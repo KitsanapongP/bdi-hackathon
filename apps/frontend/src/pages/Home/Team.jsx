@@ -22,7 +22,9 @@ import {
     Settings,
     MessageSquare,
     HelpCircle,
+    ArrowLeft,
 } from 'lucide-react';
+import ThemeToggle from '../../components/ThemeToggle';
 import { MOCK_TEAMS, TEAM_STATUS_CONFIG } from './mockData';
 import './Team.css';
 import './Register.css';
@@ -48,6 +50,7 @@ function TeamContent({ user }) {
     const [team, setTeam] = useState(null);
     const [selectedCard, setSelectedCard] = useState(null);
     const [copied, setCopied] = useState(false);
+    const [navScrolled, setNavScrolled] = useState(false);
 
     /* No-team modal state */
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -61,6 +64,14 @@ function TeamContent({ user }) {
             setTeam(MOCK_TEAMS[user.teamId] || MOCK_TEAMS['TM001']);
         }
     }, [user]);
+
+    /* Scroll listener — slide pill nav up when scrolled past banner */
+    useEffect(() => {
+        const onScroll = () => setNavScrolled(window.scrollY > 64);
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
 
     const handleCreateTeam = () => {
         const saved = localStorage.getItem('gt_user');
@@ -439,6 +450,18 @@ function TeamContent({ user }) {
     /* ═══════════════════ RENDER ═══════════════════ */
     return (
         <div className="gl-page-container">
+            {/* Pill Navigation */}
+            <nav className={`gt-pill-nav ${navScrolled ? 'scrolled' : ''}`}>
+                <div className="gt-pill-bar">
+                    <button className="gt-pill-icon" onClick={() => navigate('/home')} aria-label="Back to Home">
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div className="gt-pill-right">
+                        <ThemeToggle />
+                    </div>
+                </div>
+            </nav>
+
             <div className="gl-frame">
 
                 {/* ── LEFT: Members Panel ── */}

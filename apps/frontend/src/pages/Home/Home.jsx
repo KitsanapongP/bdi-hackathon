@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     Gamepad2,
@@ -13,10 +13,12 @@ import {
     ArrowRight,
     LogIn,
     LogOut,
+    User,
 } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 import GameShapes from '../../components/GameShapes';
 import TeamContent from './Team';
+import ProfileContent from './Profile';
 import './Home.css';
 
 // Sponsor logos (reuse from SmartLife)
@@ -69,11 +71,26 @@ function HomePage() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [user, setUser] = useState(null);
     const [showLobby, setShowLobby] = useState(false);
+    const [showProfile, setShowProfile] = useState(false);
+    const bannerRef = useRef(null);
+    const [navScrolled, setNavScrolled] = useState(false);
 
     useEffect(() => {
         const saved = localStorage.getItem('gt_user');
         if (saved) setUser(JSON.parse(saved));
     }, [location]);
+
+    /* Observe banner — when it leaves the viewport the pill nav slides up */
+    useEffect(() => {
+        const banner = bannerRef.current;
+        if (!banner) return;
+        const obs = new IntersectionObserver(
+            ([entry]) => setNavScrolled(!entry.isIntersecting),
+            { threshold: 0, rootMargin: '-44px 0px 0px 0px' }
+        );
+        obs.observe(banner);
+        return () => obs.disconnect();
+    }, []);
 
     /* Body scroll lock when mobile menu open */
     useEffect(() => {
@@ -89,7 +106,7 @@ function HomePage() {
         );
         document.querySelectorAll('.gt-reveal').forEach((el) => obs.observe(el));
         return () => obs.disconnect();
-    }, [showLobby]); // Re-run when view changes
+    }, [showLobby, showProfile]); // Re-run when view changes
 
     const handleLogout = async () => {
         try {
@@ -98,18 +115,16 @@ function HomePage() {
         localStorage.removeItem('gt_user');
         setUser(null);
         setShowLobby(false);
+        setShowProfile(false);
     };
 
     const scrollTo = (id) => {
         setMobileOpen(false); // Close mobile menu first
 
-        if (showLobby) {
+        if (showLobby || showProfile) {
             setShowLobby(false);
-            // Wait for render then scroll
-            setTimeout(() => {
-                const el = document.getElementById(id);
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
+            setShowProfile(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 
@@ -154,33 +169,21 @@ function HomePage() {
             />
 
             {/* Co-Organizer Banner */}
-            <div className="gt-banner">
+            <div className="gt-banner" ref={bannerRef}>
                 {sponsors.map((logo, i) => (
                     <img key={i} src={logo} alt={`Co-Org ${i + 1}`} />
                 ))}
             </div>
 
             {/* Pill Navigation */}
-            <nav className="gt-pill-nav">
+            <nav className={`gt-pill-nav ${navScrolled ? 'scrolled' : ''}`}>
                 <div className="gt-pill-bar">
                     <a href="#" className="gt-pill-icon" onClick={(e) => { e.preventDefault(); scrollTo('hero'); }} aria-label="Home">
                         <Gamepad2 size={20} />
                     </a>
                     <div className="gt-pill-links">
                         {config.locale.nav.map((label, i) => {
-                            const isRegister = i === 3;
-                            if (isRegister && user) {
-                                return (
-                                    <button
-                                        key={i}
-                                        className={`gt-pill-link ${showLobby ? 'active' : ''}`}
-                                        style={{ color: 'var(--gt-primary)', fontWeight: 600 }}
-                                        onClick={() => setShowLobby(true)}
-                                    >
-                                        ทีมของคุณ
-                                    </button>
-                                );
-                            }
+                            if (i === 3 && user) return null; // hide ลงทะเบียน when logged in
                             return (
                                 <button key={i} className="gt-pill-link" onClick={() => scrollTo(sectionIds[i])}>
                                     {label}
@@ -190,12 +193,26 @@ function HomePage() {
                     </div>
                     <div className="gt-pill-right">
                         {user ? (
-                            <button
-                                className="gt-pill-link gt-auth-btn gt-logout"
-                                onClick={handleLogout}
-                            >
-                                <LogOut size={15} /> ออกจากระบบ
-                            </button>
+                            <>
+                                <button
+                                    className={`gt-pill-link gt-auth-btn gt-team-btn ${showLobby ? 'active' : ''}`}
+                                    onClick={() => { setShowLobby(true); setShowProfile(false); window.scrollTo(0, 0); }}
+                                >
+                                    <Users size={15} /> ทีมของคุณ
+                                </button>
+                                <button
+                                    className={`gt-pill-link gt-auth-btn gt-login ${showProfile ? 'active' : ''}`}
+                                    onClick={() => { setShowProfile(true); setShowLobby(false); window.scrollTo(0, 0); }}
+                                >
+                                    <User size={15} /> โปรไฟล์
+                                </button>
+                                <button
+                                    className="gt-pill-link gt-auth-btn gt-logout"
+                                    onClick={handleLogout}
+                                >
+                                    <LogOut size={15} /> ออกจากระบบ
+                                </button>
+                            </>
                         ) : (
                             <Link to="/home/register" className="gt-pill-link gt-auth-btn gt-login">
                                 <LogIn size={15} /> เข้าสู่ระบบ
@@ -216,8 +233,8 @@ function HomePage() {
                     const isRegister = i === 3;
                     if (isRegister && user) {
                         return (
-                            <button key={i} className="gt-mobile-link" onClick={() => { setShowLobby(true); setMobileOpen(false); }} style={{ color: 'var(--gt-primary)' }}>
-                                ทีมของคุณ
+                            <button key={i} className="gt-mobile-link" onClick={() => { setShowLobby(true); setShowProfile(false); setMobileOpen(false); }} style={{ color: 'var(--gt-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <Users size={15} /> ทีมของคุณ
                             </button>
                         );
                     }
@@ -251,10 +268,10 @@ function HomePage() {
             </div>
 
             {/* MAIN CONTENT AREA */}
-            {showLobby && user ? (
+            {(showLobby || showProfile) && user ? (
                 <div style={{ paddingTop: 80, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-                    <TeamContent user={user} />
-                    {/* Footer for Lobby? maybe minimal */}
+                    {showLobby && <TeamContent user={user} />}
+                    {showProfile && <ProfileContent user={user} />}
                     <div style={{ textAlign: 'center', padding: 20, fontSize: '0.8rem', opacity: 0.6, marginTop: 'auto' }}>
                         © 2025 Game Event System
                     </div>

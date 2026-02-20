@@ -113,7 +113,12 @@ body:has(.gt-page) {
     top: 76px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 1000;
+    z-index: 1002;
+    transition: top 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gt-pill-nav.scrolled {
+    top: 12px;
 }
 
 .gt-pill-bar {
@@ -225,6 +230,21 @@ body:has(.gt-page) {
 
 .gt-auth-btn.gt-logout:hover {
     background: rgba(239, 68, 68, 0.16);
+}
+
+.gt-auth-btn.gt-team-btn {
+    color: var(--gt-primary) !important;
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.gt-auth-btn.gt-team-btn:hover {
+    background: rgba(124, 58, 237, 0.16);
+}
+
+.gt-auth-btn.active {
+    background: rgba(124, 58, 237, 0.20) !important;
+    font-weight: 700 !important;
+    box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.3);
 }
 
 /* — Mobile Drawer — */

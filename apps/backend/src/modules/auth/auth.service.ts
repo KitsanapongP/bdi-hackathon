@@ -16,7 +16,7 @@ function toUserSafe(row: {
     first_name_en?: string | null;
     last_name_en?: string | null;
     is_active: number;
-}): UserSafe {
+}, accessRole: 'admin' | 'judge' | null = null): UserSafe {
     return {
         userId: row.user_id,
         userName: row.user_name,
@@ -26,15 +26,32 @@ function toUserSafe(row: {
         firstNameEn: row.first_name_en ?? null,
         lastNameEn: row.last_name_en ?? null,
         isActive: row.is_active === 1,
+        accessRole,
     };
+}
+
+/** Check if email ends with .ac.th domain */
+function isAcThEmail(email: string): boolean {
+    return email.toLowerCase().endsWith('.ac.th');
+}
+
+/** Get access role for a user */
+export async function getAccessRole(db: DB, userId: number): Promise<'admin' | 'judge' | null> {
+    return repo.findAccessRole(db, userId);
 }
 
 /** Register a new user */
 export async function registerUser(db: DB, input: RegisterInput): Promise<UserSafe> {
     // Check duplicate email
-    const exists = await repo.emailExists(db, input.email);
-    if (exists) {
+    const emailDup = await repo.emailExists(db, input.email);
+    if (emailDup) {
         throw new ConflictError('อีเมลนี้ถูกใช้งานแล้ว');
+    }
+
+    // Check duplicate user_name
+    const userNameDup = await repo.userNameExists(db, input.userName);
+    if (userNameDup) {
+        throw new ConflictError('ชื่อผู้ใช้นี้ถูกใช้งานแล้ว');
     }
 
     // Hash password
@@ -53,11 +70,21 @@ export async function registerUser(db: DB, input: RegisterInput): Promise<UserSa
         passwordHash,
     });
 
+    // Determine identity type and domain rule based on .ac.th email
+    const isAcTh = isAcThEmail(input.email);
+    const identityType = isAcTh ? 'email' : 'local';
+    const domainRule = isAcTh ? 'ac_th_only' : 'any';
+
     // Create identity record
     await repo.createIdentity(db, {
         userId,
         email: input.email,
+        identityType,
+        domainRule,
     });
+
+    // Look up access role (newly registered users typically won't have one)
+    const accessRole = await repo.findAccessRole(db, userId);
 
     return {
         userId,
@@ -68,6 +95,7 @@ export async function registerUser(db: DB, input: RegisterInput): Promise<UserSa
         firstNameEn: null,
         lastNameEn: null,
         isActive: true,
+        accessRole,
     };
 }
 
@@ -84,7 +112,8 @@ export async function loginUser(db: DB, input: LoginInput): Promise<UserSafe> {
         throw new UnauthorizedError('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     }
 
-    return toUserSafe(row);
+    const accessRole = await repo.findAccessRole(db, row.user_id);
+    return toUserSafe(row, accessRole);
 }
 
 /** Get user by ID */
@@ -93,5 +122,6 @@ export async function getUserById(db: DB, userId: number): Promise<UserSafe> {
     if (!row) {
         throw new UnauthorizedError('ไม่พบผู้ใช้');
     }
-    return toUserSafe(row);
+    const accessRole = await repo.findAccessRole(db, userId);
+    return toUserSafe(row, accessRole);
 }

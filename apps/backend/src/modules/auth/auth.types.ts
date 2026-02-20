@@ -48,6 +48,7 @@ export interface JwtPayload {
     userId: number;
     email: string;
     userName: string;
+    accessRole: 'admin' | 'judge' | null;
 }
 
 /** Safe user object returned in API responses (no password_hash) */
@@ -60,4 +61,5 @@ export interface UserSafe {
     firstNameEn: string | null;
     lastNameEn: string | null;
     isActive: boolean;
+    accessRole: 'admin' | 'judge' | null;
 }

@@ -40,6 +40,15 @@ export async function emailExists(db: DB, email: string): Promise<boolean> {
     return rows.length > 0;
 }
 
+/** Check if user_name already exists */
+export async function userNameExists(db: DB, userName: string): Promise<boolean> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT 1 FROM user_users WHERE user_name = :userName AND deleted_at IS NULL LIMIT 1`,
+        { userName },
+    );
+    return rows.length > 0;
+}
+
 /** Create a new user in user_users and return the inserted id */
 export async function createUser(
     db: DB,
@@ -68,11 +77,23 @@ export async function createCredential(
 /** Create an identity record */
 export async function createIdentity(
     db: DB,
-    data: { userId: number; email: string },
+    data: { userId: number; email: string; identityType: string; domainRule: string },
 ): Promise<void> {
     await db.query(
         `INSERT INTO user_identities (user_id, identity_type, identifier, domain_rule, is_verified, created_at, updated_at)
-     VALUES (:userId, 'local', :email, 'any', 0, NOW(), NOW())`,
-        { userId: data.userId, email: data.email },
+     VALUES (:userId, :identityType, :email, :domainRule, 0, NOW(), NOW())`,
+        { userId: data.userId, identityType: data.identityType, email: data.email, domainRule: data.domainRule },
     );
+}
+
+/** Find access role for a user from access_allowlist */
+export async function findAccessRole(db: DB, userId: number): Promise<'admin' | 'judge' | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT access_role FROM access_allowlist
+     WHERE user_id = :userId AND is_active = 1
+     ORDER BY FIELD(access_role, 'admin', 'judge')
+     LIMIT 1`,
+        { userId },
+    );
+    return (rows[0]?.access_role as 'admin' | 'judge' | undefined) ?? null;
 }

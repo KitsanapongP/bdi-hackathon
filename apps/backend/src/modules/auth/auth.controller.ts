@@ -33,6 +33,7 @@ export async function handleRegister(req: FastifyRequest, reply: FastifyReply) {
             userId: user.userId,
             email: user.email ?? '',
             userName: user.userName,
+            accessRole: user.accessRole,
         };
         const token = req.server.jwt.sign(payload, { expiresIn: '7d' });
 
@@ -61,6 +62,7 @@ export async function handleLogin(req: FastifyRequest, reply: FastifyReply) {
             userId: user.userId,
             email: user.email ?? '',
             userName: user.userName,
+            accessRole: user.accessRole,
         };
         const token = req.server.jwt.sign(payload, { expiresIn: '7d' });
 
