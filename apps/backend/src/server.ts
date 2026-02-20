@@ -11,8 +11,11 @@ async function main() {
 
   const app = buildApp({ env, db });
 
-  await app.listen({ port: env.PORT, host: '0.0.0.0' });
-  app.log.info(`✅ Server running on port ${env.PORT}`);
+  await app.listen({
+    port: Number(process.env.PORT || env.PORT || 3000),
+    host: "0.0.0.0",
+  });
+  app.log.info(`✅ Server running on port ${process.env.PORT || env.PORT || 3000}`);
 }
 
 main().catch((err) => {
