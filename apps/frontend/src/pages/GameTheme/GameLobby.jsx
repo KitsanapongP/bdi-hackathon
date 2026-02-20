@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Megaphone,
     Award,
@@ -15,12 +16,16 @@ import {
     CheckCircle,
     Users,
     Plus,
+    UserPlus,
+    Lock,
+    Globe,
     Settings,
     MessageSquare,
     HelpCircle,
 } from 'lucide-react';
 import { MOCK_TEAMS, TEAM_STATUS_CONFIG } from './mockData';
 import './GameLobby.css';
+import './GameRegister.css';
 
 const MAX_MEMBERS = 5;
 
@@ -39,9 +44,17 @@ const CARDS = [
 
 /* ═══════════════════════════════════════════════════════════════ */
 function GameLobbyContent({ user }) {
+    const navigate = useNavigate();
     const [team, setTeam] = useState(null);
     const [selectedCard, setSelectedCard] = useState(null);
     const [copied, setCopied] = useState(false);
+
+    /* No-team modal state */
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showJoinModal, setShowJoinModal] = useState(false);
+    const [createName, setCreateName] = useState('');
+    const [createPublic, setCreatePublic] = useState(true);
+    const [joinCode, setJoinCode] = useState('');
 
     useEffect(() => {
         if (user?.hasTeam && user?.teamId) {
@@ -49,7 +62,101 @@ function GameLobbyContent({ user }) {
         }
     }, [user]);
 
-    if (!user || !team) return null;
+    const handleCreateTeam = () => {
+        const saved = localStorage.getItem('gt_user');
+        if (!saved) return;
+        const u = JSON.parse(saved);
+        const updatedUser = { ...u, hasTeam: true, teamId: 'TM001', role: 'leader' };
+        localStorage.setItem('gt_user', JSON.stringify(updatedUser));
+        window.location.reload();
+    };
+
+    const handleJoinTeam = () => {
+        const saved = localStorage.getItem('gt_user');
+        if (!saved) return;
+        if (joinCode === 'TM001') {
+            const u = JSON.parse(saved);
+            const updatedUser = { ...u, hasTeam: true, teamId: joinCode, role: 'member' };
+            localStorage.setItem('gt_user', JSON.stringify(updatedUser));
+            window.location.reload();
+        } else {
+            alert('ไม่พบทีมที่มีรหัสนี้ (ลอง: TM001)');
+        }
+    };
+
+    if (!user) return null;
+
+    /* ── No Team State (inside Gartic Phone theme) ── */
+    if (!team) {
+        return (
+            <div className="gl-page-container">
+                <div className="gl-frame gl-frame-center">
+                    <div className="gl-no-team">
+                        <div className="gl-no-team-icon"><Users size={48} /></div>
+                        <h3>คุณยังไม่มีทีม</h3>
+                        <p>สร้างทีมใหม่เพื่อเป็นหัวหน้ากลุ่ม หรือเข้าร่วมทีมที่มีอยู่ด้วยรหัสเชิญ</p>
+                        <div className="gl-no-team-actions">
+                            <button className="gt-btn gt-btn-primary" onClick={() => setShowCreateModal(true)}>
+                                <Plus size={18} /> สร้างทีม
+                            </button>
+                            <button className="gt-btn gt-btn-secondary" onClick={() => setShowJoinModal(true)}>
+                                <UserPlus size={18} /> เข้าร่วมทีม
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Create Modal */}
+                {showCreateModal && (
+                    <div className="gr-modal-backdrop" onClick={() => setShowCreateModal(false)}>
+                        <div className="gr-modal" onClick={(e) => e.stopPropagation()}>
+                            <h3>🎮 สร้างทีมใหม่</h3>
+                            <div className="gr-input-group">
+                                <label>ชื่อทีม</label>
+                                <input className="gr-input" placeholder="เช่น Team Alpha" value={createName} onChange={(e) => setCreateName(e.target.value)} />
+                            </div>
+                            <div className="gr-toggle-row">
+                                <span className="gr-toggle-label">
+                                    {createPublic ? <><Globe size={16} /> Public — ทุกคนเห็นและขอเข้าร่วมได้</> : <><Lock size={16} /> Private — ใช้รหัสเชิญเท่านั้น</>}
+                                </span>
+                                <button type="button" className={`gr-toggle ${createPublic ? 'on' : ''}`} onClick={() => setCreatePublic(!createPublic)} />
+                            </div>
+                            <div className="gr-modal-actions">
+                                <button className="gt-btn gt-btn-secondary" onClick={() => setShowCreateModal(false)}>ยกเลิก</button>
+                                <button className="gt-btn gt-btn-primary" style={{ flex: 1 }} onClick={handleCreateTeam}>สร้างทีม</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Join Modal */}
+                {showJoinModal && (
+                    <div className="gr-modal-backdrop" onClick={() => setShowJoinModal(false)}>
+                        <div className="gr-modal" onClick={(e) => e.stopPropagation()}>
+                            <h3>🔗 เข้าร่วมทีม</h3>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--gt-text-muted)', margin: '0 0 16px' }}>
+                                กรอกรหัสทีม 6 หลักที่ได้รับจากหัวหน้าทีม
+                            </p>
+                            <div className="gr-input-group">
+                                <label>รหัสทีม</label>
+                                <input
+                                    className="gr-input"
+                                    placeholder="เช่น TM001"
+                                    value={joinCode}
+                                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                                    style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '1.2rem', textAlign: 'center', letterSpacing: '0.15em' }}
+                                />
+                            </div>
+                            <div className="gr-modal-actions">
+                                <button className="gt-btn gt-btn-secondary" onClick={() => setShowJoinModal(false)}>ยกเลิก</button>
+                                <button className="gt-btn gt-btn-primary" style={{ flex: 1 }} onClick={handleJoinTeam}>ขอเข้าร่วม</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     const statusInfo = TEAM_STATUS_CONFIG[team.status] || TEAM_STATUS_CONFIG.pending;
     const emptySlots = Math.max(0, MAX_MEMBERS - team.members.length);

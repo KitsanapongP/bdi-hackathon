@@ -73,11 +73,6 @@ function GameThemePage() {
     useEffect(() => {
         const saved = localStorage.getItem('gt_user');
         if (saved) setUser(JSON.parse(saved));
-
-        // Check for navigation state from Register page
-        if (location.state?.showLobby) {
-            setShowLobby(true);
-        }
     }, [location]);
 
     /* Body scroll lock when mobile menu open */
