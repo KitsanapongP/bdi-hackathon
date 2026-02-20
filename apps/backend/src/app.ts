@@ -9,6 +9,7 @@ import type { DB } from './config/db.js';
 
 import { healthRoutes } from './modules/health/health.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
+import { sysConfigRoutes } from './modules/sys-config/sys-config.routes.js';
 
 export type AppContext = { env: Env; db: DB };
 
@@ -50,6 +51,7 @@ export function buildApp(ctx: AppContext) {
 
   app.register(healthRoutes, { prefix: '/api/health' });
   app.register(authRoutes, { prefix: '/api/auth' });
+  app.register(sysConfigRoutes, { prefix: '/api/sys-config' });
 
   app.setErrorHandler((err, _req, reply) => {
     app.log.error(err);
