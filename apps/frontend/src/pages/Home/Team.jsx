@@ -24,8 +24,8 @@ import {
     HelpCircle,
 } from 'lucide-react';
 import { MOCK_TEAMS, TEAM_STATUS_CONFIG } from './mockData';
-import './GameLobby.css';
-import './GameRegister.css';
+import './Team.css';
+import './Register.css';
 
 const MAX_MEMBERS = 5;
 
@@ -43,7 +43,7 @@ const CARDS = [
 ];
 
 /* ═══════════════════════════════════════════════════════════════ */
-function GameLobbyContent({ user }) {
+function TeamContent({ user }) {
     const navigate = useNavigate();
     const [team, setTeam] = useState(null);
     const [selectedCard, setSelectedCard] = useState(null);
@@ -512,4 +512,4 @@ function GameLobbyContent({ user }) {
     );
 }
 
-export default GameLobbyContent;
+export default TeamContent;

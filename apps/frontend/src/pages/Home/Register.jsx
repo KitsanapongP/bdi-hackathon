@@ -6,10 +6,10 @@ import {
 } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 import GameShapes from '../../components/GameShapes';
-import './GameTheme.css';
-import './GameRegister.css';
+import './Home.css';
+import './Register.css';
 
-function GameRegisterPage() {
+function RegisterPage() {
     const navigate = useNavigate();
 
     /* Auth state */
@@ -18,11 +18,11 @@ function GameRegisterPage() {
     const [errorMsg, setErrorMsg] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    // If already logged in, redirect to GameTheme
+    // If already logged in, redirect to Home
     useEffect(() => {
         const saved = localStorage.getItem('gt_user');
         if (saved) {
-            navigate('/gametheme', { replace: true });
+            navigate('/home', { replace: true });
         }
     }, [navigate]);
 
@@ -57,7 +57,7 @@ function GameRegisterPage() {
                 color: '#6366f1',
             };
             localStorage.setItem('gt_user', JSON.stringify(userInfo));
-            navigate('/gametheme', { replace: true });
+            navigate('/home', { replace: true });
         } catch (err) {
             setErrorMsg('เกิดข้อผิดพลาด กรุณาลองใหม่');
         } finally {
@@ -125,4 +125,4 @@ function GameRegisterPage() {
     );
 }
 
-export default GameRegisterPage;
+export default RegisterPage;
