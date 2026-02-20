@@ -8,6 +8,7 @@ import ThemeToggle from '../../components/ThemeToggle';
 import GameShapes from '../../components/GameShapes';
 import './Home.css';
 import './Register.css';
+import { apiUrl } from '../../lib/api';
 
 function RegisterPage() {
     const navigate = useNavigate();
@@ -58,7 +59,7 @@ function RegisterPage() {
         setIsLoading(true);
 
         try {
-            const res = await fetch('/api/auth/login', {
+            const res = await fetch(apiUrl('/api/auth/login'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -97,7 +98,7 @@ function RegisterPage() {
         setIsLoading(true);
 
         try {
-            const res = await fetch('/api/auth/register', {
+            const res = await fetch(apiUrl('/api/auth/register'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

@@ -20,6 +20,7 @@ import GameShapes from '../../components/GameShapes';
 import TeamContent from './Team';
 import ProfileContent from './Profile';
 import './Home.css';
+import { apiUrl } from '../../lib/api';
 
 // Co-organizer logos
 import coOrg1 from '../../assets/co-organizer/1-logo-bdi-for-web-2048x1465.png';
@@ -130,7 +131,7 @@ function HomePage() {
 
     const handleLogout = async () => {
         try {
-            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' });
         } catch { /* ignore */ }
         localStorage.removeItem('gt_user');
         setUser(null);
