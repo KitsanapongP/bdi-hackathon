@@ -21,7 +21,27 @@ import TeamContent from './Team';
 import ProfileContent from './Profile';
 import './Home.css';
 
-// Sponsor logos (reuse from SmartLife)
+// Co-organizer logos
+import coOrg1 from '../../assets/co-organizer/1-logo-bdi-for-web-2048x1465.png';
+import coOrg2 from '../../assets/co-organizer/2-kku-official-logo-2022-26.png';
+import coOrg3 from '../../assets/co-organizer/3-CPlogo-final-01.png';
+import coOrg4 from '../../assets/co-organizer/4-MED_KKU.png';
+import coOrg5 from '../../assets/co-organizer/5-Nursing_KKU_Thai_Symbol.png';
+import coOrg6 from '../../assets/co-organizer/6-Public_Heaalth_KKU.png';
+import coOrg7 from '../../assets/co-organizer/7-COLA_KKU_Symbol.svg.png';
+import coOrg8 from '../../assets/co-organizer/8-National Phenome Institute - Thailand.png';
+import coOrg9 from '../../assets/co-organizer/9-Krungsri_Logo.svg.png';
+import coOrg10 from '../../assets/co-organizer/10-INET-2024-01-24-926040289.png';
+import coOrg11 from '../../assets/co-organizer/11-ExxonMobil-Logo.png';
+import coOrg12 from '../../assets/co-organizer/12-Logo-Woxa-Corp-Transparent-blue-website.png';
+import coOrg13 from '../../assets/co-organizer/13-logo-scipark_2.png';
+
+const coOrganizers = [
+    coOrg1, coOrg2, coOrg3, coOrg4, coOrg5, coOrg6, coOrg7,
+    coOrg8, coOrg9, coOrg10, coOrg11, coOrg12, coOrg13,
+];
+
+// Sponsor logos
 import chatgptLogo from '../../assets/sponsors/ChatGPT.png';
 import claudeLogo from '../../assets/sponsors/Claude Ai.png';
 import geminiLogo from '../../assets/sponsors/Google Ai Gemini.png';
@@ -170,7 +190,7 @@ function HomePage() {
 
             {/* Co-Organizer Banner */}
             <div className="gt-banner" ref={bannerRef}>
-                {sponsors.map((logo, i) => (
+                {coOrganizers.map((logo, i) => (
                     <img key={i} src={logo} alt={`Co-Org ${i + 1}`} />
                 ))}
             </div>
@@ -269,7 +289,7 @@ function HomePage() {
 
             {/* MAIN CONTENT AREA */}
             {(showLobby || showProfile) && user ? (
-                <div style={{ paddingTop: 80, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ paddingTop: 48, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
                     {showLobby && <TeamContent user={user} />}
                     {showProfile && <ProfileContent user={user} />}
                     <div style={{ textAlign: 'center', padding: 20, fontSize: '0.8rem', opacity: 0.6, marginTop: 'auto' }}>
