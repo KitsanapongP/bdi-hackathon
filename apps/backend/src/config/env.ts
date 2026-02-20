@@ -10,6 +10,8 @@ const EnvSchema = z.object({
   DB_USER: z.string(),
   DB_PASSWORD: z.string().optional().default(''),
   DB_NAME: z.string(),
+
+  JWT_SECRET: z.string().min(8, 'JWT_SECRET must be at least 8 characters'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

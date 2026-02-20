@@ -9,10 +9,10 @@ import {
     Lock,
     Globe,
     LogOut,
+    Loader2,
 } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 import GameShapes from '../../components/GameShapes';
-import { MOCK_USERS, MOCK_TEAMS } from './mockData';
 import './GameTheme.css';
 import './GameRegister.css'; // Reusing for login & modal styles
 
@@ -23,6 +23,7 @@ function GameRegisterPage() {
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPass, setLoginPass] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     /* Modals */
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -42,24 +43,56 @@ function GameRegisterPage() {
         }
     }, [navigate]);
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
         setErrorMsg('');
+        setIsLoading(true);
 
-        // Mock Login Check
-        const foundUser = MOCK_USERS.find(u => u.email === loginEmail && u.password === loginPass);
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // send/receive HttpOnly cookies
+                body: JSON.stringify({ email: loginEmail, password: loginPass }),
+            });
 
-        if (foundUser) {
-            localStorage.setItem('gt_user', JSON.stringify(foundUser));
-            if (foundUser.hasTeam) {
-                navigate('/gametheme', { state: { showLobby: true } });
-            } else {
-                // Force reload or state update to trigger No Team view
-                window.location.reload();
+            const data = await res.json();
+
+            if (!res.ok || !data.ok) {
+                setErrorMsg(data.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+                return;
             }
-        } else {
-            setErrorMsg('อีเมลหรือรหัสผ่านไม่ถูกต้อง (ลอง: leader@game.com / password)');
+
+            // Store user info in localStorage (token is in HttpOnly cookie)
+            const user = data.data;
+            const userInfo = {
+                userId: user.userId,
+                name: user.userName,
+                email: user.email,
+                hasTeam: false, // will be updated when team system is connected
+                avatar: user.userName?.charAt(0)?.toUpperCase() || 'U',
+                color: '#6366f1',
+            };
+            localStorage.setItem('gt_user', JSON.stringify(userInfo));
+            window.location.reload();
+        } catch (err) {
+            setErrorMsg('เกิดข้อผิดพลาด กรุณาลองใหม่');
+        } finally {
+            setIsLoading(false);
         }
+    };
+
+    const handleLogout = async () => {
+        try {
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'include',
+            });
+        } catch {
+            // ignore
+        }
+        localStorage.removeItem('gt_user');
+        window.location.reload();
     };
 
     const handleCreateTeam = () => {
@@ -67,8 +100,6 @@ function GameRegisterPage() {
         if (!saved) return;
 
         const user = JSON.parse(saved);
-        const newTeamId = `TM${Math.floor(Math.random() * 9000) + 1000}`; // Random ID
-
         const updatedUser = {
             ...user,
             hasTeam: true,
@@ -84,12 +115,12 @@ function GameRegisterPage() {
         const saved = localStorage.getItem('gt_user');
         if (!saved) return;
 
-        if (MOCK_TEAMS[joinCode] || joinCode === 'TM001') {
+        if (joinCode === 'TM001') {
             const user = JSON.parse(saved);
             const updatedUser = {
                 ...user,
                 hasTeam: true,
-                teamId: joinCode === 'TM001' ? 'TM001' : joinCode,
+                teamId: joinCode,
                 role: 'member'
             };
             localStorage.setItem('gt_user', JSON.stringify(updatedUser));
@@ -114,8 +145,7 @@ function GameRegisterPage() {
                         </div>
                         <h2 style={{ color: 'var(--gt-text)' }}>เข้าสู่ระบบ</h2>
                         <p style={{ textAlign: 'center', color: 'var(--gt-text-muted)', fontSize: '0.9rem', marginBottom: 24 }}>
-                            ลงชื่อเข้าใช้เพื่อจัดการทีมของคุณ<br />
-                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>(ลอง: leader@game.com / password)</span>
+                            ลงชื่อเข้าใช้เพื่อจัดการทีมของคุณ
                         </p>
 
                         {errorMsg && <div style={{ color: '#ef4444', textAlign: 'center', marginBottom: 16, fontSize: '0.9rem', background: '#fee2e2', padding: 8, borderRadius: 8 }}>{errorMsg}</div>}
@@ -130,6 +160,7 @@ function GameRegisterPage() {
                                     value={loginEmail}
                                     onChange={(e) => setLoginEmail(e.target.value)}
                                     required
+                                    disabled={isLoading}
                                 />
                             </div>
                             <div className="gr-input-group">
@@ -141,10 +172,15 @@ function GameRegisterPage() {
                                     value={loginPass}
                                     onChange={(e) => setLoginPass(e.target.value)}
                                     required
+                                    disabled={isLoading}
                                 />
                             </div>
-                            <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%', marginTop: 8 }}>
-                                เข้าสู่ระบบ
+                            <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={isLoading}>
+                                {isLoading ? (
+                                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                        <Loader2 size={18} className="spin" /> กำลังเข้าสู่ระบบ...
+                                    </span>
+                                ) : 'เข้าสู่ระบบ'}
                             </button>
                         </form>
                         <p style={{ textAlign: 'center', marginTop: 16, fontSize: '0.85rem', color: 'var(--gt-text-muted)' }}>
@@ -179,7 +215,7 @@ function GameRegisterPage() {
                     <button
                         className="gt-btn gt-btn-secondary"
                         style={{ padding: '6px 14px', fontSize: '0.8rem', gap: 4 }}
-                        onClick={() => { localStorage.removeItem('gt_user'); window.location.reload(); }}
+                        onClick={handleLogout}
                     >
                         <LogOut size={14} /> ออก
                     </button>

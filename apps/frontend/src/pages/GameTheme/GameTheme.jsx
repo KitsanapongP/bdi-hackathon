@@ -96,6 +96,15 @@ function GameThemePage() {
         return () => obs.disconnect();
     }, [showLobby]); // Re-run when view changes
 
+    const handleLogout = async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        } catch { /* ignore */ }
+        localStorage.removeItem('gt_user');
+        setUser(null);
+        setShowLobby(false);
+    };
+
     const scrollTo = (id) => {
         setMobileOpen(false); // Close mobile menu first
 
@@ -188,7 +197,7 @@ function GameThemePage() {
                         {user ? (
                             <button
                                 className="gt-pill-link gt-auth-btn gt-logout"
-                                onClick={() => { localStorage.removeItem('gt_user'); setUser(null); setShowLobby(false); }}
+                                onClick={handleLogout}
                             >
                                 <LogOut size={15} /> ออกจากระบบ
                             </button>
@@ -229,7 +238,7 @@ function GameThemePage() {
                         <button
                             className="gt-mobile-link"
                             style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}
-                            onClick={() => { localStorage.removeItem('gt_user'); setUser(null); setShowLobby(false); setMobileOpen(false); }}
+                            onClick={() => { handleLogout(); setMobileOpen(false); }}
                         >
                             <LogOut size={16} /> ออกจากระบบ
                         </button>
