@@ -16,8 +16,8 @@ import {
 } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 import GameShapes from '../../components/GameShapes';
-import GameLobbyContent from './GameLobby';
-import './GameTheme.css';
+import TeamContent from './Team';
+import './Home.css';
 
 // Sponsor logos (reuse from SmartLife)
 import chatgptLogo from '../../assets/sponsors/ChatGPT.png';
@@ -63,7 +63,7 @@ const schedules = [
 ];
 
 /* ═══════════════════════ Component ═══════════════════════ */
-function GameThemePage() {
+function HomePage() {
     const location = useLocation();
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -197,7 +197,7 @@ function GameThemePage() {
                                 <LogOut size={15} /> ออกจากระบบ
                             </button>
                         ) : (
-                            <Link to="/gametheme/register" className="gt-pill-link gt-auth-btn gt-login">
+                            <Link to="/home/register" className="gt-pill-link gt-auth-btn gt-login">
                                 <LogIn size={15} /> เข้าสู่ระบบ
                             </Link>
                         )}
@@ -239,7 +239,7 @@ function GameThemePage() {
                         </button>
                     ) : (
                         <Link
-                            to="/gametheme/register"
+                            to="/home/register"
                             className="gt-mobile-link"
                             style={{ color: 'var(--gt-primary)', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
                             onClick={() => setMobileOpen(false)}
@@ -253,7 +253,7 @@ function GameThemePage() {
             {/* MAIN CONTENT AREA */}
             {showLobby && user ? (
                 <div style={{ paddingTop: 80, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-                    <GameLobbyContent user={user} />
+                    <TeamContent user={user} />
                     {/* Footer for Lobby? maybe minimal */}
                     <div style={{ textAlign: 'center', padding: 20, fontSize: '0.8rem', opacity: 0.6, marginTop: 'auto' }}>
                         © 2025 Game Event System
@@ -269,7 +269,7 @@ function GameThemePage() {
                         <h1>{config.locale.heroTitle}</h1>
                         <p className="gt-hero-sub">{config.locale.heroSubtitle}</p>
                         <div className="gt-hero-actions">
-                            <Link to="/gametheme/register" className="gt-btn gt-btn-primary">
+                            <Link to="/home/register" className="gt-btn gt-btn-primary">
                                 {config.locale.ctaPrimary} <ArrowRight size={18} />
                             </Link>
                             <button className="gt-btn gt-btn-secondary" onClick={() => scrollTo('schedule')}>
@@ -351,7 +351,7 @@ function GameThemePage() {
                     <section id="register" className="gt-section gt-container" style={{ textAlign: 'center', paddingBottom: 40 }}>
                         <div className="gt-reveal">
                             <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: 16 }}>พร้อมเข้าร่วมแล้วหรือยัง?</h2>
-                            <Link to="/gametheme/register" className="gt-btn gt-btn-primary" style={{ fontSize: '1.05rem', padding: '15px 36px' }}>
+                            <Link to="/home/register" className="gt-btn gt-btn-primary" style={{ fontSize: '1.05rem', padding: '15px 36px' }}>
                                 ลงทะเบียนเลย <ArrowRight size={20} />
                             </Link>
                         </div>
@@ -392,4 +392,4 @@ function GameThemePage() {
     );
 }
 
-export default GameThemePage;
+export default HomePage;

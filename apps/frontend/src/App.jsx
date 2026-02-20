@@ -1,15 +1,15 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import GameThemePage from './pages/GameTheme/GameTheme'
-import GameRegisterPage from './pages/GameTheme/GameRegister'
-import GameLobbyPage from './pages/GameTheme/GameLobby'
+import HomePage from './pages/Home/Home'
+import RegisterPage from './pages/Home/Register'
+import TeamPage from './pages/Home/Team'
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/gametheme" replace />} />
-      <Route path="/gametheme" element={<GameThemePage />} />
-      <Route path="/gametheme/register" element={<GameRegisterPage />} />
-      <Route path="/gametheme/lobby" element={<GameLobbyPage />} />
+      <Route path="/" element={<Navigate to="/home" replace />} />
+      <Route path="/home" element={<HomePage />} />
+      <Route path="/home/register" element={<RegisterPage />} />
+      <Route path="/home/team" element={<TeamPage />} />
     </Routes>
   )
 }
