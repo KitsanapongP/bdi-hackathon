@@ -67,7 +67,8 @@ body:has(.gt-page) {
     width: 100%;
     max-width: var(--gt-max-w);
     margin: 0 auto;
-    padding: 0 24px;
+    padding: 0 clamp(24px, 6vw, 64px);
+    box-sizing: border-box;
 }
 
 /* --- 3. Co-Organizer Banner --- */
@@ -83,7 +84,7 @@ body:has(.gt-page) {
     gap: 40px;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 0 24px;
+    padding: 0 clamp(24px, 6vw, 64px);
     position: relative;
     z-index: 1001;
     scrollbar-width: none;
@@ -247,61 +248,92 @@ body:has(.gt-page) {
     box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.3);
 }
 
-/* — Mobile Drawer — */
-.gt-mobile-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
-    z-index: 998;
+/* — Collapse Panel (mobile menu) — */
+.gt-pill-collapse {
+    display: none;
 }
 
-.gt-mobile-backdrop.open {
-    opacity: 1;
-    visibility: visible;
-}
+@media (max-width: 768px) {
+    .gt-pill-collapse {
+        display: grid;
+        grid-template-rows: 0fr;
+        opacity: 0;
+        transition: grid-template-rows 0.25s cubic-bezier(0.4, 0, 1, 1),
+            opacity 0.15s ease;
+    }
 
-.gt-mobile-drawer {
-    position: fixed;
-    top: 0;
-    right: -300px;
-    width: 280px;
-    height: 100vh;
-    background: var(--gt-surface);
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
-    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 999;
-    padding: 80px 24px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
+    .gt-pill-collapse.open {
+        grid-template-rows: 1fr;
+        opacity: 1;
+        transition: grid-template-rows 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 0.2s ease 0.05s;
+    }
 
-.gt-mobile-drawer.open {
-    right: 0;
-}
+    .gt-pill-collapse-inner {
+        overflow: hidden;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        padding: 0 2px;
+        margin: 0 4px;
+        border-top: 1px solid transparent;
+        transition: padding 0.25s cubic-bezier(0.4, 0, 1, 1),
+            border-color 0.15s ease;
+    }
 
-.gt-mobile-link {
-    text-decoration: none;
-    color: var(--gt-text);
-    font-weight: 500;
-    font-size: 1.05rem;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--gt-border);
-    display: block;
-    cursor: pointer;
-    background: none;
-    border-left: none;
-    border-right: none;
-    border-top: none;
-    text-align: left;
-    width: 100%;
-}
+    .gt-pill-collapse.open .gt-pill-collapse-inner {
+        padding: 4px 2px 6px;
+        border-top-color: var(--gt-border);
+        transition: padding 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+            border-color 0.2s ease 0.1s;
+    }
 
-.gt-mobile-link:hover {
-    color: var(--gt-primary);
+    .gt-collapse-link {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        border: none;
+        border-radius: 10px;
+        background: none;
+        color: var(--gt-text);
+        font-size: 0.92rem;
+        font-weight: 500;
+        cursor: pointer;
+        text-align: left;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: background 0.2s, color 0.2s;
+    }
+
+    .gt-collapse-link:hover,
+    .gt-collapse-link:active {
+        background: rgba(124, 58, 237, 0.08);
+        color: var(--gt-primary);
+    }
+
+    .gt-collapse-divider {
+        height: 1px;
+        background: var(--gt-border);
+        margin: 2px 12px;
+    }
+
+    .gt-collapse-login {
+        color: var(--gt-primary);
+        font-weight: 600;
+    }
+
+    .gt-collapse-logout {
+        color: #ef4444;
+        font-weight: 600;
+    }
+
+    .gt-collapse-logout:hover,
+    .gt-collapse-logout:active {
+        background: rgba(239, 68, 68, 0.08);
+        color: #dc2626;
+    }
 }
 
 /* --- 4. ThemeToggle Styles --- */
@@ -609,7 +641,7 @@ body:has(.gt-page) {
 
 /* --- 7. Section header --- */
 .gt-section {
-    padding: 90px 0;
+    padding-block: 90px;
     position: relative;
     z-index: 2;
 }
@@ -638,6 +670,8 @@ body:has(.gt-page) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 20px;
+    max-width: 900px;
+    margin: 0 auto;
 }
 
 .gt-bento-card {
@@ -710,7 +744,7 @@ body:has(.gt-page) {
 .gt-schedule {
     display: grid;
     gap: 16px;
-    max-width: 800px;
+    max-width: 720px;
     margin: 0 auto;
 }
 
@@ -853,7 +887,43 @@ body:has(.gt-page) {
 }
 
 /* --- 12. Responsive --- */
+
+/* — Sub-page wrapper (Team / Profile content area) — */
+.gt-subpage-wrap {
+    max-width: var(--gt-max-w);
+    margin: 0 auto;
+    padding: 48px clamp(24px, 6vw, 64px) 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: 100%;
+}
+
 @media (max-width: 768px) {
+
+    .gt-pill-nav {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: fit-content;
+        background: var(--gt-nav-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--gt-nav-border);
+        border-radius: 24px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+        transition: top 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .gt-pill-bar {
+        background: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        border: none;
+        box-shadow: none;
+        border-radius: 0;
+    }
 
     .gt-pill-links {
         display: none;
@@ -861,6 +931,10 @@ body:has(.gt-page) {
 
     .gt-pill-burger {
         display: flex;
+    }
+
+    .gt-pill-right .gt-auth-btn {
+        display: none !important;
     }
 
     .gt-hero {
@@ -874,6 +948,7 @@ body:has(.gt-page) {
     .gt-hero-actions {
         flex-direction: column;
         width: 100%;
+        max-width: 340px;
     }
 
     .gt-hero-actions .gt-btn {
@@ -882,6 +957,11 @@ body:has(.gt-page) {
 
     .gt-bento {
         grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .gt-bento-card {
+        padding: 22px 20px;
     }
 
     .gt-bento-card.large {
@@ -892,6 +972,11 @@ body:has(.gt-page) {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
+        padding: 18px 20px;
+    }
+
+    .gt-hero-sub {
+        padding: 16px 20px;
     }
 
     .gt-footer-inner {
@@ -905,7 +990,7 @@ body:has(.gt-page) {
     }
 
     .gt-section {
-        padding: 60px 0;
+        padding-block: 60px;
     }
 
     .gt-sponsors-wrapper {
@@ -1010,9 +1095,8 @@ body:has(.gt-page) {
 
 /* Re-enable pointer events on every interactive & visible element */
 .gt-page .gt-pill-nav,
+.gt-page .gt-pill-collapse,
 .gt-page .gt-banner,
-.gt-page .gt-mobile-backdrop,
-.gt-page .gt-mobile-drawer,
 .gt-page .gt-card,
 .gt-page .gt-schedule-item,
 .gt-page button,
@@ -1021,6 +1105,7 @@ body:has(.gt-page) {
 .gt-page select,
 .gt-page textarea,
 .gt-page .gt-footer,
-.gt-page .gl-page-container {
+.gt-page .gl-page-container,
+.gt-page .gt-subpage-wrap {
     pointer-events: auto;
 }

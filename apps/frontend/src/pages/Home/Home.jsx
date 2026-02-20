@@ -113,11 +113,7 @@ function HomePage() {
         return () => obs.disconnect();
     }, []);
 
-    /* Body scroll lock when mobile menu open */
-    useEffect(() => {
-        document.body.style.overflow = mobileOpen ? 'hidden' : '';
-        return () => { document.body.style.overflow = ''; };
-    }, [mobileOpen]);
+
 
     /* Scroll reveal */
     useEffect(() => {
@@ -245,52 +241,47 @@ function HomePage() {
                         </button>
                     </div>
                 </div>
-            </nav>
 
-            {/* Mobile Drawer */}
-            <div className={`gt-mobile-backdrop ${mobileOpen ? 'open' : ''}`} onClick={() => setMobileOpen(false)} />
-            <div className={`gt-mobile-drawer ${mobileOpen ? 'open' : ''}`}>
-                {config.locale.nav.map((label, i) => {
-                    const isRegister = i === 3;
-                    if (isRegister && user) {
-                        return (
-                            <button key={i} className="gt-mobile-link" onClick={() => { setShowLobby(true); setShowProfile(false); setMobileOpen(false); }} style={{ color: 'var(--gt-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <Users size={15} /> ทีมของคุณ
-                            </button>
-                        );
-                    }
-                    return (
-                        <button key={i} className="gt-mobile-link" onClick={() => scrollTo(sectionIds[i])}>
-                            {label}
-                        </button>
-                    );
-                })}
-                <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <ThemeToggle />
-                    {user ? (
-                        <button
-                            className="gt-mobile-link"
-                            style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}
-                            onClick={() => { handleLogout(); setMobileOpen(false); }}
-                        >
-                            <LogOut size={16} /> ออกจากระบบ
-                        </button>
-                    ) : (
-                        <Link
-                            to="/home/register"
-                            className="gt-mobile-link"
-                            style={{ color: 'var(--gt-primary)', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
-                            onClick={() => setMobileOpen(false)}
-                        >
-                            <LogIn size={16} /> เข้าสู่ระบบ
-                        </Link>
-                    )}
+                {/* Mobile Collapse Panel */}
+                <div className={`gt-pill-collapse ${mobileOpen ? 'open' : ''}`}>
+                    <div className="gt-pill-collapse-inner">
+                        {config.locale.nav.map((label, i) => {
+                            const isRegister = i === 3;
+                            if (isRegister && user) {
+                                return (
+                                    <button key={i} className="gt-collapse-link" onClick={() => { setShowLobby(true); setShowProfile(false); setMobileOpen(false); window.scrollTo(0, 0); }}>
+                                        <Users size={16} /> ทีมของคุณ
+                                    </button>
+                                );
+                            }
+                            return (
+                                <button key={i} className="gt-collapse-link" onClick={() => scrollTo(sectionIds[i])}>
+                                    {label}
+                                </button>
+                            );
+                        })}
+                        {user ? (
+                            <>
+                                <button className="gt-collapse-link" onClick={() => { setShowProfile(true); setShowLobby(false); setMobileOpen(false); window.scrollTo(0, 0); }}>
+                                    <User size={16} /> โปรไฟล์
+                                </button>
+                                <div className="gt-collapse-divider" />
+                                <button className="gt-collapse-link gt-collapse-logout" onClick={() => { handleLogout(); setMobileOpen(false); }}>
+                                    <LogOut size={16} /> ออกจากระบบ
+                                </button>
+                            </>
+                        ) : (
+                            <Link to="/home/register" className="gt-collapse-link gt-collapse-login" onClick={() => setMobileOpen(false)}>
+                                <LogIn size={16} /> เข้าสู่ระบบ
+                            </Link>
+                        )}
+                    </div>
                 </div>
-            </div>
+            </nav>
 
             {/* MAIN CONTENT AREA */}
             {(showLobby || showProfile) && user ? (
-                <div style={{ paddingTop: 48, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+                <div className="gt-subpage-wrap">
                     {showLobby && <TeamContent user={user} />}
                     {showProfile && <ProfileContent user={user} />}
                     <div style={{ textAlign: 'center', padding: 20, fontSize: '0.8rem', opacity: 0.6, marginTop: 'auto' }}>
