@@ -78,20 +78,18 @@ body:has(.gt-page) {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--gt-glass-border);
+    overflow: hidden;
+    position: relative;
+    z-index: 1001;
+}
+
+.gt-banner-track {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 40px;
-    overflow-x: auto;
-    overflow-y: hidden;
+    height: 100%;
     padding: 0 clamp(24px, 6vw, 64px);
-    position: relative;
-    z-index: 1001;
-    scrollbar-width: none;
-}
-
-.gt-banner::-webkit-scrollbar {
-    display: none;
 }
 
 .gt-banner img {
@@ -106,6 +104,45 @@ body:has(.gt-page) {
 .gt-banner img:hover {
     opacity: 1;
     filter: none;
+}
+
+/* Banner marquee mode (activated via .gt-banner-marquee) */
+.gt-banner-marquee .gt-banner-track {
+    justify-content: flex-start;
+    width: max-content;
+    padding: 0 20px;
+    animation: gt-banner-scroll 30s linear infinite;
+}
+
+.gt-banner-marquee::before,
+.gt-banner-marquee::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 10vw;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.gt-banner-marquee::before {
+    left: 0;
+    background: linear-gradient(to right, var(--gt-glass-strong), transparent);
+}
+
+.gt-banner-marquee::after {
+    right: 0;
+    background: linear-gradient(to left, var(--gt-glass-strong), transparent);
+}
+
+@keyframes gt-banner-scroll {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(-50%);
+    }
 }
 
 /* --- 4. Pill Navigation --- */
@@ -493,7 +530,8 @@ body:has(.gt-page) {
 
 /* --- 5. Hero Section --- */
 .gt-hero {
-    padding: 100px 0 60px;
+    padding-top: 100px;
+    padding-bottom: 60px;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -938,7 +976,8 @@ body:has(.gt-page) {
     }
 
     .gt-hero {
-        padding: 80px 0 40px;
+        padding-top: 80px;
+        padding-bottom: 40px;
     }
 
     .gt-hero h1 {

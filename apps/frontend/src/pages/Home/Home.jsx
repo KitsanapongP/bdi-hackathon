@@ -94,7 +94,9 @@ function HomePage() {
     const [showLobby, setShowLobby] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
     const bannerRef = useRef(null);
+    const bannerTrackRef = useRef(null);
     const [navScrolled, setNavScrolled] = useState(false);
+    const [bannerMarquee, setBannerMarquee] = useState(false);
 
     useEffect(() => {
         const saved = localStorage.getItem('gt_user');
@@ -111,6 +113,31 @@ function HomePage() {
         );
         obs.observe(banner);
         return () => obs.disconnect();
+    }, []);
+
+    /* Detect if banner logos overflow — if so, enable marquee */
+    useEffect(() => {
+        const banner = bannerRef.current;
+        if (!banner) return;
+        const check = () => {
+            const track = bannerTrackRef.current;
+            if (!track) return;
+            // Measure total width of only the original items (first half)
+            const items = track.children;
+            const originalCount = coOrganizers.length;
+            let totalW = 0;
+            for (let i = 0; i < Math.min(originalCount, items.length); i++) {
+                totalW += items[i].offsetWidth;
+            }
+            // Add gaps: (originalCount - 1) * 40px gap
+            totalW += (originalCount - 1) * 40;
+            const containerW = banner.clientWidth;
+            setBannerMarquee(totalW > containerW);
+        };
+        check();
+        const ro = new ResizeObserver(check);
+        ro.observe(banner);
+        return () => ro.disconnect();
     }, []);
 
 
@@ -186,10 +213,12 @@ function HomePage() {
             />
 
             {/* Co-Organizer Banner */}
-            <div className="gt-banner" ref={bannerRef}>
-                {coOrganizers.map((logo, i) => (
-                    <img key={i} src={logo} alt={`Co-Org ${i + 1}`} />
-                ))}
+            <div className={`gt-banner ${bannerMarquee ? 'gt-banner-marquee' : ''}`} ref={bannerRef}>
+                <div className="gt-banner-track" ref={bannerTrackRef}>
+                    {(bannerMarquee ? [...coOrganizers, ...coOrganizers] : coOrganizers).map((logo, i) => (
+                        <img key={i} src={logo} alt={`Co-Org ${(i % coOrganizers.length) + 1}`} />
+                    ))}
+                </div>
             </div>
 
             {/* Pill Navigation */}
