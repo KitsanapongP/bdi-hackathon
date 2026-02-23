@@ -65,12 +65,7 @@ const config = {
     },
 };
 
-const schedules = [
-    { time: '09:00 - 10:00', title: 'Registration & Welcome', desc: 'ลงทะเบียนรับป้ายชื่อและของที่ระลึก' },
-    { time: '10:00 - 12:00', title: 'Keynote: Game Dev in 2025', desc: 'โดย CTO จาก Game Studio ชั้นนำ' },
-    { time: '13:00 - 17:00', title: 'Team Hacking Begins', desc: 'เริ่มพัฒนาเกม พร้อม Mentor ให้คำปรึกษา' },
-    { time: '17:30 - 19:00', title: 'Demo & Pitching', desc: 'นำเสนอผลงานรอบคัดเลือก 10 ทีมสุดท้าย' },
-];
+
 
 /* ═══════════════════════ Component ═══════════════════════ */
 function HomePage() {
@@ -84,10 +79,37 @@ function HomePage() {
     const bannerTrackRef = useRef(null);
     const [navScrolled, setNavScrolled] = useState(false);
     const [bannerMarquee, setBannerMarquee] = useState(false);
+    const [schedulesData, setSchedulesData] = useState(null);
+    const [scheduleLoading, setScheduleLoading] = useState(true);
+    const [scheduleError, setScheduleError] = useState(null);
 
     useEffect(() => {
         const saved = localStorage.getItem('gt_user');
         if (saved) setUser(JSON.parse(saved));
+
+        const fetchSchedules = async () => {
+            try {
+                setScheduleLoading(true);
+                setScheduleError(null);
+                const res = await fetch(apiUrl('/api/events/schedules'));
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.ok && data.data) {
+                        setSchedulesData(data.data);
+                    } else {
+                        setScheduleError('ไม่สามารถโหลดข้อมูลกำหนดการได้');
+                    }
+                } else {
+                    setScheduleError('ไม่สามารถเชื่อมต่อระบบได้');
+                }
+            } catch (err) {
+                console.error('Failed to fetch schedules', err);
+                setScheduleError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+            } finally {
+                setScheduleLoading(false);
+            }
+        };
+        fetchSchedules();
     }, [location]);
 
     /* Observe banner — when it leaves the viewport the pill nav slides up */
@@ -380,15 +402,46 @@ function HomePage() {
                             <p>{config.locale.scheduleDesc}</p>
                         </div>
                         <div className="gt-schedule">
-                            {schedules.map((item, i) => (
-                                <div key={i} className="gt-schedule-card gt-reveal" style={{ transitionDelay: `${i * 80}ms` }}>
-                                    <div className="gt-time">{item.time}</div>
-                                    <div>
-                                        <h3>{item.title}</h3>
-                                        <p>{item.desc}</p>
-                                    </div>
+                            {scheduleLoading ? (
+                                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gt-text-muted)' }}>
+                                    กำลังโหลดข้อมูล...
                                 </div>
-                            ))}
+                            ) : scheduleError ? (
+                                <div style={{ textAlign: 'center', padding: '40px', color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                                    {scheduleError}
+                                </div>
+                            ) : schedulesData && schedulesData.days && schedulesData.days.length > 0 ? (
+                                schedulesData.days.map((day, dIdx) => (
+                                    <div key={dIdx} className="gt-schedule-day-group" style={{ marginBottom: '30px' }}>
+                                        {schedulesData.days.length > 1 && (
+                                            <h3 style={{ marginBottom: '15px', color: 'var(--gt-text-primary)' }}>
+                                                {day.day_name_th || day.day_date}
+                                            </h3>
+                                        )}
+                                        {day.items.map((item, i) => (
+                                            <div key={item.item_id} className="gt-schedule-card gt-reveal active" style={{ transitionDelay: `${i * 80}ms` }}>
+                                                <div className="gt-time">
+                                                    {item.start_time?.substring(0, 5)} - {item.end_time?.substring(0, 5)}
+                                                </div>
+                                                <div>
+                                                    <h3>{item.title_th}</h3>
+                                                    {item.description_th && <p>{item.description_th}</p>}
+                                                    {(item.location_th || item.speaker_th) && (
+                                                        <div className="gt-schedule-meta" style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--gt-text-muted)', display: 'flex', gap: '15px' }}>
+                                                            {item.location_th && <span><Target size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {item.location_th}</span>}
+                                                            {item.speaker_th && <span><Users size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {item.speaker_th}</span>}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gt-text-muted)' }}>
+                                    ไม่มีกำหนดการ
+                                </div>
+                            )}
                         </div>
                     </section>
 

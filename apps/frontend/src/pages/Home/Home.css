@@ -792,7 +792,7 @@ body:has(.gt-page) {
     border-radius: var(--gt-radius);
     padding: 22px 24px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 20px;
     transition: all 0.3s ease;
     position: relative;
