@@ -42,20 +42,7 @@ const coOrganizers = [
     coOrg8, coOrg9, coOrg10, coOrg11, coOrg12, coOrg13,
 ];
 
-// Sponsor logos
-import chatgptLogo from '../../assets/sponsors/ChatGPT.png';
-import claudeLogo from '../../assets/sponsors/Claude Ai.png';
-import geminiLogo from '../../assets/sponsors/Google Ai Gemini.png';
-import grabfoodLogo from '../../assets/sponsors/GrabFood.png';
-import laravelLogo from '../../assets/sponsors/Laravel.png';
-import linemanLogo from '../../assets/sponsors/Line Man.png';
-import pepsiLogo from '../../assets/sponsors/Pepsi.png';
-import shopeeLogo from '../../assets/sponsors/Shopee.png';
-
-const sponsors = [
-    chatgptLogo, claudeLogo, geminiLogo, grabfoodLogo,
-    laravelLogo, linemanLogo, pepsiLogo, shopeeLogo,
-];
+const sponsors = coOrganizers;
 
 /* ─── config (customizable per event) ─── */
 const config = {
