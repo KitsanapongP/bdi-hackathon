@@ -529,9 +529,9 @@ body:has(.gt-page) {
 }
 
 /* --- 5. Hero Section --- */
-.gt-hero {
+section.gt-hero {
     padding-top: 100px;
-    padding-bottom: 60px;
+    padding-bottom: 50px;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -679,7 +679,7 @@ body:has(.gt-page) {
 
 /* --- 7. Section header --- */
 .gt-section {
-    padding-block: 90px;
+    padding-block: 50px;
     position: relative;
     z-index: 2;
 }
@@ -687,7 +687,7 @@ body:has(.gt-page) {
 .gt-section-header {
     text-align: center;
     max-width: 600px;
-    margin: 0 auto 56px;
+    margin: 0 auto 36px;
 }
 
 .gt-section-header h2 {
@@ -845,6 +845,160 @@ body:has(.gt-page) {
     margin: 0;
 }
 
+/* --- 9.5 Prizes & Process --- */
+.gt-prizes {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 1fr;
+    gap: 24px;
+    align-items: center;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.gt-prize-card {
+    background: var(--gt-surface);
+    border: 1px solid var(--gt-border);
+    border-radius: var(--gt-radius);
+    padding: 32px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.35s ease;
+    z-index: 2;
+}
+
+.gt-prize-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 40px -12px var(--gt-primary-glow);
+    border-color: var(--gt-primary);
+}
+
+.gt-prize-card.champion {
+    background: linear-gradient(145deg, var(--gt-surface), var(--gt-surface-alt));
+    border-color: var(--gt-primary);
+    transform: scale(1.05);
+    padding: 40px 24px;
+    box-shadow: 0 8px 32px -12px var(--gt-primary-glow);
+}
+
+.gt-prize-card.champion:hover {
+    transform: scale(1.05) translateY(-8px);
+}
+
+.prize-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    color: var(--gt-primary);
+}
+
+.gt-prize-card.champion .prize-icon {
+    color: #f59e0b;
+    filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.4));
+}
+
+.gt-prize-card h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0 0 12px;
+    color: var(--gt-text);
+}
+
+.gt-prize-card.champion h3 {
+    font-size: 1.4rem;
+    color: var(--gt-primary);
+}
+
+.prize-amount {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--gt-text);
+}
+
+.gt-prize-card.champion .prize-amount {
+    font-size: 2.2rem;
+    background: var(--gt-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.prize-extra {
+    margin-top: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #ec4899;
+    padding: 6px 16px;
+    background: rgba(236, 72, 153, 0.1);
+    border-radius: 99px;
+    display: inline-block;
+}
+
+.gt-process-steps {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+}
+
+.gt-step {
+    background: var(--gt-surface);
+    border: 1px solid var(--gt-border);
+    border-radius: var(--gt-radius);
+    padding: 32px 24px;
+    text-align: center;
+    flex: 1;
+    position: relative;
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+.gt-step:hover {
+    transform: translateY(-4px);
+    border-color: var(--gt-primary);
+    box-shadow: 0 12px 32px -12px var(--gt-primary-glow);
+}
+
+.step-num {
+    width: 48px;
+    height: 48px;
+    background: var(--gt-primary);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0 auto 20px;
+    box-shadow: 0 4px 12px var(--gt-primary-glow);
+}
+
+.gt-step h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: var(--gt-text);
+}
+
+.gt-step p {
+    color: var(--gt-text-muted);
+    font-size: 0.95rem;
+    margin: 0;
+    line-height: 1.6;
+}
+
+.gt-step-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    color: var(--gt-border);
+}
+
 /* --- 10. Footer --- */
 .gt-footer {
     background: var(--gt-footer-bg);
@@ -915,13 +1069,35 @@ body:has(.gt-page) {
 /* --- 11. Reveal / animation --- */
 .gt-reveal {
     opacity: 0;
-    transform: translateY(18px);
-    transition: all 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    transform: translateY(30px);
+    transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .gt-reveal.active {
     opacity: 1;
     transform: translateY(0);
+}
+
+/* Text stagger on reveal */
+.gt-reveal.active h2,
+.gt-reveal.active h3 {
+    animation: gt-text-fade-up 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+.gt-reveal.active p {
+    animation: gt-text-fade-up 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+@keyframes gt-text-fade-up {
+    0% {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* --- 12. Responsive --- */
@@ -1042,6 +1218,30 @@ body:has(.gt-page) {
 
     .gt-marquee {
         gap: 60px;
+    }
+
+    /* New sections responsive */
+    .gt-prizes {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .gt-prize-card {
+        padding: 28px 24px;
+    }
+
+    .gt-process-steps {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .gt-step-arrow {
+        transform: rotate(90deg);
+        padding: 8px 0;
+    }
+
+    .gt-step {
+        padding: 28px 24px;
     }
 }
 

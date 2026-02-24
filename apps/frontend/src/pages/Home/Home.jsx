@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-    Gamepad2,
     Sparkles,
     Users,
     Trophy,
@@ -14,6 +13,11 @@ import {
     LogIn,
     LogOut,
     User,
+    Phone,
+    MapPin,
+    Mail,
+    Facebook,
+    Instagram
 } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 import GameShapes from '../../components/GameShapes';
@@ -51,17 +55,17 @@ const config = {
     },
     locale: {
         nav: ['หน้าแรก', 'เกี่ยวกับ', 'ตารางกิจกรรม', 'ลงทะเบียน'],
-        heroBadge: '🎮 Game Event 2025',
-        heroTitle: 'ปลดปล่อยพลัง สร้างสรรค์เกมของคุณ',
+        heroBadge: '🏆 Hackathon 2026',
+        heroTitle: 'Khon Kaen Public Health Hackathon 2026',
         heroSubtitle:
-            'มาร่วมเป็นส่วนหนึ่งของกิจกรรมสุดยิ่งใหญ่แห่งปี รวมทีมสร้างเกม แข่งขัน และเรียนรู้จากผู้เชี่ยวชาญระดับประเทศ ชิงเงินรางวัลรวมกว่า 100,000 บาท',
+            'Theme "Climate Talent for Public Health Benefits" วันที่ 12 - 13 ธันวาคม 2568 ณ คณะสาธารณสุขศาสตร์ มหาวิทยาลัยขอนแก่น',
         ctaPrimary: 'ลงทะเบียนเลย',
-        ctaSecondary: 'ดูตารางงาน',
+        ctaSecondary: 'ดูกำหนดการ',
         aboutTitle: 'ทำไมต้องร่วมกิจกรรมนี้?',
-        aboutDesc: 'โอกาสที่จะเปลี่ยนแปลงอนาคตของคุณ',
+        aboutDesc: 'โอกาสที่จะพัฒนาตนเองและสร้างนวัตกรรมเพื่อสุขภาพของทุกคน',
         scheduleTitle: 'กำหนดการกิจกรรม',
         scheduleDesc: 'ตารางเวลาของกิจกรรมทั้งหมดตลอดทั้งงาน',
-        footer: '© 2025 Game Event. All rights reserved.',
+        footer: '© 2026 Khon Kaen Public Health Hackathon',
     },
 };
 
@@ -91,21 +95,27 @@ function HomePage() {
             try {
                 setScheduleLoading(true);
                 setScheduleError(null);
-                const res = await fetch(apiUrl('/api/events/schedules'));
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.ok && data.data) {
-                        setSchedulesData(data.data);
-                    } else {
-                        setScheduleError('ไม่สามารถโหลดข้อมูลกำหนดการได้');
-                    }
-                } else {
-                    setScheduleError('ไม่สามารถเชื่อมต่อระบบได้');
-                }
+                // Replace with hardcoded schedule as per plan
+                setSchedulesData({
+                    days: [
+                        {
+                            day_name_th: '12 ธันวาคม 2568 (Day 1)',
+                            items: [
+                                { item_id: 1, start_time: '08:30', end_time: '17:00', title_th: 'Workshop + Factory Visit' }
+                            ]
+                        },
+                        {
+                            day_name_th: '13 ธันวาคม 2568 (Day 2)',
+                            items: [
+                                { item_id: 2, start_time: '08:30', end_time: '17:00', title_th: 'Hackathon Day (Hacking → Pitching → Awards)' }
+                            ]
+                        }
+                    ]
+                });
+                setScheduleLoading(false);
             } catch (err) {
                 console.error('Failed to fetch schedules', err);
                 setScheduleError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
-            } finally {
                 setScheduleLoading(false);
             }
         };
@@ -169,6 +179,7 @@ function HomePage() {
         setUser(null);
         setShowLobby(false);
         setShowProfile(false);
+        window.location.reload();
     };
 
     const scrollTo = (id) => {
@@ -234,7 +245,7 @@ function HomePage() {
             <nav className={`gt-pill-nav ${navScrolled ? 'scrolled' : ''}`}>
                 <div className="gt-pill-bar">
                     <a href="#" className="gt-pill-icon" onClick={(e) => { e.preventDefault(); scrollTo('hero'); }} aria-label="Home">
-                        <Gamepad2 size={20} />
+                        <Rocket size={20} />
                     </a>
                     <div className="gt-pill-links">
                         {config.locale.nav.map((label, i) => {
@@ -323,7 +334,7 @@ function HomePage() {
                     {showLobby && <TeamContent user={user} />}
                     {showProfile && <ProfileContent user={user} />}
                     <div style={{ textAlign: 'center', padding: 20, fontSize: '0.8rem', opacity: 0.6, marginTop: 'auto' }}>
-                        © 2025 Game Event System
+                        © 2026 Khon Kaen Public Health Hackathon
                     </div>
                 </div>
             ) : (
@@ -331,7 +342,7 @@ function HomePage() {
                     {/* Hero */}
                     <section id="hero" className="gt-section gt-hero gt-container gt-reveal">
                         <div className="gt-badge">
-                            <Gamepad2 size={16} /> {config.locale.heroBadge}
+                            <Rocket size={16} /> {config.locale.heroBadge}
                         </div>
                         <h1>{config.locale.heroTitle}</h1>
                         <p className="gt-hero-sub">{config.locale.heroSubtitle}</p>
@@ -345,17 +356,31 @@ function HomePage() {
                         </div>
                     </section>
 
-                    {/* Sponsors Marquee — above About */}
-                    <div className="gt-sponsors-wrapper">
-                        <div className="gt-container" style={{ textAlign: 'center', marginBottom: 24, color: 'var(--gt-text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>
-                            ผู้สนับสนุนหลักอย่างเป็นทางการ
+                    {/* Prize Highlights */}
+                    <section id="prizes" className="gt-section gt-container">
+                        <div className="gt-section-header gt-reveal">
+                            <h2>รางวัลระดับประเทศ</h2>
+                            <p>มูลค่ารวมกว่า 135,000 บาท พร้อมถ้วยพระราชทาน</p>
                         </div>
-                        <div className="gt-marquee">
-                            {[...sponsors, ...sponsors].map((logo, i) => (
-                                <img key={i} src={logo} alt={`Sponsor ${i + 1}`} className="gt-sponsor-logo" />
-                            ))}
+                        <div className="gt-prizes gt-reveal">
+                            <div className="gt-prize-card runner-up">
+                                <div className="prize-icon"><Trophy size={32} /></div>
+                                <h3>รองชนะเลิศอันดับ 1</h3>
+                                <div className="prize-amount">40,000 บาท</div>
+                            </div>
+                            <div className="gt-prize-card champion">
+                                <div className="prize-icon"><Trophy size={48} /></div>
+                                <h3>รางวัลชนะเลิศ</h3>
+                                <div className="prize-amount">70,000 บาท</div>
+                                <div className="prize-extra">+ ถ้วยพระราชทาน</div>
+                            </div>
+                            <div className="gt-prize-card runner-up">
+                                <div className="prize-icon"><Trophy size={32} /></div>
+                                <h3>รองชนะเลิศอันดับ 2</h3>
+                                <div className="prize-amount">25,000 บาท</div>
+                            </div>
                         </div>
-                    </div>
+                    </section>
 
                     {/* About */}
                     <section id="about" className="gt-section gt-container">
@@ -366,31 +391,58 @@ function HomePage() {
                         <div className="gt-bento">
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-purple"><Sparkles color="#fff" size={24} /></div>
-                                <h3>สร้างสรรค์เกมของคุณ</h3>
-                                <p>พัฒนาทักษะการเขียนเกม ตั้งแต่ level design จนถึง game mechanics ที่สนุกและน่าสนใจ</p>
+                                <h3>นวัตกรรมสาธารณสุข</h3>
+                                <p>สร้างสรรค์ผลงานที่ช่วยแก้ปัญหาสาธารณสุขและสิ่งแวดล้อมอย่างยั่งยืน</p>
                             </div>
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-pink"><Users color="#fff" size={24} /></div>
-                                <h3>เครือข่าย Game Dev</h3>
-                                <p>พบปะกับนักพัฒนาเกม ศิลปิน และผู้เชี่ยวชาญจากวงการเกมทั่วประเทศ</p>
+                                <h3>ทีมข้ามศาสตร์</h3>
+                                <p>ทำงานร่วมกับเพื่อนจากหลากหลายคณะและมหาวิทยาลัยทั่วประเทศ</p>
                             </div>
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-blue"><Rocket color="#fff" size={24} /></div>
-                                <h3>Workshop จากมืออาชีพ</h3>
-                                <p>เรียนรู้เทคนิคการทำเกมจากผู้เชี่ยวชาญระดับ Industry Leaders ที่พร้อมแชร์ประสบการณ์</p>
+                                <h3>Workshop & Mentoring</h3>
+                                <p>รับคำแนะนำจากการอบรมเข้มข้น มุ่งเป้าในการ Pitching ให้เข้าเป้ากระแทกใจ</p>
                             </div>
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-orange"><Trophy color="#fff" size={24} /></div>
-                                <h3>รางวัลรวม 100,000 บาท</h3>
-                                <p>ชิงรางวัลใหญ่และโอกาสในการนำเสนอผลงานต่อ Publisher ชั้นนำ</p>
+                                <h3>รางวัล 135,000 บาท + ถ้วยพระราชทาน</h3>
+                                <p>ชิงเงินรางวัลรวมกว่า 135,000 บาท พร้อมถ้วยพระราชทาน</p>
                             </div>
                             <div className="gt-bento-card large gt-reveal">
                                 <div className="gt-bento-icon gt-icon-teal"><Target color="#fff" size={24} /></div>
-                                <h3>Game Event Series: ชุดกิจกรรมที่ครบครัน</h3>
+                                <h3>Theme: Climate Talent for Public Health Benefits</h3>
                                 <p>
-                                    ไม่ใช่แค่ Hackathon แต่เป็นชุดกิจกรรมต่อเนื่อง ตั้งแต่ Workshop, Game Jam,
-                                    จนถึง Demo Day สำหรับนำเสนอเกมต่อ Publisher ชั้นนำของไทย
+                                    ร่วมเป็นส่วนหนึ่งในการพัฒนาคนรุ่นใหม่ที่มีความรู้ความเข้าใจด้านการเปลี่ยนแปลงสภาพภูมิอากาศ
+                                    เพื่อสร้างประโยชน์ต่อระบบสาธารณสุขไทย
                                 </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* 3-Step Process */}
+                    <section id="process" className="gt-section gt-container" style={{ paddingTop: '20px' }}>
+                        <div className="gt-section-header gt-reveal">
+                            <h2>ขั้นตอนการแข่งขัน</h2>
+                            <p>เตรียมตัวเพื่อเป็นผู้ชนะใน Hackathon</p>
+                        </div>
+                        <div className="gt-process-steps gt-reveal">
+                            <div className="gt-step">
+                                <div className="step-num">01</div>
+                                <h3>คัดกรองคุณสมบัติ</h3>
+                                <p>ตรวจสอบคุณสมบัติและรับสมัคร</p>
+                            </div>
+                            <div className="gt-step-arrow"><ArrowRight size={24} /></div>
+                            <div className="gt-step">
+                                <div className="step-num">02</div>
+                                <h3>พิจารณารอบคัดเลือก</h3>
+                                <p>คัดเลือก 12 ทีม เข้าสู่รอบสุดท้าย</p>
+                            </div>
+                            <div className="gt-step-arrow"><ArrowRight size={24} /></div>
+                            <div className="gt-step">
+                                <div className="step-num">03</div>
+                                <h3>ตัดสินรอบ Final</h3>
+                                <p>แข่งขันและนำเสนอผลงาน (Pitching)</p>
                             </div>
                         </div>
                     </section>
@@ -446,14 +498,28 @@ function HomePage() {
                     </section>
 
                     {/* Register CTA */}
-                    <section id="register" className="gt-section gt-container" style={{ textAlign: 'center', paddingBottom: 40 }}>
-                        <div className="gt-reveal">
-                            <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: 16 }}>พร้อมเข้าร่วมแล้วหรือยัง?</h2>
-                            <Link to="/home/register" className="gt-btn gt-btn-primary" style={{ fontSize: '1.05rem', padding: '15px 36px' }}>
-                                ลงทะเบียนเลย <ArrowRight size={20} />
-                            </Link>
+                    {!user && (
+                        <section id="register" className="gt-section gt-container" style={{ textAlign: 'center', paddingBottom: 40 }}>
+                            <div className="gt-reveal">
+                                <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: 16 }}>พร้อมเข้าร่วมแล้วหรือยัง?</h2>
+                                <Link to="/home/register" className="gt-btn gt-btn-primary" style={{ fontSize: '1.05rem', padding: '15px 36px' }}>
+                                    ลงทะเบียนเลย <ArrowRight size={20} />
+                                </Link>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Sponsors Marquee — Moved to bottom */}
+                    <div className="gt-sponsors-wrapper">
+                        <div className="gt-container" style={{ textAlign: 'center', marginBottom: 24, color: 'var(--gt-text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>
+                            ผู้สนับสนุนหลักอย่างเป็นทางการ
                         </div>
-                    </section>
+                        <div className="gt-marquee">
+                            {[...sponsors, ...sponsors].map((logo, i) => (
+                                <img key={i} src={logo} alt={`Sponsor ${i + 1}`} className="gt-sponsor-logo" />
+                            ))}
+                        </div>
+                    </div>
 
                     {/* Footer */}
                     <footer className="gt-footer">
@@ -461,23 +527,37 @@ function HomePage() {
                             <div className="gt-footer-inner">
                                 <div>
                                     <div className="gt-logo" style={{ marginBottom: 14 }}>
-                                        <Gamepad2 size={20} /> GameEvent
+                                        <Rocket size={20} /> Khon Kaen Public Health Hackathon
                                     </div>
-                                    <p style={{ maxWidth: 300, color: 'var(--gt-footer-text)', margin: 0, fontSize: '0.9rem' }}>
-                                        Building the future of gaming through innovation and friendly competition.
+                                    <p style={{ maxWidth: 350, color: 'var(--gt-footer-text)', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
+                                        <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px' }} />
+                                        คณะสาธารณสุขศาสตร์ ม.ขอนแก่น<br />
+                                        <Phone size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px', marginTop: '8px' }} />
+                                        08 1561 6471<br />
+                                        <Mail size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px', marginTop: '8px' }} />
+                                        niphatthra.the@mahidol.ac.th
                                     </p>
                                 </div>
                                 <div className="gt-footer-cols">
                                     <div className="gt-footer-col">
-                                        <h4>Event</h4>
-                                        <a href="#">Schedule</a>
-                                        <a href="#">Speakers</a>
-                                        <a href="#">Sponsors</a>
+                                        <h4>Quick Links</h4>
+                                        <a href="#">คุณสมบัติ</a>
+                                        <a href="#">กำหนดการ</a>
+                                        <a href="#">รางวัล</a>
                                     </div>
                                     <div className="gt-footer-col">
-                                        <h4>Legal</h4>
-                                        <a href="#">Privacy</a>
-                                        <a href="#">Terms</a>
+                                        <h4>Support</h4>
+                                        <a href="#">ติดต่อสอบถาม</a>
+                                        <a href="#">FAQs</a>
+                                    </div>
+                                    <div className="gt-footer-col">
+                                        <h4>Follow us</h4>
+                                        <a href="https://www.facebook.com/hackathonthailand" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Facebook size={16} /> Facebook
+                                        </a>
+                                        <a href="https://www.instagram.com/hackathonth" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Instagram size={16} /> Instagram
+                                        </a>
                                     </div>
                                 </div>
                             </div>
