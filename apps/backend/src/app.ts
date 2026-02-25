@@ -14,6 +14,7 @@ import { consentRoutes } from './modules/consent/consent.routes.js';
 import { userRoutes } from './modules/user/user.routes.js';
 import { eventsRoutes } from './modules/events/events.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
+import { teamsRoutes } from './modules/teams/teams.routes.js';
 
 export type AppContext = { env: Env; db: DB };
 
@@ -60,6 +61,7 @@ export function buildApp(ctx: AppContext) {
   app.register(userRoutes, { prefix: '/api/user' });
   app.register(eventsRoutes, { prefix: '/api/events' });
   app.register(adminRoutes, { prefix: '/api/admin' });
+  app.register(teamsRoutes, { prefix: '/api/teams' });
 
   app.setErrorHandler((err, _req, reply) => {
     app.log.error(err);
