@@ -31,3 +31,20 @@ VITE_API_BASE_URL=https://api.your-domain.com
 ```
 
 The app will build request URLs as `${VITE_API_BASE_URL}/api/...`.
+
+## SPA routing on refresh (fixes 404 on `/home`)
+
+If users open a deep link like `/home` directly, the web server must return `index.html` so React Router can handle the route.
+
+This project now includes:
+
+- `public/.htaccess` for Apache deployments.
+- `public/_redirects` for Netlify-style deployments.
+
+If your production host is Nginx, add an equivalent fallback:
+
+```nginx
+location / {
+  try_files $uri $uri/ /index.html;
+}
+```
