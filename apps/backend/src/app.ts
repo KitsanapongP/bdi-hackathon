@@ -13,6 +13,7 @@ import { sysConfigRoutes } from './modules/sys-config/sys-config.routes.js';
 import { consentRoutes } from './modules/consent/consent.routes.js';
 import { userRoutes } from './modules/user/user.routes.js';
 import { eventsRoutes } from './modules/events/events.routes.js';
+import adminRoutes from './modules/admin/admin.routes.js';
 
 export type AppContext = { env: Env; db: DB };
 
@@ -58,6 +59,7 @@ export function buildApp(ctx: AppContext) {
   app.register(consentRoutes, { prefix: '/api/consent' });
   app.register(userRoutes, { prefix: '/api/user' });
   app.register(eventsRoutes, { prefix: '/api/events' });
+  app.register(adminRoutes, { prefix: '/api/admin' });
 
   app.setErrorHandler((err, _req, reply) => {
     app.log.error(err);
