@@ -176,6 +176,10 @@ export async function getPublicTeams(db: DB, visibility?: string) {
     return repo.getPublicTeams(db, visibility);
 }
 
+export async function getTeamIdByInviteCode(db: DB, inviteCode: string) {
+    return repo.getTeamIdByInviteCode(db, inviteCode);
+}
+
 export async function sendInvitation(db: DB, teamId: number, leaderUserId: number, inviteeUserId: number) {
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);

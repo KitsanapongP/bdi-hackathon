@@ -13,6 +13,9 @@ export function createDB(env: Env): DB {
     waitForConnections: true,
     connectionLimit: 10,
     namedPlaceholders: true,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000,
+    connectTimeout: 20000,
   });
 }
 

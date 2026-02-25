@@ -15,6 +15,10 @@ export const requestJoinSchema = z.object({
     inviteCode: z.string().optional(), // For joining private teams via code
 });
 
+export const joinByCodeSchema = z.object({
+    inviteCode: z.string().min(1, 'ต้องกรอกรหัสเข้าร่วมทีม'),
+});
+
 export const respondJoinSchema = z.object({
     status: z.enum(['approved', 'rejected']),
     reason: z.string().optional(),

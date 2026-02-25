@@ -62,7 +62,8 @@ export async function getTeamMembers(db: DB, teamId: number): Promise<TeamMember
 }
 
 export async function getPublicTeams(db: DB, visibility?: string): Promise<TeamRow[]> {
-    let sql = `SELECT * FROM team_teams WHERE deleted_at IS NULL`;
+    let sql = `SELECT t.*, (SELECT COUNT(*) FROM team_members m WHERE m.team_id = t.team_id AND m.member_status = 'active') AS member_count 
+               FROM team_teams t WHERE t.deleted_at IS NULL`;
     const params: any = {};
     if (visibility) {
         sql += ` AND visibility = :visibility`;
@@ -96,6 +97,14 @@ export async function getActiveTeamCode(db: DB, teamId: number): Promise<TeamCod
         WHERE team_id = :teamId AND is_active = 1 LIMIT 1
         `, { teamId });
     return (rows[0] as TeamCodeRow | undefined) ?? null;
+}
+
+export async function getTeamIdByInviteCode(db: DB, inviteCode: string): Promise<number | null> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT team_id FROM team_team_codes 
+        WHERE invite_code = :inviteCode AND is_active = 1 LIMIT 1
+    `, { inviteCode });
+    return (rows[0] as { team_id: number } | undefined)?.team_id ?? null;
 }
 
 export async function createJoinRequest(db: DB, data: {

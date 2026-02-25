@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { createTeamSchema, getTeamsSchema, requestJoinSchema, respondJoinSchema, createInvitationSchema, respondInvitationSchema } from './teams.schema.js';
+import { createTeamSchema, getTeamsSchema, requestJoinSchema, respondJoinSchema, createInvitationSchema, respondInvitationSchema, joinByCodeSchema } from './teams.schema.js';
 import * as service from './teams.service.js';
 import { ok } from '../../shared/response.js';
 import { AppError } from '../../shared/errors.js';
@@ -172,6 +172,27 @@ export async function handleRespondInvitation(req: FastifyRequest<{ Params: { in
     try {
         const result = await service.respondToInvitation(req.server.ctx.db, invitationId, user.userId, parsed.data.status);
         return reply.send(ok(result, 'ดำเนินการสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleJoinByCode(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = joinByCodeSchema.safeParse(req.body);
+    if (!parsed.success) {
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+    }
+    const user = req.user as JwtPayload;
+    try {
+        const teamId = await service.getTeamIdByInviteCode(req.server.ctx.db, parsed.data.inviteCode);
+        if (!teamId) {
+            return reply.status(404).send({ ok: false, message: 'รหัสอ้างอิงไม่ถูกต้อง หรือหมดอายุแล้ว' });
+        }
+        const result = await service.submitJoinRequest(req.server.ctx.db, teamId, user.userId, parsed.data.inviteCode);
+        return reply.status(201).send(ok(result, 'ส่งคำขอเข้าร่วมทีมสำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 import { MOCK_TEAMS, TEAM_STATUS_CONFIG } from './mockData';
+import { apiUrl } from '../../lib/api';
 import './Team.css';
 import './Register.css';
 
@@ -62,11 +63,29 @@ function TeamContent({ user }) {
 
     // In a real app, this would be fetched from the API
     // GET /api/teams?visibility=public
-    const [publicTeams, setPublicTeams] = useState([
-        { id: '2004', code: 'TM2004', name: 'ทีมแมวเหมียว', memberCount: 1 },
-        { id: '2005', code: 'TM2005', name: 'ทีมสายฟ้า', memberCount: 1 },
-        { id: '2006', code: 'TM2006', name: 'ทีมนกฮูก', memberCount: 1 }
-    ]);
+    const [publicTeams, setPublicTeams] = useState([]);
+
+    useEffect(() => {
+        if (activeView === 'browse') {
+            const fetchTeams = async () => {
+                try {
+                    const res = await fetch(apiUrl('/api/teams?visibility=public'), { credentials: 'include' });
+                    const data = await res.json();
+                    if (data.ok) {
+                        setPublicTeams(data.data.map(t => ({
+                            id: t.team_id,
+                            name: t.team_name_th,
+                            code: t.team_code,
+                            memberCount: t.member_count || 1
+                        })));
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch public teams', e);
+                }
+            };
+            fetchTeams();
+        }
+    }, [activeView]);
 
     useEffect(() => {
         if (user?.hasTeam && user?.teamId) {
@@ -82,25 +101,47 @@ function TeamContent({ user }) {
         return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
-    const handleCreateTeam = () => {
-        const saved = localStorage.getItem('gt_user');
-        if (!saved) return;
-        const u = JSON.parse(saved);
-        const updatedUser = { ...u, hasTeam: true, teamId: 'TM001', role: 'leader' };
-        localStorage.setItem('gt_user', JSON.stringify(updatedUser));
-        window.location.reload();
+    const handleCreateTeam = async () => {
+        if (!createName.trim()) return;
+        try {
+            const res = await fetch(apiUrl('/api/teams'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    teamNameTh: createName,
+                    teamNameEn: createName,
+                    visibility: createPublic ? 'public' : 'private'
+                })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                window.location.reload();
+            } else {
+                alert(data.message || 'เกิดข้อผิดพลาดในการสร้างทีม');
+            }
+        } catch (e) {
+            alert('เกิดข้อผิดพลาด: ' + e.message);
+        }
     };
 
-    const handleJoinTeam = () => {
-        const saved = localStorage.getItem('gt_user');
-        if (!saved) return;
-        if (joinCode === 'TM001') {
-            const u = JSON.parse(saved);
-            const updatedUser = { ...u, hasTeam: true, teamId: joinCode, role: 'member' };
-            localStorage.setItem('gt_user', JSON.stringify(updatedUser));
-            window.location.reload();
-        } else {
-            alert('ไม่พบทีมที่มีรหัสนี้ (ลอง: TM001)');
+    const handleJoinTeam = async () => {
+        if (!joinCode.trim()) return;
+        try {
+            const res = await fetch(apiUrl('/api/teams/join-by-code'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ inviteCode: joinCode })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                window.location.reload();
+            } else {
+                alert(data.message || 'เกิดข้อผิดพลาดในการเข้าร่วมทีม');
+            }
+        } catch (e) {
+            alert('เกิดข้อผิดพลาด: ' + e.message);
         }
     };
 
