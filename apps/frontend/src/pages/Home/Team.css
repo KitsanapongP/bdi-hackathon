@@ -448,6 +448,10 @@
     line-height: 1.6;
 }
 
+.gl-form-card {
+    padding: 36px 32px;
+}
+
 .gl-info-card .gl-date {
     font-size: 0.72rem;
     color: var(--gl-text-dim);
@@ -855,31 +859,317 @@
     opacity: 0.7;
 }
 
-.gl-no-team h3 {
-    margin: 0;
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: var(--gl-text);
-    letter-spacing: 0.3px;
+.gl-no-team-header {
+    text-align: center;
+    margin-bottom: 24px;
 }
 
-.gl-no-team p {
+.gl-no-team-header h3 {
     margin: 0;
-    font-size: 0.92rem;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--gl-text);
+    letter-spacing: 0.5px;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+}
+
+.gl-no-team-header p {
+    margin: 8px 0 0;
+    font-size: 1rem;
     color: var(--gl-text-dim);
-    max-width: 360px;
+    max-width: 480px;
+    line-height: 1.6;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LOBBY CHOICE CARDS
+   ═══════════════════════════════════════════════════════════ */
+.gl-lobby-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 800px;
+    margin-top: 10px;
+}
+
+.gl-lobby-card {
+    background: var(--gl-card);
+    border: 3px solid var(--gl-border);
+    border-radius: var(--gl-radius-xl);
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 0 rgba(0, 0, 0, 0.1);
+}
+
+.gl-lobby-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--gl-primary);
+    box-shadow: 0 16px 0 rgba(0, 0, 0, 0.1), 0 0 20px rgba(var(--gl-primary-rgb), 0.3);
+}
+
+.gl-lobby-card:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.gl-lobby-card-icon {
+    width: 72px;
+    height: 72px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gl-text);
+    transition: all 0.3s ease;
+}
+
+.gl-lobby-card:hover .gl-lobby-card-icon {
+    background: var(--gl-primary);
+    color: white;
+    transform: scale(1.1) rotate(5deg);
+}
+
+.gl-lobby-card h4 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gl-text);
+}
+
+.gl-lobby-card p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--gl-text-dim);
     line-height: 1.5;
 }
 
-.gl-no-team-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 12px;
-    flex-wrap: wrap;
-    justify-content: center;
+/* Specific colors for specific cards to match Gartic's playful look */
+.gl-lobby-card.create-card:hover {
+    border-color: #ec4899;
 }
 
-.gl-no-team-actions .gt-btn {
-    padding: 12px 28px;
-    font-size: 0.95rem;
+.gl-lobby-card.create-card:hover .gl-lobby-card-icon {
+    background: #ec4899;
+}
+
+.gl-lobby-card.join-card:hover {
+    border-color: #3b82f6;
+}
+
+.gl-lobby-card.join-card:hover .gl-lobby-card-icon {
+    background: #3b82f6;
+}
+
+.gl-lobby-card.browse-card:hover {
+    border-color: #10b981;
+}
+
+.gl-lobby-card.browse-card:hover .gl-lobby-card-icon {
+    background: #10b981;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BROWSE PUBLIC TEAMS MODAL STYLES
+   ═══════════════════════════════════════════════════════════ */
+.gl-browse-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 8px;
+    margin-top: 16px;
+}
+
+.gl-browse-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.gl-browse-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+}
+
+.gl-browse-list::-webkit-scrollbar-thumb {
+    background: var(--gl-border);
+    border-radius: 4px;
+}
+
+.gl-browse-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background: var(--gl-bg);
+    border: 2px solid var(--gl-border);
+    border-radius: var(--gl-radius-lg);
+    transition: all 0.2s ease;
+}
+
+.gl-browse-item:hover {
+    border-color: var(--gl-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.gl-browse-item-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.gl-browse-item-avatar {
+    width: 48px;
+    height: 48px;
+    background: var(--gl-card);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: var(--gl-text);
+    border: 2px solid var(--gl-border);
+}
+
+.gl-browse-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.gl-browse-item-name {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gl-text);
+}
+
+.gl-browse-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85rem;
+    color: var(--gl-text-dim);
+}
+
+.gl-browse-item-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.gl-browse-item-action button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+}
+
+.gl-team-search {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.gl-team-search input {
+    padding-left: 40px;
+}
+
+.gl-team-search svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gl-text-dim);
+}
+
+/* Custom scrollbar for search list */
+.gl-browse-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.gl-browse-list::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 12px 0;
+}
+
+.gl-browse-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+.gl-browse-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.gl-fade-in-up {
+    animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (max-width: 768px) {
+    .gl-form-card {
+        padding: 24px 20px !important;
+    }
+
+    .gl-frame {
+        padding: 24px 16px !important;
+        margin: 16px !important;
+        border-radius: 20px !important;
+    }
+
+    .gl-lobby-cards {
+        gap: 12px;
+    }
+
+    .gl-lobby-card {
+        padding: 20px 16px;
+        background: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .gl-lobby-card-icon {
+        width: 56px;
+        height: 56px;
+    }
+
+    .gl-no-team-header h3 {
+        font-size: 1.5rem;
+    }
+
+    .gl-bg-shapes {
+        opacity: 0.15;
+    }
+
+    .gl-browse-item {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px;
+    }
+
+    .gl-browse-item-action {
+        width: 100%;
+    }
+
+    .gl-browse-item-action button {
+        width: 100%;
+        padding: 12px 16px;
+    }
 }
