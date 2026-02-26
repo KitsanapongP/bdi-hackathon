@@ -185,18 +185,6 @@ function HomePage() {
         return currency ? `${formatted} ${currency}` : formatted;
     };
 
-    const displayRewards = (() => {
-        if (rewards.length !== 3) return rewards;
-
-        const championReward = rewards.find((reward) => reward.rank === '1');
-        if (!championReward) return rewards;
-
-        const otherRewards = rewards.filter((reward) => reward.id !== championReward.id);
-        if (otherRewards.length !== 2) return rewards;
-
-        return [otherRewards[0], championReward, otherRewards[1]];
-    })();
-
     /* Observe banner — when it leaves the viewport the pill nav slides up */
     useEffect(() => {
         const banner = bannerRef.current;
@@ -435,20 +423,20 @@ function HomePage() {
                     <section id="prizes" className="gt-section gt-container">
                         <div className="gt-section-header gt-reveal">
                             <h2>รางวัลระดับประเทศ</h2>
+                            <p>เงินรางวัลจากฐานข้อมูล content_rewards</p>
                         </div>
                         <div className="gt-prizes gt-reveal">
                             {rewardsLoading ? (
-                                <p className="gt-prize-status">กำลังโหลดข้อมูลรางวัล...</p>
+                                <p>กำลังโหลดข้อมูลรางวัล...</p>
                             ) : rewardsError ? (
-                                <p className="gt-prize-status">{rewardsError}</p>
-                            ) : displayRewards.length === 0 ? (
-                                <p className="gt-prize-status">ยังไม่มีข้อมูลรางวัล</p>
+                                <p>{rewardsError}</p>
+                            ) : rewards.length === 0 ? (
+                                <p>ยังไม่มีข้อมูลรางวัล</p>
                             ) : (
-                                displayRewards.map((reward) => {
+                                rewards.map((reward, index) => {
                                     const amountLabel = formatPrizeAmount(reward.amount, reward.currency);
-                                    const isChampion = reward.rank === '1';
-                                    const cardClass = isChampion ? 'champion' : 'runner-up';
-                                    const iconSize = isChampion ? 48 : 32;
+                                    const cardClass = index === 0 ? 'champion' : 'runner-up';
+                                    const iconSize = index === 0 ? 48 : 32;
 
                                     return (
                                         <div key={reward.id} className={`gt-prize-card ${cardClass}`}>
