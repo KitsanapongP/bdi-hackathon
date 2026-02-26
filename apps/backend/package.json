@@ -19,6 +19,7 @@
     "dotenv": "^17.3.1",
     "fastify": "^5.7.4",
     "mysql2": "^3.17.3",
+    "pino-roll": "^4.0.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

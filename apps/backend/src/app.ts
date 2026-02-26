@@ -15,6 +15,7 @@ import { userRoutes } from './modules/user/user.routes.js';
 import { eventsRoutes } from './modules/events/events.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
 import { teamsRoutes } from './modules/teams/teams.routes.js';
+import { sysLogsRoutes } from './modules/sys-logs/sys-logs.routes.js';
 
 export type AppContext = { env: Env; db: DB };
 
@@ -22,11 +23,41 @@ export function buildApp(ctx: AppContext) {
   const app = Fastify({
     logger: {
       transport: {
-        target: 'pino-pretty',
-        options: {
-          translateTime: 'HH:MM:ss',
-          singleLine: true,
-          ignore: 'pid,hostname',
+        targets: [
+          {
+            target: 'pino-pretty',
+            options: {
+              translateTime: 'HH:MM:ss',
+              singleLine: true,
+              ignore: 'pid,hostname',
+            },
+          },
+          {
+            target: 'pino-roll',
+            options: {
+              file: 'logs/app',
+              size: '10m',
+              frequency: 'daily',
+              mkdir: true,
+            },
+          },
+        ],
+      },
+      serializers: {
+        req(request) {
+          return {
+            method: request.method,
+            url: request.url,
+            hostname: request.hostname,
+            remoteAddress: request.ip,
+            query: request.query,
+            params: request.params,
+          };
+        },
+        res(reply) {
+          return {
+            statusCode: reply.statusCode,
+          };
         },
       },
     },
@@ -62,6 +93,27 @@ export function buildApp(ctx: AppContext) {
   app.register(eventsRoutes, { prefix: '/api/events' });
   app.register(adminRoutes, { prefix: '/api/admin' });
   app.register(teamsRoutes, { prefix: '/api/teams' });
+  app.register(sysLogsRoutes, { prefix: '/api/sys-logs' });
+
+  // Log incoming request body
+  app.addHook('preHandler', async (request, reply) => {
+    if (request.body) {
+      request.log.info({ body: request.body }, 'Request Payload');
+    }
+  });
+
+  // Log outgoing response body
+  app.addHook('onSend', async (request, reply, payload) => {
+    // Only log JSON payloads to avoid logging huge files/HTML
+    if (typeof payload === 'string' && payload.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(payload);
+        request.log.info({ response: parsed }, 'Response Payload');
+      } catch (err) {
+        request.log.info({ response: payload }, 'Response Payload (Raw)');
+      }
+    }
+  });
 
   app.setErrorHandler((err, _req, reply) => {
     app.log.error(err);
