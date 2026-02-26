@@ -56,9 +56,9 @@ const config = {
     locale: {
         nav: ['หน้าแรก', 'เกี่ยวกับ', 'ตารางกิจกรรม', 'ลงทะเบียน'],
         heroBadge: '🏆 Hackathon 2026',
-        heroTitle: 'Khon Kaen Public Health Hackathon 2026',
+        heroTitle: 'Khon Kaen Intelligent Living Hackathon 2026',
         heroSubtitle:
-            'Theme "Climate Talent for Public Health Benefits" วันที่ 12 - 13 ธันวาคม 2568 ณ คณะสาธารณสุขศาสตร์ มหาวิทยาลัยขอนแก่น',
+            'โครงการกิจกรรมส่งเสริมการพัฒนานวัตกรรมและทักษะด้านการประยุกต์ใช้เทคโนโลยี\nการวิเคราะห์ข้อมูลและปัญญาประดิษฐ์ ประจำปี 2569\nIntelligent Living เพื่อส่งเสริมสุขภาพและคุณภาพชีวิตอย่างยั่งยืน\nณ อุทยานวิทยาศาสตร์ ภาคตะวันออกเฉียงเหนือ มหาวิทยาลัยขอนแก่น',
         ctaPrimary: 'ลงทะเบียนเลย',
         ctaSecondary: 'ดูกำหนดการ',
         aboutTitle: 'ทำไมต้องร่วมกิจกรรมนี้?',
@@ -184,6 +184,18 @@ function HomePage() {
         const formatted = amount.toLocaleString('th-TH');
         return currency ? `${formatted} ${currency}` : formatted;
     };
+
+    const displayRewards = (() => {
+        if (rewards.length !== 3) return rewards;
+
+        const championReward = rewards.find((reward) => reward.rank === '1');
+        if (!championReward) return rewards;
+
+        const otherRewards = rewards.filter((reward) => reward.id !== championReward.id);
+        if (otherRewards.length !== 2) return rewards;
+
+        return [otherRewards[0], championReward, otherRewards[1]];
+    })();
 
     /* Observe banner — when it leaves the viewport the pill nav slides up */
     useEffect(() => {
@@ -407,8 +419,8 @@ function HomePage() {
                         <div className="gt-badge">
                             <Rocket size={16} /> {config.locale.heroBadge}
                         </div>
-                        <h1>{config.locale.heroTitle}</h1>
-                        <p className="gt-hero-sub">{config.locale.heroSubtitle}</p>
+                        <h1 style={{ whiteSpace: 'pre-line' }}>{config.locale.heroTitle}</h1>
+                        {config.locale.heroSubtitle && <p className="gt-hero-sub" style={{ whiteSpace: 'pre-line' }}>{config.locale.heroSubtitle}</p>}
                         <div className="gt-hero-actions">
                             <Link to="/home/register" className="gt-btn gt-btn-primary">
                                 {config.locale.ctaPrimary} <ArrowRight size={18} />
@@ -423,20 +435,20 @@ function HomePage() {
                     <section id="prizes" className="gt-section gt-container">
                         <div className="gt-section-header gt-reveal">
                             <h2>รางวัลระดับประเทศ</h2>
-                            <p>เงินรางวัลจากฐานข้อมูล content_rewards</p>
                         </div>
                         <div className="gt-prizes gt-reveal">
                             {rewardsLoading ? (
-                                <p>กำลังโหลดข้อมูลรางวัล...</p>
+                                <p className="gt-prize-status">กำลังโหลดข้อมูลรางวัล...</p>
                             ) : rewardsError ? (
-                                <p>{rewardsError}</p>
-                            ) : rewards.length === 0 ? (
-                                <p>ยังไม่มีข้อมูลรางวัล</p>
+                                <p className="gt-prize-status">{rewardsError}</p>
+                            ) : displayRewards.length === 0 ? (
+                                <p className="gt-prize-status">ยังไม่มีข้อมูลรางวัล</p>
                             ) : (
-                                rewards.map((reward, index) => {
+                                displayRewards.map((reward) => {
                                     const amountLabel = formatPrizeAmount(reward.amount, reward.currency);
-                                    const cardClass = index === 0 ? 'champion' : 'runner-up';
-                                    const iconSize = index === 0 ? 48 : 32;
+                                    const isChampion = reward.rank === '1';
+                                    const cardClass = isChampion ? 'champion' : 'runner-up';
+                                    const iconSize = isChampion ? 48 : 32;
 
                                     return (
                                         <div key={reward.id} className={`gt-prize-card ${cardClass}`}>
