@@ -123,27 +123,25 @@ function HomePage() {
             try {
                 setScheduleLoading(true);
                 setScheduleError(null);
-                // Replace with hardcoded schedule as per plan
-                setSchedulesData({
-                    days: [
-                        {
-                            day_name_th: '12 ธันวาคม 2568 (Day 1)',
-                            items: [
-                                { item_id: 1, start_time: '08:30', end_time: '17:00', title_th: 'Workshop + Factory Visit' }
-                            ]
-                        },
-                        {
-                            day_name_th: '13 ธันวาคม 2568 (Day 2)',
-                            items: [
-                                { item_id: 2, start_time: '08:30', end_time: '17:00', title_th: 'Hackathon Day (Hacking → Pitching → Awards)' }
-                            ]
-                        }
-                    ]
+                const response = await fetch(apiUrl('/api/events/schedules'), {
+                    credentials: 'include',
                 });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch schedules: ${response.status}`);
+                }
+
+                const payload = await response.json();
+                if (!payload?.ok) {
+                    throw new Error(payload?.message || 'Failed to fetch schedules');
+                }
+
+                setSchedulesData(payload.data);
                 setScheduleLoading(false);
             } catch (err) {
                 console.error('Failed to fetch schedules', err);
                 setScheduleError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+                setSchedulesData(null);
                 setScheduleLoading(false);
             }
         };
