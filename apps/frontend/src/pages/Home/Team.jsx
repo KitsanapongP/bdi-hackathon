@@ -116,10 +116,11 @@ function TeamContent({ user }) {
                         });
 
                         setTeam({
-                            id: dbTeam.team_code,
+                            id: dbTeam.team_id,
                             name: dbTeam.team_name_th,
                             status: 'approved',
                             size: mappedMembers.length,
+                            code: dbTeam.team_code || '------',
                             inviteCode: activeCode || '------',
                             members: mappedMembers,
                             announcements: [],
@@ -398,8 +399,11 @@ function TeamContent({ user }) {
     const statusInfo = TEAM_STATUS_CONFIG[team.status] || TEAM_STATUS_CONFIG.pending;
     const emptySlots = Math.max(0, MAX_MEMBERS - team.members.length);
 
+    const teamLobbyCode = team.code || '------';
+    const teamInviteCode = team.inviteCode || '------';
+
     const copyCode = () => {
-        navigator.clipboard.writeText(team.code).then(() => {
+        navigator.clipboard.writeText(teamInviteCode).then(() => {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         });
@@ -588,10 +592,16 @@ function TeamContent({ user }) {
                     </div>
                 </div>
                 <div className="gl-info-card">
+                    <label style={{ display: 'block', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--gl-text-dim)', marginBottom: 8, fontWeight: 700 }}>รหัสทีม</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '1rem', fontWeight: 700 }}>
+                        <Users size={18} /> {teamLobbyCode}
+                    </div>
+                </div>
+                <div className="gl-info-card">
                     <label style={{ display: 'block', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--gl-text-dim)', marginBottom: 8, fontWeight: 700 }}>รหัสเข้าร่วมทีม</label>
                     <button className="gl-code-chip" onClick={copyCode}>
                         <Copy size={14} />
-                        {team.code}
+                        {teamInviteCode}
                         {copied && <span style={{ fontSize: '0.75rem', color: 'var(--gl-teal-light)', marginLeft: 6 }}>คัดลอกแล้ว!</span>}
                     </button>
                 </div>
