@@ -62,4 +62,8 @@ export interface UserSafe {
     lastNameEn: string | null;
     isActive: boolean;
     accessRole: 'admin' | 'judge' | null;
+    hasTeam?: boolean;
+    teamId?: number;
+    teamCode?: string;
+    teamRole?: string;
 }

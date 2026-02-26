@@ -16,7 +16,7 @@ function toUserSafe(row: {
     first_name_en?: string | null;
     last_name_en?: string | null;
     is_active: number;
-}, accessRole: 'admin' | 'judge' | null = null): UserSafe {
+}, accessRole: 'admin' | 'judge' | null = null, teamInfo: { teamId: number; teamCode: string; role: string } | null = null): UserSafe {
     return {
         userId: row.user_id,
         userName: row.user_name,
@@ -27,6 +27,12 @@ function toUserSafe(row: {
         lastNameEn: row.last_name_en ?? null,
         isActive: row.is_active === 1,
         accessRole,
+        hasTeam: teamInfo !== null,
+        ...(teamInfo ? {
+            teamId: teamInfo.teamId,
+            teamCode: teamInfo.teamCode,
+            teamRole: teamInfo.role,
+        } : {})
     };
 }
 
@@ -83,8 +89,9 @@ export async function registerUser(db: DB, input: RegisterInput): Promise<UserSa
         domainRule,
     });
 
-    // Look up access role (newly registered users typically won't have one)
+    // Look up access role and team info
     const accessRole = await repo.findAccessRole(db, userId);
+    const teamInfo = await repo.findUserTeam(db, userId);
 
     return {
         userId,
@@ -96,6 +103,12 @@ export async function registerUser(db: DB, input: RegisterInput): Promise<UserSa
         lastNameEn: null,
         isActive: true,
         accessRole,
+        hasTeam: teamInfo !== null,
+        ...(teamInfo ? {
+            teamId: teamInfo.teamId,
+            teamCode: teamInfo.teamCode,
+            teamRole: teamInfo.role,
+        } : {})
     };
 }
 
@@ -113,7 +126,8 @@ export async function loginUser(db: DB, input: LoginInput): Promise<UserSafe> {
     }
 
     const accessRole = await repo.findAccessRole(db, row.user_id);
-    return toUserSafe(row, accessRole);
+    const teamInfo = await repo.findUserTeam(db, row.user_id);
+    return toUserSafe(row, accessRole, teamInfo);
 }
 
 /** Get user by ID */
@@ -123,5 +137,6 @@ export async function getUserById(db: DB, userId: number): Promise<UserSafe> {
         throw new UnauthorizedError('ไม่พบผู้ใช้');
     }
     const accessRole = await repo.findAccessRole(db, userId);
-    return toUserSafe(row, accessRole);
+    const teamInfo = await repo.findUserTeam(db, userId);
+    return toUserSafe(row, accessRole, teamInfo);
 }

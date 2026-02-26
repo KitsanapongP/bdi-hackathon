@@ -45,7 +45,8 @@ function RegisterPage() {
             name: user.userName,
             email: user.email,
             accessRole: user.accessRole || null,
-            hasTeam: false,
+            hasTeam: user.hasTeam || false,
+            teamId: user.teamId || null,
             avatar: user.userName?.charAt(0)?.toUpperCase() || 'U',
             color: '#6366f1',
         };
