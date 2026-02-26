@@ -91,6 +91,7 @@ export function buildApp(ctx: AppContext) {
   // avoid browser favicon 404 spam
   app.get('/favicon.ico', async (_req, reply) => reply.code(204).send());
 
+
   app.register(healthRoutes, { prefix: '/api/health' });
   app.register(authRoutes, { prefix: '/api/auth' });
   app.register(sysConfigRoutes, { prefix: '/api/sys-config' });

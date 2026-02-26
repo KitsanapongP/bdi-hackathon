@@ -28,3 +28,31 @@ export type ContentReward = {
     descriptionEn: string | null;
     sortOrder: number;
 };
+
+export type ContentSponsorRow = {
+    sponsor_id: number;
+    sponsor_name_th: string;
+    sponsor_name_en: string;
+    logo_storage_key: string;
+    website_url: string | null;
+    tier_code: string | null;
+    tier_name_th: string | null;
+    tier_name_en: string | null;
+    sort_order: number;
+    is_enabled: number;
+    created_at: string;
+    updated_at: string;
+};
+
+export type ContentSponsor = {
+    id: number;
+    nameTh: string;
+    nameEn: string;
+    logoStorageKey: string;
+    logoUrl: string;
+    websiteUrl: string | null;
+    tierCode: string | null;
+    tierNameTh: string | null;
+    tierNameEn: string | null;
+    sortOrder: number;
+};

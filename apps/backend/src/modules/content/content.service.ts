@@ -1,6 +1,6 @@
 import type { DB } from '../../config/db.js';
 import * as repo from './content.repo.js';
-import type { ContentReward } from './content.types.js';
+import type { ContentReward, ContentSponsor } from './content.types.js';
 
 export async function getRewards(db: DB): Promise<ContentReward[]> {
     const rewards = await repo.getEnabledRewards(db);
@@ -17,5 +17,27 @@ export async function getRewards(db: DB): Promise<ContentReward[]> {
         descriptionTh: reward.description_th,
         descriptionEn: reward.description_en,
         sortOrder: reward.sort_order,
+    }));
+}
+
+
+function resolveLogoUrl(logoStorageKey: string): string {
+    return logoStorageKey;
+}
+
+export async function getSponsors(db: DB, tierCode?: string): Promise<ContentSponsor[]> {
+    const sponsors = await repo.getEnabledSponsors(db, tierCode);
+
+    return sponsors.map((sponsor) => ({
+        id: sponsor.sponsor_id,
+        nameTh: sponsor.sponsor_name_th,
+        nameEn: sponsor.sponsor_name_en,
+        logoStorageKey: sponsor.logo_storage_key,
+        logoUrl: resolveLogoUrl(sponsor.logo_storage_key),
+        websiteUrl: sponsor.website_url,
+        tierCode: sponsor.tier_code,
+        tierNameTh: sponsor.tier_name_th,
+        tierNameEn: sponsor.tier_name_en,
+        sortOrder: sponsor.sort_order,
     }));
 }

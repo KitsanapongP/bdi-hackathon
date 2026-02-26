@@ -26,27 +26,7 @@ import ProfileContent from './Profile';
 import './Home.css';
 import { apiUrl } from '../../lib/api';
 
-// Co-organizer logos
-import coOrg1 from '../../assets/co-organizer/1-logo-bdi-for-web-2048x1465.png';
-import coOrg2 from '../../assets/co-organizer/2-kku-official-logo-2022-26.png';
-import coOrg3 from '../../assets/co-organizer/3-CPlogo-final-01.png';
-import coOrg4 from '../../assets/co-organizer/4-MED_KKU.png';
-import coOrg5 from '../../assets/co-organizer/5-Nursing_KKU_Thai_Symbol.png';
-import coOrg6 from '../../assets/co-organizer/6-Public_Heaalth_KKU.png';
-import coOrg7 from '../../assets/co-organizer/7-COLA_KKU_Symbol.svg.png';
-import coOrg8 from '../../assets/co-organizer/8-National Phenome Institute - Thailand.png';
-import coOrg9 from '../../assets/co-organizer/9-Krungsri_Logo.svg.png';
-import coOrg10 from '../../assets/co-organizer/10-INET-2024-01-24-926040289.png';
-import coOrg11 from '../../assets/co-organizer/11-ExxonMobil-Logo.png';
-import coOrg12 from '../../assets/co-organizer/12-Logo-Woxa-Corp-Transparent-blue-website.png';
-import coOrg13 from '../../assets/co-organizer/13-logo-scipark_2.png';
-
-const coOrganizers = [
-    coOrg1, coOrg2, coOrg3, coOrg4, coOrg5, coOrg6, coOrg7,
-    coOrg8, coOrg9, coOrg10, coOrg11, coOrg12, coOrg13,
-];
-
-const sponsors = coOrganizers;
+/* Sponsor logos are loaded from content API */
 
 /* ─── config (customizable per event) ─── */
 const config = {
@@ -89,6 +69,9 @@ function HomePage() {
     const [rewards, setRewards] = useState([]);
     const [rewardsLoading, setRewardsLoading] = useState(true);
     const [rewardsError, setRewardsError] = useState(null);
+    const [coOrganizerSponsors, setCoOrganizerSponsors] = useState([]);
+    const [sponsors, setSponsors] = useState([]);
+    const [sponsorsLoading, setSponsorsLoading] = useState(true);
 
     useEffect(() => {
         // Initialize from localStorage first for immediate render
@@ -175,8 +158,41 @@ function HomePage() {
                 setRewardsLoading(false);
             }
         };
+
+
+        const fetchSponsors = async () => {
+            try {
+                setSponsorsLoading(true);
+                const [coOrganizerResponse, sponsorResponse] = await Promise.all([
+                    fetch(apiUrl('/api/content/sponsors?tier=co_organizer'), { credentials: 'include' }),
+                    fetch(apiUrl('/api/content/sponsors?tier=sponsor'), { credentials: 'include' }),
+                ]);
+
+                if (!coOrganizerResponse.ok || !sponsorResponse.ok) {
+                    throw new Error(`Failed to fetch sponsors: ${coOrganizerResponse.status}/${sponsorResponse.status}`);
+                }
+
+                const [coOrganizerPayload, sponsorPayload] = await Promise.all([
+                    coOrganizerResponse.json(),
+                    sponsorResponse.json(),
+                ]);
+
+                const coOrganizerItems = Array.isArray(coOrganizerPayload?.data) ? coOrganizerPayload.data : [];
+                const sponsorItems = Array.isArray(sponsorPayload?.data) ? sponsorPayload.data : [];
+
+                setCoOrganizerSponsors(coOrganizerItems);
+                setSponsors(sponsorItems.length ? sponsorItems : coOrganizerItems);
+                setSponsorsLoading(false);
+            } catch (err) {
+                console.error('Failed to fetch sponsors', err);
+                setCoOrganizerSponsors([]);
+                setSponsors([]);
+                setSponsorsLoading(false);
+            }
+        };
         fetchSchedules();
         fetchRewards();
+        fetchSponsors();
     }, [location]);
 
     const formatPrizeAmount = (amount, currency) => {
@@ -218,13 +234,13 @@ function HomePage() {
             if (!track) return;
             // Measure total width of only the original items (first half)
             const items = track.children;
-            const originalCount = coOrganizers.length;
+            const originalCount = coOrganizerSponsors.length;
             let totalW = 0;
             for (let i = 0; i < Math.min(originalCount, items.length); i++) {
                 totalW += items[i].offsetWidth;
             }
             // Add gaps: (originalCount - 1) * 40px gap
-            totalW += (originalCount - 1) * 40;
+            totalW += Math.max(0, originalCount - 1) * 40;
             const containerW = banner.clientWidth;
             setBannerMarquee(totalW > containerW);
         };
@@ -232,7 +248,7 @@ function HomePage() {
         const ro = new ResizeObserver(check);
         ro.observe(banner);
         return () => ro.disconnect();
-    }, []);
+    }, [coOrganizerSponsors]);
 
 
 
@@ -310,8 +326,8 @@ function HomePage() {
             {/* Co-Organizer Banner */}
             <div className={`gt-banner ${bannerMarquee ? 'gt-banner-marquee' : ''}`} ref={bannerRef}>
                 <div className="gt-banner-track" ref={bannerTrackRef}>
-                    {(bannerMarquee ? [...coOrganizers, ...coOrganizers] : coOrganizers).map((logo, i) => (
-                        <img key={i} src={logo} alt={`Co-Org ${(i % coOrganizers.length) + 1}`} />
+                    {(bannerMarquee ? [...coOrganizerSponsors, ...coOrganizerSponsors] : coOrganizerSponsors).map((item, i) => (
+                        <img key={`${item.id}-${i}`} src={item.logoUrl} alt={item.nameEn || item.nameTh || `Co-Org ${i + 1}`} />
                     ))}
                 </div>
             </div>
@@ -596,8 +612,8 @@ function HomePage() {
                             ผู้สนับสนุนหลักอย่างเป็นทางการ
                         </div>
                         <div className="gt-marquee">
-                            {[...sponsors, ...sponsors].map((logo, i) => (
-                                <img key={i} src={logo} alt={`Sponsor ${i + 1}`} className="gt-sponsor-logo" />
+                            {(!sponsorsLoading ? [...sponsors, ...sponsors] : []).map((item, i) => (
+                                <img key={`${item.id}-${i}`} src={item.logoUrl} alt={item.nameEn || item.nameTh || `Sponsor ${i + 1}`} className="gt-sponsor-logo" />
                             ))}
                         </div>
                     </div>
