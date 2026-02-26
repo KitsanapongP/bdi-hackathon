@@ -20,11 +20,6 @@ export async function getRewards(db: DB): Promise<ContentReward[]> {
     }));
 }
 
-
-function resolveLogoUrl(logoStorageKey: string): string {
-    return logoStorageKey;
-}
-
 export async function getSponsors(db: DB, tierCode?: string): Promise<ContentSponsor[]> {
     const sponsors = await repo.getEnabledSponsors(db, tierCode);
 
@@ -33,7 +28,7 @@ export async function getSponsors(db: DB, tierCode?: string): Promise<ContentSpo
         nameTh: sponsor.sponsor_name_th,
         nameEn: sponsor.sponsor_name_en,
         logoStorageKey: sponsor.logo_storage_key,
-        logoUrl: resolveLogoUrl(sponsor.logo_storage_key),
+        logoUrl: sponsor.logo_storage_key,
         websiteUrl: sponsor.website_url,
         tierCode: sponsor.tier_code,
         tierNameTh: sponsor.tier_name_th,
