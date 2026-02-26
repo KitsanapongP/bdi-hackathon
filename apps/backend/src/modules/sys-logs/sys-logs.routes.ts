@@ -99,6 +99,11 @@ export const sysLogsRoutes: FastifyPluginAsync = async (app) => {
         reply.raw.setHeader('Content-Type', 'text/event-stream');
         reply.raw.setHeader('Cache-Control', 'no-cache');
         reply.raw.setHeader('Connection', 'keep-alive');
+        reply.raw.setHeader('X-Accel-Buffering', 'no');
+
+        if (typeof reply.raw.flushHeaders === 'function') {
+            reply.raw.flushHeaders();
+        }
 
         // Initial connected message to keep connection alive immediately
         reply.raw.write(': connected\n\n');
@@ -171,8 +176,13 @@ export const sysLogsRoutes: FastifyPluginAsync = async (app) => {
             }
         }, 1000); // Check every second
 
+        const heartbeat = setInterval(() => {
+            reply.raw.write(': heartbeat\n\n');
+        }, 15000);
+
         req.raw.on('close', () => {
             clearInterval(interval);
+            clearInterval(heartbeat);
             reply.raw.end();
         });
     });

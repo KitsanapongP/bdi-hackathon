@@ -21,28 +21,32 @@ import { sysLogsRoutes } from './modules/sys-logs/sys-logs.routes.js';
 export type AppContext = { env: Env; db: DB };
 
 export function buildApp(ctx: AppContext) {
+  const loggerTargets: any[] = [
+    {
+      target: 'pino-roll',
+      options: {
+        file: path.join(process.cwd(), 'logs', 'app'),
+        size: '10m',
+        frequency: 'daily',
+        mkdir: true,
+      },
+    },
+  ];
+
+  if (ctx.env.NODE_ENV !== 'production') {
+    loggerTargets.unshift({
+      target: 'pino-pretty',
+      options: {
+        translateTime: 'HH:MM:ss',
+        singleLine: true,
+        ignore: 'pid,hostname',
+      },
+    });
+  }
   const app = Fastify({
     logger: {
       transport: {
-        targets: [
-          {
-            target: 'pino-pretty',
-            options: {
-              translateTime: 'HH:MM:ss',
-              singleLine: true,
-              ignore: 'pid,hostname',
-            },
-          },
-          {
-            target: 'pino-roll',
-            options: {
-              file: path.join(process.cwd(), 'logs', 'app'),
-              size: '10m',
-              frequency: 'daily',
-              mkdir: true,
-            },
-          },
-        ],
+        targets: loggerTargets,
       },
       serializers: {
         req(request) {
