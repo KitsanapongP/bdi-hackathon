@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
+import path from 'node:path';
 
 import type { Env } from './config/env.js';
 import type { DB } from './config/db.js';
@@ -35,7 +36,7 @@ export function buildApp(ctx: AppContext) {
           {
             target: 'pino-roll',
             options: {
-              file: 'logs/app',
+              file: path.join(process.cwd(), 'logs', 'app'),
               size: '10m',
               frequency: 'daily',
               mkdir: true,
