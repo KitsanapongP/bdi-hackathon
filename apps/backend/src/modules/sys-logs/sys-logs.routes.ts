@@ -103,20 +103,31 @@ export const sysLogsRoutes: FastifyPluginAsync = async (app) => {
         // Initial connected message to keep connection alive immediately
         reply.raw.write(': connected\n\n');
 
+        const logDir = path.join(process.cwd(), 'logs');
+        reply.raw.write(`data: {"time":${Date.now()},"level":30,"msg":"[LogViewer] System cwd: ${process.cwd()}"}\n\n`);
+        reply.raw.write(`data: {"time":${Date.now()},"level":30,"msg":"[LogViewer] Looking for logs in: ${logDir}"}\n\n`);
+
         let activeLogFile = '';
         let currentSize = 0;
 
         const findActiveLogFile = () => {
-            const logDir = path.join(process.cwd(), 'logs');
             try {
+                if (!fs.existsSync(logDir)) {
+                    reply.raw.write(`data: {"time":${Date.now()},"level":40,"msg":"[LogViewer] logDir does not exist."}\n\n`);
+                    return '';
+                }
                 const files = fs.readdirSync(logDir).filter(f => f.startsWith('app') && !f.endsWith('.gitignore'));
-                if (files.length === 0) return '';
+                if (files.length === 0) {
+                    reply.raw.write(`data: {"time":${Date.now()},"level":40,"msg":"[LogViewer] No log files found in directory."}\n\n`);
+                    return '';
+                }
                 files.sort((a, b) => fs.statSync(path.join(logDir, b)).mtimeMs - fs.statSync(path.join(logDir, a)).mtimeMs);
 
                 const latest = files[0];
                 if (!latest) return '';
                 return path.join(logDir, latest);
             } catch (err) {
+                reply.raw.write(`data: {"time":${Date.now()},"level":50,"msg":"[LogViewer] Error scanning logs: ${String(err)}"}\n\n`);
                 return '';
             }
         };
