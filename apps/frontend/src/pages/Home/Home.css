@@ -786,6 +786,13 @@ section.gt-hero {
     margin: 0 auto;
 }
 
+
+.gt-schedule-day-group {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
 .gt-schedule-card {
     background: var(--gt-surface);
     border: 1px solid var(--gt-border);
@@ -1172,7 +1179,7 @@ section.gt-hero {
 
     .gt-bento {
         grid-template-columns: 1fr;
-        gap: 14px;
+        gap: 18px;
     }
 
     .gt-bento-card {
