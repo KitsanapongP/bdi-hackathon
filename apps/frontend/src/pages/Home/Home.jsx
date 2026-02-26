@@ -327,7 +327,7 @@ function HomePage() {
             <div className={`gt-banner ${bannerMarquee ? 'gt-banner-marquee' : ''}`} ref={bannerRef}>
                 <div className="gt-banner-track" ref={bannerTrackRef}>
                     {(bannerMarquee ? [...coOrganizerSponsors, ...coOrganizerSponsors] : coOrganizerSponsors).map((item, i) => (
-                        <img key={`${item.id}-${i}`} src={item.logoUrl} alt={item.nameEn || item.nameTh || `Co-Org ${i + 1}`} />
+                        <img key={`${item.id}-${i}`} src={apiUrl(item.logoUrl)} alt={item.nameEn || item.nameTh || `Co-Org ${i + 1}`} />
                     ))}
                 </div>
             </div>
@@ -613,7 +613,7 @@ function HomePage() {
                         </div>
                         <div className="gt-marquee">
                             {(!sponsorsLoading ? [...sponsors, ...sponsors] : []).map((item, i) => (
-                                <img key={`${item.id}-${i}`} src={item.logoUrl} alt={item.nameEn || item.nameTh || `Sponsor ${i + 1}`} className="gt-sponsor-logo" />
+                                <img key={`${item.id}-${i}`} src={apiUrl(item.logoUrl)} alt={item.nameEn || item.nameTh || `Sponsor ${i + 1}`} className="gt-sponsor-logo" />
                             ))}
                         </div>
                     </div>
