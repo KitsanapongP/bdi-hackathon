@@ -53,12 +53,16 @@ export async function getTeamById(db: DB, teamId: number): Promise<TeamRow | nul
     return (rows[0] as TeamRow | undefined) ?? null;
 }
 
-export async function getTeamMembers(db: DB, teamId: number): Promise<TeamMemberRow[]> {
+export async function getTeamMembers(db: DB, teamId: number): Promise<any[]> {
     const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT * FROM team_members WHERE team_id = :teamId AND member_status = 'active'`,
+        `SELECT m.*, u.user_name, u.first_name_th, u.last_name_th, IFNULL(p.show_real_name, 0) as show_real_name 
+         FROM team_members m
+         JOIN user_users u ON m.user_id = u.user_id
+         LEFT JOIN user_privacy_settings p ON u.user_id = p.user_id
+         WHERE m.team_id = :teamId AND m.member_status = 'active'`,
         { teamId }
     );
-    return rows as TeamMemberRow[];
+    return rows;
 }
 
 export async function getPublicTeams(db: DB, visibility?: string): Promise<TeamRow[]> {

@@ -9,8 +9,7 @@ import {
 } from 'lucide-react';
 import './Team.css';
 import './Profile.css';
-
-const API = '/api';
+import { apiUrl } from '../../lib/api';
 
 const MENU = [
     { id: 'profile', icon: <User size={18} />, label: 'โปรไฟล์', color: '#7c3aed' },
@@ -32,7 +31,7 @@ function ProfileContent({ user }) {
     }, []);
 
     const apiFetch = useCallback(async (path, opts = {}) => {
-        const res = await fetch(`${API}${path}`, {
+        const res = await fetch(apiUrl(`/api${path}`), {
             credentials: 'include',
             headers: { 'Content-Type': 'application/json', ...opts.headers },
             ...opts,
@@ -45,7 +44,7 @@ function ProfileContent({ user }) {
     if (!user) return null;
 
     return (
-        <div className="gl-page-container">
+        <div className="gl-page-container" style={{ paddingTop: '100px' }}>
             <div className="gl-frame">
 
                 {/* ── LEFT: Menu Sidebar ── */}

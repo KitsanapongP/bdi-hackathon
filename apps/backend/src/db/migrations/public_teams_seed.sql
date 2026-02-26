@@ -18,3 +18,7 @@ INSERT INTO `team_members` (`team_member_id`, `team_id`, `user_id`, `role`, `mem
 (80010, 2004, 1013, 'leader', 'active', '2026-02-20 17:50:25', NULL),
 (80011, 2005, 1014, 'leader', 'active', '2026-02-20 17:50:25', NULL),
 (80012, 2006, 1015, 'leader', 'active', '2026-02-20 17:50:25', NULL);
+
+-- 4. Insert Test User Without A Team
+INSERT INTO `user_users` (`user_id`, `user_name`, `email`, `phone`, `university_name_th`, `university_name_en`, `first_name_th`, `last_name_th`, `first_name_en`, `last_name_en`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1016, 'david', 'david@gmail.com', '0900000004', 'จุฬาลงกรณ์มหาวิทยาลัย', 'Chulalongkorn University', 'เดวิด', 'ดี', 'David', 'D', 1, '2026-02-20 17:50:25', '2026-02-20 17:50:25', NULL);

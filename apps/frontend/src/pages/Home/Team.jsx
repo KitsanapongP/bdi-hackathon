@@ -26,7 +26,7 @@ import {
     Search,
 } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
-import { MOCK_TEAMS, TEAM_STATUS_CONFIG } from './mockData';
+import { TEAM_STATUS_CONFIG } from './mockData';
 import { apiUrl } from '../../lib/api';
 import './Team.css';
 import './Register.css';
@@ -50,6 +50,7 @@ const CARDS = [
 function TeamContent({ user }) {
     const navigate = useNavigate();
     const [team, setTeam] = useState(null);
+    const [isLoadingTeam, setIsLoadingTeam] = useState(false);
     const [selectedCard, setSelectedCard] = useState(null);
     const [copied, setCopied] = useState(false);
     const [navScrolled, setNavScrolled] = useState(false);
@@ -89,7 +90,46 @@ function TeamContent({ user }) {
 
     useEffect(() => {
         if (user?.hasTeam && user?.teamId) {
-            setTeam(MOCK_TEAMS[user.teamId] || MOCK_TEAMS['TM001']);
+            setIsLoadingTeam(true);
+            fetch(apiUrl(`/api/teams/${user.teamId}`), { credentials: 'include' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.ok && data.data) {
+                        const { team: dbTeam, members: dbMembers, activeCode } = data.data;
+
+                        // Map colors to members for consistency
+                        const memberColors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+
+                        const mappedMembers = dbMembers.map((m, index) => {
+                            // If consent is true (1) and they have a first name, show it, otherwise fallback to username
+                            const displayName = m.show_real_name && m.first_name_th
+                                ? m.first_name_th
+                                : (m.user_name || `User ${m.user_id}`);
+
+                            return {
+                                id: m.user_id,
+                                name: displayName,
+                                role: m.role || 'Member',
+                                leader: dbTeam.current_leader_user_id === m.user_id,
+                                color: memberColors[index % memberColors.length]
+                            };
+                        });
+
+                        setTeam({
+                            id: dbTeam.team_code,
+                            name: dbTeam.team_name_th,
+                            status: 'approved',
+                            size: mappedMembers.length,
+                            inviteCode: activeCode || '------',
+                            members: mappedMembers,
+                            announcements: [],
+                            requests: [],
+                            works: []
+                        });
+                    }
+                })
+                .catch(err => console.error('Failed to fetch team details:', err))
+                .finally(() => setIsLoadingTeam(false));
         }
     }, [user]);
 
@@ -146,9 +186,10 @@ function TeamContent({ user }) {
     };
 
     if (!user) return null;
+    if (isLoadingTeam) return <div className="gl-page-container"><div className="gl-frame gl-frame-center"><h3>กำลังโหลดข้อมูลทีม...</h3></div></div>;
 
     /* ── No Team State (inside Gartic Phone theme) ── */
-    if (!team) {
+    if (!user.hasTeam) {
         return (
             <div className="gl-page-container">
                 <div className="gl-frame gl-frame-center">
@@ -350,6 +391,9 @@ function TeamContent({ user }) {
             </div>
         );
     }
+
+    // Still loading or team fetch failed
+    if (!team) return <div className="gl-page-container"><div className="gl-frame gl-frame-center"><h3>กำลังโหลดข้อมูลทีม...</h3></div></div>;
 
     const statusInfo = TEAM_STATUS_CONFIG[team.status] || TEAM_STATUS_CONFIG.pending;
     const emptySlots = Math.max(0, MAX_MEMBERS - team.members.length);
@@ -631,18 +675,7 @@ function TeamContent({ user }) {
 
     /* ═══════════════════ RENDER ═══════════════════ */
     return (
-        <div className="gl-page-container">
-            {/* Pill Navigation */}
-            <nav className={`gt-pill-nav ${navScrolled ? 'scrolled' : ''}`}>
-                <div className="gt-pill-bar">
-                    <button className="gt-pill-icon" onClick={() => navigate('/home')} aria-label="Back to Home">
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div className="gt-pill-right">
-                        <ThemeToggle />
-                    </div>
-                </div>
-            </nav>
+        <div className="gl-page-container" style={{ paddingTop: '100px' }}>
 
             <div className="gl-frame">
 

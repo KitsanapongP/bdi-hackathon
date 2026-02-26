@@ -97,3 +97,16 @@ export async function findAccessRole(db: DB, userId: number): Promise<'admin' | 
     );
     return (rows[0]?.access_role as 'admin' | 'judge' | undefined) ?? null;
 }
+
+/** Find active team info for a user */
+export async function findUserTeam(db: DB, userId: number): Promise<{ teamId: number; teamCode: string; role: string } | null> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT m.team_id, t.team_code, m.role 
+        FROM team_members m
+        JOIN team_teams t ON m.team_id = t.team_id
+        WHERE m.user_id = :userId AND m.member_status = 'active' AND t.deleted_at IS NULL
+        LIMIT 1
+    `, { userId });
+    const row = rows[0] as { team_id: number; team_code: string; role: string } | undefined;
+    return row ? { teamId: row.team_id, teamCode: row.team_code, role: row.role } : null;
+}

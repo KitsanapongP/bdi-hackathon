@@ -88,8 +88,36 @@ function HomePage() {
     const [scheduleError, setScheduleError] = useState(null);
 
     useEffect(() => {
+        // Initialize from localStorage first for immediate render
         const saved = localStorage.getItem('gt_user');
-        if (saved) setUser(JSON.parse(saved));
+        if (saved) {
+            setUser(JSON.parse(saved));
+
+            // Background fetch to ensure we have the most up-to-date team state
+            fetch(apiUrl('/api/auth/me'), { credentials: 'include' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.ok && data.data) {
+                        const verifiedUser = {
+                            userId: data.data.userId,
+                            name: data.data.userName,
+                            email: data.data.email,
+                            accessRole: data.data.accessRole || null,
+                            hasTeam: data.data.hasTeam || false,
+                            teamId: data.data.teamId || null,
+                            avatar: data.data.userName?.charAt(0)?.toUpperCase() || 'U',
+                            color: '#6366f1',
+                        };
+                        setUser(verifiedUser);
+                        localStorage.setItem('gt_user', JSON.stringify(verifiedUser));
+                    } else if (data.message === 'กรุณาเข้าสู่ระบบ') {
+                        // User session expired
+                        localStorage.removeItem('gt_user');
+                        setUser(null);
+                    }
+                })
+                .catch(err => console.error('Failed to verify session', err));
+        }
 
         const fetchSchedules = async () => {
             try {
