@@ -120,6 +120,15 @@ CREATE TABLE `content_rewards` (
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Updated timestamp'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Rewards/prizes shown on website';
 
+--
+-- Dumping data for table `content_rewards`
+--
+
+INSERT INTO `content_rewards` (`reward_id`, `reward_rank`, `reward_name_th`, `reward_name_en`, `prize_amount`, `prize_currency`, `prize_text_th`, `prize_text_en`, `description_th`, `description_en`, `sort_order`, `is_enabled`, `created_at`, `updated_at`) VALUES
+(1, '1', 'รางวัลชนะเลิศ', 'Champion', 50000.00, 'บาท', 'พร้อมถ้วย', 'with trophy', NULL, NULL, 1, 1, current_timestamp(), current_timestamp()),
+(2, '2', 'รางวัลรองชนะเลิศอันดับ 1', '1st Runner-up', 30000.00, 'บาท', NULL, NULL, NULL, NULL, 2, 1, current_timestamp(), current_timestamp()),
+(3, '3', 'รางวัลรองชนะเลิศอันดับ 2', '2nd Runner-up', 20000.00, 'บาท', NULL, NULL, NULL, NULL, 3, 1, current_timestamp(), current_timestamp());
+
 -- --------------------------------------------------------
 
 --

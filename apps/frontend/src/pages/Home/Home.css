@@ -862,6 +862,14 @@ section.gt-hero {
     margin: 0 auto;
 }
 
+.gt-prize-status {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--gt-text-muted);
+    font-size: 1.05rem;
+    margin: 12px 0 0;
+}
+
 .gt-prize-card {
     background: var(--gt-surface);
     border: 1px solid var(--gt-border);
@@ -1233,7 +1241,15 @@ section.gt-hero {
         gap: 16px;
     }
 
-    .gt-prize-card {
+    .gt-prize-status {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--gt-text-muted);
+    font-size: 1.05rem;
+    margin: 12px 0 0;
+}
+
+.gt-prize-card {
         padding: 28px 24px;
     }
 
