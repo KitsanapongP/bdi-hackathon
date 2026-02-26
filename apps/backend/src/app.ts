@@ -4,6 +4,7 @@ import sensible from '@fastify/sensible';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import path from 'node:path';
+import { createReadStream, existsSync } from 'node:fs';
 
 import type { Env } from './config/env.js';
 import type { DB } from './config/db.js';
@@ -90,6 +91,29 @@ export function buildApp(ctx: AppContext) {
 
   // avoid browser favicon 404 spam
   app.get('/favicon.ico', async (_req, reply) => reply.code(204).send());
+
+
+  app.get('/static/content/sponsors/*', async (req, reply) => {
+    const wildcardPath = ((req.params as { '*': string })['*'] || '').trim();
+    const normalizedPath = path.posix.normalize(`/${wildcardPath}`).replace(/^\/+/, '');
+
+    if (!normalizedPath || normalizedPath.includes('..')) {
+      return reply.code(400).send({ ok: false, message: 'Invalid sponsor asset path' });
+    }
+
+    const filePath = path.join(process.cwd(), 'public', 'content', 'sponsors', normalizedPath);
+
+    if (filePath.endsWith('.png')) reply.type('image/png');
+    else if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) reply.type('image/jpeg');
+    else if (filePath.endsWith('.svg')) reply.type('image/svg+xml');
+
+    if (!existsSync(filePath)) {
+      return reply.code(404).send({ ok: false, message: 'Sponsor asset not found' });
+    }
+
+    return reply.send(createReadStream(filePath));
+  });
+
 
   app.register(healthRoutes, { prefix: '/api/health' });
   app.register(authRoutes, { prefix: '/api/auth' });

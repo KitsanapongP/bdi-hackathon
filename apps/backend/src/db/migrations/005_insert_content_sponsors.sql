@@ -1,0 +1,26 @@
+INSERT INTO `content_sponsors` (
+  `sponsor_name_th`,
+  `sponsor_name_en`,
+  `logo_storage_key`,
+  `website_url`,
+  `tier_code`,
+  `tier_name_th`,
+  `tier_name_en`,
+  `sort_order`,
+  `is_enabled`,
+  `created_at`,
+  `updated_at`
+) VALUES
+  ('สถาบันข้อมูลขนาดใหญ่ (องค์การมหาชน)', 'Big Data Institute (Public Organization)', '/static/content/sponsors/co-organizer/1-logo-bdi-for-web-2048x1465.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 1, 1, current_timestamp(), current_timestamp()),
+  ('มหาวิทยาลัยขอนแก่น', 'Khon Kaen University', '/static/content/sponsors/co-organizer/2-kku-official-logo-2022-26.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 2, 1, current_timestamp(), current_timestamp()),
+  ('เครือเจริญโภคภัณฑ์', 'Charoen Pokphand Group', '/static/content/sponsors/co-organizer/3-CPlogo-final-01.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 3, 1, current_timestamp(), current_timestamp()),
+  ('คณะแพทยศาสตร์ มหาวิทยาลัยขอนแก่น', 'Faculty of Medicine, Khon Kaen University', '/static/content/sponsors/co-organizer/4-MED_KKU.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 4, 1, current_timestamp(), current_timestamp()),
+  ('คณะพยาบาลศาสตร์ มหาวิทยาลัยขอนแก่น', 'Faculty of Nursing, Khon Kaen University', '/static/content/sponsors/co-organizer/5-Nursing_KKU_Thai_Symbol.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 5, 1, current_timestamp(), current_timestamp()),
+  ('คณะสาธารณสุขศาสตร์ มหาวิทยาลัยขอนแก่น', 'Faculty of Public Health, Khon Kaen University', '/static/content/sponsors/co-organizer/6-Public_Heaalth_KKU.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 6, 1, current_timestamp(), current_timestamp()),
+  ('คณะศิลปศาสตร์ มหาวิทยาลัยขอนแก่น', 'Faculty of Liberal Arts, Khon Kaen University', '/static/content/sponsors/co-organizer/7-COLA_KKU_Symbol.svg.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 7, 1, current_timestamp(), current_timestamp()),
+  ('สถาบัน National Phenome Institute Thailand', 'National Phenome Institute Thailand', '/static/content/sponsors/co-organizer/8-National Phenome Institute - Thailand.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 8, 1, current_timestamp(), current_timestamp()),
+  ('ธนาคารกรุงศรีอยุธยา', 'Bank of Ayudhya (Krungsri)', '/static/content/sponsors/co-organizer/9-Krungsri_Logo.svg.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 9, 1, current_timestamp(), current_timestamp()),
+  ('บริษัท อินเทอร์เน็ตประเทศไทย จำกัด (มหาชน)', 'Internet Thailand Public Company Limited (INET)', '/static/content/sponsors/co-organizer/10-INET-2024-01-24-926040289.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 10, 1, current_timestamp(), current_timestamp()),
+  ('เอ็กซอนโมบิล', 'ExxonMobil', '/static/content/sponsors/co-organizer/11-ExxonMobil-Logo.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 11, 1, current_timestamp(), current_timestamp()),
+  ('WOXA Corp', 'WOXA Corp', '/static/content/sponsors/co-organizer/12-Logo-Woxa-Corp-Transparent-blue-website.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 12, 1, current_timestamp(), current_timestamp()),
+  ('อุทยานวิทยาศาสตร์ มหาวิทยาลัยขอนแก่น', 'Khon Kaen University Science Park', '/static/content/sponsors/co-organizer/13-logo-scipark_2.png', NULL, 'co_organizer', 'ผู้ร่วมจัด', 'Co-Organizer', 13, 1, current_timestamp(), current_timestamp());
