@@ -1,0 +1,552 @@
+export const dashboardStats = [
+  {
+    id: 'submitted',
+    label: 'Teams In Queue',
+    value: 14,
+    trend: '+4 วันนี้',
+    tone: 'info',
+  },
+  {
+    id: 'returned',
+    label: 'Returned / Waiting Fix',
+    value: 9,
+    trend: '3 พร้อมส่งซ้ำ',
+    tone: 'warn',
+  },
+  {
+    id: 'approved',
+    label: 'Approved Teams',
+    value: 27,
+    trend: '+2 สัปดาห์นี้',
+    tone: 'success',
+  },
+  {
+    id: 'content',
+    label: 'Static Content Updates',
+    value: 11,
+    trend: '5 รายการรอเผยแพร่',
+    tone: 'neutral',
+  },
+]
+
+export const dashboardDeadlines = [
+  { id: 1, name: 'ปิดรับสมัครทีม', at: '2026-03-20T23:59:00', status: 'upcoming' },
+  { id: 2, name: 'วันสุดท้ายยืนยันตัวตน', at: '2026-03-24T23:59:00', status: 'upcoming' },
+  { id: 3, name: 'เปิดส่งผลงานรอบสุดท้าย', at: '2026-03-28T09:00:00', status: 'planned' },
+]
+
+export const sponsorsSeed = [
+  {
+    id: 1,
+    name: 'BDI',
+    link: 'https://www.bdi.or.th',
+    displayOrder: 1,
+    isActive: true,
+    logo: '/content/sponsors/co-organizer/1-logo-bdi-for-web-2048x1465.png',
+    logoMeta: { type: 'image/png', sizeKb: 220 },
+  },
+  {
+    id: 2,
+    name: 'KKU',
+    link: 'https://www.kku.ac.th',
+    displayOrder: 2,
+    isActive: true,
+    logo: '/content/sponsors/co-organizer/2-kku-official-logo-2022-26.png',
+    logoMeta: { type: 'image/png', sizeKb: 180 },
+  },
+  {
+    id: 3,
+    name: 'Krungsri',
+    link: 'https://www.krungsri.com',
+    displayOrder: 3,
+    isActive: false,
+    logo: '/content/sponsors/co-organizer/9-Krungsri_Logo.svg.png',
+    logoMeta: { type: 'image/png', sizeKb: 146 },
+  },
+]
+
+export const rewardsSeed = [
+  {
+    id: 1,
+    rank: 1,
+    title: 'Champion',
+    amount: 80000,
+    currency: 'THB',
+    description: 'ทุนสนับสนุน + ถ้วยพระราชทาน',
+    isActive: true,
+  },
+  {
+    id: 2,
+    rank: 2,
+    title: 'First Runner-up',
+    amount: 35000,
+    currency: 'THB',
+    description: 'ทุนสนับสนุน + mentoring package',
+    isActive: true,
+  },
+  {
+    id: 3,
+    rank: 3,
+    title: 'Second Runner-up',
+    amount: 20000,
+    currency: 'THB',
+    description: 'ทุนสนับสนุน',
+    isActive: true,
+  },
+]
+
+export const contactsSeed = [
+  {
+    id: 1,
+    name: 'Niphatthra The',
+    role: 'Event Coordinator',
+    phone: '08 1561 6471',
+    email: 'niphatthra.the@mahidol.ac.th',
+    social: 'https://www.facebook.com/hackathonthailand',
+    displayOrder: 1,
+    isActive: true,
+  },
+  {
+    id: 2,
+    name: 'Support Team',
+    role: 'Technical Helpdesk',
+    phone: '02 000 0000',
+    email: 'support@hackathon.local',
+    social: 'https://line.me/R/ti/p/@hackathon',
+    displayOrder: 2,
+    isActive: true,
+  },
+]
+
+export const winnersSeed = [
+  {
+    id: 1,
+    season: 2025,
+    rank: 1,
+    team: 'Health Pulse',
+    projectTitle: 'Flood-Aware Risk Map',
+    description: 'แผนที่แจ้งเตือนความเสี่ยงสุขภาพจากสภาพอากาศ',
+    demoLink: 'https://example.com/demo/health-pulse',
+    image: '/content/winners/2025-health-pulse.jpg',
+    isPublished: true,
+  },
+  {
+    id: 2,
+    season: 2025,
+    rank: 2,
+    team: 'Aqua Insight',
+    projectTitle: 'Water Quality AI Assistant',
+    description: 'วิเคราะห์และให้คำแนะนำคุณภาพน้ำในชุมชน',
+    demoLink: 'https://example.com/demo/aqua-insight',
+    image: '/content/winners/2025-aqua-insight.jpg',
+    isPublished: true,
+  },
+  {
+    id: 3,
+    season: 2024,
+    rank: 1,
+    team: 'Climate Doctor',
+    projectTitle: 'Heat Stroke Prediction',
+    description: 'โมเดลพยากรณ์ภาวะ heat stroke รายตำบล',
+    demoLink: 'https://example.com/demo/climate-doctor',
+    image: '/content/winners/2024-climate-doctor.jpg',
+    isPublished: false,
+  },
+]
+
+export const reviewTeamsSeed = [
+  {
+    teamId: 101,
+    teamCode: 'KKLH-2401',
+    teamName: 'Vital Spark',
+    university: 'Khon Kaen University',
+    teamState: 'SUBMITTED',
+    submittedAt: '2026-02-26T15:32:00',
+    counts: { approved: 1, needFix: 0, pending: 3, resubmitted: 0 },
+  },
+  {
+    teamId: 102,
+    teamCode: 'KKLH-2402',
+    teamName: 'GeoCare',
+    university: 'Mahidol University',
+    teamState: 'RETURNED',
+    submittedAt: '2026-02-24T10:13:00',
+    counts: { approved: 2, needFix: 2, pending: 0, resubmitted: 1 },
+  },
+  {
+    teamId: 103,
+    teamCode: 'KKLH-2403',
+    teamName: 'EarlyBird',
+    university: 'Chiang Mai University',
+    teamState: 'READY_TO_RESUBMIT',
+    submittedAt: '2026-02-23T20:05:00',
+    counts: { approved: 3, needFix: 0, pending: 0, resubmitted: 2 },
+  },
+  {
+    teamId: 104,
+    teamCode: 'KKLH-2404',
+    teamName: 'MediVerse',
+    university: 'Prince of Songkla University',
+    teamState: 'APPROVED',
+    submittedAt: '2026-02-20T13:25:00',
+    counts: { approved: 5, needFix: 0, pending: 0, resubmitted: 0 },
+  },
+]
+
+const team101Members = [
+  {
+    memberId: 5001,
+    userId: 7001,
+    fullName: 'Arisa Boonmee',
+    university: 'Khon Kaen University',
+    email: 'arisa@sample.com',
+    phone: '08 1111 1111',
+    role: 'Leader',
+    verifyState: 'PENDING',
+    needFixReason: '',
+    needFixAt: null,
+    lastUploadAt: '2026-02-26T14:30:00',
+    files: [
+      {
+        fileId: 'f101-1',
+        filename: 'citizen-card-arisa.pdf',
+        type: 'application/pdf',
+        size: 389000,
+        uploadedAt: '2026-02-26T14:30:00',
+      },
+      {
+        fileId: 'f101-2',
+        filename: 'student-card-arisa.png',
+        type: 'image/png',
+        size: 1210000,
+        uploadedAt: '2026-02-26T14:31:00',
+      },
+    ],
+  },
+  {
+    memberId: 5002,
+    userId: 7002,
+    fullName: 'Napat Siri',
+    university: 'Khon Kaen University',
+    email: 'napat@sample.com',
+    phone: '08 2222 2222',
+    role: 'Member',
+    verifyState: 'APPROVED',
+    needFixReason: '',
+    needFixAt: null,
+    lastUploadAt: '2026-02-25T20:10:00',
+    files: [
+      {
+        fileId: 'f101-3',
+        filename: 'student-card-napat.jpg',
+        type: 'image/jpeg',
+        size: 820000,
+        uploadedAt: '2026-02-25T20:10:00',
+      },
+    ],
+  },
+  {
+    memberId: 5003,
+    userId: 7003,
+    fullName: 'Suda Kaew',
+    university: 'Khon Kaen University',
+    email: 'suda@sample.com',
+    phone: '08 3333 3333',
+    role: 'Member',
+    verifyState: 'PENDING',
+    needFixReason: '',
+    needFixAt: null,
+    lastUploadAt: '2026-02-26T11:00:00',
+    files: [
+      {
+        fileId: 'f101-4',
+        filename: 'passport-suda.pdf',
+        type: 'application/pdf',
+        size: 420000,
+        uploadedAt: '2026-02-26T11:00:00',
+      },
+    ],
+  },
+  {
+    memberId: 5004,
+    userId: 7004,
+    fullName: 'Peerawat Jun',
+    university: 'Khon Kaen University',
+    email: 'peerawat@sample.com',
+    phone: '08 4444 4444',
+    role: 'Member',
+    verifyState: 'PENDING',
+    needFixReason: '',
+    needFixAt: null,
+    lastUploadAt: '2026-02-26T12:22:00',
+    files: [
+      {
+        fileId: 'f101-5',
+        filename: 'student-card-peerawat.png',
+        type: 'image/png',
+        size: 930000,
+        uploadedAt: '2026-02-26T12:22:00',
+      },
+    ],
+  },
+]
+
+const team102Members = [
+  {
+    memberId: 5101,
+    userId: 7101,
+    fullName: 'Korn Wattan',
+    university: 'Mahidol University',
+    email: 'korn@sample.com',
+    phone: '08 5555 5555',
+    role: 'Leader',
+    verifyState: 'RESUBMITTED',
+    needFixReason: 'รูปบัตรไม่ชัดเจน',
+    needFixAt: '2026-02-25T13:20:00',
+    lastUploadAt: '2026-02-26T09:05:00',
+    files: [
+      {
+        fileId: 'f102-1',
+        filename: 'id-card-korn-v2.jpg',
+        type: 'image/jpeg',
+        size: 1400000,
+        uploadedAt: '2026-02-26T09:05:00',
+      },
+    ],
+  },
+  {
+    memberId: 5102,
+    userId: 7102,
+    fullName: 'Mint Chok',
+    university: 'Mahidol University',
+    email: 'mint@sample.com',
+    phone: '08 6666 6666',
+    role: 'Member',
+    verifyState: 'NEED_FIX',
+    needFixReason: 'เอกสารหมดอายุ',
+    needFixAt: '2026-02-25T13:20:00',
+    lastUploadAt: '2026-02-24T19:41:00',
+    files: [
+      {
+        fileId: 'f102-2',
+        filename: 'student-card-mint-old.pdf',
+        type: 'application/pdf',
+        size: 350000,
+        uploadedAt: '2026-02-24T19:41:00',
+      },
+    ],
+  },
+  {
+    memberId: 5103,
+    userId: 7103,
+    fullName: 'Pim N.',
+    university: 'Mahidol University',
+    email: 'pim@sample.com',
+    phone: '08 7777 7777',
+    role: 'Member',
+    verifyState: 'APPROVED',
+    needFixReason: '',
+    needFixAt: null,
+    lastUploadAt: '2026-02-23T09:41:00',
+    files: [
+      {
+        fileId: 'f102-3',
+        filename: 'citizen-card-pim.pdf',
+        type: 'application/pdf',
+        size: 372000,
+        uploadedAt: '2026-02-23T09:41:00',
+      },
+    ],
+  },
+  {
+    memberId: 5104,
+    userId: 7104,
+    fullName: 'Thanakrit S.',
+    university: 'Mahidol University',
+    email: 'thanakrit@sample.com',
+    phone: '08 8888 8888',
+    role: 'Member',
+    verifyState: 'NEED_FIX',
+    needFixReason: 'เอกสารไม่ตรงชื่อ',
+    needFixAt: '2026-02-25T13:20:00',
+    lastUploadAt: '2026-02-24T22:31:00',
+    files: [
+      {
+        fileId: 'f102-4',
+        filename: 'verification-thanakrit.docx',
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        size: 112000,
+        uploadedAt: '2026-02-24T22:31:00',
+      },
+    ],
+  },
+]
+
+export const reviewTeamDetailsSeed = {
+  101: {
+    teamId: 101,
+    teamCode: 'KKLH-2401',
+    teamName: 'Vital Spark',
+    teamState: 'IN_REVIEW',
+    university: 'Khon Kaen University',
+    submittedAt: '2026-02-26T15:32:00',
+    lockOwner: 'Admin: Supha',
+    lockAt: '2026-02-27T08:20:00',
+    members: team101Members,
+    timeline: [
+      {
+        id: 1,
+        at: '2026-02-26T15:32:00',
+        action: 'TEAM_SUBMITTED',
+        actor: 'Arisa Boonmee',
+        detail: 'ทีมส่งเอกสารตรวจสอบรอบแรก',
+      },
+      {
+        id: 2,
+        at: '2026-02-27T08:20:00',
+        action: 'TEAM_LOCKED',
+        actor: 'Supha (Admin)',
+        detail: 'เริ่มตรวจสอบทีม',
+      },
+    ],
+  },
+  102: {
+    teamId: 102,
+    teamCode: 'KKLH-2402',
+    teamName: 'GeoCare',
+    teamState: 'RETURNED',
+    university: 'Mahidol University',
+    submittedAt: '2026-02-24T10:13:00',
+    lockOwner: 'Admin: Panisa',
+    lockAt: '2026-02-25T13:00:00',
+    members: team102Members,
+    timeline: [
+      {
+        id: 1,
+        at: '2026-02-24T10:13:00',
+        action: 'TEAM_SUBMITTED',
+        actor: 'Korn Wattan',
+        detail: 'ส่งทีมเข้าคิวรีวิว',
+      },
+      {
+        id: 2,
+        at: '2026-02-25T13:00:00',
+        action: 'TEAM_LOCKED',
+        actor: 'Panisa (Admin)',
+        detail: 'เริ่มรีวิวเอกสาร',
+      },
+      {
+        id: 3,
+        at: '2026-02-25T13:20:00',
+        action: 'MEMBER_RETURNED',
+        actor: 'Panisa (Admin)',
+        detail: 'คืนเอกสาร 2 สมาชิกเพื่อแก้ไข',
+      },
+      {
+        id: 4,
+        at: '2026-02-26T09:05:00',
+        action: 'MEMBER_RESUBMITTED',
+        actor: 'Korn Wattan',
+        detail: 'อัปโหลดเอกสารใหม่',
+      },
+    ],
+  },
+}
+
+export const returnedTeamsSeed = [
+  {
+    teamId: 102,
+    teamCode: 'KKLH-2402',
+    teamName: 'GeoCare',
+    needFixMembers: ['Mint Chok', 'Thanakrit S.'],
+    needFixAt: '2026-02-25T13:20:00',
+    changedMembers: 1,
+    totalNeedFixMembers: 2,
+    state: 'RETURNED',
+  },
+  {
+    teamId: 107,
+    teamCode: 'KKLH-2407',
+    teamName: 'BioShield',
+    needFixMembers: ['Mook K.'],
+    needFixAt: '2026-02-26T11:00:00',
+    changedMembers: 1,
+    totalNeedFixMembers: 1,
+    state: 'READY_TO_RESUBMIT',
+  },
+]
+
+export const approvedTeamsSeed = [
+  {
+    teamId: 104,
+    teamCode: 'KKLH-2404',
+    teamName: 'MediVerse',
+    university: 'Prince of Songkla University',
+    approvedAt: '2026-02-26T16:40:00',
+    approvedBy: 'Supha (Admin)',
+  },
+  {
+    teamId: 108,
+    teamCode: 'KKLH-2408',
+    teamName: 'HeatGuard',
+    university: 'Chulalongkorn University',
+    approvedAt: '2026-02-25T18:10:00',
+    approvedBy: 'Panisa (Admin)',
+  },
+]
+
+export const auditLogsSeed = [
+  {
+    id: 1,
+    actor: 'Supha',
+    actionType: 'SPONSOR_UPDATED',
+    entityType: 'sponsor',
+    entityId: 2,
+    payload: '{"name":"KKU","is_active":true}',
+    createdAt: '2026-02-27T08:44:00',
+  },
+  {
+    id: 2,
+    actor: 'Panisa',
+    actionType: 'MEMBER_RETURNED',
+    entityType: 'member_verification',
+    entityId: 5102,
+    payload: '{"reason":"เอกสารหมดอายุ"}',
+    createdAt: '2026-02-25T13:20:00',
+  },
+  {
+    id: 3,
+    actor: 'Supha',
+    actionType: 'TEAM_APPROVED',
+    entityType: 'team',
+    entityId: 104,
+    payload: '{"team_state":"APPROVED"}',
+    createdAt: '2026-02-26T16:40:00',
+  },
+]
+
+export const settingsSeed = {
+  registrationOpen: true,
+  reviewLockTimeoutMinutes: 30,
+  teamSubmissionDeadline: '2026-03-20T23:59',
+  verificationDeadline: '2026-03-24T23:59',
+  allowTeamResubmission: true,
+  maintenanceBanner: 'ระบบจะปิดปรับปรุงช่วง 00:00 - 00:15 ทุกวัน',
+}
+
+export const aboutSeed = {
+  contentTh: `# เกี่ยวกับโครงการ
+
+Hackathon นี้มุ่งเน้นการแก้ปัญหาสุขภาพสาธารณะด้วยข้อมูลและ AI
+
+## เป้าหมาย
+- พัฒนาทักษะผู้เข้าร่วม
+- สร้างต้นแบบที่ใช้ได้จริง`,
+  contentEn: `# About Event
+
+This hackathon focuses on public-health innovation powered by data and AI.
+
+## Goals
+- Build practical prototypes
+- Improve interdisciplinary collaboration`,
+}
