@@ -116,6 +116,26 @@
     box-shadow: 0 0 6px rgba(52, 211, 153, 0.5);
 }
 
+.gl-status-dot.forming {
+    background: #22d3ee;
+    box-shadow: 0 0 6px rgba(34, 211, 238, 0.5);
+}
+
+.gl-status-dot.submitted {
+    background: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+}
+
+.gl-status-dot.returned {
+    background: #fb7185;
+    box-shadow: 0 0 6px rgba(251, 113, 133, 0.5);
+}
+
+.gl-status-dot.ready_to_resubmit {
+    background: #a78bfa;
+    box-shadow: 0 0 6px rgba(167, 139, 250, 0.5);
+}
+
 .gl-status-dot.qualified {
     background: var(--gl-teal);
     box-shadow: 0 0 6px var(--gl-teal-glow);
@@ -1172,4 +1192,47 @@
         width: 100%;
         padding: 12px 16px;
     }
+}
+
+.gl-invitations-card {
+    padding: 14px 16px;
+}
+
+.gl-invitation-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.gl-invitation-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: var(--gl-text);
+}
+
+.gl-invitation-text span {
+    color: var(--gl-text-dim);
+    font-size: 0.86rem;
+}
+
+.gl-member-entry.gl-me {
+    border: 1px solid rgba(45, 212, 191, 0.55);
+    box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.18), 0 8px 20px rgba(45, 212, 191, 0.12);
+    background: linear-gradient(135deg, rgba(45, 212, 191, 0.22), rgba(196, 181, 253, 0.24));
+}
+
+.gl-me-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #042f2e;
+    background: linear-gradient(135deg, #5eead4, #2dd4bf);
 }

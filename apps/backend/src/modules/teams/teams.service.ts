@@ -82,6 +82,29 @@ export async function removeMember(db: DB, teamId: number, leaderUserId: number,
     return { success: true };
 }
 
+export async function transferLeader(db: DB, teamId: number, currentLeaderUserId: number, newLeaderUserId: number) {
+    const team = await repo.getTeamById(db, teamId);
+    if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
+    if (team.current_leader_user_id !== currentLeaderUserId) {
+        throw new AppError('เฉพาะหัวหน้าทีมเท่านั้นที่โอนหัวหน้าได้ (Only leader can transfer ownership)', 403);
+    }
+    if (currentLeaderUserId === newLeaderUserId) {
+        throw new AppError('หัวหน้าทีมคนใหม่ต้องไม่ใช่คนเดิม', 400);
+    }
+
+    const members = await repo.getTeamMembers(db, teamId);
+    const target = members.find((m) => m.user_id === newLeaderUserId);
+    if (!target) {
+        throw new AppError('ผู้ใช้ปลายทางไม่ได้อยู่ในทีม', 400);
+    }
+
+    await repo.updateMemberRole(db, teamId, currentLeaderUserId, 'member');
+    await repo.updateMemberRole(db, teamId, newLeaderUserId, 'leader');
+    await repo.updateTeamLeader(db, teamId, newLeaderUserId);
+
+    return { success: true, newLeaderUserId };
+}
+
 export async function submitJoinRequest(db: DB, teamId: number, userId: number, inviteCode?: string) {
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
@@ -142,6 +165,11 @@ export async function respondJoinRequest(db: DB, teamId: number, requestId: numb
     const members = await repo.getTeamMembers(db, teamId);
 
     if (status === 'approved') {
+        const requesterInAnyTeam = await repo.checkUserInAnyTeam(db, request.requester_user_id);
+        if (requesterInAnyTeam) {
+            throw new AppError('ผู้ใช้นี้อยู่ในทีมอื่นแล้ว', 400);
+        }
+
         if (members.length >= 5) {
             throw new AppError('สมาชิกในทีมเต็มแล้ว (Team is full)', 400);
         }
@@ -152,6 +180,8 @@ export async function respondJoinRequest(db: DB, teamId: number, requestId: numb
             userId: request.requester_user_id,
             role: 'member'
         });
+        await repo.cancelOtherPendingJoinRequestsByUser(db, request.requester_user_id, requestId);
+        await repo.cancelOtherPendingInvitationsByUser(db, request.requester_user_id, -1);
     }
 
     await repo.updateJoinRequestStatus(db, {
@@ -180,11 +210,24 @@ export async function getTeamIdByInviteCode(db: DB, inviteCode: string) {
     return repo.getTeamIdByInviteCode(db, inviteCode);
 }
 
-export async function sendInvitation(db: DB, teamId: number, leaderUserId: number, inviteeUserId: number) {
+export async function sendInvitation(
+    db: DB,
+    teamId: number,
+    leaderUserId: number,
+    input: { inviteeUserId?: number; inviteeUserName?: string }
+) {
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
     if (team.current_leader_user_id !== leaderUserId) {
         throw new AppError('เฉพาะหัวหน้าทีมเท่านั้น (Only leader)', 403);
+    }
+
+    let inviteeUserId = input.inviteeUserId ?? null;
+    if (!inviteeUserId && input.inviteeUserName) {
+        inviteeUserId = await repo.findActiveUserIdByUserName(db, input.inviteeUserName.trim());
+    }
+    if (!inviteeUserId) {
+        throw new AppError('ไม่พบผู้ใช้จาก username ที่ระบุ', 404);
     }
 
     const members = await repo.getTeamMembers(db, teamId);
@@ -235,8 +278,11 @@ export async function respondToInvitation(db: DB, invitationId: number, userId: 
             userId,
             role: 'member'
         });
+        await repo.cancelOtherPendingJoinRequestsByUser(db, userId, -1);
+        await repo.cancelOtherPendingInvitationsByUser(db, userId, invitationId);
     }
 
     await repo.updateInvitationStatus(db, invitationId, status);
     return { success: true, status };
 }
+

@@ -25,9 +25,17 @@ export const respondJoinSchema = z.object({
 });
 
 export const createInvitationSchema = z.object({
-    inviteeUserId: z.number().int().positive(),
-});
+    inviteeUserId: z.number().int().positive().optional(),
+    inviteeUserName: z.string().min(2).max(50).optional(),
+}).refine(
+    (data) => !!data.inviteeUserId || !!data.inviteeUserName,
+    { message: 'กรุณาระบุ user id หรือ username อย่างน้อย 1 ค่า' }
+);
 
 export const respondInvitationSchema = z.object({
     status: z.enum(['accepted', 'declined']),
+});
+
+export const transferLeaderSchema = z.object({
+    newLeaderUserId: z.number().int().positive(),
 });
