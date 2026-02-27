@@ -1,6 +1,6 @@
 import type { DB } from '../../config/db.js';
 import * as repo from './teams.repo.js';
-import { AppError } from '../../shared/errors.js';
+import { AppError, BadRequestError, ConflictError } from '../../shared/errors.js';
 import * as crypto from 'crypto';
 
 function generateRandomCode(length: number = 6): string {
@@ -239,4 +239,31 @@ export async function respondToInvitation(db: DB, invitationId: number, userId: 
 
     await repo.updateInvitationStatus(db, invitationId, status);
     return { success: true, status };
+}
+
+export async function submitTeamForReview(db: DB, teamId: number, userId: number) {
+    const isLeader = await repo.isTeamLeader(db, teamId, userId);
+    if (!isLeader) throw new AppError('เฉพาะหัวหน้าทีมเท่านั้นที่ส่งตรวจได้', 403);
+
+    const profileComplete = await repo.allMembersProfileComplete(db, teamId);
+    if (!profileComplete) throw new BadRequestError('TEAM_MEMBER_PROFILE_INCOMPLETE');
+
+    const hasFile = await repo.teamHasAnyFile(db, teamId);
+    if (!hasFile) throw new BadRequestError('TEAM_HAS_NO_FILES');
+
+    const openFixItems = await repo.hasOpenFixItems(db, teamId);
+    if (openFixItems.length > 0) {
+        throw new ConflictError(JSON.stringify({ error: 'TEAM_BLOCKED_BY_FIXES', fixItems: openFixItems }));
+    }
+
+    const submissionId = await repo.createTeamSubmission(db, teamId, userId);
+    await repo.attachSubmissionFiles(db, submissionId, teamId);
+    return { submissionId };
+}
+
+export async function getTeamSubmissionStatus(db: DB, teamId: number, userId: number) {
+    const latest = await repo.latestTeamSubmission(db, teamId);
+    const myFixItems = await repo.myFixItems(db, teamId, userId);
+    const openFixItems = await repo.hasOpenFixItems(db, teamId);
+    return { latestSubmission: latest, myFixItems, openFixItems, canSubmit: openFixItems.length === 0 };
 }

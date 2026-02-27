@@ -199,3 +199,58 @@ export async function updateInvitationStatus(db: DB, invitationId: number, statu
         UPDATE team_invitations SET status = :status, updated_at = NOW() WHERE invitation_id = :invitationId
     `, { invitationId, status });
 }
+
+export async function isTeamLeader(db: DB, teamId: number, userId: number): Promise<boolean> {
+    const [rows] = await db.query<RowDataPacket[]>(`SELECT 1 FROM team_teams WHERE team_id=:teamId AND current_leader_user_id=:userId LIMIT 1`, { teamId, userId });
+    return rows.length > 0;
+}
+
+export async function hasOpenFixItems(db: DB, teamId: number) {
+    const [rows] = await db.query<RowDataPacket[]>(`SELECT fix_item_id, member_user_id, reason, rejected_at FROM team_fix_items WHERE team_id=:teamId AND status='open'`, { teamId });
+    return rows;
+}
+
+export async function allMembersProfileComplete(db: DB, teamId: number): Promise<boolean> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN upp.first_name_th IS NOT NULL AND upp.last_name_th IS NOT NULL THEN 1 ELSE 0 END) AS completed
+        FROM team_members tm
+        LEFT JOIN user_users upp ON upp.user_id = tm.user_id
+        WHERE tm.team_id=:teamId AND tm.member_status='active'
+    `, { teamId });
+    const row = rows[0] as any;
+    return Number(row?.total || 0) > 0 && Number(row?.total || 0) === Number(row?.completed || 0);
+}
+
+export async function teamHasAnyFile(db: DB, teamId: number): Promise<boolean> {
+    const [rows] = await db.query<RowDataPacket[]>(`SELECT 1 FROM drive_files WHERE team_id=:teamId AND deleted_at IS NULL LIMIT 1`, { teamId });
+    return rows.length > 0;
+}
+
+export async function createTeamSubmission(db: DB, teamId: number, submittedByUserId: number): Promise<number> {
+    const [result] = await db.query<ResultSetHeader>(`INSERT INTO team_submissions (team_id, submitted_by_user_id, status, submitted_at) VALUES (:teamId,:submittedByUserId,'pending_review',NOW())`, { teamId, submittedByUserId });
+    return result.insertId;
+}
+
+export async function attachSubmissionFiles(db: DB, submissionId: number, teamId: number) {
+    await db.query(`
+      INSERT INTO team_submission_files (submission_id, file_id, uploaded_by_user_id, uploaded_at)
+      SELECT :submissionId, df.file_id, df.uploaded_by_user_id, df.uploaded_at
+      FROM drive_files df
+      WHERE df.team_id=:teamId AND df.deleted_at IS NULL
+    `, { submissionId, teamId });
+}
+
+export async function latestTeamSubmission(db: DB, teamId: number) {
+    const [rows] = await db.query<RowDataPacket[]>(`SELECT * FROM team_submissions WHERE team_id=:teamId ORDER BY submission_id DESC LIMIT 1`, { teamId });
+    return rows[0] ?? null;
+}
+
+export async function myFixItems(db: DB, teamId: number, userId: number) {
+    const [rows] = await db.query<RowDataPacket[]>(`SELECT * FROM team_fix_items WHERE team_id=:teamId AND member_user_id=:userId ORDER BY fix_item_id DESC`, { teamId, userId });
+    return rows;
+}
+
+export async function resolveFixItemsAfterUpload(db: DB, teamId: number, userId: number, uploadedAt: Date) {
+    await db.query(`UPDATE team_fix_items SET status='resolved', resolved_at=NOW(), resolved_by_user_id=:userId WHERE team_id=:teamId AND member_user_id=:userId AND status='open' AND rejected_at < :uploadedAt`, { teamId, userId, uploadedAt });
+}

@@ -39,7 +39,7 @@ function RegisterPage() {
     }, [navigate]);
 
     /** Save user info to localStorage and redirect */
-    const saveUserAndRedirect = (user) => {
+    const saveUserAndRedirect = async (user) => {
         const userInfo = {
             userId: user.userId,
             name: user.userName,
@@ -51,6 +51,16 @@ function RegisterPage() {
             color: '#6366f1',
         };
         localStorage.setItem('gt_user', JSON.stringify(userInfo));
+        try {
+            const accessRes = await fetch(apiUrl('/api/admin/me/access'), { credentials: 'include' });
+            const access = await accessRes.json();
+            if (access?.isAdmin) {
+                navigate('/admin', { replace: true });
+                return;
+            }
+        } catch (e) {
+            // noop
+        }
         navigate('/home', { replace: true });
     };
 
@@ -74,7 +84,7 @@ function RegisterPage() {
                 return;
             }
 
-            saveUserAndRedirect(data.data);
+            await saveUserAndRedirect(data.data);
         } catch (err) {
             setErrorMsg('เกิดข้อผิดพลาด กรุณาลองใหม่');
         } finally {
@@ -117,7 +127,7 @@ function RegisterPage() {
                 return;
             }
 
-            saveUserAndRedirect(data.data);
+            await saveUserAndRedirect(data.data);
         } catch (err) {
             setErrorMsg('เกิดข้อผิดพลาด กรุณาลองใหม่');
         } finally {
