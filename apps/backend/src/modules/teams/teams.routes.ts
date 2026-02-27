@@ -20,4 +20,6 @@ export async function teamsRoutes(app: FastifyInstance) {
     app.post('/:id/invitations', controller.handleSendInvitation);
     app.get('/my-invitations', controller.handleGetMyInvitations);
     app.put('/invitations/:invitationId', controller.handleRespondInvitation);
+    app.post('/:id/submit', controller.handleSubmitTeam);
+    app.get('/:id/status', controller.handleGetTeamStatus);
 }

@@ -200,3 +200,40 @@ export async function handleJoinByCode(req: FastifyRequest, reply: FastifyReply)
         throw err;
     }
 }
+
+export async function handleSubmitTeam(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const teamId = parseInt(req.params.id, 10);
+    if (isNaN(teamId)) return reply.status(400).send({ ok: false, message: 'Invalid team ID' });
+    const user = req.user as JwtPayload;
+    try {
+        const result = await service.submitTeamForReview(req.server.ctx.db, teamId, user.userId);
+        return reply.send(ok(result, 'ส่งคำขอตรวจสอบสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            if (err.statusCode === 409) {
+                try {
+                    return reply.status(409).send(JSON.parse(err.message));
+                } catch {
+                    return reply.status(409).send({ ok: false, message: err.message });
+                }
+            }
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleGetTeamStatus(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const teamId = parseInt(req.params.id, 10);
+    if (isNaN(teamId)) return reply.status(400).send({ ok: false, message: 'Invalid team ID' });
+    const user = req.user as JwtPayload;
+    try {
+        const result = await service.getTeamSubmissionStatus(req.server.ctx.db, teamId, user.userId);
+        return reply.send(ok(result));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}

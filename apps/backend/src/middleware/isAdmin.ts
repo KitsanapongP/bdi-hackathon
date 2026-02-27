@@ -1,15 +1,19 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { JwtPayload } from '../modules/auth/auth.types.js';
+import type { RowDataPacket } from 'mysql2/promise';
 
-/**
- * Fastify preHandler hook — checks that the authenticated user
- * has admin role in access_allowlist (via JWT accessRole claim).
- * Must be used AFTER authRequired middleware.
- */
 export async function isAdmin(req: FastifyRequest, reply: FastifyReply) {
     const user = req.user as JwtPayload | undefined;
+    if (!user) {
+        return reply.status(401).send({ ok: false, message: 'กรุณาเข้าสู่ระบบ' });
+    }
 
-    if (!user || user.accessRole !== 'admin') {
+    const [rows] = await req.server.ctx.db.query<RowDataPacket[]>(
+        `SELECT 1 FROM access_allowlist WHERE user_id = :userId AND access_role = 'admin' AND is_active = 1 LIMIT 1`,
+        { userId: user.userId }
+    );
+
+    if (!rows.length) {
         return reply.status(403).send({ ok: false, message: 'ไม่มีสิทธิ์เข้าถึง' });
     }
 }

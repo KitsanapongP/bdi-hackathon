@@ -19,6 +19,8 @@ import adminRoutes from './modules/admin/admin.routes.js';
 import { teamsRoutes } from './modules/teams/teams.routes.js';
 import { sysLogsRoutes } from './modules/sys-logs/sys-logs.routes.js';
 import { contentRoutes } from './modules/content/content.routes.js';
+import { filesRoutes } from './modules/files/files.routes.js';
+import { publicStaticRoutes } from './modules/public-static/public-static.routes.js';
 
 export type AppContext = { env: Env; db: DB };
 
@@ -92,6 +94,15 @@ export function buildApp(ctx: AppContext) {
   // avoid browser favicon 404 spam
   app.get('/favicon.ico', async (_req, reply) => reply.code(204).send());
 
+  app.decorateRequest('rawToBuffer', null as any);
+  app.addHook('onRequest', async (req) => {
+    req.rawToBuffer = async function () {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req.raw) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      return Buffer.concat(chunks);
+    };
+  });
+
 
   app.get('/static/content/sponsors/*', async (req, reply) => {
     const wildcardPath = ((req.params as { '*': string })['*'] || '').trim();
@@ -125,6 +136,8 @@ export function buildApp(ctx: AppContext) {
   app.register(teamsRoutes, { prefix: '/api/teams' });
   app.register(sysLogsRoutes, { prefix: '/api/sys-logs' });
   app.register(contentRoutes, { prefix: '/api/content' });
+  app.register(filesRoutes, { prefix: '/api/files' });
+  app.register(publicStaticRoutes, { prefix: '/api/public/static' });
 
   // Log incoming request body
   app.addHook('preHandler', async (request, reply) => {
