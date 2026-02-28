@@ -14,6 +14,7 @@ import {
     HelpCircle,
     Lock,
     LogOut,
+    Mail,
     Megaphone,
     MessageSquare,
     Plus,
@@ -22,6 +23,7 @@ import {
     ShieldCheck,
     UserPlus,
     Users,
+    X,
 } from 'lucide-react';
 import { TEAM_STATUS_CONFIG } from './mockData';
 import { apiUrl } from '../../lib/api';
@@ -326,70 +328,188 @@ export default function TeamContent({ user }) {
         return (
             <div className="gl-page-container">
                 <div className="gl-frame gl-frame-center">
-                    {message && <div className="gl-info-card" style={{ width: '100%', marginBottom: 12 }}><p>{message}</p></div>}
+                    {message && <div className="gl-info-card gl-msg-toast"><p>{message}</p></div>}
 
-                    {myInvitations.length > 0 && (
-                        <div className="gl-info-card gl-invitations-card" style={{ width: '100%', marginBottom: 12 }}>
-                            <h4>คำเชิญเข้าทีม</h4>
-                            {myInvitations.map((inv) => (
-                                <div key={inv.invitation_id} className="gl-invitation-item">
-                                    <div className="gl-invitation-text">
-                                        <strong>{inv.team_name_th || `ทีม #${inv.team_id}`}</strong>
-                                        <span>ผู้เชิญ: {inv.invited_by_user_name || '-'}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                        <button className="gt-btn gt-btn-primary" disabled={actionLoading} onClick={() => handleRespondInvitation(inv.invitation_id, 'accepted')}>ยอมรับ</button>
-                                        <button className="gt-btn" disabled={actionLoading} onClick={() => handleRespondInvitation(inv.invitation_id, 'declined')}>ปฏิเสธ</button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
+                    {/* ── Lobby Home (2x2 grid) ── */}
                     {activeView === null && (
-                        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <div className="gl-lobby-cards">
-                                <div className="gl-lobby-card create-card" onClick={() => setActiveView('create')}><Plus size={36} /><h4>สร้างทีม</h4></div>
-                                <div className="gl-lobby-card join-card" onClick={() => setActiveView('join')}><Lock size={36} /><h4>เข้าทีมด้วยโค้ด</h4></div>
-                                <div className="gl-lobby-card browse-card" onClick={() => setActiveView('browse')}><Globe size={36} /><h4>ค้นหาทีมสาธารณะ</h4></div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeView === 'create' && (
-                        <div style={{ width: '100%', maxWidth: 500 }}>
-                            <button className="gl-back-btn" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> ย้อนกลับ</button>
-                            <div className="gl-info-card gl-form-card">
-                                <div className="gr-input-group"><label>ชื่อทีม</label><input className="gr-input" value={createName} onChange={(e) => setCreateName(e.target.value)} /></div>
-                                <div className="gr-toggle-row"><span>{createPublic ? 'สาธารณะ' : 'ส่วนตัว'}</span><button type="button" className={`gr-toggle ${createPublic ? 'on' : ''}`} onClick={() => setCreatePublic((v) => !v)} /></div>
-                                <button className="gt-btn gt-btn-primary" disabled={actionLoading} onClick={handleCreateTeam}>สร้างทีม</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeView === 'join' && (
-                        <div style={{ width: '100%', maxWidth: 500 }}>
-                            <button className="gl-back-btn" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> ย้อนกลับ</button>
-                            <div className="gl-info-card gl-form-card">
-                                <input className="gr-input" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="รหัสเชิญ" />
-                                <button className="gt-btn gt-btn-primary" disabled={actionLoading} onClick={handleJoinByCode}>ส่งคำขอเข้าร่วม</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeView === 'browse' && (
-                        <div style={{ width: '100%', maxWidth: 640 }}>
-                            <button className="gl-back-btn" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> ย้อนกลับ</button>
-                            <div className="gl-info-card gl-form-card">
-                                <div style={{ position: 'relative', marginBottom: 12 }}>
-                                    <Search size={18} style={{ position: 'absolute', left: 12, top: 12 }} />
-                                    <input className="gr-input" style={{ paddingLeft: 36 }} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="ค้นหาทีม..." />
+                        <div className="gl-lobby-home">
+                            <div className="gl-lobby-welcome">
+                                <div className="gl-lobby-welcome-icon">
+                                    <Users size={32} />
                                 </div>
-                                <div className="gl-browse-list" style={{ maxHeight: 360, overflowY: 'auto' }}>
+                                <h2>ค้นหาทีมของคุณ</h2>
+                                <p>เริ่มต้นการแข่งขันโดยสร้างทีมใหม่ หรือเข้าร่วมทีมที่มีอยู่แล้ว</p>
+                            </div>
+                            <div className="gl-lobby-cards gl-lobby-2x2">
+                                <div className="gl-lobby-card create-card" onClick={() => setActiveView('create')}>
+                                    <div className="gl-lobby-card-icon"><Plus size={28} /></div>
+                                    <div className="gl-lobby-card-text">
+                                        <h4>สร้างทีม</h4>
+                                        <p>สร้างทีมใหม่และเชิญเพื่อนเข้าร่วม</p>
+                                    </div>
+                                </div>
+                                <div className="gl-lobby-card join-card" onClick={() => setActiveView('join')}>
+                                    <div className="gl-lobby-card-icon"><Lock size={28} /></div>
+                                    <div className="gl-lobby-card-text">
+                                        <h4>เข้าทีมด้วยโค้ด</h4>
+                                        <p>ใช้รหัสเชิญเพื่อเข้าร่วมทีมส่วนตัว</p>
+                                    </div>
+                                </div>
+                                <div className="gl-lobby-card browse-card" onClick={() => setActiveView('browse')}>
+                                    <div className="gl-lobby-card-icon"><Globe size={28} /></div>
+                                    <div className="gl-lobby-card-text">
+                                        <h4>ค้นหาทีมสาธารณะ</h4>
+                                        <p>ดูรายชื่อทีมที่เปิดรับสมาชิก</p>
+                                    </div>
+                                </div>
+                                <div className="gl-lobby-card invite-card" onClick={() => setActiveView('invitations')}>
+                                    {myInvitations.length > 0 && (
+                                        <span className="gl-lobby-card-badge">{myInvitations.length}</span>
+                                    )}
+                                    <div className="gl-lobby-card-icon"><Mail size={28} /></div>
+                                    <div className="gl-lobby-card-text">
+                                        <h4>คำเชิญเข้าทีม</h4>
+                                        <p>ดูคำเชิญที่ได้รับจากทีมอื่น</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Create Team View ── */}
+                    {activeView === 'create' && (
+                        <div className="gl-inner-view">
+                            <div className="gl-inner-header">
+                                <button className="gl-back-btn" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> ย้อนกลับ</button>
+                                <div className="gl-inner-header-icon create-icon"><Plus size={24} /></div>
+                                <div>
+                                    <h3>สร้างทีมใหม่</h3>
+                                    <p>กรอกข้อมูลด้านล่างเพื่อสร้างทีมของคุณ</p>
+                                </div>
+                            </div>
+                            <div className="gl-inner-form">
+                                <div className="gl-form-field">
+                                    <label className="gl-form-label">ชื่อทีม</label>
+                                    <input className="gl-form-input" value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="ตั้งชื่อทีมของคุณ" />
+                                </div>
+                                <div className="gl-form-toggle-row">
+                                    <div className="gl-form-toggle-info">
+                                        <span className="gl-form-toggle-label">{createPublic ? 'สาธารณะ' : 'ส่วนตัว'}</span>
+                                        <span className="gl-form-toggle-desc">{createPublic ? 'ทุกคนสามารถค้นหาและขอเข้าร่วมทีมได้' : 'เข้าร่วมได้ด้วยรหัสเชิญเท่านั้น'}</span>
+                                    </div>
+                                    <button type="button" className={`gl-form-toggle ${createPublic ? 'on' : ''}`} onClick={() => setCreatePublic((v) => !v)} />
+                                </div>
+                                <button className="gl-form-submit gl-btn-pink" disabled={actionLoading || !createName.trim()} onClick={handleCreateTeam}>
+                                    <Plus size={18} /> สร้างทีม
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Join by Code View ── */}
+                    {activeView === 'join' && (
+                        <div className="gl-inner-view">
+                            <div className="gl-inner-header">
+                                <button className="gl-back-btn" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> ย้อนกลับ</button>
+                                <div className="gl-inner-header-icon join-icon"><Lock size={24} /></div>
+                                <div>
+                                    <h3>เข้าทีมด้วยรหัสเชิญ</h3>
+                                    <p>กรอกรหัสเชิญที่ได้รับจากหัวหน้าทีม</p>
+                                </div>
+                            </div>
+                            <div className="gl-inner-form">
+                                <div className="gl-form-field">
+                                    <label className="gl-form-label">รหัสเชิญ</label>
+                                    <input className="gl-form-input gl-form-code-input" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="เช่น ABC123" />
+                                </div>
+                                <button className="gl-form-submit gl-btn-blue" disabled={actionLoading || !joinCode.trim()} onClick={handleJoinByCode}>
+                                    <UserPlus size={18} /> ส่งคำขอเข้าร่วม
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Browse Public Teams View ── */}
+                    {activeView === 'browse' && (
+                        <div className="gl-inner-view gl-inner-wide">
+                            <div className="gl-inner-header">
+                                <button className="gl-back-btn" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> ย้อนกลับ</button>
+                                <div className="gl-inner-header-icon browse-icon"><Globe size={24} /></div>
+                                <div>
+                                    <h3>ค้นหาทีมสาธารณะ</h3>
+                                    <p>เลือกทีมที่คุณสนใจแล้วส่งคำขอเข้าร่วม</p>
+                                </div>
+                            </div>
+                            <div className="gl-inner-form">
+                                <div className="gl-search-wrap">
+                                    <Search size={18} className="gl-search-icon" />
+                                    <input className="gl-form-input gl-search-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="ค้นหาทีม..." />
+                                </div>
+                                <div className="gl-browse-list">
+                                    {filteredTeams.length === 0 && (
+                                        <div className="gl-browse-empty">
+                                            <Search size={32} />
+                                            <span>ไม่พบทีมที่ค้นหา</span>
+                                        </div>
+                                    )}
                                     {filteredTeams.map((t) => (
-                                        <div key={t.id} className="gl-browse-item" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                                            <div><strong>{t.name}</strong><div><Users size={14} /> {t.memberCount}/{MAX_MEMBERS}</div></div>
-                                            <button className="gt-btn gt-btn-primary" disabled={actionLoading} onClick={() => handleRequestPublicTeam(t.id)}>ขอเข้าร่วม</button>
+                                        <div key={t.id} className="gl-browse-item">
+                                            <div className="gl-browse-item-left">
+                                                <div className="gl-browse-team-avatar">{t.name.charAt(0)}</div>
+                                                <div className="gl-browse-team-info">
+                                                    <span className="gl-browse-team-name">{t.name}</span>
+                                                    <span className="gl-browse-team-meta"><Users size={13} /> {t.memberCount}/{MAX_MEMBERS} คน</span>
+                                                </div>
+                                            </div>
+                                            <button className="gl-browse-join-btn gl-btn-green" disabled={actionLoading} onClick={() => handleRequestPublicTeam(t.id)}>
+                                                <UserPlus size={15} /> ขอเข้าร่วม
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Invitations View ── */}
+                    {activeView === 'invitations' && (
+                        <div className="gl-inner-view gl-inner-wide">
+                            <div className="gl-inner-header">
+                                <button className="gl-back-btn" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> ย้อนกลับ</button>
+                                <div className="gl-inner-header-icon invite-icon-header"><Mail size={24} /></div>
+                                <div>
+                                    <h3>คำเชิญเข้าทีม</h3>
+                                    <p>{myInvitations.length > 0 ? `คุณมี ${myInvitations.length} คำเชิญที่รอดำเนินการ` : 'ยังไม่มีคำเชิญในขณะนี้'}</p>
+                                </div>
+                            </div>
+                            <div className="gl-inner-form">
+                                {myInvitations.length === 0 && (
+                                    <div className="gl-browse-empty">
+                                        <Mail size={36} />
+                                        <span>ยังไม่มีคำเชิญ</span>
+                                        <p>เมื่อมีทีมเชิญคุณเข้าร่วม จะแสดงที่นี่</p>
+                                    </div>
+                                )}
+                                <div className="gl-inv-list">
+                                    {myInvitations.map((inv) => (
+                                        <div key={inv.invitation_id} className="gl-inv-card">
+                                            <div className="gl-inv-card-left">
+                                                <div className="gl-inv-avatar">
+                                                    {(inv.team_name_th || 'T').charAt(0)}
+                                                </div>
+                                                <div className="gl-inv-info">
+                                                    <span className="gl-inv-team-name">{inv.team_name_th || `ทีม #${inv.team_id}`}</span>
+                                                    <span className="gl-inv-from">เชิญโดย {inv.invited_by_user_name || '-'}</span>
+                                                </div>
+                                            </div>
+                                            <div className="gl-inv-actions">
+                                                <button className="gl-inv-btn gl-inv-accept" disabled={actionLoading} onClick={() => handleRespondInvitation(inv.invitation_id, 'accepted')}>
+                                                    <CheckCircle size={15} /> ยอมรับ
+                                                </button>
+                                                <button className="gl-inv-btn gl-inv-decline" disabled={actionLoading} onClick={() => handleRespondInvitation(inv.invitation_id, 'declined')}>
+                                                    <X size={15} /> ปฏิเสธ
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

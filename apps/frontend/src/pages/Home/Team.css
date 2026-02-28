@@ -916,7 +916,8 @@
 }
 
 .gl-lobby-card {
-    background: var(--gl-card);
+    position: relative;
+    background: rgba(196, 181, 253, 0.18);
     border: 3px solid var(--gl-border);
     border-radius: var(--gl-radius-xl);
     padding: 32px 24px;
@@ -928,6 +929,21 @@
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     box-shadow: 0 8px 0 rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.gl-lobby-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.gl-lobby-card>* {
+    position: relative;
+    z-index: 1;
 }
 
 .gl-lobby-card:hover {
@@ -1196,29 +1212,726 @@
     }
 }
 
-.gl-invitations-card {
-    padding: 14px 16px;
+/* ═══════════════════════════════════════════════════════════
+   MESSAGE TOAST
+   ═══════════════════════════════════════════════════════════ */
+.gl-msg-toast {
+    width: 100%;
+    margin-bottom: 16px;
+    border-left: 4px solid var(--gl-teal);
+    animation: gl-fade-up 0.4s ease both;
 }
 
-.gl-invitation-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-}
-
-.gl-invitation-text {
+/* ═══════════════════════════════════════════════════════════
+   LOBBY WELCOME HEADER
+   ═══════════════════════════════════════════════════════════ */
+.gl-lobby-home {
+    width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    animation: gl-lobby-fade-in 0.5s ease both;
+    padding: 12px;
+    border-radius: var(--gl-radius-xl);
+}
+
+@keyframes gl-lobby-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.gl-lobby-welcome {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.gl-lobby-welcome-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gl-teal), var(--gl-light));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 8px 32px rgba(20, 184, 166, 0.35);
+    animation: gl-float 3s ease-in-out infinite;
+}
+
+@keyframes gl-float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-6px);
+    }
+}
+
+.gl-lobby-welcome h2 {
+    margin: 0 0 8px;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--gl-text);
+    letter-spacing: 0.3px;
+}
+
+.gl-lobby-welcome p {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--gl-text-dim);
+    max-width: 420px;
+    line-height: 1.6;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LOBBY CARD TEXT (description below title)
+   ═══════════════════════════════════════════════════════════ */
+.gl-lobby-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+}
+
+.gl-lobby-card-text h4 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
     color: var(--gl-text);
 }
 
-.gl-invitation-text span {
+.gl-lobby-card-text p {
+    margin: 0;
+    font-size: 0.8rem;
     color: var(--gl-text-dim);
+    line-height: 1.4;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   2x2 LOBBY GRID
+   ═══════════════════════════════════════════════════════════ */
+.gl-lobby-2x2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    max-width: 640px;
+}
+
+/* ── Lobby card notification badge ── */
+.gl-lobby-card-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    min-width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 99px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 0 6px;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.45);
+    animation: gl-badge-pulse 2s ease-in-out infinite;
+    z-index: 2;
+}
+
+@keyframes gl-badge-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.45);
+    }
+
+    50% {
+        box-shadow: 0 0 18px rgba(239, 68, 68, 0.7);
+    }
+}
+
+/* ── Invite card hover color ── */
+.gl-lobby-card.invite-card:hover {
+    border-color: #f59e0b;
+}
+
+.gl-lobby-card.invite-card:hover .gl-lobby-card-icon {
+    background: #f59e0b;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INNER VIEW (create / join / browse / invitations)
+   ═══════════════════════════════════════════════════════════ */
+.gl-inner-view {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    animation: gl-slide-in 0.35s ease both;
+}
+
+.gl-inner-wide {
+    max-width: 640px;
+}
+
+/* ── Inner view header with icon badge ── */
+.gl-inner-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 4px 0;
+}
+
+.gl-inner-header-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.gl-inner-header-icon.create-icon {
+    background: linear-gradient(135deg, #ec4899, #f472b6);
+    box-shadow: 0 4px 16px rgba(236, 72, 153, 0.35);
+}
+
+.gl-inner-header-icon.join-icon {
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+}
+
+.gl-inner-header-icon.browse-icon {
+    background: linear-gradient(135deg, #10b981, #34d399);
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+}
+
+.gl-inner-header-icon.invite-icon-header {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);
+}
+
+.gl-inner-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--gl-text);
+}
+
+.gl-inner-header p {
+    margin: 2px 0 0;
     font-size: 0.85rem;
+    color: var(--gl-text-dim);
+}
+
+/* ── Form container ── */
+.gl-inner-form {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--gl-border);
+    border-radius: var(--gl-radius-lg);
+    padding: 24px;
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ── Form field ── */
+.gl-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.gl-form-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--gl-text-dim);
+}
+
+.gl-form-input {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: var(--gl-radius-md);
+    border: 1px solid var(--gl-border);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--gl-text);
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.gl-form-input:focus {
+    border-color: var(--gl-teal);
+    box-shadow: 0 0 0 3px var(--gl-teal-glow);
+}
+
+.gl-form-input::placeholder {
+    color: var(--gl-text-dim);
+}
+
+.gl-form-code-input {
+    font-family: 'Consolas', 'Courier New', monospace;
+    letter-spacing: 2px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* ── Toggle row ── */
+.gl-form-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--gl-border);
+    border-radius: var(--gl-radius-md);
+}
+
+.gl-form-toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.gl-form-toggle-label {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--gl-text);
+}
+
+.gl-form-toggle-desc {
+    font-size: 0.8rem;
+    color: var(--gl-text-dim);
+}
+
+.gl-form-toggle {
+    width: 48px;
+    height: 26px;
+    border-radius: 99px;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    position: relative;
+    transition: background 0.25s;
+    flex-shrink: 0;
+}
+
+.gl-form-toggle::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.25s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.gl-form-toggle.on {
+    background: var(--gl-teal);
+}
+
+.gl-form-toggle.on::after {
+    transform: translateX(22px);
+}
+
+/* ── Submit button (Base) ── */
+.gl-form-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: var(--gl-radius-md);
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    letter-spacing: 0.5px;
+}
+
+.gl-form-submit:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.gl-form-submit:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ── Submit button variants ── */
+.gl-btn-pink {
+    background: linear-gradient(135deg, #ec4899, #f472b6);
+    box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4);
+}
+
+.gl-btn-pink:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(236, 72, 153, 0.6);
+}
+
+.gl-btn-blue {
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.gl-btn-blue:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(59, 130, 246, 0.6);
+}
+
+.gl-form-submit:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.gl-form-submit:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ── Search bar ── */
+.gl-search-wrap {
+    position: relative;
+}
+
+.gl-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gl-text-dim);
+    pointer-events: none;
+}
+
+.gl-search-input {
+    padding-left: 40px !important;
+}
+
+/* ── Browse list (enhanced) ── */
+.gl-browse-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 360px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.gl-browse-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--gl-border);
+    border-radius: var(--gl-radius-md);
+    transition: all 0.22s ease;
+}
+
+.gl-browse-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.gl-browse-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.gl-browse-team-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--gl-light), var(--gl-teal));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.gl-browse-team-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.gl-browse-team-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--gl-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gl-browse-team-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: var(--gl-text-dim);
+}
+
+.gl-browse-join-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border-radius: 99px;
+    border: none;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.22s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.gl-browse-join-btn.gl-btn-green {
+    background: linear-gradient(135deg, #10b981, #34d399);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+.gl-browse-join-btn.gl-btn-green:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+}
+
+.gl-browse-join-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Empty state ── */
+.gl-browse-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 40px 20px;
+    color: var(--gl-text-dim);
+    text-align: center;
+}
+
+.gl-browse-empty svg {
+    opacity: 0.35;
+}
+
+.gl-browse-empty span {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--gl-text);
+}
+
+.gl-browse-empty p {
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+    .gl-lobby-2x2 {
+        grid-template-columns: 1fr !important;
+    }
+
+    .gl-inner-form {
+        padding: 18px 16px;
+    }
+
+    .gl-browse-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .gl-browse-join-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 10px 16px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INVITATION CARDS (inside inner view)
+   ═══════════════════════════════════════════════════════════ */
+.gl-inv-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.gl-inv-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 18px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--gl-border);
+    border-radius: var(--gl-radius-lg);
+    backdrop-filter: blur(4px);
+    transition: all 0.25s ease;
+    animation: gl-fade-up 0.4s ease both;
+}
+
+.gl-inv-card:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.gl-inv-card:nth-child(2) {
+    animation-delay: 0.06s;
+}
+
+.gl-inv-card:nth-child(3) {
+    animation-delay: 0.12s;
+}
+
+.gl-inv-card:hover {
+    background: var(--gl-card-hover);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.gl-inv-card-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.gl-inv-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.gl-inv-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.gl-inv-team-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--gl-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gl-inv-from {
+    font-size: 0.8rem;
+    color: var(--gl-text-dim);
+}
+
+.gl-inv-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.gl-inv-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 16px;
+    border-radius: 99px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.22s ease;
+    white-space: nowrap;
+}
+
+.gl-inv-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.gl-inv-accept {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.gl-inv-accept:hover:not(:disabled) {
+    background: linear-gradient(135deg, #34d399, #10b981);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
+    transform: translateY(-1px);
+}
+
+.gl-inv-decline {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.gl-inv-decline:hover:not(:disabled) {
+    background: linear-gradient(135deg, #f87171, #ef4444);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
+    transform: translateY(-1px);
+}
+
+@media (max-width: 600px) {
+    .gl-inv-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .gl-inv-actions {
+        justify-content: stretch;
+    }
+
+    .gl-inv-btn {
+        flex: 1;
+        justify-content: center;
+    }
 }
 
 .gl-member-entry.gl-me {
