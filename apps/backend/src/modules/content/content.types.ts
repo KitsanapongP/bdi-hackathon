@@ -71,3 +71,17 @@ export type ContentSponsor = {
     tierNameEn: string | null;
     sortOrder: number;
 };
+
+export type ContentSponsorAdmin = {
+    id: number;
+    name: string;
+    nameTh: string;
+    link: string;
+    displayOrder: number;
+    isActive: boolean;
+    logo: string;
+    logoMeta: { type: string; sizeKb: number } | null;
+    tierCode: string | null;
+    tierNameTh: string | null;
+    tierNameEn: string | null;
+};

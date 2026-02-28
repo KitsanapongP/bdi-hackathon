@@ -130,3 +130,74 @@ export async function handleDeleteRewardAdmin(req: FastifyRequest<{ Params: { id
         throw err;
     }
 }
+
+export async function handleGetAllSponsorsAdmin(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const sponsors = await contentService.getAllSponsorsAdmin(req.server.ctx.db);
+        return reply.send(ok(sponsors));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleCreateSponsorAdmin(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const result = await contentService.createSponsorAdmin(req.server.ctx.db, req.body as any);
+        return reply.status(201).send(ok(result, 'เพิ่ม Sponsor สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateSponsorAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+        return reply.status(400).send({ ok: false, message: 'ID ไม่ถูกต้อง' });
+    }
+
+    try {
+        const result = await contentService.updateSponsorAdmin(req.server.ctx.db, id, req.body as any);
+        return reply.send(ok(result, 'อัปเดต Sponsor สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleDeleteSponsorAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+        return reply.status(400).send({ ok: false, message: 'ID ไม่ถูกต้อง' });
+    }
+
+    try {
+        await contentService.deleteSponsorAdmin(req.server.ctx.db, id);
+        return reply.send(ok({ success: true }, 'ลบ Sponsor สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleReorderSponsorsAdmin(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const body = req.body as { updates: { id: number; displayOrder: number }[] };
+        await contentService.reorderSponsorsAdmin(req.server.ctx.db, body.updates);
+        return reply.send(ok({ success: true }, 'จัดลำดับ Sponsor สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}

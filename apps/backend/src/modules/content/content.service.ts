@@ -1,6 +1,6 @@
 import type { DB } from '../../config/db.js';
 import * as repo from './content.repo.js';
-import type { ContentReward, ContentSponsor, ContentRewardAdmin } from './content.types.js';
+import type { ContentReward, ContentSponsor, ContentRewardAdmin, ContentSponsorAdmin } from './content.types.js';
 import { NotFoundError } from '../../shared/errors.js';
 
 function toRewardAdminResponse(row: any): ContentRewardAdmin {
@@ -108,16 +108,16 @@ export async function updateRewardAdmin(
     }
 
     await repo.updateReward(db, rewardId, {
-        rewardRank: data.rank,
-        rewardNameTh: data.titleTh,
-        rewardNameEn: data.title,
-        prizeAmount: data.amount,
-        prizeCurrency: data.currency,
-        prizeTextTh: data.prizeTextTh,
-        prizeTextEn: data.prizeTextEn,
-        descriptionTh: data.descriptionTh,
-        descriptionEn: data.descriptionEn,
-        sortOrder: data.sortOrder,
+        rewardRank: data.rank ?? undefined,
+        rewardNameTh: data.titleTh ?? undefined,
+        rewardNameEn: data.title ?? undefined,
+        prizeAmount: data.amount ?? undefined,
+        prizeCurrency: data.currency ?? undefined,
+        prizeTextTh: data.prizeTextTh ?? undefined,
+        prizeTextEn: data.prizeTextEn ?? undefined,
+        descriptionTh: data.descriptionTh ?? undefined,
+        descriptionEn: data.descriptionEn ?? undefined,
+        sortOrder: data.sortOrder ?? undefined,
         isEnabled: data.isActive,
     });
 
@@ -148,4 +148,111 @@ export async function getSponsors(db: DB, tierCode?: string): Promise<ContentSpo
         tierNameEn: sponsor.tier_name_en,
         sortOrder: sponsor.sort_order,
     }));
+}
+
+function toSponsorAdminResponse(row: any): ContentSponsorAdmin {
+    return {
+        id: row.sponsor_id,
+        name: row.sponsor_name_en,
+        nameTh: row.sponsor_name_th,
+        link: row.website_url || '',
+        displayOrder: row.sort_order,
+        isActive: row.is_enabled === 1,
+        logo: row.logo_storage_key || '',
+        logoMeta: null,
+        tierCode: row.tier_code,
+        tierNameTh: row.tier_name_th,
+        tierNameEn: row.tier_name_en,
+    };
+}
+
+export async function getAllSponsorsAdmin(db: DB): Promise<ContentSponsorAdmin[]> {
+    const sponsors = await repo.getAllSponsors(db);
+    return sponsors.map(toSponsorAdminResponse);
+}
+
+export async function getSponsorByIdAdmin(db: DB, sponsorId: number): Promise<ContentSponsorAdmin> {
+    const sponsor = await repo.getSponsorById(db, sponsorId);
+    if (!sponsor) {
+        throw new NotFoundError('ไม่พบข้อมูล sponsor นี้');
+    }
+    return toSponsorAdminResponse(sponsor);
+}
+
+export async function createSponsorAdmin(
+    db: DB,
+    data: {
+        name: string;
+        nameTh: string;
+        link: string;
+        displayOrder: number;
+        isActive: boolean;
+        logo: string;
+        tierCode?: string | null;
+        tierNameTh?: string | null;
+        tierNameEn?: string | null;
+    }
+): Promise<ContentSponsorAdmin> {
+    const sponsorId = await repo.createSponsor(db, {
+        nameEn: data.name,
+        nameTh: data.nameTh,
+        logoStorageKey: data.logo,
+        websiteUrl: data.link || null,
+        tierCode: data.tierCode || null,
+        tierNameTh: data.tierNameTh || null,
+        tierNameEn: data.tierNameEn || null,
+        sortOrder: data.displayOrder,
+        isEnabled: data.isActive,
+    });
+
+    const sponsor = await repo.getSponsorById(db, sponsorId);
+    return toSponsorAdminResponse(sponsor!);
+}
+
+export async function updateSponsorAdmin(
+    db: DB,
+    sponsorId: number,
+    data: {
+        name?: string;
+        nameTh?: string;
+        link?: string;
+        displayOrder?: number;
+        isActive?: boolean;
+        logo?: string;
+        tierCode?: string | null;
+        tierNameTh?: string | null;
+        tierNameEn?: string | null;
+    }
+): Promise<ContentSponsorAdmin> {
+    const existing = await repo.getSponsorById(db, sponsorId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูล sponsor นี้');
+    }
+
+    await repo.updateSponsor(db, sponsorId, {
+        nameEn: data.name ?? undefined,
+        nameTh: data.nameTh ?? undefined,
+        logoStorageKey: data.logo ?? undefined,
+        websiteUrl: data.link,
+        tierCode: data.tierCode,
+        tierNameTh: data.tierNameTh,
+        tierNameEn: data.tierNameEn,
+        sortOrder: data.displayOrder ?? undefined,
+        isEnabled: data.isActive,
+    });
+
+    const updated = await repo.getSponsorById(db, sponsorId);
+    return toSponsorAdminResponse(updated!);
+}
+
+export async function deleteSponsorAdmin(db: DB, sponsorId: number): Promise<void> {
+    const existing = await repo.getSponsorById(db, sponsorId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูล sponsor นี้');
+    }
+    await repo.deleteSponsor(db, sponsorId);
+}
+
+export async function reorderSponsorsAdmin(db: DB, updates: { id: number; displayOrder: number }[]): Promise<void> {
+    await repo.updateSponsorsOrder(db, updates.map(u => ({ id: u.id, sortOrder: u.displayOrder })));
 }

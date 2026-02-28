@@ -72,7 +72,6 @@ import {
   reviewTeamDetailsSeed,
   reviewTeamsSeed,
   settingsSeed,
-  sponsorsSeed,
   winnersSeed,
 } from './adminMockData'
 import './Admin.css'
@@ -244,10 +243,10 @@ function useAdminSession() {
   return useContext(AdminSessionContext)
 }
 
-function StatusBadge({ status }) {
+function StatusBadge({ status, label }) {
   return (
     <span className={`ad-status ad-status-${getStatusTone(status)}`}>
-      {teamStateLabel[status] || memberStateLabel[status] || status}
+      {label || teamStateLabel[status] || memberStateLabel[status] || status}
     </span>
   )
 }
@@ -276,14 +275,16 @@ function AdminDataTable({
   searchKeys = [],
   searchPlaceholder = 'ค้นหา',
   filters = [],
-  pageSize = 8,
+  pageSize: initialPageSize = 25,
   emptyMessage = 'ไม่มีข้อมูล',
   defaultFilter = 'all',
   toolbarExtra = null,
+  loading = false,
 }) {
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState(defaultFilter)
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(initialPageSize)
 
   const filteredRows = useMemo(() => {
     const keyword = search.trim().toLowerCase()
@@ -298,13 +299,20 @@ function AdminDataTable({
     })
   }, [rows, search, searchKeys, filters, activeFilter])
 
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize))
+  const totalPages = pageSize === -1 ? 1 : Math.max(1, Math.ceil(filteredRows.length / pageSize))
+  const effectivePageSize = pageSize === -1 ? filteredRows.length : pageSize
 
   useEffect(() => {
+    if (pageSize === -1) return
     if (page > totalPages) setPage(totalPages)
-  }, [page, totalPages])
+  }, [page, totalPages, pageSize])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, activeFilter, pageSize])
 
   const pagedRows = useMemo(() => {
+    if (pageSize === -1) return filteredRows
     const start = (page - 1) * pageSize
     return filteredRows.slice(start, start + pageSize)
   }, [filteredRows, page, pageSize])
@@ -318,7 +326,6 @@ function AdminDataTable({
             value={search}
             onChange={(event) => {
               setSearch(event.target.value)
-              setPage(1)
             }}
             placeholder={searchPlaceholder}
           />
@@ -333,7 +340,6 @@ function AdminDataTable({
                 className={filter.value === activeFilter ? 'active' : ''}
                 onClick={() => {
                   setActiveFilter(filter.value)
-                  setPage(1)
                 }}
               >
                 {filter.label}
@@ -354,7 +360,13 @@ function AdminDataTable({
             </tr>
           </thead>
           <tbody>
-            {pagedRows.length ? (
+            {loading ? (
+              <tr>
+                <td colSpan={columns.length}>
+                  <div className="ad-table-empty">กำลังโหลด...</div>
+                </td>
+              </tr>
+            ) : pagedRows.length ? (
               pagedRows.map((row) => (
                 <tr key={row.id || row.teamId || row.memberId}>
                   {columns.map((column) => (
@@ -376,14 +388,30 @@ function AdminDataTable({
       </div>
 
       <div className="ad-table-pager">
+        <div className="ad-page-size-selector">
+          <span>Rows:</span>
+          <select
+            value={pageSize}
+            onChange={(event) => {
+              setPageSize(event.target.value === 'all' ? -1 : Number(event.target.value))
+            }}
+          >
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value="all">All</option>
+          </select>
+        </div>
         <span>
-          Page {page} / {totalPages} ({filteredRows.length} rows)
+          {pageSize === -1
+            ? `${filteredRows.length} rows`
+            : `Page ${page} / ${totalPages} (${filteredRows.length} rows)`}
         </span>
         <div>
           <button type="button" disabled={page === 1} onClick={() => setPage((prev) => prev - 1)}>
             <ChevronLeft size={16} />
           </button>
-          <button type="button" disabled={page === totalPages} onClick={() => setPage((prev) => prev + 1)}>
+          <button type="button" disabled={pageSize === -1 || page === totalPages} onClick={() => setPage((prev) => prev + 1)}>
             <ChevronRight size={16} />
           </button>
         </div>
@@ -875,12 +903,14 @@ function DashboardPage() {
 
 function StaticSponsorsPage() {
   const { pushToast } = useAdminToast()
-  const [items, setItems] = useState(sponsorsSeed)
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [errors, setErrors] = useState({})
   const [form, setForm] = useState({
     name: '',
+    nameTh: '',
     link: '',
     displayOrder: 1,
     isActive: true,
@@ -889,11 +919,46 @@ function StaticSponsorsPage() {
     logoSize: 0,
   })
 
+  const fetchSponsors = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(apiUrl('/api/admin/sponsors'), { credentials: 'include' })
+      const data = await response.json()
+      if (data.ok) {
+        setItems(
+          data.data.map((item) => ({
+            id: item.id,
+            name: item.name,
+            nameTh: item.nameTh,
+            link: item.link,
+            displayOrder: item.displayOrder,
+            isActive: item.isActive,
+            logo: item.logo,
+            logoMeta: item.logoMeta,
+            tierCode: item.tierCode,
+            tierNameTh: item.tierNameTh,
+            tierNameEn: item.tierNameEn,
+          }))
+        )
+      }
+    } catch (err) {
+      console.error('Failed to fetch sponsors:', err)
+      pushToast({ type: 'error', title: 'ไม่สามารถโหลดข้อมูล sponsor ได้' })
+    } finally {
+      setLoading(false)
+    }
+  }, [pushToast])
+
+  useEffect(() => {
+    fetchSponsors()
+  }, [fetchSponsors])
+
   const openCreate = () => {
     setEditingId(null)
     setErrors({})
     setForm({
       name: '',
+      nameTh: '',
       link: '',
       displayOrder: items.length + 1,
       isActive: true,
@@ -909,7 +974,8 @@ function StaticSponsorsPage() {
     setErrors({})
     setForm({
       name: item.name,
-      link: item.link,
+      nameTh: item.nameTh || '',
+      link: item.link || '',
       displayOrder: item.displayOrder,
       isActive: item.isActive,
       logoFileName: item.logo?.split('/').pop() || '',
@@ -922,7 +988,6 @@ function StaticSponsorsPage() {
   const validate = () => {
     const next = {}
     if (!form.name.trim()) next.name = 'กรุณากรอกชื่อ sponsor'
-    if (!form.link.trim()) next.link = 'กรุณากรอกลิงก์'
     if (!editingId && !form.logoFileName) next.logo = 'กรุณาอัปโหลดโลโก้'
     if (form.logoType && !['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'].includes(form.logoType)) {
       next.logo = 'รองรับเฉพาะ PNG/JPG/WEBP/SVG'
@@ -932,78 +997,113 @@ function StaticSponsorsPage() {
     return Object.keys(next).length === 0
   }
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     if (!validate()) return
-    if (editingId) {
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                name: form.name.trim(),
-                link: form.link.trim(),
-                displayOrder: Number(form.displayOrder),
-                isActive: form.isActive,
-                logoMeta: form.logoType
-                  ? {
-                      type: form.logoType,
-                      sizeKb: Math.round(form.logoSize / 1024),
-                    }
-                  : item.logoMeta,
-              }
-            : item,
-        ),
-      )
-      pushToast({ title: 'อัปเดต Sponsor สำเร็จ', description: form.name })
-    } else {
-      const id = Date.now()
-      setItems((prev) => [
-        ...prev,
-        {
-          id,
-          name: form.name.trim(),
-          link: form.link.trim(),
-          displayOrder: Number(form.displayOrder),
-          isActive: form.isActive,
-          logo: '/content/sponsors/mock-upload.png',
-          logoMeta: {
-            type: form.logoType || 'image/png',
-            sizeKb: Math.round(form.logoSize / 1024) || 120,
-          },
-        },
-      ])
-      pushToast({ title: 'เพิ่ม Sponsor สำเร็จ', description: form.name })
+    try {
+      if (editingId) {
+        const response = await fetch(apiUrl(`/api/admin/sponsors/${editingId}`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            name: form.name.trim(),
+            nameTh: form.nameTh.trim(),
+            link: form.link.trim() || null,
+            displayOrder: Number(form.displayOrder),
+            isActive: form.isActive,
+          }),
+        })
+        const data = await response.json()
+        if (data.ok) {
+          pushToast({ title: 'อัปเดต Sponsor สำเร็จ', description: form.name })
+          fetchSponsors()
+        } else {
+          pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+        }
+      } else {
+        const response = await fetch(apiUrl('/api/admin/sponsors'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            name: form.name.trim(),
+            nameTh: form.nameTh.trim(),
+            link: form.link.trim() || null,
+            displayOrder: Number(form.displayOrder),
+            isActive: form.isActive,
+            logo: '/content/sponsors/mock-upload.png',
+          }),
+        })
+        const data = await response.json()
+        if (data.ok) {
+          pushToast({ title: 'เพิ่ม Sponsor สำเร็จ', description: form.name })
+          fetchSponsors()
+        } else {
+          pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+        }
+      }
+    } catch (err) {
+      console.error('Failed to save sponsor:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการบันทึก' })
     }
     setDrawerOpen(false)
   }
 
-  const remove = (id) => {
+  const remove = async (id) => {
     const target = items.find((item) => item.id === id)
-    setItems((prev) => prev.filter((item) => item.id !== id))
-    pushToast({
-      type: 'warning',
-      title: 'ลบ Sponsor แล้ว',
-      description: target?.name || '',
-    })
+    try {
+      const response = await fetch(apiUrl(`/api/admin/sponsors/${id}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await response.json()
+      if (data.ok) {
+        pushToast({
+          type: 'warning',
+          title: 'ลบ Sponsor แล้ว',
+          description: target?.name || '',
+        })
+        fetchSponsors()
+      } else {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+      }
+    } catch (err) {
+      console.error('Failed to delete sponsor:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการลบ' })
+    }
   }
 
-  const moveItem = (id, direction) => {
-    setItems((prev) => {
-      const index = prev.findIndex((item) => item.id === id)
-      if (index === -1) return prev
-      const swapIndex = direction === 'up' ? index - 1 : index + 1
-      if (swapIndex < 0 || swapIndex >= prev.length) return prev
-      const next = [...prev]
-      ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
-      return next.map((item, idx) => ({ ...item, displayOrder: idx + 1 }))
-    })
+  const moveItem = async (id, direction) => {
+    const index = items.findIndex((item) => item.id === id)
+    if (index === -1) return
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (swapIndex < 0 || swapIndex >= items.length) return
+
+    const next = [...items]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    const reordered = next.map((item, idx) => ({ ...item, displayOrder: idx + 1 }))
+    setItems(reordered)
+
+    try {
+      const updates = reordered.map((item) => ({ id: item.id, displayOrder: item.displayOrder }))
+      await fetch(apiUrl('/api/admin/sponsors/reorder'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ updates }),
+      })
+    } catch (err) {
+      console.error('Failed to reorder sponsors:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับ' })
+      fetchSponsors()
+    }
   }
 
   return (
     <div className="ad-stack">
       <SectionHeading
         title="Static Content: Sponsors"
-        description="CRUD + Reorder + Logo upload validation สำหรับหน้าเว็บไซต์หลัก"
+        description=""
         right={
           <button type="button" className="ad-btn ad-btn-primary" onClick={openCreate}>
             <Plus size={15} />
@@ -1013,6 +1113,7 @@ function StaticSponsorsPage() {
       />
 
       <AdminDataTable
+        loading={loading}
         rows={[...items].sort((a, b) => a.displayOrder - b.displayOrder)}
         searchKeys={['name', 'link']}
         searchPlaceholder="ค้นหาชื่อ sponsor หรือลิงก์"
@@ -1052,7 +1153,7 @@ function StaticSponsorsPage() {
           {
             key: 'isActive',
             label: 'Status',
-            render: (row) => <StatusBadge status={row.isActive ? 'APPROVED' : 'RETURNED'} />,
+            render: (row) => <StatusBadge status={row.isActive ? 'APPROVED' : 'RETURNED'} label={row.isActive ? 'Enable' : 'Disable'} />,
           },
           {
             key: 'actions',
@@ -1095,7 +1196,7 @@ function StaticSponsorsPage() {
           </label>
 
           <label htmlFor="sponsor-link">
-            Link *
+            Link
             <input
               id="sponsor-link"
               value={form.link}
@@ -1141,14 +1242,20 @@ function StaticSponsorsPage() {
             {errors.logo ? <small>{errors.logo}</small> : null}
           </label>
 
-          <label className="ad-check">
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
-            />
-            <span>Active</span>
-          </label>
+          <div className="ad-toggle-row">
+            <label htmlFor="sponsor-active" className="ad-toggle-label">
+              Status
+            </label>
+            <label className="ad-toggle">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+              />
+              <span className="ad-toggle-switch"></span>
+              <span className="ad-toggle-text">{form.isActive ? 'Enabled' : 'Disabled'}</span>
+            </label>
+          </div>
 
           <div className="ad-form-actions">
             <button type="button" className="ad-btn" onClick={() => setDrawerOpen(false)}>

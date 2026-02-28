@@ -10,6 +10,11 @@ import {
     handleCreateRewardAdmin,
     handleUpdateRewardAdmin,
     handleDeleteRewardAdmin,
+    handleGetAllSponsorsAdmin,
+    handleCreateSponsorAdmin,
+    handleUpdateSponsorAdmin,
+    handleDeleteSponsorAdmin,
+    handleReorderSponsorsAdmin,
 } from './admin.controller.js';
 
 const adminRoutes: FastifyPluginAsync = async (fastify) => {
@@ -25,6 +30,12 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.post('/rewards', handleCreateRewardAdmin);
     fastify.patch('/rewards/:id', handleUpdateRewardAdmin);
     fastify.delete('/rewards/:id', handleDeleteRewardAdmin);
+
+    fastify.get('/sponsors', handleGetAllSponsorsAdmin);
+    fastify.post('/sponsors', handleCreateSponsorAdmin);
+    fastify.patch('/sponsors/:id', handleUpdateSponsorAdmin);
+    fastify.delete('/sponsors/:id', handleDeleteSponsorAdmin);
+    fastify.put('/sponsors/reorder', handleReorderSponsorsAdmin);
 };
 
 export default adminRoutes;

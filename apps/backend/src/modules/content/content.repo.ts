@@ -74,17 +74,17 @@ export async function updateReward(
     db: DB,
     rewardId: number,
     data: {
-        rewardRank?: string;
-        rewardNameTh?: string;
-        rewardNameEn?: string;
-        prizeAmount?: string | number | null;
-        prizeCurrency?: string | null;
-        prizeTextTh?: string | null;
-        prizeTextEn?: string | null;
-        descriptionTh?: string | null;
-        descriptionEn?: string | null;
-        sortOrder?: number;
-        isEnabled?: boolean;
+        rewardRank?: string | undefined;
+        rewardNameTh?: string | undefined;
+        rewardNameEn?: string | undefined;
+        prizeAmount?: string | number | null | undefined;
+        prizeCurrency?: string | null | undefined;
+        prizeTextTh?: string | null | undefined;
+        prizeTextEn?: string | null | undefined;
+        descriptionTh?: string | null | undefined;
+        descriptionEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
     }
 ): Promise<void> {
     const fields: string[] = [];
@@ -130,4 +130,100 @@ export async function getEnabledSponsors(db: DB, tierCode?: string): Promise<Con
     const [rows] = await db.query<RowDataPacket[]>(query, params);
 
     return rows as ContentSponsorRow[];
+}
+
+export async function getAllSponsors(db: DB): Promise<ContentSponsorRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT * FROM content_sponsors ORDER BY sort_order ASC, sponsor_id ASC`
+    );
+    return rows as ContentSponsorRow[];
+}
+
+export async function getSponsorById(db: DB, sponsorId: number): Promise<ContentSponsorRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT * FROM content_sponsors WHERE sponsor_id = ?`,
+        [sponsorId]
+    );
+    const result = rows as ContentSponsorRow[];
+    return result[0] || null;
+}
+
+export async function createSponsor(
+    db: DB,
+    data: {
+        nameTh: string;
+        nameEn: string;
+        logoStorageKey: string;
+        websiteUrl?: string | null;
+        tierCode?: string | null;
+        tierNameTh?: string | null;
+        tierNameEn?: string | null;
+        sortOrder: number;
+        isEnabled: boolean;
+    }
+): Promise<number> {
+    const [result] = await db.query(
+        `INSERT INTO content_sponsors 
+         (sponsor_name_th, sponsor_name_en, logo_storage_key, website_url, tier_code, tier_name_th, tier_name_en, sort_order, is_enabled) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            data.nameTh,
+            data.nameEn,
+            data.logoStorageKey,
+            data.websiteUrl || null,
+            data.tierCode || null,
+            data.tierNameTh || null,
+            data.tierNameEn || null,
+            data.sortOrder,
+            data.isEnabled ? 1 : 0,
+        ]
+    );
+    return (result as any).insertId;
+}
+
+export async function updateSponsor(
+    db: DB,
+    sponsorId: number,
+    data: {
+        nameTh?: string | undefined;
+        nameEn?: string | undefined;
+        logoStorageKey?: string | undefined;
+        websiteUrl?: string | null | undefined;
+        tierCode?: string | null | undefined;
+        tierNameTh?: string | null | undefined;
+        tierNameEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+    }
+): Promise<void> {
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (data.nameTh !== undefined) { fields.push('sponsor_name_th = ?'); values.push(data.nameTh); }
+    if (data.nameEn !== undefined) { fields.push('sponsor_name_en = ?'); values.push(data.nameEn); }
+    if (data.logoStorageKey !== undefined) { fields.push('logo_storage_key = ?'); values.push(data.logoStorageKey); }
+    if (data.websiteUrl !== undefined) { fields.push('website_url = ?'); values.push(data.websiteUrl); }
+    if (data.tierCode !== undefined) { fields.push('tier_code = ?'); values.push(data.tierCode); }
+    if (data.tierNameTh !== undefined) { fields.push('tier_name_th = ?'); values.push(data.tierNameTh); }
+    if (data.tierNameEn !== undefined) { fields.push('tier_name_en = ?'); values.push(data.tierNameEn); }
+    if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
+    if (data.isEnabled !== undefined) { fields.push('is_enabled = ?'); values.push(data.isEnabled ? 1 : 0); }
+
+    if (fields.length === 0) return;
+
+    values.push(sponsorId);
+    await db.query(
+        `UPDATE content_sponsors SET ${fields.join(', ')} WHERE sponsor_id = ?`,
+        values
+    );
+}
+
+export async function deleteSponsor(db: DB, sponsorId: number): Promise<void> {
+    await db.query(`DELETE FROM content_sponsors WHERE sponsor_id = ?`, [sponsorId]);
+}
+
+export async function updateSponsorsOrder(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
+    for (const update of updates) {
+        await db.query(`UPDATE content_sponsors SET sort_order = ? WHERE sponsor_id = ?`, [update.sortOrder, update.id]);
+    }
 }
