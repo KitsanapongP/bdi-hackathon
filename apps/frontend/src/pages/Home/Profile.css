@@ -3,6 +3,11 @@
    (Extends gl-* from Team.css)
    ═══════════════════════════════════════════════════════════════ */
 
+/* ── Profile-specific card override (blur effect) ── */
+.gl-page-container .gl-info-card {
+    backdrop-filter: blur(4px);
+}
+
 /* ── Profile menu items in sidebar ── */
 .pf-menu-item {
     display: flex;
@@ -15,10 +20,11 @@
     border: 2px solid transparent;
     color: var(--gl-text);
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 600;
     transition: all 0.25s;
     text-align: left;
+    backdrop-filter: blur(4px);
 }
 
 .pf-menu-item:hover {
@@ -55,7 +61,7 @@
     border: 1px solid var(--gl-border);
     background: rgba(255, 255, 255, 0.08);
     color: var(--gl-text);
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-family: inherit;
     transition: border-color 0.2s, box-shadow 0.2s;
     outline: none;
@@ -171,7 +177,7 @@
 .pf-social-url {
     flex: 1;
     color: var(--gl-text-dim);
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -216,12 +222,12 @@
 
 .pf-consent-title {
     font-weight: 700;
-    font-size: 0.92rem;
+    font-size: 1rem;
     color: var(--gl-text);
 }
 
 .pf-consent-version {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: var(--gl-text-dim);
     margin-top: 2px;
 }
@@ -232,7 +238,7 @@
     gap: 4px;
     padding: 5px 14px;
     border-radius: 99px;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     font-weight: 700;
     white-space: nowrap;
 }
@@ -278,7 +284,7 @@
 }
 
 .pf-modal h3 {
-    font-size: 1.15rem;
+    font-size: 1.125rem;
     font-weight: 800;
     margin: 0 0 18px;
 }

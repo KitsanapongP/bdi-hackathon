@@ -13,16 +13,19 @@ import {
     Globe,
     HelpCircle,
     Lock,
+    LogOut,
     Megaphone,
     MessageSquare,
     Plus,
     Search,
     Settings,
     ShieldCheck,
+    UserPlus,
     Users,
 } from 'lucide-react';
 import { TEAM_STATUS_CONFIG } from './mockData';
 import { apiUrl } from '../../lib/api';
+import ConfirmModal from '../../components/ConfirmModal';
 import './Team.css';
 import './Register.css';
 
@@ -54,6 +57,12 @@ export default function TeamContent({ user }) {
     const [copied, setCopied] = useState(false);
     const [message, setMessage] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
+    const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', variant: 'danger', onConfirm: null });
+
+    const openConfirm = (title, message, onConfirm, variant = 'danger') => {
+        setConfirmState({ open: true, title, message, onConfirm, variant });
+    };
+    const closeConfirm = () => setConfirmState((s) => ({ ...s, open: false }));
 
     const [activeView, setActiveView] = useState(null);
     const [createName, setCreateName] = useState('');
@@ -256,45 +265,58 @@ export default function TeamContent({ user }) {
         setMessage('ส่งคำเชิญสำเร็จ');
     });
 
-    const handleRemoveMember = (memberUserId) => withAction(async () => {
-        if (!team?.id) return;
-        if (!window.confirm('ยืนยันการเตะสมาชิกออกจากทีม?')) return;
-        const res = await fetch(apiUrl(`/api/teams/${team.id}/members/${memberUserId}`), {
-            method: 'DELETE',
-            credentials: 'include',
-        });
-        const payload = await res.json();
-        if (!payload.ok) throw new Error(payload.message || 'ลบสมาชิกไม่สำเร็จ');
-        setTeam((prev) => prev ? { ...prev, members: prev.members.filter((m) => m.id !== memberUserId) } : prev);
-        setMessage('ลบสมาชิกสำเร็จ');
-    });
+    const handleRemoveMember = (memberUserId) => {
+        openConfirm('เตะสมาชิกออกจากทีม', 'คุณแน่ใจหรือไม่ว่าต้องการเตะสมาชิกคนนี้ออกจากทีม?', () => {
+            closeConfirm();
+            withAction(async () => {
+                if (!team?.id) return;
+                const res = await fetch(apiUrl(`/api/teams/${team.id}/members/${memberUserId}`), {
+                    method: 'DELETE',
+                    credentials: 'include',
+                });
+                const payload = await res.json();
+                if (!payload.ok) throw new Error(payload.message || 'ลบสมาชิกไม่สำเร็จ');
+                setTeam((prev) => prev ? { ...prev, members: prev.members.filter((m) => m.id !== memberUserId) } : prev);
+                setMessage('ลบสมาชิกสำเร็จ');
+            });
+        }, 'danger');
+    };
 
-    const handleLeaveCurrentTeam = () => withAction(async () => {
-        if (!team?.id || !user?.userId) return;
-        if (!window.confirm('ยืนยันการออกจากทีม?')) return;
-        const res = await fetch(apiUrl(`/api/teams/${team.id}/members/${user.userId}`), {
-            method: 'DELETE',
-            credentials: 'include',
-        });
-        const payload = await res.json();
-        if (!payload.ok) throw new Error(payload.message || 'ออกจากทีมไม่สำเร็จ');
-        window.location.reload();
-    });
+    const handleLeaveCurrentTeam = () => {
+        openConfirm('ออกจากทีม', 'คุณแน่ใจหรือไม่ว่าต้องการออกจากทีมนี้?', () => {
+            closeConfirm();
+            withAction(async () => {
+                if (!team?.id || !user?.userId) return;
+                const res = await fetch(apiUrl(`/api/teams/${team.id}/members/${user.userId}`), {
+                    method: 'DELETE',
+                    credentials: 'include',
+                });
+                const payload = await res.json();
+                if (!payload.ok) throw new Error(payload.message || 'ออกจากทีมไม่สำเร็จ');
+                window.location.reload();
+            });
+        }, 'danger');
+    };
 
-    const handleTransferLeader = (newLeaderUserId) => withAction(async () => {
-        if (!team?.id) return;
-        if (!window.confirm('ยืนยันการโอนหัวหน้าทีม?')) return;
-        const res = await fetch(apiUrl(`/api/teams/${team.id}/leader`), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ newLeaderUserId }),
-        });
-        const payload = await res.json();
-        if (!payload.ok) throw new Error(payload.message || 'โอนหัวหน้าทีมไม่สำเร็จ');
-        setMessage('โอนหัวหน้าทีมสำเร็จ');
-        window.location.reload();
-    });
+    const handleTransferLeader = (newLeaderUserId) => {
+        const targetMember = sortedMembers.find((m) => m.id === newLeaderUserId);
+        openConfirm('โอนหัวหน้าทีม', `คุณแน่ใจหรือไม่ว่าต้องการโอนตำแหน่งหัวหน้าทีมให้ ${targetMember?.name || 'สมาชิกคนนี้'}?`, () => {
+            closeConfirm();
+            withAction(async () => {
+                if (!team?.id) return;
+                const res = await fetch(apiUrl(`/api/teams/${team.id}/leader`), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ newLeaderUserId }),
+                });
+                const payload = await res.json();
+                if (!payload.ok) throw new Error(payload.message || 'โอนหัวหน้าทีมไม่สำเร็จ');
+                setMessage('โอนหัวหน้าทีมสำเร็จ');
+                window.location.reload();
+            });
+        }, 'warning');
+    };
 
     if (!user) return null;
     if (isLoadingTeam) return <div className="gl-page-container"><div className="gl-frame gl-frame-center"><h3>กำลังโหลดข้อมูลทีม...</h3></div></div>;
@@ -375,6 +397,14 @@ export default function TeamContent({ user }) {
                         </div>
                     )}
                 </div>
+                <ConfirmModal
+                    open={confirmState.open}
+                    title={confirmState.title}
+                    message={confirmState.message}
+                    variant={confirmState.variant}
+                    onConfirm={confirmState.onConfirm}
+                    onCancel={closeConfirm}
+                />
             </div>
         );
     }
@@ -410,32 +440,49 @@ export default function TeamContent({ user }) {
         'จัดการทีม',
         <Settings size={20} />,
         <div>
-            <div className="gl-info-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>รหัสเชิญเข้าทีม</span>
-                    <button className="gl-code-chip" onClick={() => navigator.clipboard.writeText(teamInviteCode).then(() => setCopied(true))}>
-                        <Copy size={14} /> {teamInviteCode} {copied ? 'คัดลอกแล้ว' : ''}
-                    </button>
+            {/* Team info cards */}
+            <div className="gl-team-info-card">
+                <span className="gl-team-info-label"><Gamepad2 size={13} /> ชื่อทีม</span>
+                <div className="gl-team-info-value">{team.name}</div>
+            </div>
+            <div className="gl-team-info-card">
+                <span className="gl-team-info-label"><Users size={13} /> รหัสทีม</span>
+                <div className="gl-team-info-value">{team.code}</div>
+            </div>
+            <div className="gl-team-info-card">
+                <span className="gl-team-info-label"><BarChart3 size={13} /> สถานะทีม</span>
+                <div className="gl-team-info-value gl-team-info-status">
+                    <span className={`gl-status-dot ${team.status}`} /> {statusInfo.label}
                 </div>
+            </div>
+            <div className="gl-team-info-card">
+                <span className="gl-team-info-label"><Users size={13} /> จำนวนสมาชิก</span>
+                <div className="gl-team-info-value">{team.members.length} / {MAX_MEMBERS} คน</div>
             </div>
 
             {isLeader && (
                 <>
-                    <div className="gl-info-card">
-                        <h4>เชิญสมาชิกเข้าทีม (ใส่ username)</h4>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            <input className="gr-input" value={inviteUserNameInput} onChange={(e) => setInviteUserNameInput(e.target.value)} placeholder="เช่น somchai01" />
-                            <button className="gt-btn gt-btn-primary" disabled={actionLoading} onClick={handleInviteMember}>เชิญ</button>
+                    <div className="gl-team-info-card">
+                        <span className="gl-team-info-label"><Copy size={13} /> เชิญเข้าทีม</span>
+                        <div className="gl-invite-row">
+                            <button className="gl-code-chip" onClick={() => navigator.clipboard.writeText(teamInviteCode).then(() => setCopied(true))}>
+                                <Copy size={14} /> {teamInviteCode}
+                            </button>
+                            {copied && <span style={{ color: '#34d399', fontSize: '0.85rem', fontWeight: 600 }}>คัดลอกสำเร็จ</span>}
+                            <div className="gl-invite-input-group">
+                                <input className="gr-input" value={inviteUserNameInput} onChange={(e) => setInviteUserNameInput(e.target.value)} placeholder="ใส่ username เพื่อเชิญ" />
+                                <button className="gt-btn gt-btn-primary" disabled={actionLoading} onClick={handleInviteMember}>เชิญ</button>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="gl-info-card">
-                        <h4>คำขอเข้าร่วมทีมที่รอดำเนินการ</h4>
-                        {pendingJoinRequests.length === 0 && <p>ยังไม่มีคำขอใหม่</p>}
+                    <div className="gl-team-info-card">
+                        <span className="gl-team-info-label"><Clock size={13} /> คำขอเข้าร่วมทีมที่รอดำเนินการ</span>
+                        {pendingJoinRequests.length === 0 && <div className="gl-team-info-value" style={{ color: 'var(--gl-text-dim)', fontWeight: 600, fontSize: '0.9rem' }}>ยังไม่มีคำขอใหม่</div>}
                         {pendingJoinRequests.map((req) => (
-                            <div key={req.join_request_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-                                <span>ผู้ขอเข้าร่วม: {req.requester_user_name || `user_id: ${req.requester_user_id}`}</span>
-                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <div key={req.join_request_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>ผู้ขอเข้าร่วม: {req.requester_user_name || `user_id: ${req.requester_user_id}`}</span>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
                                     <button className="gt-btn gt-btn-primary" disabled={actionLoading} onClick={() => handleRespondJoinRequest(req.join_request_id, 'approved')}>อนุมัติ</button>
                                     <button className="gt-btn" disabled={actionLoading} onClick={() => handleRespondJoinRequest(req.join_request_id, 'rejected')}>ปฏิเสธ</button>
                                 </div>
@@ -443,15 +490,21 @@ export default function TeamContent({ user }) {
                         ))}
                     </div>
 
-                    <div className="gl-info-card">
-                        <h4>จัดการสมาชิก</h4>
+                    <div className="gl-team-info-card">
+                        <span className="gl-team-info-label"><UserPlus size={13} /> จัดการสมาชิก</span>
                         {sortedMembers.map((m) => (
-                            <div key={`manage-${m.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                                <span>{m.name} ({m.id}) {m.leader ? '• หัวหน้า' : ''}</span>
+                            <div key={`manage-${m.id}`} className="gl-manage-member-row">
+                                <div className="gl-manage-member-info">
+                                    <div className="gl-manage-member-avatar" style={{ background: m.color }}>{m.name.charAt(0)}</div>
+                                    <div>
+                                        <span className="gl-manage-member-name">{m.name}</span>
+                                        {m.leader && <span className="gl-manage-leader-tag">หัวหน้า</span>}
+                                    </div>
+                                </div>
                                 {!m.leader && (
-                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                        <button className="gt-btn" disabled={actionLoading} onClick={() => handleTransferLeader(m.id)}>โอนหัวหน้า</button>
-                                        <button className="gt-btn" disabled={actionLoading} onClick={() => handleRemoveMember(m.id)}>เตะออก</button>
+                                    <div className="gl-manage-actions">
+                                        <button className="gl-btn-warning" disabled={actionLoading} onClick={() => handleTransferLeader(m.id)}>โอนหัวหน้า</button>
+                                        <button className="gl-btn-danger" disabled={actionLoading} onClick={() => handleRemoveMember(m.id)}>เตะออก</button>
                                     </div>
                                 )}
                             </div>
@@ -461,16 +514,18 @@ export default function TeamContent({ user }) {
             )}
 
             {isLeader && (
-                <div className="gl-info-card">
-                    <h4>ออกจากทีม</h4>
-                    <p>หากเป็นหัวหน้าทีม ต้องโอนหัวหน้าให้สมาชิกคนอื่นก่อน จึงจะออกจากทีมได้</p>
+                <div className="gl-team-info-card">
+                    <span className="gl-team-info-label"><LogOut size={13} /> ออกจากทีม</span>
+                    <div className="gl-team-info-value" style={{ color: 'var(--gl-text-dim)', fontWeight: 600, fontSize: '0.9rem' }}>หากเป็นหัวหน้าทีม ต้องโอนหัวหน้าให้สมาชิกคนอื่นก่อน จึงจะออกจากทีมได้</div>
                 </div>
             )}
 
             {!isLeader && (
-                <div className="gl-info-card">
-                    <h4>ออกจากทีม</h4>
-                    <button className="gt-btn" disabled={actionLoading} onClick={handleLeaveCurrentTeam}>ออกจากทีม</button>
+                <div className="gl-team-info-card">
+                    <span className="gl-team-info-label"><LogOut size={13} /> ออกจากทีม</span>
+                    <div className="gl-team-info-value">
+                        <button className="gl-btn-danger" disabled={actionLoading} onClick={handleLeaveCurrentTeam}>ออกจากทีม</button>
+                    </div>
                 </div>
             )}
         </div>
@@ -528,6 +583,14 @@ export default function TeamContent({ user }) {
                     )}
                 </main>
             </div>
+            <ConfirmModal
+                open={confirmState.open}
+                title={confirmState.title}
+                message={confirmState.message}
+                variant={confirmState.variant}
+                onConfirm={confirmState.onConfirm}
+                onCancel={closeConfirm}
+            />
         </div>
     );
 }

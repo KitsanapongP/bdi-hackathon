@@ -1242,14 +1242,14 @@ section.gt-hero {
     }
 
     .gt-prize-status {
-    grid-column: 1 / -1;
-    text-align: center;
-    color: var(--gt-text-muted);
-    font-size: 1.05rem;
-    margin: 12px 0 0;
-}
+        grid-column: 1 / -1;
+        text-align: center;
+        color: var(--gt-text-muted);
+        font-size: 1.05rem;
+        margin: 12px 0 0;
+    }
 
-.gt-prize-card {
+    .gt-prize-card {
         padding: 28px 24px;
     }
 

@@ -58,13 +58,11 @@ const shapeTypes = ['triangle', 'circle', 'square', 'cross'];
 
 /* ═══════════════════════════ Component ═══════════════════════════════ */
 const GameShapes = ({
-    shapeCount = 40,
+    shapeCount = 20,
     sizeRange = [24, 52],
     speedRange = [18, 40],
     rotationRange = [0, 360],
     depthLayers = 3,
-    interactionRadius = 120,
-    repelEnabled = true,
     minDistance = 60,
     seed = 42,
     colors = defaultColors,
@@ -73,7 +71,6 @@ const GameShapes = ({
     const containerRef = useRef(null);
     const shapesRef = useRef([]);     // DOM node refs
     const dataRef = useRef([]);       // shape metadata
-    const mouseRef = useRef({ x: -9999, y: -9999 });
     const rafRef = useRef(null);
     const pausedRef = useRef(false);
     const reducedMotionRef = useRef(false);
@@ -118,9 +115,6 @@ const GameShapes = ({
     const animate = useCallback(() => {
         if (pausedRef.current) { rafRef.current = requestAnimationFrame(animate); return; }
         const now = performance.now() / 1000;
-        const mx = mouseRef.current.x;
-        const my = mouseRef.current.y;
-        const irSq = interactionRadius * interactionRadius;
         const reduced = reducedMotionRef.current;
 
         for (let i = 0; i < dataRef.current.length; i++) {
@@ -137,48 +131,13 @@ const GameShapes = ({
                 rot = d.rot0 + Math.sin(now * sp * 0.3) * 15;
             }
 
-            /* parallax (depth-based, min 0.005 so all shapes respond) */
-            const parallaxStr = 0.005 + d.depthT * 0.02;
-            const px = (mx - window.innerWidth / 2) * parallaxStr;
-            const py = (my - window.innerHeight / 2) * parallaxStr;
-
-            /* repel */
-            let rx = 0, ry = 0, sc = d.scale, glow = 0;
-            const rect = containerRef.current?.getBoundingClientRect();
-            if (rect && !reduced) {
-                const elX = d.xPct * rect.width + fx + px;
-                const elY = d.yPct * rect.height + fy + py;
-                const dx = elX - (mx - rect.left);
-                const dy = elY - (my - rect.top);
-                const dSq = dx * dx + dy * dy;
-                if (dSq < irSq && dSq > 0) {
-                    const dist = Math.sqrt(dSq);
-                    const t = 1 - dist / interactionRadius;
-                    if (repelEnabled) {
-                        const pushStr = t * 30 * d.depthT;
-                        rx = (dx / dist) * pushStr;
-                        ry = (dy / dist) * pushStr;
-                    }
-                    sc = d.scale + t * 0.3;
-                    glow = t;
-                }
-            }
-
-            const totalX = fx + px + rx;
-            const totalY = fy + py + ry;
-
             el.style.transform =
-                `translate(${totalX.toFixed(1)}px, ${totalY.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${sc.toFixed(3)})`;
-
-            if (glow > 0) {
-                el.style.filter = `blur(${d.blur}px) drop-shadow(0 0 ${(glow * 12).toFixed(0)}px ${d.color})`;
-            } else {
-                el.style.filter = d.blur > 0.1 ? `blur(${d.blur}px)` : 'none';
-            }
+                `translate(${fx.toFixed(1)}px, ${fy.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${d.scale.toFixed(3)})`;
+            el.style.filter = d.blur > 0.1 ? `blur(${d.blur}px)` : 'none';
         }
 
         rafRef.current = requestAnimationFrame(animate);
-    }, [interactionRadius, repelEnabled]);
+    }, []);
 
     /* ── mount: store data, start loop, listeners ── */
     useEffect(() => {
@@ -194,17 +153,6 @@ const GameShapes = ({
         const onVis = () => { pausedRef.current = document.hidden; };
         document.addEventListener('visibilitychange', onVis);
 
-        /* mouse + touch */
-        const onMove = (e) => { mouseRef.current.x = e.clientX; mouseRef.current.y = e.clientY; };
-        const onTouch = (e) => {
-            if (e.touches.length > 0) {
-                mouseRef.current.x = e.touches[0].clientX;
-                mouseRef.current.y = e.touches[0].clientY;
-            }
-        };
-        window.addEventListener('mousemove', onMove, { passive: true });
-        window.addEventListener('touchmove', onTouch, { passive: true });
-
         /* start */
         rafRef.current = requestAnimationFrame(animate);
 
@@ -212,8 +160,6 @@ const GameShapes = ({
             cancelAnimationFrame(rafRef.current);
             mq.removeEventListener('change', onMqChange);
             document.removeEventListener('visibilitychange', onVis);
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('touchmove', onTouch);
         };
     }, [shapeData, animate]);
 

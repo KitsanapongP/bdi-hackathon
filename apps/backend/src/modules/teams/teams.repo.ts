@@ -221,7 +221,7 @@ export async function getPendingInvitationsByUser(db: DB, userId: number): Promi
         FROM team_invitations i
         JOIN team_teams t ON t.team_id = i.team_id
         LEFT JOIN user_users u ON u.user_id = i.invited_by_user_id
-        WHERE invited_user_id = :userId AND status = 'pending'
+        WHERE i.invited_user_id = :userId AND i.status = 'pending'
         ORDER BY i.created_at DESC
     `, { userId });
     return rows as TeamInvitationRow[];
