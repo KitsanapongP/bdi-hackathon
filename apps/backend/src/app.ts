@@ -24,6 +24,11 @@ import { contentRoutes } from './modules/content/content.routes.js';
 export type AppContext = { env: Env; db: DB };
 
 export function buildApp(ctx: AppContext) {
+  const corsOrigins = ctx.env.CORS_ORIGIN
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
   const loggerTargets: any[] = [
     {
       target: 'pino-roll',
@@ -73,7 +78,11 @@ export function buildApp(ctx: AppContext) {
 
   app.decorate('ctx', ctx);
 
-  app.register(cors, { origin: true, credentials: true });
+  app.register(cors, {
+    origin: corsOrigins.length > 0 ? corsOrigins : true,
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  });
   app.register(sensible);
   app.register(multipart, {
     limits: {
