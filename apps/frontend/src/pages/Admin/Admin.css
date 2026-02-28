@@ -11,6 +11,11 @@
   --ad-shadow: 0 18px 40px -26px rgba(15, 23, 42, 0.45);
 }
 
+.ad-text-muted {
+  color: var(--ad-muted);
+  font-size: 0.85em;
+}
+
 .dark {
   --ad-shadow: 0 18px 42px -24px rgba(2, 6, 23, 0.75);
 }
@@ -695,6 +700,63 @@ body:has(.ad-page) {
   width: 16px;
   height: 16px;
   margin: 0;
+}
+
+.ad-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.ad-toggle-label {
+  font-weight: 500;
+  color: var(--ad-text);
+}
+
+.ad-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.ad-toggle input {
+  display: none;
+}
+
+.ad-toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: var(--ad-border);
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+
+.ad-toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.ad-toggle input:checked + .ad-toggle-switch {
+  background: var(--ad-primary);
+}
+
+.ad-toggle input:checked + .ad-toggle-switch::after {
+  transform: translateX(20px);
+}
+
+.ad-toggle-text {
+  font-size: 0.875rem;
+  color: var(--ad-text-secondary);
 }
 
 .ad-form-actions {

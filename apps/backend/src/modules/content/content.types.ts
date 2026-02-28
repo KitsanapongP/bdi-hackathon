@@ -29,6 +29,21 @@ export type ContentReward = {
     sortOrder: number;
 };
 
+export type ContentRewardAdmin = {
+    id: number;
+    rank: string;
+    title: string;
+    titleTh: string;
+    amount: number | null;
+    currency: string | null;
+    prizeTextTh: string | null;
+    prizeTextEn: string | null;
+    descriptionTh: string | null;
+    descriptionEn: string | null;
+    sortOrder: number;
+    isActive: boolean;
+};
+
 export type ContentSponsorRow = {
     sponsor_id: number;
     sponsor_name_th: string;
