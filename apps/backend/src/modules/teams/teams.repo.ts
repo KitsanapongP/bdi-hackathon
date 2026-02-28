@@ -59,7 +59,8 @@ export async function getTeamMembers(db: DB, teamId: number): Promise<any[]> {
          FROM team_members m
          JOIN user_users u ON m.user_id = u.user_id
          LEFT JOIN user_privacy_settings p ON u.user_id = p.user_id
-         WHERE m.team_id = :teamId AND m.member_status = 'active'`,
+         WHERE m.team_id = :teamId AND m.member_status = 'active'
+         ORDER BY CASE WHEN m.role = 'leader' THEN 0 ELSE 1 END, m.joined_at ASC`,
         { teamId }
     );
     return rows;
@@ -126,9 +127,25 @@ export async function createJoinRequest(db: DB, data: {
 
 export async function getPendingJoinRequests(db: DB, teamId: number): Promise<TeamJoinRequestRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(`
-        SELECT * FROM team_join_requests WHERE team_id = :teamId AND status = 'pending'
+        SELECT r.*, u.user_name AS requester_user_name
+        FROM team_join_requests r
+        JOIN user_users u ON u.user_id = r.requester_user_id
+        WHERE r.team_id = :teamId AND r.status = 'pending'
+        ORDER BY r.created_at ASC
     `, { teamId });
     return rows as TeamJoinRequestRow[];
+}
+
+export async function findActiveUserIdByUserName(db: DB, userName: string): Promise<number | null> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT user_id
+        FROM user_users
+        WHERE user_name = :userName
+          AND is_active = 1
+          AND deleted_at IS NULL
+        LIMIT 1
+    `, { userName });
+    return (rows[0] as { user_id: number } | undefined)?.user_id ?? null;
 }
 
 export async function getJoinRequestById(db: DB, requestId: number): Promise<TeamJoinRequestRow | null> {
@@ -160,13 +177,29 @@ export async function updateJoinRequestStatus(db: DB, data: {
     `, data);
 }
 
+export async function cancelOtherPendingJoinRequestsByUser(
+    db: DB,
+    userId: number,
+    exceptRequestId: number
+): Promise<void> {
+    await db.query(`
+        UPDATE team_join_requests
+        SET status = 'cancelled',
+            leader_reason = 'Auto-cancelled: user already joined another team',
+            updated_at = NOW()
+        WHERE requester_user_id = :userId
+          AND status = 'pending'
+          AND join_request_id <> :exceptRequestId
+    `, { userId, exceptRequestId });
+}
+
 export async function createInvitation(db: DB, data: {
     teamId: number;
     inviteeUserId: number;
     createdByUserId: number;
 }): Promise<number> {
     const [result] = await db.query<ResultSetHeader>(`
-        INSERT INTO team_invitations (team_id, invitee_user_id, status, created_at, updated_at, created_by_user_id)
+        INSERT INTO team_invitations (team_id, invited_user_id, status, created_at, updated_at, invited_by_user_id)
         VALUES (:teamId, :inviteeUserId, 'pending', NOW(), NOW(), :createdByUserId)
     `, data);
     return result.insertId;
@@ -174,22 +207,31 @@ export async function createInvitation(db: DB, data: {
 
 export async function getInvitationById(db: DB, invitationId: number): Promise<TeamInvitationRow | null> {
     const [rows] = await db.query<RowDataPacket[]>(`
-        SELECT * FROM team_invitations WHERE invitation_id = :invitationId LIMIT 1
+        SELECT invitation_id, team_id, invited_user_id as invitee_user_id, status, created_at, updated_at, invited_by_user_id as created_by_user_id
+        FROM team_invitations
+        WHERE invitation_id = :invitationId LIMIT 1
     `, { invitationId });
     return (rows[0] as TeamInvitationRow | undefined) ?? null;
 }
 
 export async function getPendingInvitationsByUser(db: DB, userId: number): Promise<TeamInvitationRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(`
-        SELECT * FROM team_invitations WHERE invitee_user_id = :userId AND status = 'pending'
+        SELECT i.invitation_id, i.team_id, i.invited_user_id as invitee_user_id, i.status, i.created_at, i.updated_at, i.invited_by_user_id as created_by_user_id,
+               t.team_name_th, t.team_code, u.user_name as invited_by_user_name
+        FROM team_invitations i
+        JOIN team_teams t ON t.team_id = i.team_id
+        LEFT JOIN user_users u ON u.user_id = i.invited_by_user_id
+        WHERE invited_user_id = :userId AND status = 'pending'
+        ORDER BY i.created_at DESC
     `, { userId });
     return rows as TeamInvitationRow[];
 }
 
 export async function getPendingInvitationByUserAndTeam(db: DB, userId: number, teamId: number): Promise<TeamInvitationRow | null> {
     const [rows] = await db.query<RowDataPacket[]>(`
-        SELECT * FROM team_invitations 
-        WHERE invitee_user_id = :userId AND team_id = :teamId AND status = 'pending' LIMIT 1
+        SELECT invitation_id, team_id, invited_user_id as invitee_user_id, status, created_at, updated_at, invited_by_user_id as created_by_user_id
+        FROM team_invitations 
+        WHERE invited_user_id = :userId AND team_id = :teamId AND status = 'pending' LIMIT 1
     `, { userId, teamId });
     return (rows[0] as TeamInvitationRow | undefined) ?? null;
 }
@@ -198,4 +240,41 @@ export async function updateInvitationStatus(db: DB, invitationId: number, statu
     await db.query(`
         UPDATE team_invitations SET status = :status, updated_at = NOW() WHERE invitation_id = :invitationId
     `, { invitationId, status });
+}
+
+export async function cancelOtherPendingInvitationsByUser(
+    db: DB,
+    userId: number,
+    exceptInvitationId: number
+): Promise<void> {
+    await db.query(`
+        UPDATE team_invitations
+        SET status = 'cancelled', updated_at = NOW()
+        WHERE invited_user_id = :userId
+          AND status = 'pending'
+          AND invitation_id <> :exceptInvitationId
+    `, { userId, exceptInvitationId });
+}
+
+export async function updateTeamLeader(db: DB, teamId: number, newLeaderUserId: number): Promise<void> {
+    await db.query(`
+        UPDATE team_teams
+        SET current_leader_user_id = :newLeaderUserId, updated_at = NOW()
+        WHERE team_id = :teamId
+    `, { teamId, newLeaderUserId });
+}
+
+export async function updateMemberRole(
+    db: DB,
+    teamId: number,
+    userId: number,
+    role: 'leader' | 'member'
+): Promise<void> {
+    await db.query(`
+        UPDATE team_members
+        SET role = :role
+        WHERE team_id = :teamId
+          AND user_id = :userId
+          AND member_status = 'active'
+    `, { teamId, userId, role });
 }

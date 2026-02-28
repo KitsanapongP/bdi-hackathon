@@ -45,6 +45,7 @@ export interface TeamJoinRequestRow {
     leader_reason: string | null;
     created_at: Date;
     updated_at: Date;
+    requester_user_name?: string;
 }
 
 export interface TeamInvitationRow {
@@ -55,4 +56,7 @@ export interface TeamInvitationRow {
     created_at: Date;
     updated_at: Date;
     created_by_user_id: number;
+    team_name_th?: string;
+    team_code?: string;
+    invited_by_user_name?: string;
 }

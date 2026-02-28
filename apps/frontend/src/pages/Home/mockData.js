@@ -1,40 +1,41 @@
-/* 
+/*
  * Mock data for Game Theme System
  * Includes Users, Teams, and sample content for the lobby.
  */
 
 export const MOCK_USERS = [
-    { email: 'user@game.com', password: 'password', name: 'สมชาย นักล่ารางวัล', role: 'user', hasTeam: false, avatar: 'SC', color: '#6366f1' },
-    { email: 'leader@game.com', password: 'password', name: 'หัวหน้าทีม A', role: 'leader', hasTeam: true, teamId: 'TM001', avatar: 'L', color: '#ef4444' },
-    { email: 'member@game.com', password: 'password', name: 'สมาชิกทีม A', role: 'member', hasTeam: true, teamId: 'TM001', avatar: 'M', color: '#3b82f6' },
+    { email: 'user@game.com', password: 'password', name: 'User Demo', role: 'user', hasTeam: false, avatar: 'U', color: '#6366f1' },
+    { email: 'leader@game.com', password: 'password', name: 'Leader A', role: 'leader', hasTeam: true, teamId: 'TM001', avatar: 'L', color: '#ef4444' },
+    { email: 'member@game.com', password: 'password', name: 'Member A', role: 'member', hasTeam: true, teamId: 'TM001', avatar: 'M', color: '#3b82f6' },
 ];
 
 export const MOCK_TEAMS = {
-    'TM001': {
+    TM001: {
         code: 'TM001',
         name: 'Team Alpha',
-        status: 'pending', // pending, approved, rejected, qualified
+        status: 'submitted',
         members: [
-            { id: 1, name: 'หัวหน้าทีม A', role: 'Leader', verified: true, color: '#ef4444', leader: true },
-            { id: 2, name: 'สมาชิกทีม A', role: 'Developer', verified: true, color: '#3b82f6', leader: false },
-            { id: 3, name: 'กิตติ ดีไซน์', role: 'Designer', verified: false, color: '#14b8a6', leader: false },
+            { id: 1, name: 'Leader A', role: 'Leader', verified: true, color: '#ef4444', leader: true },
+            { id: 2, name: 'Member A', role: 'Developer', verified: true, color: '#3b82f6', leader: false },
+            { id: 3, name: 'Member B', role: 'Designer', verified: false, color: '#14b8a6', leader: false },
         ],
-        announcements: [
-            { date: '19 ก.พ. 2025', title: 'ยินดีต้อนรับทุกท่าน!', body: 'ขอให้ทุกทีมเตรียมตัวให้พร้อม ตรวจสอบเอกสารให้ครบถ้วนก่อนส่ง' },
-            { date: '18 ก.พ. 2025', title: 'อัปเดตกฎกติกา', body: 'สมาชิกทุกคนต้องยืนยันตัวตนด้วยบัตรนักศึกษาก่อนกำหนดส่ง 25 ก.พ.' },
-        ],
-        works: [], // Array of submission objects
-        verification: {
-            'user@game.com': null,
-            'leader@game.com': { studentCard: 'approved', cert: 'pending' },
-            'member@game.com': { studentCard: 'approved' },
-        }
-    }
+        announcements: [],
+        works: [],
+        verification: {},
+    },
 };
 
 export const TEAM_STATUS_CONFIG = {
-    pending: { label: 'รอพิจารณา', color: 'bg-yellow-100 text-yellow-800' },
-    approved: { label: 'ผ่านการพิจารณา', color: 'bg-green-100 text-green-800' },
+    draft: { label: 'แบบร่าง', color: 'bg-slate-100 text-slate-800' },
+    forming: { label: 'กำลังก่อตั้งทีม', color: 'bg-cyan-100 text-cyan-800' },
+    ready: { label: 'พร้อมส่ง', color: 'bg-blue-100 text-blue-800' },
+    submitted: { label: 'ส่งตรวจแล้ว', color: 'bg-amber-100 text-amber-800' },
+    in_review: { label: 'กำลังตรวจสอบ', color: 'bg-indigo-100 text-indigo-800' },
+    returned: { label: 'ตีกลับให้แก้ไข', color: 'bg-rose-100 text-rose-800' },
+    ready_to_resubmit: { label: 'พร้อมส่งใหม่', color: 'bg-violet-100 text-violet-800' },
+    approved: { label: 'ผ่านการอนุมัติ', color: 'bg-green-100 text-green-800' },
+    archived: { label: 'ปิดสถานะ', color: 'bg-zinc-100 text-zinc-800' },
+    pending: { label: 'รอดำเนินการ', color: 'bg-yellow-100 text-yellow-800' },
     rejected: { label: 'ไม่ผ่าน', color: 'bg-red-100 text-red-800' },
-    qualified: { label: 'เข้ารอบ 10 ทีมสุดท้าย', color: 'bg-purple-100 text-purple-800 border-purple-200' },
+    qualified: { label: 'ผ่านเข้ารอบ', color: 'bg-purple-100 text-purple-800 border-purple-200' },
 };
