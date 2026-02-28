@@ -583,8 +583,6 @@ function AdminGuard({ children }) {
 
   useEffect(() => {
     let active = true
-    const local = localStorage.getItem('gt_user')
-    const localUser = local ? JSON.parse(local) : null
 
     async function run() {
       try {
@@ -594,41 +592,24 @@ function AdminGuard({ children }) {
         if (!active) return
 
         if (response.ok && normalized.isAdmin) {
+          const userData = normalized.user || payload.user
+          if (userData) {
+            localStorage.setItem('gt_user', JSON.stringify(userData))
+          }
           setState({
             loading: false,
             allowed: true,
-            user: normalized.user || localUser,
+            user: userData,
             demoMode: false,
           })
           return
         }
+
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('gt_user')
+        }
       } catch {
-        // fallback below
-      }
-
-      if (!active) return
-
-      if (localUser?.accessRole === 'admin') {
-        setState({
-          loading: false,
-          allowed: true,
-          user: localUser,
-          demoMode: true,
-        })
-        return
-      }
-
-      if (import.meta.env.DEV) {
-        setState({
-          loading: false,
-          allowed: true,
-          user: {
-            userName: 'Design Preview Admin',
-            email: 'preview@local.dev',
-          },
-          demoMode: true,
-        })
-        return
+        localStorage.removeItem('gt_user')
       }
 
       setState({

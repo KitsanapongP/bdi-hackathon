@@ -51,7 +51,13 @@ function RegisterPage() {
             color: '#6366f1',
         };
         localStorage.setItem('gt_user', JSON.stringify(userInfo));
-        navigate('/home', { replace: true });
+        
+        // Redirect to admin if user has admin role
+        if (user.accessRole === 'admin') {
+            navigate('/admin', { replace: true });
+        } else {
+            navigate('/home', { replace: true });
+        }
     };
 
     const handleLogin = async (e) => {

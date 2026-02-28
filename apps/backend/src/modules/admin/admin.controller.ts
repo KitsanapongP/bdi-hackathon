@@ -1,9 +1,22 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { allowlistSchema, updateAllowlistSchema } from './admin.schema.js';
 import * as service from './admin.service.js';
+import * as authService from '../auth/auth.service.js';
 import { ok } from '../../shared/response.js';
 import { AppError } from '../../shared/errors.js';
 import type { JwtPayload } from '../auth/auth.types.js';
+
+export async function handleGetAdminMe(req: FastifyRequest, reply: FastifyReply) {
+    const user = req.user as JwtPayload;
+    const freshUser = await authService.getUserById(req.server.ctx.db, user.userId);
+    return reply.send(ok({
+        userId: freshUser.userId,
+        userName: freshUser.userName,
+        email: freshUser.email,
+        accessRole: freshUser.accessRole,
+        is_admin: freshUser.accessRole === 'admin',
+    }));
+}
 
 export async function handleGetAllowlist(req: FastifyRequest, reply: FastifyReply) {
     try {
