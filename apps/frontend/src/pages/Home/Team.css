@@ -75,7 +75,7 @@
 
 .gl-members-header h3 {
     margin: 0;
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 800;
     color: var(--gl-text);
     letter-spacing: 0.4px;
@@ -95,7 +95,7 @@
 .gl-team-badge-name {
     color: var(--gl-text);
     font-weight: 700;
-    font-size: 0.95rem;
+    font-size: 1rem;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -173,6 +173,7 @@
     border-radius: var(--gl-radius-md);
     background: var(--gl-card);
     transition: background 0.2s;
+    backdrop-filter: blur(4px);
 }
 
 .gl-member-entry:hover {
@@ -219,14 +220,14 @@
 .gl-member-name {
     color: var(--gl-text);
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 1rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .gl-member-role {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     color: var(--gl-text-dim);
 }
 
@@ -253,7 +254,7 @@
     border: 2px solid transparent;
     background: var(--gl-card);
     color: var(--gl-text-dim);
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.25s;
@@ -336,7 +337,7 @@
 }
 
 .gl-mode-label {
-    font-size: 0.88rem;
+    font-size: 1rem;
     font-weight: 700;
     text-align: center;
     letter-spacing: 0.2px;
@@ -347,7 +348,7 @@
     position: absolute;
     top: 10px;
     right: 10px;
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     background: var(--gl-teal);
     color: white;
     min-width: 20px;
@@ -401,7 +402,7 @@
     padding: 8px 16px;
     border-radius: var(--gl-radius-sm);
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 1rem;
     font-weight: 700;
     transition: background 0.2s;
 }
@@ -411,7 +412,7 @@
 }
 
 .gl-detail-title {
-    font-size: 1.15rem;
+    font-size: 1.125rem;
     font-weight: 800;
     color: var(--gl-text);
     display: flex;
@@ -449,7 +450,6 @@
     border-radius: var(--gl-radius-md);
     padding: 16px 20px;
     color: var(--gl-text);
-    backdrop-filter: blur(4px);
 }
 
 .gl-info-card h4 {
@@ -464,7 +464,7 @@
 .gl-info-card p {
     margin: 0;
     color: var(--gl-text-dim);
-    font-size: 0.88rem;
+    font-size: 1rem;
     line-height: 1.6;
 }
 
@@ -473,7 +473,7 @@
 }
 
 .gl-info-card .gl-date {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     color: var(--gl-text-dim);
     margin-bottom: 6px;
     display: block;
@@ -491,6 +491,7 @@
     padding: 36px;
     border: 2px dashed var(--gl-border);
     border-radius: var(--gl-radius-lg);
+    backdrop-filter: blur(4px);
 }
 
 .gl-empty-state svg {
@@ -506,7 +507,7 @@
 
 .gl-empty-state p {
     margin: 0;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     text-align: center;
 }
 
@@ -525,11 +526,11 @@
 
 .gl-status-label {
     font-weight: 600;
-    font-size: 0.92rem;
+    font-size: 1rem;
 }
 
 .gl-status-sub {
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     color: var(--gl-text-dim);
     margin-top: 2px;
 }
@@ -542,7 +543,7 @@
     color: #6ee7b7;
     padding: 4px 12px;
     border-radius: 99px;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-weight: 700;
 }
 
@@ -554,7 +555,7 @@
     color: #fcd34d;
     padding: 4px 12px;
     border-radius: 99px;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-weight: 700;
 }
 
@@ -569,7 +570,7 @@
     padding: 8px 16px;
     border-radius: var(--gl-radius-sm);
     cursor: pointer;
-    font-size: 0.82rem;
+    font-size: 0.85rem;
     font-weight: 600;
     transition: background 0.2s;
 }
@@ -598,7 +599,7 @@
 
 .gl-settings-card label {
     display: block;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.8px;
     color: var(--gl-text-dim);
@@ -607,7 +608,7 @@
 }
 
 .gl-settings-card .gl-value {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -657,7 +658,7 @@
     padding: 12px 28px;
     border: none;
     border-radius: var(--gl-radius-md);
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.25s;
@@ -745,6 +746,7 @@
 
 .gl-mode-card {
     animation: gl-fade-up 0.35s ease both;
+    backdrop-filter: blur(4px);
 }
 
 .gl-mode-card:nth-child(1) {
@@ -836,7 +838,7 @@
 
     .gl-action-btn {
         padding: 10px 18px;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
     }
 }
 
@@ -886,7 +888,7 @@
 
 .gl-no-team-header h3 {
     margin: 0;
-    font-size: 1.8rem;
+    font-size: 1.75rem;
     font-weight: 800;
     color: var(--gl-text);
     letter-spacing: 0.5px;
@@ -959,7 +961,7 @@
 
 .gl-lobby-card h4 {
     margin: 0;
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--gl-text);
 }
@@ -1055,7 +1057,7 @@
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    font-size: 1.2rem;
+    font-size: 1.125rem;
     color: var(--gl-text);
     border: 2px solid var(--gl-border);
 }
@@ -1068,7 +1070,7 @@
 
 .gl-browse-item-name {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--gl-text);
 }
@@ -1216,7 +1218,7 @@
 
 .gl-invitation-text span {
     color: var(--gl-text-dim);
-    font-size: 0.86rem;
+    font-size: 0.85rem;
 }
 
 .gl-member-entry.gl-me {
@@ -1231,8 +1233,237 @@
     margin-left: 8px;
     padding: 2px 8px;
     border-radius: 999px;
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     font-weight: 700;
     color: #042f2e;
     background: linear-gradient(135deg, #5eead4, #2dd4bf);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MANAGE MEMBER ROWS
+   ═══════════════════════════════════════════════════════════ */
+.gl-manage-member-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+    border-radius: var(--gl-radius-md);
+    background: rgba(255, 255, 255, 0.06);
+    transition: background 0.2s;
+}
+
+.gl-manage-member-row:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.gl-manage-member-row:last-child {
+    margin-bottom: 0;
+}
+
+.gl-manage-member-info {
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.gl-manage-member-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.gl-manage-member-name {
+    color: var(--gl-text);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.gl-manage-leader-tag {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.gl-manage-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+/* Warning button (transfer leader) */
+.gl-btn-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 99px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    background: rgba(245, 158, 11, 0.12);
+    color: #fcd34d;
+    transition: all 0.2s ease;
+}
+
+.gl-btn-warning:hover:not(:disabled) {
+    background: rgba(245, 158, 11, 0.25);
+    border-color: rgba(245, 158, 11, 0.6);
+    transform: translateY(-1px);
+}
+
+.gl-btn-warning:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Danger button (kick) */
+.gl-btn-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 99px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.12);
+    color: #fca5a5;
+    transition: all 0.2s ease;
+}
+
+.gl-btn-danger:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.6);
+    transform: translateY(-1px);
+}
+
+.gl-btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FIX: No-team frame height
+   ═══════════════════════════════════════════════════════════ */
+.gl-frame.gl-frame-center {
+    min-height: auto;
+    padding: 48px 24px;
+}
+
+@media (max-width: 768px) {
+    .gl-manage-member-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .gl-manage-actions {
+        width: 100%;
+    }
+
+    .gl-btn-warning,
+    .gl-btn-danger {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TEAM INFO CARDS (Manage detail top section)
+   ═══════════════════════════════════════════════════════════ */
+.gl-team-info-card {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--gl-radius-md);
+    padding: 14px 20px;
+    margin-bottom: 8px;
+    color: var(--gl-text);
+    border-left: 4px solid rgba(124, 58, 237, 0.5);
+    transition: background 0.2s;
+    backdrop-filter: blur(4px);
+}
+
+.gl-team-info-card:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.gl-team-info-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--gl-text-dim);
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.gl-team-info-value {
+    font-size: 1rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--gl-text);
+}
+
+.gl-team-info-status {
+    gap: 10px;
+}
+
+.gl-team-info-status .gl-status-dot {
+    margin-left: 0;
+}
+
+/* ── Invite row (code + username input inline) ── */
+.gl-invite-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.gl-invite-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.gl-invite-input-group .gr-input {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 600px) {
+    .gl-invite-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .gl-invite-row .gl-code-chip {
+        align-self: flex-start;
+    }
 }

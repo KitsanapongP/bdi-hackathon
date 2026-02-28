@@ -314,7 +314,6 @@ function HomePage() {
         <div className="gt-page">
             {/* Background shapes */}
             <GameShapes
-                shapeCount={45}
                 sizeRange={[22, 50]}
                 depthLayers={3}
                 interactionRadius={130}

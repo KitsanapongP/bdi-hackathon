@@ -1,0 +1,137 @@
+/* ═══════════════════════════════════════════════════════════
+   Confirm Modal — Purple Theme
+   ═══════════════════════════════════════════════════════════ */
+
+.cm-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 5, 40, 0.72);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 24px;
+}
+
+.cm-card {
+    background: linear-gradient(145deg, #4c1d95, #3b1578);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 24px;
+    padding: 36px 32px 28px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 24px 64px rgba(15, 5, 40, 0.6),
+                0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+/* Icon ring */
+.cm-icon-ring {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+}
+
+.cm-icon-danger {
+    background: rgba(239, 68, 68, 0.18);
+    color: #fca5a5;
+    border: 2px solid rgba(239, 68, 68, 0.3);
+}
+
+.cm-icon-warning {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fcd34d;
+    border: 2px solid rgba(245, 158, 11, 0.3);
+}
+
+.cm-title {
+    margin: 0 0 8px;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.3px;
+}
+
+.cm-message {
+    margin: 0 0 24px;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.6;
+}
+
+/* Actions */
+.cm-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.cm-btn {
+    padding: 10px 24px;
+    border-radius: 99px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    min-width: 100px;
+}
+
+.cm-btn:active {
+    transform: scale(0.96);
+}
+
+.cm-btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.cm-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+.cm-btn-confirm.cm-btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+}
+
+.cm-btn-confirm.cm-btn-danger:hover {
+    background: linear-gradient(135deg, #f87171, #ef4444);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.45);
+    transform: translateY(-1px);
+}
+
+.cm-btn-confirm.cm-btn-warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);
+}
+
+.cm-btn-confirm.cm-btn-warning:hover {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+    transform: translateY(-1px);
+}
+
+@media (max-width: 480px) {
+    .cm-card {
+        padding: 28px 20px 22px;
+        border-radius: 20px;
+    }
+
+    .cm-actions {
+        flex-direction: column-reverse;
+    }
+
+    .cm-btn {
+        width: 100%;
+    }
+}

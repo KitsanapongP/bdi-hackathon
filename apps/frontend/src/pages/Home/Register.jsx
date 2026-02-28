@@ -139,7 +139,11 @@ function RegisterPage() {
 
     return (
         <div className="gr-page">
-            <GameShapes shapeCount={30} sizeRange={[18, 40]} depthLayers={2} interactionRadius={100} seed={99} />
+            <GameShapes
+                sizeRange={[18, 40]}
+                depthLayers={2}
+                seed={99}
+            />
             <div className="gr-login-wrap">
                 <div className="gr-login-card">
                     <div className="gt-badge" style={{ marginBottom: 20 }}>
