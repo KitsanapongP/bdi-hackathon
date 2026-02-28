@@ -1172,7 +1172,7 @@ function StaticSponsorsPage() {
             label: 'Logo + Name',
             render: (row) => (
               <div className="ad-inline-logo">
-                <img src={apiUrl(row.logo)} alt={row.name} onError={(event) => (event.currentTarget.style.display = 'none')} />
+                <img src={apiUrl(row.logo)} alt={row.name} loading="lazy" decoding="async" />
                 <div>
                   <strong>{row.name}</strong>
                   <span>{row.logoMeta?.type || '-'}</span>

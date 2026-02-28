@@ -612,7 +612,14 @@ function HomePage() {
                         </div>
                         <div className="gt-marquee">
                             {(!sponsorsLoading ? [...sponsors, ...sponsors] : []).map((item, i) => (
-                                <img key={`${item.id}-${i}`} src={apiUrl(item.logoUrl)} alt={item.nameEn || item.nameTh || `Sponsor ${i + 1}`} className="gt-sponsor-logo" />
+                                <img
+                                    key={`${item.id}-${i}`}
+                                    src={apiUrl(item.logoUrl)}
+                                    alt={item.nameEn || item.nameTh || `Sponsor ${i + 1}`}
+                                    className="gt-sponsor-logo"
+                                    loading="eager"
+                                    decoding="async"
+                                />
                             ))}
                         </div>
                     </div>
