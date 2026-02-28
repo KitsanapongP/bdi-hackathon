@@ -713,7 +713,7 @@
 }
 
 .gl-member-entry {
-    animation: gl-fade-up 0.35s ease both;
+    animation: gl-fade-up 0.35s ease backwards;
 }
 
 .gl-member-entry:nth-child(1) {
@@ -745,8 +745,9 @@
 }
 
 .gl-mode-card {
-    animation: gl-fade-up 0.35s ease both;
+    animation: gl-fade-up 0.35s ease backwards;
     backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 
 .gl-mode-card:nth-child(1) {
@@ -860,7 +861,7 @@
     text-align: center;
     padding: 48px 32px;
     gap: 14px;
-    animation: gl-fade-up 0.5s ease both;
+    animation: gl-fade-up 0.5s ease backwards;
 }
 
 .gl-no-team-icon {
@@ -918,6 +919,8 @@
 .gl-lobby-card {
     position: relative;
     background: rgba(196, 181, 253, 0.18);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     border: 3px solid var(--gl-border);
     border-radius: var(--gl-radius-xl);
     padding: 32px 24px;
@@ -1219,7 +1222,7 @@
     width: 100%;
     margin-bottom: 16px;
     border-left: 4px solid var(--gl-teal);
-    animation: gl-fade-up 0.4s ease both;
+    animation: gl-fade-up 0.4s ease backwards;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1230,7 +1233,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    animation: gl-lobby-fade-in 0.5s ease both;
+    animation: gl-lobby-fade-in 0.5s ease backwards;
     padding: 12px;
     border-radius: var(--gl-radius-xl);
 }
@@ -1375,7 +1378,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-    animation: gl-slide-in 0.35s ease both;
+    animation: gl-slide-in 0.35s ease backwards;
 }
 
 .gl-inner-wide {
