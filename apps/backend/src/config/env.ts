@@ -13,6 +13,7 @@ const EnvSchema = z.object({
 
   JWT_SECRET: z.string().min(8, 'JWT_SECRET must be at least 8 characters'),
   LOG_VIEWER_SECRET: z.string().optional().default('hackathon'),
+  CORS_ORIGIN: z.string().optional().default(''),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
