@@ -23,7 +23,7 @@
     width: 100%;
     text-align: center;
     box-shadow: 0 24px 64px rgba(15, 5, 40, 0.6),
-                0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
 /* Icon ring */
@@ -47,6 +47,18 @@
     background: rgba(245, 158, 11, 0.18);
     color: #fcd34d;
     border: 2px solid rgba(245, 158, 11, 0.3);
+}
+
+.cm-icon-success {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 2px solid rgba(16, 185, 129, 0.3);
+}
+
+.cm-icon-info {
+    background: rgba(59, 130, 246, 0.18);
+    color: #93c5fd;
+    border: 2px solid rgba(59, 130, 246, 0.3);
 }
 
 .cm-title {
@@ -118,6 +130,30 @@
 .cm-btn-confirm.cm-btn-warning:hover {
     background: linear-gradient(135deg, #fbbf24, #f59e0b);
     box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+    transform: translateY(-1px);
+}
+
+.cm-btn-confirm.cm-btn-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+}
+
+.cm-btn-confirm.cm-btn-success:hover {
+    background: linear-gradient(135deg, #34d399, #10b981);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+    transform: translateY(-1px);
+}
+
+.cm-btn-confirm.cm-btn-info {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+}
+
+.cm-btn-confirm.cm-btn-info:hover {
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
     transform: translateY(-1px);
 }
 

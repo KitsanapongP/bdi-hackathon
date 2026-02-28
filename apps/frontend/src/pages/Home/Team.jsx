@@ -57,12 +57,23 @@ export default function TeamContent({ user }) {
     const [isLoadingTeam, setIsLoadingTeam] = useState(false);
     const [selectedCard, setSelectedCard] = useState(null);
     const [copied, setCopied] = useState(false);
-    const [message, setMessage] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
-    const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', variant: 'danger', onConfirm: null });
+    const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', variant: 'danger', onConfirm: null, hideCancel: false, confirmLabel: 'ยืนยัน', cancelLabel: 'ยกเลิก' });
 
     const openConfirm = (title, message, onConfirm, variant = 'danger') => {
-        setConfirmState({ open: true, title, message, onConfirm, variant });
+        setConfirmState({ open: true, title, message, onConfirm, variant, hideCancel: false, confirmLabel: 'ยืนยัน', cancelLabel: 'ยกเลิก' });
+    };
+    const openAlert = (title, message, variant = 'danger') => {
+        setConfirmState({
+            open: true,
+            title,
+            message,
+            variant,
+            hideCancel: true,
+            confirmLabel: 'ตกลง',
+            onConfirm: () => setConfirmState(s => ({ ...s, open: false })),
+            onCancel: () => setConfirmState(s => ({ ...s, open: false }))
+        });
     };
     const closeConfirm = () => setConfirmState((s) => ({ ...s, open: false }));
 
@@ -170,10 +181,9 @@ export default function TeamContent({ user }) {
     const withAction = async (fn) => {
         try {
             setActionLoading(true);
-            setMessage('');
             await fn();
         } catch (err) {
-            setMessage(`เกิดข้อผิดพลาด: ${err.message}`);
+            openAlert('เกิดข้อผิดพลาด', err.message, 'danger');
         } finally {
             setActionLoading(false);
         }
@@ -207,7 +217,7 @@ export default function TeamContent({ user }) {
         const payload = await res.json();
         if (!payload.ok) throw new Error(payload.message || 'ส่งคำขอเข้าร่วมทีมไม่สำเร็จ');
         setJoinCode('');
-        setMessage('ส่งคำขอเข้าร่วมทีมแล้ว กรุณารอหัวหน้าทีมอนุมัติ');
+        openAlert('สำเร็จ', 'ส่งคำขอเข้าร่วมทีมแล้ว กรุณารอหัวหน้าทีมอนุมัติ', 'success');
     });
 
     const handleRequestPublicTeam = (teamId) => withAction(async () => {
@@ -219,7 +229,7 @@ export default function TeamContent({ user }) {
         });
         const payload = await res.json();
         if (!payload.ok) throw new Error(payload.message || 'ส่งคำขอเข้าร่วมทีมไม่สำเร็จ');
-        setMessage('ส่งคำขอเข้าร่วมทีมสำเร็จ');
+        openAlert('สำเร็จ', 'ส่งคำขอเข้าร่วมทีมสำเร็จ', 'success');
         setActiveView(null);
     });
 
@@ -264,7 +274,7 @@ export default function TeamContent({ user }) {
         const payload = await res.json();
         if (!payload.ok) throw new Error(payload.message || 'ส่งคำเชิญไม่สำเร็จ');
         setInviteUserNameInput('');
-        setMessage('ส่งคำเชิญสำเร็จ');
+        openAlert('สำเร็จ', 'ส่งคำเชิญสำเร็จ', 'success');
     });
 
     const handleRemoveMember = (memberUserId) => {
@@ -279,7 +289,7 @@ export default function TeamContent({ user }) {
                 const payload = await res.json();
                 if (!payload.ok) throw new Error(payload.message || 'ลบสมาชิกไม่สำเร็จ');
                 setTeam((prev) => prev ? { ...prev, members: prev.members.filter((m) => m.id !== memberUserId) } : prev);
-                setMessage('ลบสมาชิกสำเร็จ');
+                openAlert('สำเร็จ', 'ลบสมาชิกสำเร็จ', 'success');
             });
         }, 'danger');
     };
@@ -314,7 +324,7 @@ export default function TeamContent({ user }) {
                 });
                 const payload = await res.json();
                 if (!payload.ok) throw new Error(payload.message || 'โอนหัวหน้าทีมไม่สำเร็จ');
-                setMessage('โอนหัวหน้าทีมสำเร็จ');
+                openAlert('สำเร็จ', 'โอนหัวหน้าทีมสำเร็จ', 'success');
                 window.location.reload();
             });
         }, 'warning');
@@ -328,7 +338,6 @@ export default function TeamContent({ user }) {
         return (
             <div className="gl-page-container">
                 <div className="gl-frame gl-frame-center">
-                    {message && <div className="gl-info-card gl-msg-toast"><p>{message}</p></div>}
 
                     {/* ── Lobby Home (2x2 grid) ── */}
                     {activeView === null && (
@@ -522,6 +531,9 @@ export default function TeamContent({ user }) {
                     title={confirmState.title}
                     message={confirmState.message}
                     variant={confirmState.variant}
+                    hideCancel={confirmState.hideCancel}
+                    confirmLabel={confirmState.confirmLabel}
+                    cancelLabel={confirmState.cancelLabel}
                     onConfirm={confirmState.onConfirm}
                     onCancel={closeConfirm}
                 />
@@ -687,7 +699,6 @@ export default function TeamContent({ user }) {
                 </aside>
 
                 <main className="gl-content-panel">
-                    {message && <div className="gl-info-card" style={{ marginBottom: 10 }}><p>{message}</p></div>}
                     {selectedCard === null ? (
                         <div className="gl-card-grid">
                             {CARDS.map((card) => (
@@ -708,6 +719,9 @@ export default function TeamContent({ user }) {
                 title={confirmState.title}
                 message={confirmState.message}
                 variant={confirmState.variant}
+                hideCancel={confirmState.hideCancel}
+                confirmLabel={confirmState.confirmLabel}
+                cancelLabel={confirmState.cancelLabel}
                 onConfirm={confirmState.onConfirm}
                 onCancel={closeConfirm}
             />
