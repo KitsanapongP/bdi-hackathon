@@ -909,11 +909,16 @@ function StaticSponsorsPage() {
   const [editingId, setEditingId] = useState(null)
   const [errors, setErrors] = useState({})
   const [form, setForm] = useState({
-    name: '',
-    nameTh: '',
-    link: '',
-    displayOrder: 1,
-    isActive: true,
+    sponsorNameEn: '',
+    sponsorNameTh: '',
+    websiteUrl: '',
+    tierCode: 'co_organizer',
+    tierNameTh: 'ผู้ร่วมจัด',
+    tierNameEn: 'Co-Organizer',
+    sortOrder: 1,
+    isEnabled: true,
+    logoStorageKey: '',
+    logoFile: null,
     logoFileName: '',
     logoType: '',
     logoSize: 0,
@@ -957,11 +962,16 @@ function StaticSponsorsPage() {
     setEditingId(null)
     setErrors({})
     setForm({
-      name: '',
-      nameTh: '',
-      link: '',
-      displayOrder: items.length + 1,
-      isActive: true,
+      sponsorNameEn: '',
+      sponsorNameTh: '',
+      websiteUrl: '',
+      tierCode: 'co_organizer',
+      tierNameTh: 'ผู้ร่วมจัด',
+      tierNameEn: 'Co-Organizer',
+      sortOrder: items.length + 1,
+      isEnabled: true,
+      logoStorageKey: '',
+      logoFile: null,
       logoFileName: '',
       logoType: '',
       logoSize: 0,
@@ -973,11 +983,16 @@ function StaticSponsorsPage() {
     setEditingId(item.id)
     setErrors({})
     setForm({
-      name: item.name,
-      nameTh: item.nameTh || '',
-      link: item.link || '',
-      displayOrder: item.displayOrder,
-      isActive: item.isActive,
+      sponsorNameEn: item.name || '',
+      sponsorNameTh: item.nameTh || '',
+      websiteUrl: item.link || '',
+      tierCode: item.tierCode || 'co_organizer',
+      tierNameTh: item.tierNameTh || 'ผู้ร่วมจัด',
+      tierNameEn: item.tierNameEn || 'Co-Organizer',
+      sortOrder: item.displayOrder,
+      isEnabled: item.isActive,
+      logoStorageKey: item.logo || '',
+      logoFile: null,
       logoFileName: item.logo?.split('/').pop() || '',
       logoType: item.logoMeta?.type || '',
       logoSize: (item.logoMeta?.sizeKb || 0) * 1024,
@@ -985,10 +1000,18 @@ function StaticSponsorsPage() {
     setDrawerOpen(true)
   }
 
+  const tierFolder = (form.tierCode || 'co_organizer').replace(/_/g, '-')
+  const previewLogoStorageKey = form.logoFileName
+    ? `/static/content/sponsors/${tierFolder}/${form.logoFileName}`
+    : form.logoStorageKey
+
   const validate = () => {
     const next = {}
-    if (!form.name.trim()) next.name = 'กรุณากรอกชื่อ sponsor'
-    if (!editingId && !form.logoFileName) next.logo = 'กรุณาอัปโหลดโลโก้'
+    if (!form.sponsorNameEn.trim()) next.sponsorNameEn = 'กรุณากรอก sponsor_name_en'
+    if (!form.sponsorNameTh.trim()) next.sponsorNameTh = 'กรุณากรอก sponsor_name_th'
+    if (!form.tierCode.trim()) next.tierCode = 'กรุณากรอก tier_code'
+    if (!editingId && !form.logoFile) next.logo = 'กรุณาอัปโหลดโลโก้'
+    if (form.logoFile && !form.logoFileName.trim()) next.logoFileName = 'กรุณาตั้งชื่อไฟล์ก่อนอัปโหลด'
     if (form.logoType && !['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'].includes(form.logoType)) {
       next.logo = 'รองรับเฉพาะ PNG/JPG/WEBP/SVG'
     }
@@ -999,23 +1022,47 @@ function StaticSponsorsPage() {
 
   const onSubmit = async () => {
     if (!validate()) return
+    const payload = {
+      name: form.sponsorNameEn.trim(),
+      nameTh: form.sponsorNameTh.trim(),
+      link: form.websiteUrl.trim() || null,
+      displayOrder: Number(form.sortOrder),
+      isActive: form.isEnabled,
+      tierCode: form.tierCode.trim(),
+      tierNameTh: form.tierNameTh.trim() || null,
+      tierNameEn: form.tierNameEn.trim() || null,
+    }
+
+    const uploadLogoIfNeeded = async (sponsorId) => {
+      if (!form.logoFile) return
+      const formData = new FormData()
+      formData.append('file', form.logoFile)
+      formData.append('fileName', form.logoFileName.trim())
+      formData.append('tierCode', form.tierCode.trim())
+
+      const uploadResponse = await fetch(apiUrl(`/api/admin/sponsors/${sponsorId}/logo`), {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+      const uploadData = await uploadResponse.json()
+      if (!uploadData.ok) {
+        throw new Error(uploadData.message || 'Logo upload failed')
+      }
+    }
+
     try {
       if (editingId) {
         const response = await fetch(apiUrl(`/api/admin/sponsors/${editingId}`), {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({
-            name: form.name.trim(),
-            nameTh: form.nameTh.trim(),
-            link: form.link.trim() || null,
-            displayOrder: Number(form.displayOrder),
-            isActive: form.isActive,
-          }),
+          body: JSON.stringify(payload),
         })
         const data = await response.json()
         if (data.ok) {
-          pushToast({ title: 'อัปเดต Sponsor สำเร็จ', description: form.name })
+          await uploadLogoIfNeeded(editingId)
+          pushToast({ title: 'อัปเดต Sponsor สำเร็จ', description: form.sponsorNameEn })
           fetchSponsors()
         } else {
           pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
@@ -1026,17 +1073,14 @@ function StaticSponsorsPage() {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            name: form.name.trim(),
-            nameTh: form.nameTh.trim(),
-            link: form.link.trim() || null,
-            displayOrder: Number(form.displayOrder),
-            isActive: form.isActive,
-            logo: '/content/sponsors/mock-upload.png',
+            ...payload,
+            logo: previewLogoStorageKey,
           }),
         })
         const data = await response.json()
         if (data.ok) {
-          pushToast({ title: 'เพิ่ม Sponsor สำเร็จ', description: form.name })
+          await uploadLogoIfNeeded(data.data.id)
+          pushToast({ title: 'เพิ่ม Sponsor สำเร็จ', description: form.sponsorNameEn })
           fetchSponsors()
         } else {
           pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
@@ -1140,10 +1184,14 @@ function StaticSponsorsPage() {
             key: 'link',
             label: 'Link',
             render: (row) => (
-              <a href={row.link} target="_blank" rel="noreferrer" className="ad-link">
-                <Link2 size={13} />
-                {row.link}
-              </a>
+              row.link ? (
+                <a href={row.link} target="_blank" rel="noreferrer" className="ad-link">
+                  <Link2 size={13} />
+                  {row.link}
+                </a>
+              ) : (
+                <span>-</span>
+              )
             ),
           },
           {
@@ -1185,34 +1233,71 @@ function StaticSponsorsPage() {
         subtitle="รองรับการอัปโหลดโลโก้และตรวจสอบไฟล์ภาพ"
       >
         <div className="ad-form">
-          <label htmlFor="sponsor-name">
-            Name *
+          <label htmlFor="sponsor-name-en">
+            sponsor_name_en *
             <input
-              id="sponsor-name"
-              value={form.name}
-              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              id="sponsor-name-en"
+              value={form.sponsorNameEn}
+              onChange={(event) => setForm((prev) => ({ ...prev, sponsorNameEn: event.target.value }))}
             />
-            {errors.name ? <small>{errors.name}</small> : null}
+            {errors.sponsorNameEn ? <small>{errors.sponsorNameEn}</small> : null}
           </label>
 
-          <label htmlFor="sponsor-link">
-            Link
+          <label htmlFor="sponsor-name-th">
+            sponsor_name_th *
             <input
-              id="sponsor-link"
-              value={form.link}
-              onChange={(event) => setForm((prev) => ({ ...prev, link: event.target.value }))}
+              id="sponsor-name-th"
+              value={form.sponsorNameTh}
+              onChange={(event) => setForm((prev) => ({ ...prev, sponsorNameTh: event.target.value }))}
             />
-            {errors.link ? <small>{errors.link}</small> : null}
+            {errors.sponsorNameTh ? <small>{errors.sponsorNameTh}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-website-url">
+            website_url
+            <input
+              id="sponsor-website-url"
+              value={form.websiteUrl}
+              onChange={(event) => setForm((prev) => ({ ...prev, websiteUrl: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="sponsor-tier-code">
+            tier_code *
+            <input
+              id="sponsor-tier-code"
+              value={form.tierCode}
+              onChange={(event) => setForm((prev) => ({ ...prev, tierCode: event.target.value }))}
+            />
+            {errors.tierCode ? <small>{errors.tierCode}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-tier-name-th">
+            tier_name_th
+            <input
+              id="sponsor-tier-name-th"
+              value={form.tierNameTh}
+              onChange={(event) => setForm((prev) => ({ ...prev, tierNameTh: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="sponsor-tier-name-en">
+            tier_name_en
+            <input
+              id="sponsor-tier-name-en"
+              value={form.tierNameEn}
+              onChange={(event) => setForm((prev) => ({ ...prev, tierNameEn: event.target.value }))}
+            />
           </label>
 
           <label htmlFor="sponsor-order">
-            Display Order
+            sort_order
             <input
               id="sponsor-order"
               type="number"
               min={1}
-              value={form.displayOrder}
-              onChange={(event) => setForm((prev) => ({ ...prev, displayOrder: event.target.value }))}
+              value={form.sortOrder}
+              onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
             />
           </label>
 
@@ -1227,6 +1312,7 @@ function StaticSponsorsPage() {
                 if (!file) return
                 setForm((prev) => ({
                   ...prev,
+                  logoFile: file,
                   logoFileName: file.name,
                   logoType: file.type,
                   logoSize: file.size,
@@ -1242,6 +1328,26 @@ function StaticSponsorsPage() {
             {errors.logo ? <small>{errors.logo}</small> : null}
           </label>
 
+          <label htmlFor="sponsor-logo-file-name">
+            Logo File Name
+            <input
+              id="sponsor-logo-file-name"
+              value={form.logoFileName}
+              placeholder="example-logo.png"
+              onChange={(event) => setForm((prev) => ({ ...prev, logoFileName: event.target.value }))}
+            />
+            {errors.logoFileName ? <small>{errors.logoFileName}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-logo-key">
+            logo_storage_key
+            <input
+              id="sponsor-logo-key"
+              value={previewLogoStorageKey}
+              readOnly
+            />
+          </label>
+
           <div className="ad-toggle-row">
             <label htmlFor="sponsor-active" className="ad-toggle-label">
               Status
@@ -1249,11 +1355,11 @@ function StaticSponsorsPage() {
             <label className="ad-toggle">
               <input
                 type="checkbox"
-                checked={form.isActive}
-                onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+                checked={form.isEnabled}
+                onChange={(event) => setForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
               />
               <span className="ad-toggle-switch"></span>
-              <span className="ad-toggle-text">{form.isActive ? 'Enabled' : 'Disabled'}</span>
+              <span className="ad-toggle-text">{form.isEnabled ? 'Enabled' : 'Disabled'}</span>
             </label>
           </div>
 

@@ -1,7 +1,11 @@
 import type { DB } from '../../config/db.js';
+import path from 'node:path';
+import { mkdir } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import * as repo from './content.repo.js';
 import type { ContentReward, ContentSponsor, ContentRewardAdmin, ContentSponsorAdmin } from './content.types.js';
-import { NotFoundError } from '../../shared/errors.js';
+import { BadRequestError, NotFoundError } from '../../shared/errors.js';
 
 function toRewardAdminResponse(row: any): ContentRewardAdmin {
     return {
@@ -18,6 +22,71 @@ function toRewardAdminResponse(row: any): ContentRewardAdmin {
         sortOrder: row.sort_order,
         isActive: row.is_enabled === 1,
     };
+}
+
+const DEFAULT_SPONSOR_TIER = {
+    code: 'co_organizer',
+    nameTh: 'ผู้ร่วมจัด',
+    nameEn: 'Co-Organizer',
+};
+
+function normalizeTierCode(tierCode?: string | null): string {
+    const normalized = (tierCode || '').trim();
+    return normalized || DEFAULT_SPONSOR_TIER.code;
+}
+
+function normalizeSponsorLogoStorageKey(logoInput: string, tierCode?: string | null): string {
+    const tierFolder = normalizeTierCode(tierCode).replace(/_/g, '-');
+    let normalizedPath = (logoInput || '').trim();
+
+    if (/^https?:\/\//i.test(normalizedPath)) {
+        try {
+            normalizedPath = new URL(normalizedPath).pathname;
+        } catch {
+            normalizedPath = '';
+        }
+    }
+
+    normalizedPath = normalizedPath.replace(/^\/+/, '');
+
+    if (normalizedPath.startsWith('static/content/sponsors/')) {
+        return `/${normalizedPath}`;
+    }
+
+    if (normalizedPath.startsWith('content/sponsors/')) {
+        return `/static/${normalizedPath}`;
+    }
+
+    const fileName = path.posix.basename(normalizedPath);
+    return `/static/content/sponsors/${tierFolder}/${fileName}`;
+}
+
+function sanitizeFileName(name: string): string {
+    const parsed = path.parse((name || '').trim());
+    const normalizedBase = (parsed.name || 'sponsor-logo')
+        .normalize('NFKD')
+        .replace(/[^\x00-\x7F]/g, '')
+        .replace(/[^a-zA-Z0-9_-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase();
+    const safeBase = normalizedBase || 'sponsor-logo';
+
+    const ext = (parsed.ext || '').toLowerCase();
+    const allowedExts = new Set(['.png', '.jpg', '.jpeg', '.webp', '.svg']);
+    const safeExt = allowedExts.has(ext) ? ext : '';
+
+    return `${safeBase}${safeExt}`;
+}
+
+function extensionFromMimeType(mimeType: string): string {
+    switch ((mimeType || '').toLowerCase()) {
+        case 'image/png': return '.png';
+        case 'image/jpeg': return '.jpg';
+        case 'image/webp': return '.webp';
+        case 'image/svg+xml': return '.svg';
+        default: return '';
+    }
 }
 
 export async function getRewards(db: DB): Promise<ContentReward[]> {
@@ -183,8 +252,8 @@ export async function createSponsorAdmin(
     db: DB,
     data: {
         name: string;
-        nameTh: string;
-        link: string;
+        nameTh?: string;
+        link?: string | null;
         displayOrder: number;
         isActive: boolean;
         logo: string;
@@ -193,14 +262,18 @@ export async function createSponsorAdmin(
         tierNameEn?: string | null;
     }
 ): Promise<ContentSponsorAdmin> {
+    const tierCode = normalizeTierCode(data.tierCode);
+    const nameEn = data.name.trim();
+    const nameTh = (data.nameTh || '').trim() || nameEn;
+
     const sponsorId = await repo.createSponsor(db, {
-        nameEn: data.name,
-        nameTh: data.nameTh,
-        logoStorageKey: data.logo,
-        websiteUrl: data.link || null,
-        tierCode: data.tierCode || null,
-        tierNameTh: data.tierNameTh || null,
-        tierNameEn: data.tierNameEn || null,
+        nameEn,
+        nameTh,
+        logoStorageKey: normalizeSponsorLogoStorageKey(data.logo, tierCode),
+        websiteUrl: (data.link || '').trim() || null,
+        tierCode,
+        tierNameTh: (data.tierNameTh || '').trim() || DEFAULT_SPONSOR_TIER.nameTh,
+        tierNameEn: (data.tierNameEn || '').trim() || DEFAULT_SPONSOR_TIER.nameEn,
         sortOrder: data.displayOrder,
         isEnabled: data.isActive,
     });
@@ -215,7 +288,7 @@ export async function updateSponsorAdmin(
     data: {
         name?: string;
         nameTh?: string;
-        link?: string;
+        link?: string | null;
         displayOrder?: number;
         isActive?: boolean;
         logo?: string;
@@ -229,17 +302,35 @@ export async function updateSponsorAdmin(
         throw new NotFoundError('ไม่พบข้อมูล sponsor นี้');
     }
 
-    await repo.updateSponsor(db, sponsorId, {
-        nameEn: data.name ?? undefined,
-        nameTh: data.nameTh ?? undefined,
-        logoStorageKey: data.logo ?? undefined,
-        websiteUrl: data.link,
-        tierCode: data.tierCode,
-        tierNameTh: data.tierNameTh,
-        tierNameEn: data.tierNameEn,
-        sortOrder: data.displayOrder ?? undefined,
-        isEnabled: data.isActive,
-    });
+    const updatePayload: {
+        nameEn?: string | undefined;
+        nameTh?: string | undefined;
+        logoStorageKey?: string | undefined;
+        websiteUrl?: string | null | undefined;
+        tierCode?: string | null | undefined;
+        tierNameTh?: string | null | undefined;
+        tierNameEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+    } = {};
+
+    if (data.name !== undefined) updatePayload.nameEn = data.name.trim();
+    if (data.nameTh !== undefined) updatePayload.nameTh = data.nameTh.trim();
+    if (data.link !== undefined) updatePayload.websiteUrl = (data.link || '').trim() || null;
+    if (data.tierCode !== undefined) updatePayload.tierCode = normalizeTierCode(data.tierCode);
+    if (data.tierNameTh !== undefined) updatePayload.tierNameTh = (data.tierNameTh || '').trim() || null;
+    if (data.tierNameEn !== undefined) updatePayload.tierNameEn = (data.tierNameEn || '').trim() || null;
+    if (data.displayOrder !== undefined) updatePayload.sortOrder = data.displayOrder;
+    if (data.isActive !== undefined) updatePayload.isEnabled = data.isActive;
+
+    if (data.logo !== undefined) {
+        updatePayload.logoStorageKey = normalizeSponsorLogoStorageKey(
+            data.logo,
+            data.tierCode !== undefined ? data.tierCode : existing.tier_code
+        );
+    }
+
+    await repo.updateSponsor(db, sponsorId, updatePayload);
 
     const updated = await repo.getSponsorById(db, sponsorId);
     return toSponsorAdminResponse(updated!);
@@ -251,6 +342,53 @@ export async function deleteSponsorAdmin(db: DB, sponsorId: number): Promise<voi
         throw new NotFoundError('ไม่พบข้อมูล sponsor นี้');
     }
     await repo.deleteSponsor(db, sponsorId);
+}
+
+export async function uploadSponsorLogoAdmin(
+    db: DB,
+    sponsorId: number,
+    input: {
+        stream: NodeJS.ReadableStream;
+        originalName: string;
+        mimeType: string;
+        requestedFileName?: string | null;
+        tierCode?: string | null;
+    }
+): Promise<ContentSponsorAdmin> {
+    const sponsor = await repo.getSponsorById(db, sponsorId);
+    if (!sponsor) {
+        throw new NotFoundError('ไม่พบข้อมูล sponsor นี้');
+    }
+
+    const extFromMime = extensionFromMimeType(input.mimeType);
+    if (!extFromMime) {
+        throw new BadRequestError('รองรับเฉพาะ PNG/JPG/WEBP/SVG');
+    }
+
+    const chosenTierCode = normalizeTierCode(input.tierCode ?? sponsor.tier_code);
+    const tierFolder = chosenTierCode.replace(/_/g, '-');
+
+    const preferredName = (input.requestedFileName || '').trim() || input.originalName;
+    let safeFileName = sanitizeFileName(preferredName);
+    if (!safeFileName || !path.posix.extname(safeFileName)) {
+        safeFileName = `${sanitizeFileName(path.posix.parse(preferredName).name || 'sponsor-logo')}${extFromMime}`;
+    }
+
+    const uploadDir = path.join(process.cwd(), 'public', 'content', 'sponsors', tierFolder);
+    await mkdir(uploadDir, { recursive: true });
+
+    const diskPath = path.join(uploadDir, safeFileName);
+    await pipeline(input.stream, createWriteStream(diskPath));
+
+    const logoStorageKey = `/static/content/sponsors/${tierFolder}/${safeFileName}`;
+
+    await repo.updateSponsor(db, sponsorId, {
+        logoStorageKey,
+        tierCode: chosenTierCode,
+    });
+
+    const updated = await repo.getSponsorById(db, sponsorId);
+    return toSponsorAdminResponse(updated!);
 }
 
 export async function reorderSponsorsAdmin(db: DB, updates: { id: number; displayOrder: number }[]): Promise<void> {

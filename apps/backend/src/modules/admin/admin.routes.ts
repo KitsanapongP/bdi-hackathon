@@ -14,6 +14,7 @@ import {
     handleCreateSponsorAdmin,
     handleUpdateSponsorAdmin,
     handleDeleteSponsorAdmin,
+    handleUploadSponsorLogoAdmin,
     handleReorderSponsorsAdmin,
 } from './admin.controller.js';
 
@@ -34,6 +35,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get('/sponsors', handleGetAllSponsorsAdmin);
     fastify.post('/sponsors', handleCreateSponsorAdmin);
     fastify.patch('/sponsors/:id', handleUpdateSponsorAdmin);
+    fastify.post('/sponsors/:id/logo', handleUploadSponsorLogoAdmin);
     fastify.delete('/sponsors/:id', handleDeleteSponsorAdmin);
     fastify.put('/sponsors/reorder', handleReorderSponsorsAdmin);
 };

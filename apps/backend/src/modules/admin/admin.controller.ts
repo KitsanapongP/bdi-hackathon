@@ -189,6 +189,38 @@ export async function handleDeleteSponsorAdmin(req: FastifyRequest<{ Params: { i
     }
 }
 
+export async function handleUploadSponsorLogoAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+        return reply.status(400).send({ ok: false, message: 'ID ไม่ถูกต้อง' });
+    }
+
+    try {
+        const file = await (req as any).file();
+        if (!file) {
+            return reply.status(400).send({ ok: false, message: 'กรุณาแนบไฟล์โลโก้' });
+        }
+
+        const requestedFileName = (file.fields?.fileName?.value || '').toString();
+        const tierCode = (file.fields?.tierCode?.value || '').toString();
+
+        const result = await contentService.uploadSponsorLogoAdmin(req.server.ctx.db, id, {
+            stream: file.file,
+            originalName: file.filename,
+            mimeType: file.mimetype,
+            requestedFileName: requestedFileName || null,
+            tierCode: tierCode || null,
+        });
+
+        return reply.send(ok(result, 'อัปโหลดโลโก้สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
 export async function handleReorderSponsorsAdmin(req: FastifyRequest, reply: FastifyReply) {
     try {
         const body = req.body as { updates: { id: number; displayOrder: number }[] };
