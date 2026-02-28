@@ -181,8 +181,8 @@ const memberStateLabel = {
 }
 
 function getStatusTone(status) {
-  if (status === 'APPROVED') return 'success'
-  if (status === 'NEED_FIX' || status === 'RETURNED') return 'danger'
+  if (status === 'APPROVED' || status === 'ENABLED') return 'success'
+  if (status === 'NEED_FIX' || status === 'RETURNED' || status === 'DISABLED') return 'danger'
   if (status === 'RESUBMITTED' || status === 'READY_TO_RESUBMIT') return 'warning'
   if (status === 'IN_REVIEW') return 'info'
   return 'neutral'
@@ -583,8 +583,6 @@ function AdminGuard({ children }) {
 
   useEffect(() => {
     let active = true
-    const local = localStorage.getItem('gt_user')
-    const localUser = local ? JSON.parse(local) : null
 
     async function run() {
       try {
@@ -594,41 +592,24 @@ function AdminGuard({ children }) {
         if (!active) return
 
         if (response.ok && normalized.isAdmin) {
+          const userData = normalized.user || payload.user
+          if (userData) {
+            localStorage.setItem('gt_user', JSON.stringify(userData))
+          }
           setState({
             loading: false,
             allowed: true,
-            user: normalized.user || localUser,
+            user: userData,
             demoMode: false,
           })
           return
         }
+
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('gt_user')
+        }
       } catch {
-        // fallback below
-      }
-
-      if (!active) return
-
-      if (localUser?.accessRole === 'admin') {
-        setState({
-          loading: false,
-          allowed: true,
-          user: localUser,
-          demoMode: true,
-        })
-        return
-      }
-
-      if (import.meta.env.DEV) {
-        setState({
-          loading: false,
-          allowed: true,
-          user: {
-            userName: 'Design Preview Admin',
-            email: 'preview@local.dev',
-          },
-          demoMode: true,
-        })
-        return
+        localStorage.removeItem('gt_user')
       }
 
       setState({
@@ -1186,28 +1167,72 @@ function StaticSponsorsPage() {
 
 function StaticRewardsPage() {
   const { pushToast } = useAdminToast()
-  const [items, setItems] = useState(rewardsSeed)
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState({
     rank: 1,
     title: '',
+    titleTh: '',
     amount: '',
     currency: 'THB',
-    description: '',
+    prizeTextTh: '',
+    prizeTextEn: '',
+    descriptionTh: '',
+    descriptionEn: '',
     isActive: true,
   })
 
   const [errors, setErrors] = useState({})
+
+  const fetchRewards = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(apiUrl('/api/admin/rewards'), { credentials: 'include' })
+      const data = await response.json()
+      if (data.ok) {
+        setItems(
+          data.data.map((item) => ({
+            id: item.id,
+            rank: item.rank,
+            title: item.title,
+            titleTh: item.titleTh,
+            amount: item.amount,
+            currency: item.currency,
+            prizeTextTh: item.prizeTextTh,
+            prizeTextEn: item.prizeTextEn,
+            descriptionTh: item.descriptionTh,
+            descriptionEn: item.descriptionEn,
+            sortOrder: item.sortOrder,
+            isActive: item.isActive,
+          }))
+        )
+      }
+    } catch (err) {
+      console.error('Failed to fetch rewards:', err)
+      pushToast({ type: 'error', title: 'ไม่สามารถโหลดข้อมูลรางวัลได้' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchRewards()
+  }, [])
 
   const openCreate = () => {
     setEditingId(null)
     setForm({
       rank: items.length + 1,
       title: '',
+      titleTh: '',
       amount: '',
       currency: 'THB',
-      description: '',
+      prizeTextTh: '',
+      prizeTextEn: '',
+      descriptionTh: '',
+      descriptionEn: '',
       isActive: true,
     })
     setErrors({})
@@ -1219,9 +1244,13 @@ function StaticRewardsPage() {
     setForm({
       rank: item.rank,
       title: item.title,
-      amount: item.amount,
-      currency: item.currency,
-      description: item.description,
+      titleTh: item.titleTh || '',
+      amount: item.amount ?? '',
+      currency: item.currency ?? 'THB',
+      prizeTextTh: item.prizeTextTh || '',
+      prizeTextEn: item.prizeTextEn || '',
+      descriptionTh: item.descriptionTh || '',
+      descriptionEn: item.descriptionEn || '',
       isActive: item.isActive,
     })
     setErrors({})
@@ -1236,67 +1265,104 @@ function StaticRewardsPage() {
     return Object.keys(next).length === 0
   }
 
-  const save = () => {
+  const save = async () => {
     if (!validate()) return
-    if (editingId) {
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                rank: Number(form.rank),
-                title: form.title.trim(),
-                amount: Number(form.amount),
-                currency: form.currency.trim(),
-                description: form.description.trim(),
-                isActive: form.isActive,
-              }
-            : item,
-        ),
-      )
-      pushToast({ title: 'อัปเดตรางวัลสำเร็จ' })
-    } else {
-      setItems((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          rank: Number(form.rank),
-          title: form.title.trim(),
-          amount: Number(form.amount),
-          currency: form.currency.trim(),
-          description: form.description.trim(),
-          isActive: form.isActive,
-        },
-      ])
-      pushToast({ title: 'เพิ่มรางวัลสำเร็จ' })
+
+    const payload = {
+      rank: String(form.rank),
+      title: form.title.trim(),
+      titleTh: form.titleTh.trim() || form.title.trim(),
+      amount: form.amount ? Number(form.amount) : null,
+      currency: form.currency.trim() || null,
+      prizeTextTh: form.prizeTextTh.trim() || null,
+      prizeTextEn: form.prizeTextEn.trim() || null,
+      descriptionTh: form.descriptionTh.trim() || null,
+      descriptionEn: form.descriptionEn.trim() || null,
+      isActive: form.isActive,
+    }
+
+    try {
+      const url = editingId
+        ? apiUrl(`/api/admin/rewards/${editingId}`)
+        : apiUrl('/api/admin/rewards')
+      const method = editingId ? 'PATCH' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+
+      const data = await response.json()
+      if (data.ok) {
+        pushToast({ title: editingId ? 'อัปเดตรางวัลสำเร็จ' : 'เพิ่มรางวัลสำเร็จ' })
+        await fetchRewards()
+      } else {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+      }
+    } catch (err) {
+      console.error('Failed to save reward:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการบันทึก' })
     }
     setDrawerOpen(false)
   }
 
-  const remove = (id) => {
-    setItems((prev) => prev.filter((item) => item.id !== id))
-    pushToast({
-      type: 'warning',
-      title: 'ลบรางวัลแล้ว',
-    })
+  const remove = async (id) => {
+    try {
+      const response = await fetch(apiUrl(`/api/admin/rewards/${id}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await response.json()
+      if (data.ok) {
+        pushToast({ type: 'warning', title: 'ลบรางวัลแล้ว' })
+        await fetchRewards()
+      } else {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+      }
+    } catch (err) {
+      console.error('Failed to delete reward:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการลบ' })
+    }
   }
 
-  const moveItem = (id, direction) => {
-    setItems((prev) => {
-      const sorted = [...prev].sort((a, b) => a.rank - b.rank)
-      const index = sorted.findIndex((item) => item.id === id)
-      const swapIndex = direction === 'up' ? index - 1 : index + 1
-      if (index < 0 || swapIndex < 0 || swapIndex >= sorted.length) return prev
-      ;[sorted[index], sorted[swapIndex]] = [sorted[swapIndex], sorted[index]]
-      return sorted.map((item, idx) => ({ ...item, rank: idx + 1 }))
-    })
+  const moveItem = async (id, direction) => {
+    const sorted = [...items].sort((a, b) => (a.sortOrder || a.rank) - (b.sortOrder || b.rank))
+    const index = sorted.findIndex((item) => item.id === id)
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (index < 0 || swapIndex < 0 || swapIndex >= sorted.length) return
+
+    const itemA = sorted[index]
+    const itemB = sorted[swapIndex]
+
+    try {
+      await Promise.all([
+        fetch(apiUrl(`/api/admin/rewards/${itemA.id}`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ sortOrder: itemB.sortOrder || itemB.rank }),
+        }),
+        fetch(apiUrl(`/api/admin/rewards/${itemB.id}`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ sortOrder: itemA.sortOrder || itemA.rank }),
+        }),
+      ])
+      await fetchRewards()
+    } catch (err) {
+      console.error('Failed to reorder rewards:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการเรียงลำดับ' })
+    }
   }
 
   return (
     <div className="ad-stack">
       <SectionHeading
         title="Static Content: Rewards"
-        description="จัดการข้อมูลรางวัลแบบ editable table + sort by rank"
+        description=""
         right={
           <button type="button" className="ad-btn ad-btn-primary" onClick={openCreate}>
             <Plus size={15} />
@@ -1306,35 +1372,48 @@ function StaticRewardsPage() {
       />
 
       <AdminDataTable
-        rows={[...items].sort((a, b) => a.rank - b.rank)}
-        searchKeys={['title', 'description']}
+        rows={[...items].sort((a, b) => (a.sortOrder || a.rank) - (b.sortOrder || b.rank))}
+        searchKeys={['title', 'titleTh', 'descriptionTh', 'descriptionEn']}
         searchPlaceholder="ค้นหา reward title / description"
         filters={[
           { label: 'ทั้งหมด', value: 'all', predicate: () => true },
-          { label: 'Active', value: 'active', predicate: (row) => row.isActive },
-          { label: 'Inactive', value: 'inactive', predicate: (row) => !row.isActive },
+          { label: 'Enabled', value: 'active', predicate: (row) => row.isActive },
+          { label: 'Disabled', value: 'inactive', predicate: (row) => !row.isActive },
         ]}
         columns={[
           { key: 'rank', label: 'Rank' },
-          { key: 'title', label: 'Title' },
+          {
+            key: 'title',
+            label: 'Title',
+            render: (row) => (
+              <div>
+                <div>{row.titleTh || row.title}</div>
+                {(row.titleTh && row.title) && <div className="ad-text-muted">{row.title}</div>}
+              </div>
+            ),
+          },
           {
             key: 'amount',
             label: 'Amount',
-            render: (row) => `${Number(row.amount).toLocaleString('th-TH')} ${row.currency}`,
+            render: (row) => row.amount ? Number(row.amount).toLocaleString('th-TH') : '-',
           },
           {
-            key: 'description',
-            label: 'Description',
-            render: (row) => <span className="ad-truncate">{row.description}</span>,
+            key: 'currency',
+            label: 'Currency',
+            render: (row) => row.currency || '-',
+          },
+          {
+            key: 'sortOrder',
+            label: 'Order',
           },
           {
             key: 'isActive',
             label: 'Status',
-            render: (row) => <StatusBadge status={row.isActive ? 'APPROVED' : 'RETURNED'} />,
+            render: (row) => <StatusBadge status={row.isActive ? 'ENABLED' : 'DISABLED'} />,
           },
           {
             key: 'actions',
-            label: 'Actions',
+            label: '',
             render: (row) => (
               <div className="ad-row-actions">
                 <button type="button" onClick={() => moveItem(row.id, 'up')} aria-label="move up">
@@ -1373,13 +1452,21 @@ function StaticRewardsPage() {
             />
           </label>
           <label htmlFor="reward-title">
-            Title *
+            Title (English) *
             <input
               id="reward-title"
               value={form.title}
               onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
             />
             {errors.title ? <small>{errors.title}</small> : null}
+          </label>
+          <label htmlFor="reward-title-th">
+            Title (Thai)
+            <input
+              id="reward-title-th"
+              value={form.titleTh}
+              onChange={(event) => setForm((prev) => ({ ...prev, titleTh: event.target.value }))}
+            />
           </label>
           <label htmlFor="reward-amount">
             Amount *
@@ -1400,23 +1487,56 @@ function StaticRewardsPage() {
               onChange={(event) => setForm((prev) => ({ ...prev, currency: event.target.value.toUpperCase() }))}
             />
           </label>
-          <label htmlFor="reward-description">
-            Description
-            <textarea
-              id="reward-description"
-              rows={4}
-              value={form.description}
-              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-            />
-          </label>
-          <label className="ad-check">
+          <label htmlFor="reward-prize-text-th">
+            Prize Text (Thai)
             <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+              id="reward-prize-text-th"
+              value={form.prizeTextTh}
+              placeholder="เช่น พร้อมถ้วย, โล่ + ของรางวัล"
+              onChange={(event) => setForm((prev) => ({ ...prev, prizeTextTh: event.target.value }))}
             />
-            <span>Active</span>
           </label>
+          <label htmlFor="reward-prize-text-en">
+            Prize Text (English)
+            <input
+              id="reward-prize-text-en"
+              value={form.prizeTextEn}
+              placeholder="e.g. with trophy, shield + prize"
+              onChange={(event) => setForm((prev) => ({ ...prev, prizeTextEn: event.target.value }))}
+            />
+          </label>
+          <label htmlFor="reward-description-th">
+            Description (Thai)
+            <textarea
+              id="reward-description-th"
+              rows={3}
+              value={form.descriptionTh}
+              onChange={(event) => setForm((prev) => ({ ...prev, descriptionTh: event.target.value }))}
+            />
+          </label>
+          <label htmlFor="reward-description-en">
+            Description (English)
+            <textarea
+              id="reward-description-en"
+              rows={3}
+              value={form.descriptionEn}
+              onChange={(event) => setForm((prev) => ({ ...prev, descriptionEn: event.target.value }))}
+            />
+          </label>
+          <div className="ad-toggle-row">
+            <label htmlFor="reward-active" className="ad-toggle-label">
+              Status
+            </label>
+            <label className="ad-toggle">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+              />
+              <span className="ad-toggle-switch"></span>
+              <span className="ad-toggle-text">{form.isActive ? 'Enabled' : 'Disabled'}</span>
+            </label>
+          </div>
           <div className="ad-form-actions">
             <button type="button" className="ad-btn" onClick={() => setDrawerOpen(false)}>
               ยกเลิก
@@ -1664,9 +1784,9 @@ function StaticContactsPage() {
           },
           { key: 'displayOrder', label: 'Order' },
           {
-            key: 'status',
+            key: 'isActive',
             label: 'Status',
-            render: (row) => <StatusBadge status={row.isActive ? 'APPROVED' : 'RETURNED'} />,
+            render: (row) => <StatusBadge status={row.isActive ? 'ENABLED' : 'DISABLED'} />,
           },
           {
             key: 'actions',

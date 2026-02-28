@@ -12,3 +12,69 @@ export async function handleGetSponsors(req: FastifyRequest<{ Querystring: { tie
     const sponsors = await service.getSponsors(req.server.ctx.db, req.query?.tier);
     return reply.send(ok(sponsors));
 }
+
+export async function handleGetAllRewardsAdmin(req: FastifyRequest, reply: FastifyReply) {
+    const rewards = await service.getAllRewardsAdmin(req.server.ctx.db);
+    return reply.send(ok(rewards));
+}
+
+export async function handleGetRewardByIdAdmin(
+    req: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+) {
+    const reward = await service.getRewardByIdAdmin(req.server.ctx.db, Number(req.params.id));
+    return reply.send(ok(reward));
+}
+
+export async function handleCreateRewardAdmin(
+    req: FastifyRequest<{
+        Body: {
+            rank: string;
+            title: string;
+            titleTh: string;
+            amount: number | null;
+            currency: string | null;
+            prizeTextTh: string | null;
+            prizeTextEn: string | null;
+            descriptionTh: string | null;
+            descriptionEn: string | null;
+            sortOrder: number;
+            isActive: boolean;
+        };
+    }>,
+    reply: FastifyReply
+) {
+    const reward = await service.createRewardAdmin(req.server.ctx.db, req.body);
+    return reply.send(ok(reward));
+}
+
+export async function handleUpdateRewardAdmin(
+    req: FastifyRequest<{
+        Params: { id: string };
+        Body: {
+            rank?: string;
+            title?: string;
+            titleTh?: string;
+            amount?: number | null;
+            currency?: string | null;
+            prizeTextTh?: string | null;
+            prizeTextEn?: string | null;
+            descriptionTh?: string | null;
+            descriptionEn?: string | null;
+            sortOrder?: number;
+            isActive?: boolean;
+        };
+    }>,
+    reply: FastifyReply
+) {
+    const reward = await service.updateRewardAdmin(req.server.ctx.db, Number(req.params.id), req.body);
+    return reply.send(ok(reward));
+}
+
+export async function handleDeleteRewardAdmin(
+    req: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+) {
+    await service.deleteRewardAdmin(req.server.ctx.db, Number(req.params.id));
+    return reply.send(ok({ success: true }));
+}

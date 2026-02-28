@@ -1,6 +1,24 @@
 import type { DB } from '../../config/db.js';
 import * as repo from './content.repo.js';
-import type { ContentReward, ContentSponsor } from './content.types.js';
+import type { ContentReward, ContentSponsor, ContentRewardAdmin } from './content.types.js';
+import { NotFoundError } from '../../shared/errors.js';
+
+function toRewardAdminResponse(row: any): ContentRewardAdmin {
+    return {
+        id: row.reward_id,
+        rank: row.reward_rank,
+        title: row.reward_name_en,
+        titleTh: row.reward_name_th,
+        amount: row.prize_amount === null ? null : Number(row.prize_amount),
+        currency: row.prize_currency,
+        prizeTextTh: row.prize_text_th,
+        prizeTextEn: row.prize_text_en,
+        descriptionTh: row.description_th,
+        descriptionEn: row.description_en,
+        sortOrder: row.sort_order,
+        isActive: row.is_enabled === 1,
+    };
+}
 
 export async function getRewards(db: DB): Promise<ContentReward[]> {
     const rewards = await repo.getEnabledRewards(db);
@@ -18,6 +36,101 @@ export async function getRewards(db: DB): Promise<ContentReward[]> {
         descriptionEn: reward.description_en,
         sortOrder: reward.sort_order,
     }));
+}
+
+export async function getAllRewardsAdmin(db: DB): Promise<ContentRewardAdmin[]> {
+    const rewards = await repo.getAllRewards(db);
+    return rewards.map(toRewardAdminResponse);
+}
+
+export async function getRewardByIdAdmin(db: DB, rewardId: number): Promise<ContentRewardAdmin> {
+    const reward = await repo.getRewardById(db, rewardId);
+    if (!reward) {
+        throw new NotFoundError('ไม่พบข้อมูลรางวัลนี้');
+    }
+    return toRewardAdminResponse(reward);
+}
+
+export async function createRewardAdmin(
+    db: DB,
+    data: {
+        rank: string;
+        title: string;
+        titleTh: string;
+        amount: number | null;
+        currency: string | null;
+        prizeTextTh: string | null;
+        prizeTextEn: string | null;
+        descriptionTh: string | null;
+        descriptionEn: string | null;
+        sortOrder: number;
+        isActive: boolean;
+    }
+): Promise<ContentRewardAdmin> {
+    const rewardId = await repo.createReward(db, {
+        rewardRank: data.rank,
+        rewardNameTh: data.titleTh,
+        rewardNameEn: data.title,
+        prizeAmount: data.amount,
+        prizeCurrency: data.currency,
+        prizeTextTh: data.prizeTextTh,
+        prizeTextEn: data.prizeTextEn,
+        descriptionTh: data.descriptionTh,
+        descriptionEn: data.descriptionEn,
+        sortOrder: data.sortOrder,
+        isEnabled: data.isActive,
+    });
+
+    const reward = await repo.getRewardById(db, rewardId);
+    return toRewardAdminResponse(reward!);
+}
+
+export async function updateRewardAdmin(
+    db: DB,
+    rewardId: number,
+    data: {
+        rank?: string;
+        title?: string;
+        titleTh?: string;
+        amount?: number | null;
+        currency?: string | null;
+        prizeTextTh?: string | null;
+        prizeTextEn?: string | null;
+        descriptionTh?: string | null;
+        descriptionEn?: string | null;
+        sortOrder?: number;
+        isActive?: boolean;
+    }
+): Promise<ContentRewardAdmin> {
+    const existing = await repo.getRewardById(db, rewardId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูลรางวัลนี้');
+    }
+
+    await repo.updateReward(db, rewardId, {
+        rewardRank: data.rank,
+        rewardNameTh: data.titleTh,
+        rewardNameEn: data.title,
+        prizeAmount: data.amount,
+        prizeCurrency: data.currency,
+        prizeTextTh: data.prizeTextTh,
+        prizeTextEn: data.prizeTextEn,
+        descriptionTh: data.descriptionTh,
+        descriptionEn: data.descriptionEn,
+        sortOrder: data.sortOrder,
+        isEnabled: data.isActive,
+    });
+
+    const updated = await repo.getRewardById(db, rewardId);
+    return toRewardAdminResponse(updated!);
+}
+
+export async function deleteRewardAdmin(db: DB, rewardId: number): Promise<void> {
+    const existing = await repo.getRewardById(db, rewardId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูลรางวัลนี้');
+    }
+    await repo.deleteReward(db, rewardId);
 }
 
 export async function getSponsors(db: DB, tierCode?: string): Promise<ContentSponsor[]> {
