@@ -11,6 +11,7 @@ function toUserSafe(row: {
     user_id: number;
     user_name: string;
     email: string | null;
+    phone?: string | null;
     first_name_th?: string | null;
     last_name_th?: string | null;
     first_name_en?: string | null;
@@ -27,6 +28,7 @@ function toUserSafe(row: {
         userId: row.user_id,
         userName: row.user_name,
         email: row.email,
+        phone: row.phone ?? null,
         firstNameTh: row.first_name_th ?? null,
         lastNameTh: row.last_name_th ?? null,
         firstNameEn: row.first_name_en ?? null,
@@ -79,6 +81,7 @@ export async function registerUser(db: DB, input: RegisterInput): Promise<UserSa
     const userId = await repo.createUser(db, {
         userName: input.userName,
         email: input.email,
+        phone: input.phone,
         firstNameTh: input.firstNameTh,
         lastNameTh: input.lastNameTh,
         firstNameEn: input.firstNameEn,
@@ -119,6 +122,7 @@ export async function registerUser(db: DB, input: RegisterInput): Promise<UserSa
         userId,
         userName: input.userName,
         email: input.email,
+        phone: input.phone,
         firstNameTh: input.firstNameTh,
         lastNameTh: input.lastNameTh,
         firstNameEn: input.firstNameEn,

@@ -37,6 +37,7 @@ export interface CredentialRow {
 /** Input for POST /api/auth/register */
 export interface RegisterInput {
     email: string;
+    phone: string;
     password: string;
     userName: string;
     firstNameTh: string;
@@ -70,6 +71,7 @@ export interface UserSafe {
     userId: number;
     userName: string;
     email: string | null;
+    phone: string | null;
     firstNameTh: string | null;
     lastNameTh: string | null;
     firstNameEn: string | null;
