@@ -37,6 +37,13 @@ export async function createTeam(db: DB, userId: number, data: { teamNameTh: str
         createdByUserId: userId,
     });
 
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: userId,
+        actionCode: 'TEAM_CREATED',
+        actionDetail: { visibility: data.visibility, team_code: teamCode },
+    });
+
     return { teamId, teamCode, inviteCode };
 }
 
@@ -54,6 +61,14 @@ export async function rotateTeamCode(db: DB, teamId: number, userId: number) {
         inviteCode,
         createdByUserId: userId,
     });
+
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: userId,
+        actionCode: 'TEAM_CODE_ROTATED',
+        actionDetail: { invite_code: inviteCode },
+    });
+
     return { inviteCode };
 }
 
@@ -64,7 +79,19 @@ export async function leaveTeam(db: DB, teamId: number, userId: number) {
         throw new AppError('หัวหน้าทีมไม่สามารถออกจากทีมได้ (Leader cannot leave team)', 400);
     }
 
+    const member = await repo.getTeamMemberByTeamAndUser(db, teamId, userId);
+    if (!member || member.member_status !== 'active') {
+        throw new AppError('คุณไม่ได้เป็นสมาชิกทีมนี้ (You are not an active member of this team)', 400);
+    }
+
     await repo.removeTeamMember(db, teamId, userId);
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: userId,
+        actionCode: 'MEMBER_LEFT',
+        actionDetail: { user_id: userId },
+    });
+
     return { success: true };
 }
 
@@ -78,7 +105,19 @@ export async function removeMember(db: DB, teamId: number, leaderUserId: number,
         throw new AppError('หัวหน้าทีมไม่สามารถลบตัวเองได้ (Leader cannot remove self)', 400);
     }
 
+    const targetMember = await repo.getTeamMemberByTeamAndUser(db, teamId, targetUserId);
+    if (!targetMember || targetMember.member_status !== 'active') {
+        throw new AppError('ผู้ใช้นี้ไม่ได้เป็นสมาชิกทีมนี้ (Target user is not an active member)', 400);
+    }
+
     await repo.removeTeamMember(db, teamId, targetUserId);
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: leaderUserId,
+        actionCode: 'MEMBER_REMOVED',
+        actionDetail: { target_user_id: targetUserId },
+    });
+
     return { success: true };
 }
 
@@ -101,6 +140,13 @@ export async function transferLeader(db: DB, teamId: number, currentLeaderUserId
     await repo.updateMemberRole(db, teamId, currentLeaderUserId, 'member');
     await repo.updateMemberRole(db, teamId, newLeaderUserId, 'leader');
     await repo.updateTeamLeader(db, teamId, newLeaderUserId);
+
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: currentLeaderUserId,
+        actionCode: 'LEADER_TRANSFERRED',
+        actionDetail: { from_user_id: currentLeaderUserId, to_user_id: newLeaderUserId },
+    });
 
     return { success: true, newLeaderUserId };
 }
@@ -133,6 +179,13 @@ export async function submitJoinRequest(db: DB, teamId: number, userId: number, 
 
     const requestId = await repo.createJoinRequest(db, {
         teamId, userId, source, inviteCode: usedCode
+    });
+
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: userId,
+        actionCode: 'JOIN_REQUEST_SUBMITTED',
+        actionDetail: { join_request_id: requestId, source, invite_code: usedCode },
     });
 
     return { requestId, status: 'pending' };
@@ -174,11 +227,19 @@ export async function respondJoinRequest(db: DB, teamId: number, requestId: numb
             throw new AppError('สมาชิกในทีมเต็มแล้ว (Team is full)', 400);
         }
 
+        const previousMembership = await repo.getTeamMemberByTeamAndUser(db, teamId, request.requester_user_id);
+
         // Add member
         await repo.addTeamMember(db, {
             teamId,
             userId: request.requester_user_id,
             role: 'member'
+        });
+        await repo.createTeamAuditLog(db, {
+            teamId,
+            actorUserId: leaderUserId,
+            actionCode: previousMembership && previousMembership.member_status !== 'active' ? 'MEMBER_REJOINED' : 'MEMBER_JOINED',
+            actionDetail: { requester_user_id: request.requester_user_id, join_request_id: requestId },
         });
         await repo.cancelOtherPendingJoinRequestsByUser(db, request.requester_user_id, requestId);
         await repo.cancelOtherPendingInvitationsByUser(db, request.requester_user_id, -1);
@@ -189,6 +250,17 @@ export async function respondJoinRequest(db: DB, teamId: number, requestId: numb
         status,
         leaderId: leaderUserId,
         reason: reason ?? null
+    });
+
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: leaderUserId,
+        actionCode: status === 'approved' ? 'JOIN_REQUEST_APPROVED' : 'JOIN_REQUEST_REJECTED',
+        actionDetail: {
+            join_request_id: requestId,
+            requester_user_id: request.requester_user_id,
+            reason: reason ?? null,
+        },
     });
 
     return { success: true, status };
@@ -246,6 +318,13 @@ export async function sendInvitation(
         createdByUserId: leaderUserId
     });
 
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: leaderUserId,
+        actionCode: 'INVITE_SENT',
+        actionDetail: { invitation_id: invitationId, invited_user_id: inviteeUserId },
+    });
+
     return { invitationId, status: 'pending' };
 }
 
@@ -273,16 +352,34 @@ export async function respondToInvitation(db: DB, invitationId: number, userId: 
             throw new AppError('สมาชิกในทีมเต็มแล้ว (Team is full)', 400);
         }
 
+        const previousMembership = await repo.getTeamMemberByTeamAndUser(db, invitation.team_id, userId);
+
         await repo.addTeamMember(db, {
             teamId: invitation.team_id,
             userId,
             role: 'member'
         });
+
+        await repo.createTeamAuditLog(db, {
+            teamId: invitation.team_id,
+            actorUserId: userId,
+            actionCode: previousMembership && previousMembership.member_status !== 'active' ? 'MEMBER_REJOINED' : 'MEMBER_JOINED',
+            actionDetail: { invitation_id: invitationId, user_id: userId },
+        });
+
         await repo.cancelOtherPendingJoinRequestsByUser(db, userId, -1);
         await repo.cancelOtherPendingInvitationsByUser(db, userId, invitationId);
     }
 
     await repo.updateInvitationStatus(db, invitationId, status);
+
+    await repo.createTeamAuditLog(db, {
+        teamId: invitation.team_id,
+        actorUserId: userId,
+        actionCode: status === 'accepted' ? 'INVITE_ACCEPTED' : 'INVITE_DECLINED',
+        actionDetail: { invitation_id: invitationId, invited_user_id: userId },
+    });
+
     return { success: true, status };
 }
 

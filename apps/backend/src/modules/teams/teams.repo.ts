@@ -23,9 +23,25 @@ export async function addTeamMember(db: DB, data: {
     role: 'leader' | 'member';
 }): Promise<void> {
     await db.query(`
-        INSERT INTO team_members (team_id, user_id, role, member_status, joined_at)
-        VALUES (:teamId, :userId, :role, 'active', NOW())
+        INSERT INTO team_members (team_id, user_id, role, member_status, joined_at, left_at)
+        VALUES (:teamId, :userId, :role, 'active', NOW(), NULL)
+        ON DUPLICATE KEY UPDATE
+            role = VALUES(role),
+            member_status = 'active',
+            left_at = NULL,
+            joined_at = IF(member_status <> 'active', NOW(), joined_at)
     `, data);
+}
+
+export async function getTeamMemberByTeamAndUser(db: DB, teamId: number, userId: number): Promise<TeamMemberRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT *
+        FROM team_members
+        WHERE team_id = :teamId AND user_id = :userId
+        LIMIT 1
+    `, { teamId, userId });
+
+    return (rows[0] as TeamMemberRow | undefined) ?? null;
 }
 
 export async function createTeamCode(db: DB, data: {
@@ -238,7 +254,11 @@ export async function getPendingInvitationByUserAndTeam(db: DB, userId: number, 
 
 export async function updateInvitationStatus(db: DB, invitationId: number, status: 'accepted' | 'declined'): Promise<void> {
     await db.query(`
-        UPDATE team_invitations SET status = :status, updated_at = NOW() WHERE invitation_id = :invitationId
+        UPDATE team_invitations
+        SET status = :status,
+            responded_at = NOW(),
+            updated_at = NOW()
+        WHERE invitation_id = :invitationId
     `, { invitationId, status });
 }
 
@@ -277,4 +297,21 @@ export async function updateMemberRole(
           AND user_id = :userId
           AND member_status = 'active'
     `, { teamId, userId, role });
+}
+
+export async function createTeamAuditLog(db: DB, data: {
+    teamId: number;
+    actorUserId: number;
+    actionCode: string;
+    actionDetail?: Record<string, unknown> | null;
+}): Promise<void> {
+    await db.query(`
+        INSERT INTO team_audit_logs (team_id, actor_user_id, action_code, action_detail, created_at)
+        VALUES (:teamId, :actorUserId, :actionCode, :actionDetail, NOW())
+    `, {
+        teamId: data.teamId,
+        actorUserId: data.actorUserId,
+        actionCode: data.actionCode,
+        actionDetail: data.actionDetail ? JSON.stringify(data.actionDetail) : null,
+    });
 }
