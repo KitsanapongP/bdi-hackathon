@@ -15,8 +15,12 @@ export async function getProfile(db: DB, userId: number): Promise<UserProfileSaf
         userName: row.user_name,
         email: row.email,
         phone: row.phone,
-        universityNameTh: row.university_name_th,
-        universityNameEn: row.university_name_en,
+        institutionNameTh: row.institution_name_th,
+        institutionNameEn: row.institution_name_en,
+        gender: row.gender,
+        birthDate: row.birth_date,
+        educationLevel: row.education_level,
+        homeProvince: row.home_province,
         firstNameTh: row.first_name_th,
         lastNameTh: row.last_name_th,
         firstNameEn: row.first_name_en,
@@ -34,8 +38,12 @@ export async function updateProfile(
         firstNameEn?: string | undefined;
         lastNameEn?: string | undefined;
         phone?: string | undefined;
-        universityNameTh?: string | undefined;
-        universityNameEn?: string | undefined;
+        institutionNameTh?: string | undefined;
+        institutionNameEn?: string | undefined;
+        gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | undefined;
+        birthDate?: string | undefined;
+        educationLevel?: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | undefined;
+        homeProvince?: string | undefined;
     },
 ): Promise<UserProfileSafe> {
     await repo.updateProfile(db, userId, data);

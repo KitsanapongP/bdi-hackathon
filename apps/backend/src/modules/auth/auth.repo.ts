@@ -52,12 +52,37 @@ export async function userNameExists(db: DB, userName: string): Promise<boolean>
 /** Create a new user in user_users and return the inserted id */
 export async function createUser(
     db: DB,
-    data: { userName: string; email: string },
+    data: {
+        userName: string;
+        email: string;
+        firstNameTh: string;
+        lastNameTh: string;
+        firstNameEn: string;
+        lastNameEn: string;
+        gender: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+        birthDate: string;
+        educationLevel: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate';
+        institutionNameTh: string;
+        institutionNameEn: string;
+        homeProvince: string;
+    },
 ): Promise<number> {
     const [result] = await db.query<ResultSetHeader>(
-        `INSERT INTO user_users (user_name, email, is_active, created_at, updated_at)
-     VALUES (:userName, :email, 1, NOW(), NOW())`,
-        { userName: data.userName, email: data.email },
+        `INSERT INTO user_users (
+        user_name, email,
+        first_name_th, last_name_th, first_name_en, last_name_en,
+        gender, birth_date, education_level,
+        institution_name_th, institution_name_en, home_province,
+        is_active, created_at, updated_at
+     )
+     VALUES (
+        :userName, :email,
+        :firstNameTh, :lastNameTh, :firstNameEn, :lastNameEn,
+        :gender, :birthDate, :educationLevel,
+        :institutionNameTh, :institutionNameEn, :homeProvince,
+        1, NOW(), NOW()
+     )`,
+        data,
     );
     return result.insertId;
 }
