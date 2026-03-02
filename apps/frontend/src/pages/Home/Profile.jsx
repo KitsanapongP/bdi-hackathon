@@ -24,10 +24,15 @@ function ProfileContent({ user }) {
     const navigate = useNavigate();
     const [tab, setTab] = useState('profile');
     const [toast, setToast] = useState(null);
+    const [toastExiting, setToastExiting] = useState(false);
 
     const showToast = useCallback((message, type = 'success') => {
+        setToastExiting(false);
         setToast({ message, type });
-        setTimeout(() => setToast(null), 2500);
+        setTimeout(() => {
+            setToastExiting(true);
+            setTimeout(() => { setToast(null); setToastExiting(false); }, 400);
+        }, 2500);
     }, []);
 
     const apiFetch = useCallback(async (path, opts = {}) => {
@@ -44,7 +49,7 @@ function ProfileContent({ user }) {
     if (!user) return null;
 
     return (
-        <div className="gl-page-container" style={{ paddingTop: '100px' }}>
+        <div className="gl-page-container">
             <div className="gl-frame">
 
                 {/* ── LEFT: Menu Sidebar ── */}
@@ -80,9 +85,10 @@ function ProfileContent({ user }) {
 
             {/* Toast */}
             {toast && (
-                <div className={`pf-toast show ${toast.type}`}>
+                <div className={`pf-toast show ${toast.type}${toastExiting ? ' exiting' : ''}`}>
                     {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
                     {toast.message}
+                    <div className="pf-toast-progress" />
                 </div>
             )}
         </div>
