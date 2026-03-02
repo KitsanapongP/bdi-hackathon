@@ -2,12 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     Rocket,
+    Users,
+    User,
     Menu,
     X,
     MapPin,
     Phone,
     Mail,
     LogIn,
+    LogOut,
     Facebook,
     Instagram,
 } from 'lucide-react';
@@ -20,6 +23,7 @@ import './Home.css';
 function HomeShell({ children }) {
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [user, setUser] = useState(null);
     const [coOrganizerSponsors, setCoOrganizerSponsors] = useState(() => getCachedCoOrganizerSponsors() || []);
     const [bannerMarquee, setBannerMarquee] = useState(false);
     const bannerRef = useRef(null);
@@ -47,6 +51,53 @@ function HomeShell({ children }) {
 
         navigate('/home/register');
     };
+
+    const handleLogout = async () => {
+        try {
+            await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' });
+        } catch {
+            // ignore
+        }
+        localStorage.removeItem('gt_user');
+        setUser(null);
+        navigate('/home', { replace: true });
+    };
+
+    useEffect(() => {
+        const saved = localStorage.getItem('gt_user');
+        if (!saved) return;
+
+        try {
+            setUser(JSON.parse(saved));
+        } catch {
+            localStorage.removeItem('gt_user');
+        }
+
+        fetch(apiUrl('/api/auth/me'), { credentials: 'include' })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.ok && data.data) {
+                    const verifiedUser = {
+                        userId: data.data.userId,
+                        name: data.data.userName,
+                        email: data.data.email,
+                        accessRole: data.data.accessRole || null,
+                        hasTeam: data.data.hasTeam || false,
+                        teamId: data.data.teamId || null,
+                        avatar: data.data.userName?.charAt(0)?.toUpperCase() || 'U',
+                        color: '#6366f1',
+                    };
+                    setUser(verifiedUser);
+                    localStorage.setItem('gt_user', JSON.stringify(verifiedUser));
+                } else if (data.message === 'กรุณาเข้าสู่ระบบ') {
+                    localStorage.removeItem('gt_user');
+                    setUser(null);
+                }
+            })
+            .catch(() => {
+                // ignore
+            });
+    }, []);
 
     useEffect(() => {
         const cached = getCachedCoOrganizerSponsors();
@@ -129,16 +180,33 @@ function HomeShell({ children }) {
                         <Rocket size={20} />
                     </a>
                     <div className="gt-pill-links">
-                        {navItems.map((label, i) => (
-                            <button key={label} className="gt-pill-link" onClick={() => handleNavClick(i)}>
-                                {label}
-                            </button>
-                        ))}
+                        {navItems.map((label, i) => {
+                            if (i === 3 && user) return null;
+                            return (
+                                <button key={label} className="gt-pill-link" onClick={() => handleNavClick(i)}>
+                                    {label}
+                                </button>
+                            );
+                        })}
                     </div>
                     <div className="gt-pill-right">
-                        <Link to="/home/register" className="gt-pill-link gt-auth-btn gt-login">
-                            <LogIn size={15} /> เข้าสู่ระบบ
-                        </Link>
+                        {user ? (
+                            <>
+                                <button className="gt-pill-link gt-auth-btn gt-team-btn" onClick={() => navigate('/home', { state: { open: 'team' } })}>
+                                    <Users size={15} /> ทีมของคุณ
+                                </button>
+                                <button className="gt-pill-link gt-auth-btn gt-login" onClick={() => navigate('/home', { state: { open: 'profile' } })}>
+                                    <User size={15} /> โปรไฟล์
+                                </button>
+                                <button className="gt-pill-link gt-auth-btn gt-logout" onClick={handleLogout}>
+                                    <LogOut size={15} /> ออกจากระบบ
+                                </button>
+                            </>
+                        ) : (
+                            <Link to="/home/register" className="gt-pill-link gt-auth-btn gt-login">
+                                <LogIn size={15} /> เข้าสู่ระบบ
+                            </Link>
+                        )}
                         <ThemeToggle />
                         <button className="gt-pill-burger" onClick={() => setMobileOpen(!mobileOpen)} aria-label="toggle menu">
                             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
@@ -148,14 +216,36 @@ function HomeShell({ children }) {
 
                 <div className={`gt-pill-collapse ${mobileOpen ? 'open' : ''}`}>
                     <div className="gt-pill-collapse-inner">
-                        {navItems.map((label, i) => (
-                            <button key={label} className="gt-collapse-link" onClick={() => handleNavClick(i)}>
-                                {label}
-                            </button>
-                        ))}
-                        <Link to="/home/register" className="gt-collapse-link gt-collapse-login" onClick={() => setMobileOpen(false)}>
-                            <LogIn size={16} /> เข้าสู่ระบบ
-                        </Link>
+                        {navItems.map((label, i) => {
+                            const isRegister = i === 3;
+                            if (isRegister && user) {
+                                return (
+                                    <button key={label} className="gt-collapse-link" onClick={() => { setMobileOpen(false); navigate('/home', { state: { open: 'team' } }); }}>
+                                        <Users size={16} /> ทีมของคุณ
+                                    </button>
+                                );
+                            }
+                            return (
+                                <button key={label} className="gt-collapse-link" onClick={() => handleNavClick(i)}>
+                                    {label}
+                                </button>
+                            );
+                        })}
+                        {user ? (
+                            <>
+                                <button className="gt-collapse-link" onClick={() => { setMobileOpen(false); navigate('/home', { state: { open: 'profile' } }); }}>
+                                    <User size={16} /> โปรไฟล์
+                                </button>
+                                <div className="gt-collapse-divider" />
+                                <button className="gt-collapse-link gt-collapse-logout" onClick={() => { setMobileOpen(false); handleLogout(); }}>
+                                    <LogOut size={16} /> ออกจากระบบ
+                                </button>
+                            </>
+                        ) : (
+                            <Link to="/home/register" className="gt-collapse-link gt-collapse-login" onClick={() => setMobileOpen(false)}>
+                                <LogIn size={16} /> เข้าสู่ระบบ
+                            </Link>
+                        )}
                     </div>
                 </div>
             </nav>
