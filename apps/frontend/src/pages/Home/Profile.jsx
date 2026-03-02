@@ -44,7 +44,7 @@ function ProfileContent({ user }) {
     if (!user) return null;
 
     return (
-        <div className="gl-page-container" style={{ paddingTop: '100px' }}>
+        <div className="gl-page-container">
             <div className="gl-frame">
 
                 {/* ── LEFT: Menu Sidebar ── */}
