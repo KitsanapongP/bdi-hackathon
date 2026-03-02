@@ -198,6 +198,24 @@ function HomePage() {
         fetchSponsors();
     }, [location]);
 
+    useEffect(() => {
+        if (!user) return;
+
+        const open = location.state?.open;
+        if (open === 'team') {
+            setShowLobby(true);
+            setShowProfile(false);
+            window.scrollTo(0, 0);
+            return;
+        }
+
+        if (open === 'profile') {
+            setShowProfile(true);
+            setShowLobby(false);
+            window.scrollTo(0, 0);
+        }
+    }, [location.state, user]);
+
     const formatPrizeAmount = (amount, currency) => {
         if (typeof amount !== 'number' || Number.isNaN(amount)) return null;
         const formatted = amount.toLocaleString('th-TH');
