@@ -1,6 +1,12 @@
 import type { RowDataPacket } from 'mysql2/promise';
 import type { DB } from '../../config/db.js';
-import type { ContentRewardRow, ContentSponsorRow } from './content.types.js';
+import type {
+    ContentContactChannelRow,
+    ContentContactRow,
+    ContentPageRow,
+    ContentRewardRow,
+    ContentSponsorRow,
+} from './content.types.js';
 
 export async function getEnabledRewards(db: DB): Promise<ContentRewardRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(
@@ -226,4 +232,42 @@ export async function updateSponsorsOrder(db: DB, updates: { id: number; sortOrd
     for (const update of updates) {
         await db.query(`UPDATE content_sponsors SET sort_order = ? WHERE sponsor_id = ?`, [update.sortOrder, update.id]);
     }
+}
+
+export async function getPublishedPageByCode(db: DB, pageCode: string): Promise<ContentPageRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_pages
+         WHERE UPPER(page_code) = UPPER(?)
+           AND is_published = 1
+         ORDER BY published_at DESC, page_id DESC
+         LIMIT 1`,
+        [pageCode]
+    );
+
+    const result = rows as ContentPageRow[];
+    return result[0] || null;
+}
+
+export async function getEnabledContacts(db: DB): Promise<ContentContactRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_contacts
+         WHERE is_enabled = 1
+           AND deleted_at IS NULL
+         ORDER BY is_featured DESC, sort_order ASC, contact_id ASC`
+    );
+
+    return rows as ContentContactRow[];
+}
+
+export async function getEnabledContactChannels(db: DB): Promise<ContentContactChannelRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_contact_channels
+         WHERE is_enabled = 1
+         ORDER BY contact_id ASC, is_primary DESC, sort_order ASC, channel_id ASC`
+    );
+
+    return rows as ContentContactChannelRow[];
 }

@@ -85,3 +85,89 @@ export type ContentSponsorAdmin = {
     tierNameTh: string | null;
     tierNameEn: string | null;
 };
+
+export type ContentPageRow = {
+    page_id: number;
+    page_code: string;
+    title_th: string;
+    title_en: string;
+    content_html_th: string | null;
+    content_html_en: string | null;
+    is_published: number;
+    published_at: string | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type ContentPage = {
+    id: number;
+    code: string;
+    titleTh: string;
+    titleEn: string;
+    contentHtmlTh: string | null;
+    contentHtmlEn: string | null;
+};
+
+export type ContentContactRow = {
+    contact_id: number;
+    display_name_th: string;
+    display_name_en: string;
+    role_th: string | null;
+    role_en: string | null;
+    organization_th: string | null;
+    organization_en: string | null;
+    department_th: string | null;
+    department_en: string | null;
+    bio_th: string | null;
+    bio_en: string | null;
+    avatar_url: string | null;
+    avatar_alt_th: string | null;
+    avatar_alt_en: string | null;
+    is_featured: number;
+    sort_order: number;
+    is_enabled: number;
+};
+
+export type ContentContactChannelRow = {
+    channel_id: number;
+    contact_id: number;
+    channel_type: string;
+    label_th: string | null;
+    label_en: string | null;
+    value: string;
+    url: string | null;
+    is_primary: number;
+    sort_order: number;
+    is_enabled: number;
+};
+
+export type ContentContactChannel = {
+    id: number;
+    type: string;
+    labelTh: string | null;
+    labelEn: string | null;
+    value: string;
+    url: string | null;
+    isPrimary: boolean;
+    sortOrder: number;
+};
+
+export type ContentContact = {
+    id: number;
+    displayNameTh: string;
+    displayNameEn: string;
+    roleTh: string | null;
+    roleEn: string | null;
+    organizationTh: string | null;
+    organizationEn: string | null;
+    departmentTh: string | null;
+    departmentEn: string | null;
+    bioTh: string | null;
+    bioEn: string | null;
+    avatarUrl: string | null;
+    avatarAltTh: string | null;
+    avatarAltEn: string | null;
+    isFeatured: boolean;
+    sortOrder: number;
+    channels: ContentContactChannel[];
+};

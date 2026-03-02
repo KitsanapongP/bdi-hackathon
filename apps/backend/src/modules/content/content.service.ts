@@ -4,7 +4,14 @@ import { mkdir } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import * as repo from './content.repo.js';
-import type { ContentReward, ContentSponsor, ContentRewardAdmin, ContentSponsorAdmin } from './content.types.js';
+import type {
+    ContentContact,
+    ContentPage,
+    ContentReward,
+    ContentRewardAdmin,
+    ContentSponsor,
+    ContentSponsorAdmin,
+} from './content.types.js';
 import { BadRequestError, NotFoundError } from '../../shared/errors.js';
 
 function toRewardAdminResponse(row: any): ContentRewardAdmin {
@@ -393,4 +400,64 @@ export async function uploadSponsorLogoAdmin(
 
 export async function reorderSponsorsAdmin(db: DB, updates: { id: number; displayOrder: number }[]): Promise<void> {
     await repo.updateSponsorsOrder(db, updates.map(u => ({ id: u.id, sortOrder: u.displayOrder })));
+}
+
+export async function getPublishedPageByCode(db: DB, pageCode: string): Promise<ContentPage> {
+    const page = await repo.getPublishedPageByCode(db, pageCode);
+    if (!page) {
+        throw new NotFoundError('ไม่พบข้อมูลหน้าที่ร้องขอ');
+    }
+
+    return {
+        id: page.page_id,
+        code: page.page_code,
+        titleTh: page.title_th,
+        titleEn: page.title_en,
+        contentHtmlTh: page.content_html_th,
+        contentHtmlEn: page.content_html_en,
+    };
+}
+
+export async function getContacts(db: DB): Promise<ContentContact[]> {
+    const [contacts, channels] = await Promise.all([
+        repo.getEnabledContacts(db),
+        repo.getEnabledContactChannels(db),
+    ]);
+
+    const channelsByContact = new Map<number, ContentContact['channels']>();
+
+    for (const channel of channels) {
+        const list = channelsByContact.get(channel.contact_id) ?? [];
+        list.push({
+            id: channel.channel_id,
+            type: channel.channel_type,
+            labelTh: channel.label_th,
+            labelEn: channel.label_en,
+            value: channel.value,
+            url: channel.url,
+            isPrimary: channel.is_primary === 1,
+            sortOrder: channel.sort_order,
+        });
+        channelsByContact.set(channel.contact_id, list);
+    }
+
+    return contacts.map((contact) => ({
+        id: contact.contact_id,
+        displayNameTh: contact.display_name_th,
+        displayNameEn: contact.display_name_en,
+        roleTh: contact.role_th,
+        roleEn: contact.role_en,
+        organizationTh: contact.organization_th,
+        organizationEn: contact.organization_en,
+        departmentTh: contact.department_th,
+        departmentEn: contact.department_en,
+        bioTh: contact.bio_th,
+        bioEn: contact.bio_en,
+        avatarUrl: contact.avatar_url,
+        avatarAltTh: contact.avatar_alt_th,
+        avatarAltEn: contact.avatar_alt_en,
+        isFeatured: contact.is_featured === 1,
+        sortOrder: contact.sort_order,
+        channels: channelsByContact.get(contact.contact_id) ?? [],
+    }));
 }

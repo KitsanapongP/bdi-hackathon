@@ -13,6 +13,19 @@ export async function handleGetSponsors(req: FastifyRequest<{ Querystring: { tie
     return reply.send(ok(sponsors));
 }
 
+export async function handleGetPageByCode(
+    req: FastifyRequest<{ Params: { pageCode: string } }>,
+    reply: FastifyReply
+) {
+    const page = await service.getPublishedPageByCode(req.server.ctx.db, req.params.pageCode);
+    return reply.send(ok(page));
+}
+
+export async function handleGetContacts(req: FastifyRequest, reply: FastifyReply) {
+    const contacts = await service.getContacts(req.server.ctx.db);
+    return reply.send(ok(contacts));
+}
+
 export async function handleGetAllRewardsAdmin(req: FastifyRequest, reply: FastifyReply) {
     const rewards = await service.getAllRewardsAdmin(req.server.ctx.db);
     return reply.send(ok(rewards));

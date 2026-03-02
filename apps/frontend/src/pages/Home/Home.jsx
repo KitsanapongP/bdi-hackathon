@@ -25,6 +25,7 @@ import TeamContent from './Team';
 import ProfileContent from './Profile';
 import './Home.css';
 import { apiUrl } from '../../lib/api';
+import { getCachedCoOrganizerSponsors, setCachedCoOrganizerSponsors } from '../../lib/contentCache';
 
 /* Sponsor logos are loaded from content API */
 
@@ -45,7 +46,7 @@ const config = {
         aboutDesc: 'โอกาสที่จะพัฒนาตนเองและสร้างนวัตกรรมเพื่อสุขภาพของทุกคน',
         scheduleTitle: 'กำหนดการกิจกรรม',
         scheduleDesc: 'ตารางเวลาของกิจกรรมทั้งหมดตลอดทั้งงาน',
-        footer: '© 2026 Khon Kaen Public Health Hackathon',
+        footer: '© 2026 Khon Kaen Intelligent Living Hackathon 2026',
     },
 };
 
@@ -69,7 +70,7 @@ function HomePage() {
     const [rewards, setRewards] = useState([]);
     const [rewardsLoading, setRewardsLoading] = useState(true);
     const [rewardsError, setRewardsError] = useState(null);
-    const [coOrganizerSponsors, setCoOrganizerSponsors] = useState([]);
+    const [coOrganizerSponsors, setCoOrganizerSponsors] = useState(() => getCachedCoOrganizerSponsors() || []);
     const [sponsors, setSponsors] = useState([]);
     const [sponsorsLoading, setSponsorsLoading] = useState(true);
 
@@ -181,11 +182,13 @@ function HomePage() {
                 const sponsorItems = Array.isArray(sponsorPayload?.data) ? sponsorPayload.data : [];
 
                 setCoOrganizerSponsors(coOrganizerItems);
+                setCachedCoOrganizerSponsors(coOrganizerItems);
                 setSponsors(sponsorItems.length ? sponsorItems : coOrganizerItems);
                 setSponsorsLoading(false);
             } catch (err) {
                 console.error('Failed to fetch sponsors', err);
                 setCoOrganizerSponsors([]);
+                setCachedCoOrganizerSponsors([]);
                 setSponsors([]);
                 setSponsorsLoading(false);
             }
@@ -340,8 +343,18 @@ function HomePage() {
                     <div className="gt-pill-links">
                         {config.locale.nav.map((label, i) => {
                             if (i === 3 && user) return null; // hide ลงทะเบียน when logged in
+
+                            const handleNavClick = () => {
+                                if (i === 1) {
+                                    navigate('/home/about');
+                                    return;
+                                }
+
+                                scrollTo(sectionIds[i]);
+                            };
+
                             return (
-                                <button key={i} className="gt-pill-link" onClick={() => scrollTo(sectionIds[i])}>
+                                <button key={i} className="gt-pill-link" onClick={handleNavClick}>
                                     {label}
                                 </button>
                             );
@@ -393,8 +406,19 @@ function HomePage() {
                                     </button>
                                 );
                             }
+
+                            const handleNavClick = () => {
+                                if (i === 1) {
+                                    navigate('/home/about');
+                                    setMobileOpen(false);
+                                    return;
+                                }
+
+                                scrollTo(sectionIds[i]);
+                            };
+
                             return (
-                                <button key={i} className="gt-collapse-link" onClick={() => scrollTo(sectionIds[i])}>
+                                <button key={i} className="gt-collapse-link" onClick={handleNavClick}>
                                     {label}
                                 </button>
                             );
@@ -420,13 +444,13 @@ function HomePage() {
 
             {/* MAIN CONTENT AREA */}
             {(showLobby || showProfile) && user ? (
-                <div className="gt-subpage-wrap">
-                    {showLobby && <TeamContent user={user} />}
-                    {showProfile && <ProfileContent user={user} />}
-                    <div style={{ textAlign: 'center', padding: 20, fontSize: '0.8rem', opacity: 0.6, marginTop: 'auto' }}>
-                        © 2026 Khon Kaen Public Health Hackathon
+                    <div className="gt-subpage-wrap">
+                        {showLobby && <TeamContent user={user} />}
+                        {showProfile && <ProfileContent user={user} />}
+                        <div style={{ textAlign: 'center', padding: 20, fontSize: '0.8rem', opacity: 0.6, marginTop: 'auto' }}>
+                            © 2026 Khon Kaen Intelligent Living Hackathon 2026
+                        </div>
                     </div>
-                </div>
             ) : (
                 <>
                     {/* Hero */}
@@ -630,7 +654,7 @@ function HomePage() {
                             <div className="gt-footer-inner">
                                 <div>
                                     <div className="gt-logo" style={{ marginBottom: 14 }}>
-                                        <Rocket size={20} /> Khon Kaen Public Health Hackathon
+                                        <Rocket size={20} /> Khon Kaen Intelligent Living Hackathon 2026
                                     </div>
                                     <p style={{ maxWidth: 350, color: 'var(--gt-footer-text)', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
                                         <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px' }} />
@@ -650,7 +674,7 @@ function HomePage() {
                                     </div>
                                     <div className="gt-footer-col">
                                         <h4>Support</h4>
-                                        <a href="#">ติดต่อสอบถาม</a>
+                                        <Link to="/home/contact">ติดต่อสอบถาม</Link>
                                         <a href="#">FAQs</a>
                                     </div>
                                     <div className="gt-footer-col">
