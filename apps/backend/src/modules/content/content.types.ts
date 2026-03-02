@@ -126,6 +126,10 @@ export type ContentContactRow = {
     is_featured: number;
     sort_order: number;
     is_enabled: number;
+    published_at: string | null;
+    created_at: string;
+    updated_at: string;
+    deleted_at: string | null;
 };
 
 export type ContentContactChannelRow = {
@@ -139,6 +143,8 @@ export type ContentContactChannelRow = {
     is_primary: number;
     sort_order: number;
     is_enabled: number;
+    created_at: string;
+    updated_at: string;
 };
 
 export type ContentContactChannel = {
@@ -170,4 +176,39 @@ export type ContentContact = {
     isFeatured: boolean;
     sortOrder: number;
     channels: ContentContactChannel[];
+};
+
+export type ContentContactChannelAdmin = {
+    id: number;
+    contactId: number;
+    channelType: string;
+    labelTh: string | null;
+    labelEn: string | null;
+    value: string;
+    url: string | null;
+    isPrimary: boolean;
+    sortOrder: number;
+    isEnabled: boolean;
+};
+
+export type ContentContactAdmin = {
+    id: number;
+    displayNameTh: string;
+    displayNameEn: string;
+    roleTh: string | null;
+    roleEn: string | null;
+    organizationTh: string | null;
+    organizationEn: string | null;
+    departmentTh: string | null;
+    departmentEn: string | null;
+    bioTh: string | null;
+    bioEn: string | null;
+    avatarUrl: string | null;
+    avatarAltTh: string | null;
+    avatarAltEn: string | null;
+    isFeatured: boolean;
+    sortOrder: number;
+    isEnabled: boolean;
+    publishedAt: string | null;
+    channels: ContentContactChannelAdmin[];
 };

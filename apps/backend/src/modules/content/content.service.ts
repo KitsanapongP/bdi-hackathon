@@ -6,6 +6,8 @@ import { pipeline } from 'node:stream/promises';
 import * as repo from './content.repo.js';
 import type {
     ContentContact,
+    ContentContactAdmin,
+    ContentContactChannelAdmin,
     ContentPage,
     ContentReward,
     ContentRewardAdmin,
@@ -94,6 +96,254 @@ function extensionFromMimeType(mimeType: string): string {
         case 'image/svg+xml': return '.svg';
         default: return '';
     }
+}
+
+function toContactChannelAdminResponse(row: {
+    channel_id: number;
+    contact_id: number;
+    channel_type: string;
+    label_th: string | null;
+    label_en: string | null;
+    value: string;
+    url: string | null;
+    is_primary: number;
+    sort_order: number;
+    is_enabled: number;
+}): ContentContactChannelAdmin {
+    return {
+        id: row.channel_id,
+        contactId: row.contact_id,
+        channelType: row.channel_type,
+        labelTh: row.label_th,
+        labelEn: row.label_en,
+        value: row.value,
+        url: row.url,
+        isPrimary: row.is_primary === 1,
+        sortOrder: row.sort_order,
+        isEnabled: row.is_enabled === 1,
+    };
+}
+
+function toContactAdminResponse(row: {
+    contact_id: number;
+    display_name_th: string;
+    display_name_en: string;
+    role_th: string | null;
+    role_en: string | null;
+    organization_th: string | null;
+    organization_en: string | null;
+    department_th: string | null;
+    department_en: string | null;
+    bio_th: string | null;
+    bio_en: string | null;
+    avatar_url: string | null;
+    avatar_alt_th: string | null;
+    avatar_alt_en: string | null;
+    is_featured: number;
+    sort_order: number;
+    is_enabled: number;
+    published_at: string | null;
+}, channels: ContentContactChannelAdmin[]): ContentContactAdmin {
+    return {
+        id: row.contact_id,
+        displayNameTh: row.display_name_th,
+        displayNameEn: row.display_name_en,
+        roleTh: row.role_th,
+        roleEn: row.role_en,
+        organizationTh: row.organization_th,
+        organizationEn: row.organization_en,
+        departmentTh: row.department_th,
+        departmentEn: row.department_en,
+        bioTh: row.bio_th,
+        bioEn: row.bio_en,
+        avatarUrl: row.avatar_url,
+        avatarAltTh: row.avatar_alt_th,
+        avatarAltEn: row.avatar_alt_en,
+        isFeatured: row.is_featured === 1,
+        sortOrder: row.sort_order,
+        isEnabled: row.is_enabled === 1,
+        publishedAt: row.published_at,
+        channels,
+    };
+}
+
+function parsePublishedAt(value: string | null | undefined): string | null {
+    if (value === undefined || value === null) return null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) {
+        throw new BadRequestError('รูปแบบ publishedAt ไม่ถูกต้อง');
+    }
+
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function normalizeContactPayload(data: {
+    displayNameTh?: string | undefined;
+    displayNameEn?: string | undefined;
+    roleTh?: string | null | undefined;
+    roleEn?: string | null | undefined;
+    organizationTh?: string | null | undefined;
+    organizationEn?: string | null | undefined;
+    departmentTh?: string | null | undefined;
+    departmentEn?: string | null | undefined;
+    bioTh?: string | null | undefined;
+    bioEn?: string | null | undefined;
+    avatarUrl?: string | null | undefined;
+    avatarAltTh?: string | null | undefined;
+    avatarAltEn?: string | null | undefined;
+    isFeatured?: boolean | undefined;
+    sortOrder?: number | undefined;
+    isEnabled?: boolean | undefined;
+    publishedAt?: string | null | undefined;
+}, requireName: boolean): {
+    displayNameTh?: string;
+    displayNameEn?: string;
+    roleTh?: string | null;
+    roleEn?: string | null;
+    organizationTh?: string | null;
+    organizationEn?: string | null;
+    departmentTh?: string | null;
+    departmentEn?: string | null;
+    bioTh?: string | null;
+    bioEn?: string | null;
+    avatarUrl?: string | null;
+    avatarAltTh?: string | null;
+    avatarAltEn?: string | null;
+    isFeatured?: boolean;
+    sortOrder?: number;
+    isEnabled?: boolean;
+    publishedAt?: string | null;
+} {
+    const output: {
+        displayNameTh?: string;
+        displayNameEn?: string;
+        roleTh?: string | null;
+        roleEn?: string | null;
+        organizationTh?: string | null;
+        organizationEn?: string | null;
+        departmentTh?: string | null;
+        departmentEn?: string | null;
+        bioTh?: string | null;
+        bioEn?: string | null;
+        avatarUrl?: string | null;
+        avatarAltTh?: string | null;
+        avatarAltEn?: string | null;
+        isFeatured?: boolean;
+        sortOrder?: number;
+        isEnabled?: boolean;
+        publishedAt?: string | null;
+    } = {};
+
+    if (data.displayNameTh !== undefined) {
+        const v = data.displayNameTh.trim();
+        if (!v) throw new BadRequestError('displayNameTh ต้องไม่ว่าง');
+        output.displayNameTh = v;
+    } else if (requireName) {
+        throw new BadRequestError('displayNameTh ต้องไม่ว่าง');
+    }
+
+    if (data.displayNameEn !== undefined) {
+        const v = data.displayNameEn.trim();
+        if (!v) throw new BadRequestError('displayNameEn ต้องไม่ว่าง');
+        output.displayNameEn = v;
+    } else if (requireName) {
+        throw new BadRequestError('displayNameEn ต้องไม่ว่าง');
+    }
+
+    if (data.roleTh !== undefined) output.roleTh = (data.roleTh || '').trim() || null;
+    if (data.roleEn !== undefined) output.roleEn = (data.roleEn || '').trim() || null;
+    if (data.organizationTh !== undefined) output.organizationTh = (data.organizationTh || '').trim() || null;
+    if (data.organizationEn !== undefined) output.organizationEn = (data.organizationEn || '').trim() || null;
+    if (data.departmentTh !== undefined) output.departmentTh = (data.departmentTh || '').trim() || null;
+    if (data.departmentEn !== undefined) output.departmentEn = (data.departmentEn || '').trim() || null;
+    if (data.bioTh !== undefined) output.bioTh = (data.bioTh || '').trim() || null;
+    if (data.bioEn !== undefined) output.bioEn = (data.bioEn || '').trim() || null;
+    if (data.avatarUrl !== undefined) output.avatarUrl = (data.avatarUrl || '').trim() || null;
+    if (data.avatarAltTh !== undefined) output.avatarAltTh = (data.avatarAltTh || '').trim() || null;
+    if (data.avatarAltEn !== undefined) output.avatarAltEn = (data.avatarAltEn || '').trim() || null;
+
+    if (data.isFeatured !== undefined) output.isFeatured = Boolean(data.isFeatured);
+    if (data.isEnabled !== undefined) output.isEnabled = Boolean(data.isEnabled);
+
+    if (data.sortOrder !== undefined) {
+        const sortOrder = Number(data.sortOrder);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+            throw new BadRequestError('sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+        }
+        output.sortOrder = Math.trunc(sortOrder);
+    }
+
+    if (data.publishedAt !== undefined) {
+        output.publishedAt = parsePublishedAt(data.publishedAt);
+    }
+
+    return output;
+}
+
+function normalizeContactChannelPayload(data: {
+    channelType?: string | undefined;
+    labelTh?: string | null | undefined;
+    labelEn?: string | null | undefined;
+    value?: string | undefined;
+    url?: string | null | undefined;
+    isPrimary?: boolean | undefined;
+    sortOrder?: number | undefined;
+    isEnabled?: boolean | undefined;
+}, requireRequired: boolean): {
+    channelType?: string;
+    labelTh?: string | null;
+    labelEn?: string | null;
+    value?: string;
+    url?: string | null;
+    isPrimary?: boolean;
+    sortOrder?: number;
+    isEnabled?: boolean;
+} {
+    const output: {
+        channelType?: string;
+        labelTh?: string | null;
+        labelEn?: string | null;
+        value?: string;
+        url?: string | null;
+        isPrimary?: boolean;
+        sortOrder?: number;
+        isEnabled?: boolean;
+    } = {};
+
+    if (data.channelType !== undefined) {
+        const channelType = data.channelType.trim().toLowerCase();
+        if (!channelType) throw new BadRequestError('channelType ต้องไม่ว่าง');
+        output.channelType = channelType;
+    } else if (requireRequired) {
+        throw new BadRequestError('channelType ต้องไม่ว่าง');
+    }
+
+    if (data.value !== undefined) {
+        const value = data.value.trim();
+        if (!value) throw new BadRequestError('value ต้องไม่ว่าง');
+        output.value = value;
+    } else if (requireRequired) {
+        throw new BadRequestError('value ต้องไม่ว่าง');
+    }
+
+    if (data.labelTh !== undefined) output.labelTh = (data.labelTh || '').trim() || null;
+    if (data.labelEn !== undefined) output.labelEn = (data.labelEn || '').trim() || null;
+    if (data.url !== undefined) output.url = (data.url || '').trim() || null;
+    if (data.isPrimary !== undefined) output.isPrimary = Boolean(data.isPrimary);
+    if (data.isEnabled !== undefined) output.isEnabled = Boolean(data.isEnabled);
+
+    if (data.sortOrder !== undefined) {
+        const sortOrder = Number(data.sortOrder);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+            throw new BadRequestError('sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+        }
+        output.sortOrder = Math.trunc(sortOrder);
+    }
+
+    return output;
 }
 
 export async function getRewards(db: DB): Promise<ContentReward[]> {
@@ -400,6 +650,248 @@ export async function uploadSponsorLogoAdmin(
 
 export async function reorderSponsorsAdmin(db: DB, updates: { id: number; displayOrder: number }[]): Promise<void> {
     await repo.updateSponsorsOrder(db, updates.map(u => ({ id: u.id, sortOrder: u.displayOrder })));
+}
+
+export async function getAllContactsAdmin(db: DB): Promise<ContentContactAdmin[]> {
+    const contacts = await repo.getAllContactsAdmin(db);
+    const channels = await repo.getChannelsByContactIdsAdmin(db, contacts.map((contact) => contact.contact_id));
+
+    const channelsByContact = new Map<number, ContentContactChannelAdmin[]>();
+    for (const row of channels) {
+        const list = channelsByContact.get(row.contact_id) ?? [];
+        list.push(toContactChannelAdminResponse(row));
+        channelsByContact.set(row.contact_id, list);
+    }
+
+    return contacts.map((contact) =>
+        toContactAdminResponse(contact, channelsByContact.get(contact.contact_id) ?? [])
+    );
+}
+
+export async function createContactAdmin(
+    db: DB,
+    data: {
+        displayNameTh: string;
+        displayNameEn: string;
+        roleTh?: string | null | undefined;
+        roleEn?: string | null | undefined;
+        organizationTh?: string | null | undefined;
+        organizationEn?: string | null | undefined;
+        departmentTh?: string | null | undefined;
+        departmentEn?: string | null | undefined;
+        bioTh?: string | null | undefined;
+        bioEn?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
+        avatarAltTh?: string | null | undefined;
+        avatarAltEn?: string | null | undefined;
+        isFeatured?: boolean | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+        publishedAt?: string | null | undefined;
+    }
+): Promise<ContentContactAdmin> {
+    const payload = normalizeContactPayload(data, true);
+    const contactId = await repo.createContactAdmin(db, {
+        displayNameTh: payload.displayNameTh!,
+        displayNameEn: payload.displayNameEn!,
+        roleTh: payload.roleTh ?? null,
+        roleEn: payload.roleEn ?? null,
+        organizationTh: payload.organizationTh ?? null,
+        organizationEn: payload.organizationEn ?? null,
+        departmentTh: payload.departmentTh ?? null,
+        departmentEn: payload.departmentEn ?? null,
+        bioTh: payload.bioTh ?? null,
+        bioEn: payload.bioEn ?? null,
+        avatarUrl: payload.avatarUrl ?? null,
+        avatarAltTh: payload.avatarAltTh ?? null,
+        avatarAltEn: payload.avatarAltEn ?? null,
+        isFeatured: payload.isFeatured ?? false,
+        sortOrder: payload.sortOrder ?? 0,
+        isEnabled: payload.isEnabled ?? true,
+        publishedAt: payload.publishedAt ?? null,
+    });
+
+    const created = await repo.getContactByIdAdmin(db, contactId);
+    if (!created) {
+        throw new NotFoundError('ไม่พบข้อมูล contact ที่เพิ่งสร้าง');
+    }
+
+    return toContactAdminResponse(created, []);
+}
+
+export async function updateContactAdmin(
+    db: DB,
+    contactId: number,
+    data: {
+        displayNameTh?: string | undefined;
+        displayNameEn?: string | undefined;
+        roleTh?: string | null;
+        roleEn?: string | null;
+        organizationTh?: string | null;
+        organizationEn?: string | null;
+        departmentTh?: string | null;
+        departmentEn?: string | null;
+        bioTh?: string | null;
+        bioEn?: string | null;
+        avatarUrl?: string | null;
+        avatarAltTh?: string | null;
+        avatarAltEn?: string | null;
+        isFeatured?: boolean;
+        sortOrder?: number;
+        isEnabled?: boolean;
+        publishedAt?: string | null;
+    }
+): Promise<ContentContactAdmin> {
+    const existing = await repo.getContactByIdAdmin(db, contactId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูล contact นี้');
+    }
+
+    const payload = normalizeContactPayload(data, false);
+    await repo.updateContactAdmin(db, contactId, payload);
+
+    const updated = await repo.getContactByIdAdmin(db, contactId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบข้อมูล contact ที่อัปเดตแล้ว');
+    }
+    const channels = await repo.getChannelsByContactIdsAdmin(db, [contactId]);
+    return toContactAdminResponse(updated, channels.map(toContactChannelAdminResponse));
+}
+
+export async function deleteContactAdmin(db: DB, contactId: number): Promise<void> {
+    const existing = await repo.getContactByIdAdmin(db, contactId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูล contact นี้');
+    }
+
+    await repo.softDeleteContactAdmin(db, contactId);
+}
+
+export async function reorderContactsAdmin(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
+    const normalized = updates.map((update) => {
+        const sortOrder = Number(update.sortOrder);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+            throw new BadRequestError('sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+        }
+        return {
+            id: Number(update.id),
+            sortOrder: Math.trunc(sortOrder),
+        };
+    });
+
+    await repo.updateContactsOrderAdmin(db, normalized);
+}
+
+export async function createContactChannelAdmin(
+    db: DB,
+    contactId: number,
+    data: {
+        channelType: string;
+        labelTh?: string | null | undefined;
+        labelEn?: string | null | undefined;
+        value: string;
+        url?: string | null | undefined;
+        isPrimary?: boolean | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+    }
+): Promise<ContentContactChannelAdmin> {
+    const contact = await repo.getContactByIdAdmin(db, contactId);
+    if (!contact) {
+        throw new NotFoundError('ไม่พบข้อมูล contact นี้');
+    }
+
+    const payload = normalizeContactChannelPayload(data, true);
+    const channelId = await repo.createContactChannelAdmin(db, {
+        contactId,
+        channelType: payload.channelType!,
+        labelTh: payload.labelTh ?? null,
+        labelEn: payload.labelEn ?? null,
+        value: payload.value!,
+        url: payload.url ?? null,
+        isPrimary: payload.isPrimary ?? false,
+        sortOrder: payload.sortOrder ?? 0,
+        isEnabled: payload.isEnabled ?? true,
+    });
+
+    const created = await repo.getContactChannelByIdAdmin(db, channelId);
+    if (!created) {
+        throw new NotFoundError('ไม่พบข้อมูลช่องทางที่เพิ่งสร้าง');
+    }
+    return toContactChannelAdminResponse(created);
+}
+
+export async function updateContactChannelAdmin(
+    db: DB,
+    contactId: number,
+    channelId: number,
+    data: {
+        channelType?: string | undefined;
+        labelTh?: string | null | undefined;
+        labelEn?: string | null | undefined;
+        value?: string | undefined;
+        url?: string | null | undefined;
+        isPrimary?: boolean | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+    }
+): Promise<ContentContactChannelAdmin> {
+    const contact = await repo.getContactByIdAdmin(db, contactId);
+    if (!contact) {
+        throw new NotFoundError('ไม่พบข้อมูล contact นี้');
+    }
+
+    const existingChannel = await repo.getContactChannelByIdAdmin(db, channelId);
+    if (!existingChannel || existingChannel.contact_id !== contactId) {
+        throw new NotFoundError('ไม่พบช่องทางการติดต่อนี้ใน contact ที่เลือก');
+    }
+
+    const payload = normalizeContactChannelPayload(data, false);
+    await repo.updateContactChannelAdmin(db, channelId, payload);
+
+    const updated = await repo.getContactChannelByIdAdmin(db, channelId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบข้อมูลช่องทางหลังการอัปเดต');
+    }
+    return toContactChannelAdminResponse(updated);
+}
+
+export async function deleteContactChannelAdmin(db: DB, contactId: number, channelId: number): Promise<void> {
+    const contact = await repo.getContactByIdAdmin(db, contactId);
+    if (!contact) {
+        throw new NotFoundError('ไม่พบข้อมูล contact นี้');
+    }
+
+    const existingChannel = await repo.getContactChannelByIdAdmin(db, channelId);
+    if (!existingChannel || existingChannel.contact_id !== contactId) {
+        throw new NotFoundError('ไม่พบช่องทางการติดต่อนี้ใน contact ที่เลือก');
+    }
+
+    await repo.deleteContactChannelAdmin(db, channelId);
+}
+
+export async function reorderContactChannelsAdmin(
+    db: DB,
+    contactId: number,
+    updates: { id: number; sortOrder: number }[]
+): Promise<void> {
+    const contact = await repo.getContactByIdAdmin(db, contactId);
+    if (!contact) {
+        throw new NotFoundError('ไม่พบข้อมูล contact นี้');
+    }
+
+    const normalized = updates.map((update) => {
+        const sortOrder = Number(update.sortOrder);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+            throw new BadRequestError('sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+        }
+        return {
+            id: Number(update.id),
+            sortOrder: Math.trunc(sortOrder),
+        };
+    });
+
+    await repo.updateContactChannelsOrderAdmin(db, contactId, normalized);
 }
 
 export async function getPublishedPageByCode(db: DB, pageCode: string): Promise<ContentPage> {

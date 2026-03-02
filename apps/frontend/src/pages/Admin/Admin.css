@@ -691,6 +691,7 @@ body:has(.ad-page) {
 }
 
 .ad-form input,
+.ad-form select,
 .ad-form textarea,
 .ad-panel textarea,
 .ad-panel input {
@@ -785,6 +786,35 @@ body:has(.ad-page) {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.ad-contact-selector-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ad-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ad-chip-btn {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--ad-border);
+  background: var(--ad-surface-soft);
+  color: var(--ad-text);
+  font-size: 0.78rem;
+}
+
+.ad-chip-btn.active {
+  border-color: var(--ad-primary);
+  background: var(--ad-primary-soft);
+  color: var(--ad-primary);
+  font-weight: 700;
 }
 
 .ad-file-chip {

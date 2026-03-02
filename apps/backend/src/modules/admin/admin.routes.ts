@@ -16,6 +16,15 @@ import {
     handleDeleteSponsorAdmin,
     handleUploadSponsorLogoAdmin,
     handleReorderSponsorsAdmin,
+    handleGetAllContactsAdmin,
+    handleCreateContactAdmin,
+    handleUpdateContactAdmin,
+    handleDeleteContactAdmin,
+    handleReorderContactsAdmin,
+    handleCreateContactChannelAdmin,
+    handleUpdateContactChannelAdmin,
+    handleDeleteContactChannelAdmin,
+    handleReorderContactChannelsAdmin,
 } from './admin.controller.js';
 
 const adminRoutes: FastifyPluginAsync = async (fastify) => {
@@ -38,6 +47,17 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.post('/sponsors/:id/logo', handleUploadSponsorLogoAdmin);
     fastify.delete('/sponsors/:id', handleDeleteSponsorAdmin);
     fastify.put('/sponsors/reorder', handleReorderSponsorsAdmin);
+
+    fastify.get('/contacts', handleGetAllContactsAdmin);
+    fastify.post('/contacts', handleCreateContactAdmin);
+    fastify.put('/contacts/reorder', handleReorderContactsAdmin);
+    fastify.patch('/contacts/:id', handleUpdateContactAdmin);
+    fastify.delete('/contacts/:id', handleDeleteContactAdmin);
+
+    fastify.post('/contacts/:contactId/channels', handleCreateContactChannelAdmin);
+    fastify.put('/contacts/:contactId/channels/reorder', handleReorderContactChannelsAdmin);
+    fastify.patch('/contacts/:contactId/channels/:channelId', handleUpdateContactChannelAdmin);
+    fastify.delete('/contacts/:contactId/channels/:channelId', handleDeleteContactChannelAdmin);
 };
 
 export default adminRoutes;

@@ -271,3 +271,302 @@ export async function getEnabledContactChannels(db: DB): Promise<ContentContactC
 
     return rows as ContentContactChannelRow[];
 }
+
+export async function getAllContactsAdmin(db: DB): Promise<ContentContactRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_contacts
+         WHERE deleted_at IS NULL
+         ORDER BY is_featured DESC, sort_order ASC, contact_id ASC`
+    );
+
+    return rows as ContentContactRow[];
+}
+
+export async function getContactByIdAdmin(db: DB, contactId: number): Promise<ContentContactRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_contacts
+         WHERE contact_id = ?
+           AND deleted_at IS NULL
+         LIMIT 1`,
+        [contactId]
+    );
+
+    const result = rows as ContentContactRow[];
+    return result[0] ?? null;
+}
+
+export async function createContactAdmin(
+    db: DB,
+    data: {
+        displayNameTh: string;
+        displayNameEn: string;
+        roleTh: string | null;
+        roleEn: string | null;
+        organizationTh: string | null;
+        organizationEn: string | null;
+        departmentTh: string | null;
+        departmentEn: string | null;
+        bioTh: string | null;
+        bioEn: string | null;
+        avatarUrl: string | null;
+        avatarAltTh: string | null;
+        avatarAltEn: string | null;
+        isFeatured: boolean;
+        sortOrder: number;
+        isEnabled: boolean;
+        publishedAt: string | null;
+    }
+): Promise<number> {
+    const [result] = await db.query(
+        `INSERT INTO content_contacts (
+            display_name_th,
+            display_name_en,
+            role_th,
+            role_en,
+            organization_th,
+            organization_en,
+            department_th,
+            department_en,
+            bio_th,
+            bio_en,
+            avatar_url,
+            avatar_alt_th,
+            avatar_alt_en,
+            is_featured,
+            sort_order,
+            is_enabled,
+            published_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            data.displayNameTh,
+            data.displayNameEn,
+            data.roleTh,
+            data.roleEn,
+            data.organizationTh,
+            data.organizationEn,
+            data.departmentTh,
+            data.departmentEn,
+            data.bioTh,
+            data.bioEn,
+            data.avatarUrl,
+            data.avatarAltTh,
+            data.avatarAltEn,
+            data.isFeatured ? 1 : 0,
+            data.sortOrder,
+            data.isEnabled ? 1 : 0,
+            data.publishedAt,
+        ]
+    );
+
+    return (result as { insertId: number }).insertId;
+}
+
+export async function updateContactAdmin(
+    db: DB,
+    contactId: number,
+    data: {
+        displayNameTh?: string | undefined;
+        displayNameEn?: string | undefined;
+        roleTh?: string | null | undefined;
+        roleEn?: string | null | undefined;
+        organizationTh?: string | null | undefined;
+        organizationEn?: string | null | undefined;
+        departmentTh?: string | null | undefined;
+        departmentEn?: string | null | undefined;
+        bioTh?: string | null | undefined;
+        bioEn?: string | null | undefined;
+        avatarUrl?: string | null | undefined;
+        avatarAltTh?: string | null | undefined;
+        avatarAltEn?: string | null | undefined;
+        isFeatured?: boolean | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+        publishedAt?: string | null | undefined;
+    }
+): Promise<void> {
+    const fields: string[] = [];
+    const values: Array<string | number | null> = [];
+
+    if (data.displayNameTh !== undefined) { fields.push('display_name_th = ?'); values.push(data.displayNameTh); }
+    if (data.displayNameEn !== undefined) { fields.push('display_name_en = ?'); values.push(data.displayNameEn); }
+    if (data.roleTh !== undefined) { fields.push('role_th = ?'); values.push(data.roleTh); }
+    if (data.roleEn !== undefined) { fields.push('role_en = ?'); values.push(data.roleEn); }
+    if (data.organizationTh !== undefined) { fields.push('organization_th = ?'); values.push(data.organizationTh); }
+    if (data.organizationEn !== undefined) { fields.push('organization_en = ?'); values.push(data.organizationEn); }
+    if (data.departmentTh !== undefined) { fields.push('department_th = ?'); values.push(data.departmentTh); }
+    if (data.departmentEn !== undefined) { fields.push('department_en = ?'); values.push(data.departmentEn); }
+    if (data.bioTh !== undefined) { fields.push('bio_th = ?'); values.push(data.bioTh); }
+    if (data.bioEn !== undefined) { fields.push('bio_en = ?'); values.push(data.bioEn); }
+    if (data.avatarUrl !== undefined) { fields.push('avatar_url = ?'); values.push(data.avatarUrl); }
+    if (data.avatarAltTh !== undefined) { fields.push('avatar_alt_th = ?'); values.push(data.avatarAltTh); }
+    if (data.avatarAltEn !== undefined) { fields.push('avatar_alt_en = ?'); values.push(data.avatarAltEn); }
+    if (data.isFeatured !== undefined) { fields.push('is_featured = ?'); values.push(data.isFeatured ? 1 : 0); }
+    if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
+    if (data.isEnabled !== undefined) { fields.push('is_enabled = ?'); values.push(data.isEnabled ? 1 : 0); }
+    if (data.publishedAt !== undefined) { fields.push('published_at = ?'); values.push(data.publishedAt); }
+
+    if (!fields.length) return;
+
+    values.push(contactId);
+    await db.query(
+        `UPDATE content_contacts
+         SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+         WHERE contact_id = ?
+           AND deleted_at IS NULL`,
+        values
+    );
+}
+
+export async function softDeleteContactAdmin(db: DB, contactId: number): Promise<void> {
+    await db.query(
+        `UPDATE content_contacts
+         SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+         WHERE contact_id = ?
+           AND deleted_at IS NULL`,
+        [contactId]
+    );
+}
+
+export async function updateContactsOrderAdmin(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
+    for (const update of updates) {
+        await db.query(
+            `UPDATE content_contacts
+             SET sort_order = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE contact_id = ?
+               AND deleted_at IS NULL`,
+            [update.sortOrder, update.id]
+        );
+    }
+}
+
+export async function getChannelsByContactIdsAdmin(db: DB, contactIds: number[]): Promise<ContentContactChannelRow[]> {
+    if (!contactIds.length) return [];
+    const placeholders = contactIds.map(() => '?').join(', ');
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT c.*
+         FROM content_contact_channels c
+         INNER JOIN content_contacts ct ON ct.contact_id = c.contact_id
+         WHERE c.contact_id IN (${placeholders})
+           AND ct.deleted_at IS NULL
+         ORDER BY c.contact_id ASC, c.is_primary DESC, c.sort_order ASC, c.channel_id ASC`,
+        contactIds
+    );
+
+    return rows as ContentContactChannelRow[];
+}
+
+export async function getContactChannelByIdAdmin(db: DB, channelId: number): Promise<ContentContactChannelRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT c.*
+         FROM content_contact_channels c
+         INNER JOIN content_contacts ct ON ct.contact_id = c.contact_id
+         WHERE c.channel_id = ?
+           AND ct.deleted_at IS NULL
+         LIMIT 1`,
+        [channelId]
+    );
+
+    const result = rows as ContentContactChannelRow[];
+    return result[0] ?? null;
+}
+
+export async function createContactChannelAdmin(
+    db: DB,
+    data: {
+        contactId: number;
+        channelType: string;
+        labelTh: string | null;
+        labelEn: string | null;
+        value: string;
+        url: string | null;
+        isPrimary: boolean;
+        sortOrder: number;
+        isEnabled: boolean;
+    }
+): Promise<number> {
+    const [result] = await db.query(
+        `INSERT INTO content_contact_channels (
+            contact_id,
+            channel_type,
+            label_th,
+            label_en,
+            value,
+            url,
+            is_primary,
+            sort_order,
+            is_enabled
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            data.contactId,
+            data.channelType,
+            data.labelTh,
+            data.labelEn,
+            data.value,
+            data.url,
+            data.isPrimary ? 1 : 0,
+            data.sortOrder,
+            data.isEnabled ? 1 : 0,
+        ]
+    );
+
+    return (result as { insertId: number }).insertId;
+}
+
+export async function updateContactChannelAdmin(
+    db: DB,
+    channelId: number,
+    data: {
+        channelType?: string | undefined;
+        labelTh?: string | null | undefined;
+        labelEn?: string | null | undefined;
+        value?: string | undefined;
+        url?: string | null | undefined;
+        isPrimary?: boolean | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+    }
+): Promise<void> {
+    const fields: string[] = [];
+    const values: Array<string | number | null> = [];
+
+    if (data.channelType !== undefined) { fields.push('channel_type = ?'); values.push(data.channelType); }
+    if (data.labelTh !== undefined) { fields.push('label_th = ?'); values.push(data.labelTh); }
+    if (data.labelEn !== undefined) { fields.push('label_en = ?'); values.push(data.labelEn); }
+    if (data.value !== undefined) { fields.push('value = ?'); values.push(data.value); }
+    if (data.url !== undefined) { fields.push('url = ?'); values.push(data.url); }
+    if (data.isPrimary !== undefined) { fields.push('is_primary = ?'); values.push(data.isPrimary ? 1 : 0); }
+    if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
+    if (data.isEnabled !== undefined) { fields.push('is_enabled = ?'); values.push(data.isEnabled ? 1 : 0); }
+
+    if (!fields.length) return;
+
+    values.push(channelId);
+    await db.query(
+        `UPDATE content_contact_channels
+         SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+         WHERE channel_id = ?`,
+        values
+    );
+}
+
+export async function deleteContactChannelAdmin(db: DB, channelId: number): Promise<void> {
+    await db.query(`DELETE FROM content_contact_channels WHERE channel_id = ?`, [channelId]);
+}
+
+export async function updateContactChannelsOrderAdmin(
+    db: DB,
+    contactId: number,
+    updates: { id: number; sortOrder: number }[]
+): Promise<void> {
+    for (const update of updates) {
+        await db.query(
+            `UPDATE content_contact_channels
+             SET sort_order = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE channel_id = ?
+               AND contact_id = ?`,
+            [update.sortOrder, update.id, contactId]
+        );
+    }
+}

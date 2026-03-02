@@ -1,5 +1,17 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { allowlistSchema, updateAllowlistSchema } from './admin.schema.js';
+import {
+    allowlistSchema,
+    updateAllowlistSchema,
+    idParamSchema,
+    contactIdParamSchema,
+    contactChannelParamSchema,
+    createContactSchema,
+    updateContactSchema,
+    reorderContactsSchema,
+    createContactChannelSchema,
+    updateContactChannelSchema,
+    reorderContactChannelsSchema,
+} from './admin.schema.js';
 import * as service from './admin.service.js';
 import * as contentService from '../content/content.service.js';
 import * as authService from '../auth/auth.service.js';
@@ -226,6 +238,211 @@ export async function handleReorderSponsorsAdmin(req: FastifyRequest, reply: Fas
         const body = req.body as { updates: { id: number; displayOrder: number }[] };
         await contentService.reorderSponsorsAdmin(req.server.ctx.db, body.updates);
         return reply.send(ok({ success: true }, 'จัดลำดับ Sponsor สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleGetAllContactsAdmin(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const contacts = await contentService.getAllContactsAdmin(req.server.ctx.db);
+        return reply.send(ok(contacts));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleCreateContactAdmin(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = createContactSchema.safeParse(req.body);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await contentService.createContactAdmin(req.server.ctx.db, parsed.data);
+        return reply.status(201).send(ok(result, 'เพิ่ม contact สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateContactAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = updateContactSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await contentService.updateContactAdmin(req.server.ctx.db, parsedParams.data.id, parsedBody.data as any);
+        return reply.send(ok(result, 'อัปเดต contact สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleDeleteContactAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await contentService.deleteContactAdmin(req.server.ctx.db, parsedParams.data.id);
+        return reply.send(ok({ success: true }, 'ลบ contact สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleReorderContactsAdmin(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = reorderContactsSchema.safeParse(req.body);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await contentService.reorderContactsAdmin(req.server.ctx.db, parsed.data.updates || []);
+        return reply.send(ok({ success: true }, 'จัดลำดับ contact สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleCreateContactChannelAdmin(
+    req: FastifyRequest<{ Params: { contactId: string } }>,
+    reply: FastifyReply
+) {
+    const parsedParams = contactIdParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'contactId ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = createContactChannelSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await contentService.createContactChannelAdmin(req.server.ctx.db, parsedParams.data.contactId, parsedBody.data);
+        return reply.status(201).send(ok(result, 'เพิ่มช่องทางติดต่อสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateContactChannelAdmin(
+    req: FastifyRequest<{ Params: { contactId: string; channelId: string } }>,
+    reply: FastifyReply
+) {
+    const parsedParams = contactChannelParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = updateContactChannelSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await contentService.updateContactChannelAdmin(
+            req.server.ctx.db,
+            parsedParams.data.contactId,
+            parsedParams.data.channelId,
+            parsedBody.data
+        );
+        return reply.send(ok(result, 'อัปเดตช่องทางติดต่อสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleDeleteContactChannelAdmin(
+    req: FastifyRequest<{ Params: { contactId: string; channelId: string } }>,
+    reply: FastifyReply
+) {
+    const parsedParams = contactChannelParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await contentService.deleteContactChannelAdmin(
+            req.server.ctx.db,
+            parsedParams.data.contactId,
+            parsedParams.data.channelId
+        );
+        return reply.send(ok({ success: true }, 'ลบช่องทางติดต่อสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleReorderContactChannelsAdmin(
+    req: FastifyRequest<{ Params: { contactId: string } }>,
+    reply: FastifyReply
+) {
+    const parsedParams = contactIdParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'contactId ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = reorderContactChannelsSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await contentService.reorderContactChannelsAdmin(
+            req.server.ctx.db,
+            parsedParams.data.contactId,
+            parsedBody.data.updates || []
+        );
+        return reply.send(ok({ success: true }, 'จัดลำดับช่องทางติดต่อสำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });
