@@ -373,7 +373,7 @@ body:has(.gr-page) {
 }
 
 .gr-login-card {
-    background: var(--gt-surface);
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--gt-border);
     border-radius: 24px;
     padding: 40px;
@@ -381,11 +381,12 @@ body:has(.gr-page) {
     max-width: 420px;
     box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.08);
     pointer-events: auto;
+    backdrop-filter: blur(6px);
 }
 
 .gr-login-card h2 {
     text-align: center;
-    margin: 0 0 8px;
+    margin: 0 0 24px;
     font-size: 1.6rem;
 }
 
@@ -417,6 +418,38 @@ body:has(.gr-page) {
     color: var(--gt-text);
     transition: border-color 0.2s, box-shadow 0.2s;
     box-sizing: border-box;
+}
+
+.gr-password-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.gr-password-wrap .gr-input {
+    padding-right: 42px;
+}
+
+.gr-password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--gt-text-muted, #64748b);
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+}
+
+.gr-password-toggle:hover {
+    color: var(--gt-primary, #7c3aed);
+    background: rgba(124, 58, 237, 0.08);
 }
 
 .gr-input:focus {

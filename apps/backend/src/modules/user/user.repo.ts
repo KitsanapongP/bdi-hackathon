@@ -9,8 +9,9 @@ import type { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 export async function getProfile(db: DB, userId: number): Promise<UserProfileRow | null> {
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT user_id, user_name, email, phone,
-                university_name_th, university_name_en,
+                institution_name_th, institution_name_en,
                 first_name_th, last_name_th, first_name_en, last_name_en,
+                gender, birth_date, education_level, home_province,
                 is_active, created_at, updated_at
          FROM user_users
          WHERE user_id = :userId AND is_active = 1 AND deleted_at IS NULL
@@ -30,8 +31,12 @@ export async function updateProfile(
         firstNameEn?: string | undefined;
         lastNameEn?: string | undefined;
         phone?: string | undefined;
-        universityNameTh?: string | undefined;
-        universityNameEn?: string | undefined;
+        institutionNameTh?: string | undefined;
+        institutionNameEn?: string | undefined;
+        gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | undefined;
+        birthDate?: string | undefined;
+        educationLevel?: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | undefined;
+        homeProvince?: string | undefined;
     },
 ): Promise<void> {
     const sets: string[] = [];
@@ -43,8 +48,12 @@ export async function updateProfile(
     if (data.firstNameEn !== undefined) { sets.push('first_name_en = :firstNameEn'); params.firstNameEn = data.firstNameEn; }
     if (data.lastNameEn !== undefined) { sets.push('last_name_en = :lastNameEn'); params.lastNameEn = data.lastNameEn; }
     if (data.phone !== undefined) { sets.push('phone = :phone'); params.phone = data.phone; }
-    if (data.universityNameTh !== undefined) { sets.push('university_name_th = :universityNameTh'); params.universityNameTh = data.universityNameTh; }
-    if (data.universityNameEn !== undefined) { sets.push('university_name_en = :universityNameEn'); params.universityNameEn = data.universityNameEn; }
+    if (data.institutionNameTh !== undefined) { sets.push('institution_name_th = :institutionNameTh'); params.institutionNameTh = data.institutionNameTh; }
+    if (data.institutionNameEn !== undefined) { sets.push('institution_name_en = :institutionNameEn'); params.institutionNameEn = data.institutionNameEn; }
+    if (data.gender !== undefined) { sets.push('gender = :gender'); params.gender = data.gender; }
+    if (data.birthDate !== undefined) { sets.push('birth_date = :birthDate'); params.birthDate = data.birthDate; }
+    if (data.educationLevel !== undefined) { sets.push('education_level = :educationLevel'); params.educationLevel = data.educationLevel; }
+    if (data.homeProvince !== undefined) { sets.push('home_province = :homeProvince'); params.homeProvince = data.homeProvince; }
 
     if (sets.length === 0) return;
 

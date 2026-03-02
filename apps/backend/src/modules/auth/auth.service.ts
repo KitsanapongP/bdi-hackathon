@@ -15,6 +15,12 @@ function toUserSafe(row: {
     last_name_th?: string | null;
     first_name_en?: string | null;
     last_name_en?: string | null;
+    gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+    birth_date?: string | null;
+    education_level?: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | null;
+    institution_name_th?: string | null;
+    institution_name_en?: string | null;
+    home_province?: string | null;
     is_active: number;
 }, accessRole: 'admin' | 'judge' | null = null, teamInfo: { teamId: number; teamCode: string; role: string } | null = null): UserSafe {
     return {
@@ -25,6 +31,12 @@ function toUserSafe(row: {
         lastNameTh: row.last_name_th ?? null,
         firstNameEn: row.first_name_en ?? null,
         lastNameEn: row.last_name_en ?? null,
+        gender: row.gender ?? null,
+        birthDate: row.birth_date ?? null,
+        educationLevel: row.education_level ?? null,
+        institutionNameTh: row.institution_name_th ?? null,
+        institutionNameEn: row.institution_name_en ?? null,
+        homeProvince: row.home_province ?? null,
         isActive: row.is_active === 1,
         accessRole,
         hasTeam: teamInfo !== null,
@@ -67,6 +79,16 @@ export async function registerUser(db: DB, input: RegisterInput): Promise<UserSa
     const userId = await repo.createUser(db, {
         userName: input.userName,
         email: input.email,
+        firstNameTh: input.firstNameTh,
+        lastNameTh: input.lastNameTh,
+        firstNameEn: input.firstNameEn,
+        lastNameEn: input.lastNameEn,
+        gender: input.gender,
+        birthDate: input.birthDate,
+        educationLevel: input.educationLevel,
+        institutionNameTh: input.institutionNameTh,
+        institutionNameEn: input.institutionNameEn,
+        homeProvince: input.homeProvince,
     });
 
     // Create local credential
@@ -97,10 +119,16 @@ export async function registerUser(db: DB, input: RegisterInput): Promise<UserSa
         userId,
         userName: input.userName,
         email: input.email,
-        firstNameTh: null,
-        lastNameTh: null,
-        firstNameEn: null,
-        lastNameEn: null,
+        firstNameTh: input.firstNameTh,
+        lastNameTh: input.lastNameTh,
+        firstNameEn: input.firstNameEn,
+        lastNameEn: input.lastNameEn,
+        gender: input.gender,
+        birthDate: input.birthDate,
+        educationLevel: input.educationLevel,
+        institutionNameTh: input.institutionNameTh,
+        institutionNameEn: input.institutionNameEn,
+        homeProvince: input.homeProvince,
         isActive: true,
         accessRole,
         hasTeam: teamInfo !== null,

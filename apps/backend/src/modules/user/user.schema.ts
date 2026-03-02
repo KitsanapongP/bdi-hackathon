@@ -8,8 +8,12 @@ export const updateProfileSchema = z.object({
     firstNameEn: z.string().max(100).optional(),
     lastNameEn: z.string().max(100).optional(),
     phone: z.string().max(30).optional(),
-    universityNameTh: z.string().max(255).optional(),
-    universityNameEn: z.string().max(255).optional(),
+    institutionNameTh: z.string().max(255).optional(),
+    institutionNameEn: z.string().max(255).optional(),
+    gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(),
+    birthDate: z.string().date('วันเดือนปีเกิดไม่ถูกต้อง').optional(),
+    educationLevel: z.enum(['secondary', 'high_school', 'bachelor', 'master', 'doctorate']).optional(),
+    homeProvince: z.string().max(100).optional(),
 });
 
 /* ── 1.7 Privacy settings ── */
