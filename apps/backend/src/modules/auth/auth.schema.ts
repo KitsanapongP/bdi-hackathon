@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const registerSchema = z.object({
     email: z.string().email('อีเมลไม่ถูกต้อง'),
+    phone: z.string().min(9, 'กรุณากรอกเบอร์โทรศัพท์').max(15, 'เบอร์โทรศัพท์ยาวเกินไป'),
     password: z.string().min(6, 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'),
     userName: z.string().min(3, 'ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร').max(50),
     firstNameTh: z.string().min(1, 'กรุณากรอกชื่อภาษาไทย').max(100),

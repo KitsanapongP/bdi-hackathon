@@ -92,6 +92,14 @@ function ProfileContent({ user }) {
 /* ═══════════════════════════════════════════════════════════
    Tab 1: Profile (1.6)
    ═══════════════════════════════════════════════════════════ */
+const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    if (!dateStr.includes('T')) return dateStr;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 function ProfileTab({ apiFetch, showToast, user }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -118,7 +126,7 @@ function ProfileTab({ apiFetch, showToast, user }) {
                     institutionNameTh: data.institutionNameTh || undefined,
                     institutionNameEn: data.institutionNameEn || undefined,
                     gender: data.gender || undefined,
-                    birthDate: data.birthDate || undefined,
+                    birthDate: data.birthDate ? formatDate(data.birthDate) : undefined,
                     educationLevel: data.educationLevel || undefined,
                     homeProvince: data.homeProvince || undefined,
                     userName: data.userName || undefined,
@@ -221,7 +229,7 @@ function ProfileTab({ apiFetch, showToast, user }) {
                         </div>
                         <div className="pf-field">
                             <span className="pf-label">วันเดือนปีเกิด</span>
-                            <input type="date" className="pf-input" value={data.birthDate || ''} onChange={(e) => set('birthDate', e.target.value)} />
+                            <input type="date" lang="en-GB" className="pf-input" value={formatDate(data.birthDate)} onChange={(e) => set('birthDate', e.target.value)} />
                         </div>
                         <div className="pf-field">
                             <span className="pf-label">ภูมิลำเนา (จังหวัด)</span>
@@ -229,7 +237,10 @@ function ProfileTab({ apiFetch, showToast, user }) {
                         </div>
                         <div className="pf-field full">
                             <span className="pf-label">เบอร์โทรศัพท์</span>
-                            <input className="pf-input" value={data.phone || ''} onChange={(e) => set('phone', e.target.value)} placeholder="08x-xxx-xxxx" />
+                            <input className="pf-input" value={data.phone || ''} onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                set('phone', value);
+                            }} placeholder="08x-xxx-xxxx" maxLength={10} />
                         </div>
                     </div>
                 </div>

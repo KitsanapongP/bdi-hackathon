@@ -55,6 +55,7 @@ export async function createUser(
     data: {
         userName: string;
         email: string;
+        phone: string;
         firstNameTh: string;
         lastNameTh: string;
         firstNameEn: string;
@@ -69,14 +70,14 @@ export async function createUser(
 ): Promise<number> {
     const [result] = await db.query<ResultSetHeader>(
         `INSERT INTO user_users (
-        user_name, email,
+        user_name, email, phone,
         first_name_th, last_name_th, first_name_en, last_name_en,
         gender, birth_date, education_level,
         institution_name_th, institution_name_en, home_province,
         is_active, created_at, updated_at
      )
      VALUES (
-        :userName, :email,
+        :userName, :email, :phone,
         :firstNameTh, :lastNameTh, :firstNameEn, :lastNameEn,
         :gender, :birthDate, :educationLevel,
         :institutionNameTh, :institutionNameEn, :homeProvince,
