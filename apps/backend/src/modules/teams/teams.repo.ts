@@ -315,3 +315,12 @@ export async function createTeamAuditLog(db: DB, data: {
         actionDetail: data.actionDetail ? JSON.stringify(data.actionDetail) : null,
     });
 }
+
+export async function checkTeamHasSubmittedVerification(db: DB, teamId: number): Promise<boolean> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT 1 FROM verify_review_rounds
+        WHERE team_id = :teamId AND status IN ('submitted', 'completed')
+        LIMIT 1
+    `, { teamId });
+    return rows.length > 0;
+}

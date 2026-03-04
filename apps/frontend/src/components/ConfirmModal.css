@@ -83,6 +83,27 @@
     justify-content: center;
 }
 
+.cm-body {
+    margin: 0 0 18px;
+    text-align: left;
+}
+
+.cm-input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.cm-input:focus {
+    border-color: rgba(45, 212, 191, 0.8);
+    box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.2);
+}
+
 .cm-btn {
     padding: 10px 24px;
     border-radius: 99px;
@@ -170,4 +191,10 @@
     .cm-btn {
         width: 100%;
     }
+}
+
+.cm-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
 }

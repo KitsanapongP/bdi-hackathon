@@ -110,6 +110,8 @@ function ProfileTab({ apiFetch, showToast, user }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [lockLoading, setLockLoading] = useState(false);
+    const [profileLocked, setProfileLocked] = useState(false);
 
     useEffect(() => {
         apiFetch('/user/profile')
@@ -118,7 +120,26 @@ function ProfileTab({ apiFetch, showToast, user }) {
             .finally(() => setLoading(false));
     }, [apiFetch, showToast]);
 
+    useEffect(() => {
+        if (!user?.hasTeam || !user?.teamId || !user?.userId) {
+            setProfileLocked(false);
+            return;
+        }
+        setLockLoading(true);
+        apiFetch(`/verification/team/${user.teamId}/status`)
+            .then((r) => {
+                const me = (r.data?.members || []).find((m) => m.user_id === user.userId);
+                setProfileLocked(Boolean(me?.is_member_confirmed));
+            })
+            .catch(() => setProfileLocked(false))
+            .finally(() => setLockLoading(false));
+    }, [apiFetch, user]);
+
     const handleSave = async () => {
+        if (profileLocked) {
+            showToast('ข้อมูลโปรไฟล์ถูกล็อกหลังยืนยันตัวตนแล้ว', 'error');
+            return;
+        }
         setSaving(true);
         try {
             const res = await apiFetch('/user/profile', {
@@ -147,7 +168,7 @@ function ProfileTab({ apiFetch, showToast, user }) {
         }
     };
 
-    if (loading) return <div className="gl-empty-state"><Loader2 size={32} /></div>;
+    if (loading || lockLoading) return <div className="gl-empty-state"><Loader2 size={32} /></div>;
     if (!data) return null;
 
     const set = (key, val) => setData((d) => ({ ...d, [key]: val }));
@@ -158,6 +179,13 @@ function ProfileTab({ apiFetch, showToast, user }) {
                 <h3 className="gl-detail-title"><User size={20} /> โปรไฟล์</h3>
             </div>
             <div className="gl-detail-body">
+                {profileLocked && (
+                    <div className="vf-info-banner vf-submitted">
+                        <Lock size={16} />
+                        <span>โปรไฟล์ถูกล็อกเพราะคุณยืนยันตัวตนแล้ว หากต้องการแก้ไขให้ยกเลิกการยืนยันที่หน้ายืนยันตัวตนก่อน</span>
+                    </div>
+                )}
+                <fieldset disabled={profileLocked} style={{ border: 'none', padding: 0, margin: 0 }}>
                 {/* Account info (readonly) */}
                 <div className="gl-info-card">
                     <h4><User size={16} /> ข้อมูลบัญชี</h4>
@@ -257,6 +285,7 @@ function ProfileTab({ apiFetch, showToast, user }) {
                         บันทึก
                     </button>
                 </div>
+                </fieldset>
             </div>
         </div>
     );

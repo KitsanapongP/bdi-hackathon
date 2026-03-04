@@ -10,8 +10,10 @@ export default function ConfirmModal({
     cancelLabel = 'ยกเลิก',
     variant = 'danger',
     hideCancel = false,
+    confirmDisabled = false,
     onConfirm,
     onCancel,
+    children,
 }) {
     return (
         <AnimatePresence>
@@ -48,11 +50,12 @@ export default function ConfirmModal({
                         </div>
                         <h3 className="cm-title">{title}</h3>
                         {message && <p className="cm-message">{message}</p>}
+                        {children && <div className="cm-body">{children}</div>}
                         <div className="cm-actions">
                             {!hideCancel && (
                                 <button className="cm-btn cm-btn-cancel" onClick={onCancel}>{cancelLabel}</button>
                             )}
-                            <button className={`cm-btn cm-btn-confirm cm-btn-${variant}`} onClick={onConfirm}>{confirmLabel}</button>
+                            <button className={`cm-btn cm-btn-confirm cm-btn-${variant}`} onClick={onConfirm} disabled={confirmDisabled}>{confirmLabel}</button>
                         </div>
                     </motion.div>
                 </motion.div>

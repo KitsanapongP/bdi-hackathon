@@ -131,6 +131,11 @@ export async function transferLeader(db: DB, teamId: number, currentLeaderUserId
         throw new AppError('หัวหน้าทีมคนใหม่ต้องไม่ใช่คนเดิม', 400);
     }
 
+    const hasSubmitted = await repo.checkTeamHasSubmittedVerification(db, teamId);
+    if (hasSubmitted) {
+        throw new AppError('ไม่สามารถโอนสิทธิ์หัวหน้าทีมได้ เนื่องจากทีมได้ส่งเอกสารยืนยันตัวตนแล้ว', 400);
+    }
+
     const members = await repo.getTeamMembers(db, teamId);
     const target = members.find((m) => m.user_id === newLeaderUserId);
     if (!target) {
