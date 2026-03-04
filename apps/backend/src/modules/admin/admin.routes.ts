@@ -25,6 +25,10 @@ import {
     handleUpdateContactChannelAdmin,
     handleDeleteContactChannelAdmin,
     handleReorderContactChannelsAdmin,
+    handleGetScheduleAdminBundle,
+    handleCreateScheduleItemAdmin,
+    handleUpdateScheduleItemAdmin,
+    handleDeleteScheduleItemAdmin,
 } from './admin.controller.js';
 
 const adminRoutes: FastifyPluginAsync = async (fastify) => {
@@ -58,6 +62,11 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.put('/contacts/:contactId/channels/reorder', handleReorderContactChannelsAdmin);
     fastify.patch('/contacts/:contactId/channels/:channelId', handleUpdateContactChannelAdmin);
     fastify.delete('/contacts/:contactId/channels/:channelId', handleDeleteContactChannelAdmin);
+
+    fastify.get('/schedules', handleGetScheduleAdminBundle);
+    fastify.post('/schedules/items', handleCreateScheduleItemAdmin);
+    fastify.patch('/schedules/items/:id', handleUpdateScheduleItemAdmin);
+    fastify.delete('/schedules/items/:id', handleDeleteScheduleItemAdmin);
 };
 
 export default adminRoutes;

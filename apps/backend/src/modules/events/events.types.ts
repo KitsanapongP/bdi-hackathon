@@ -26,6 +26,7 @@ export interface EventScheduleDayRow {
     day_name_th: string | null;
     day_name_en: string | null;
     sort_order: number;
+    is_enabled: number;
 }
 
 export interface EventScheduleTrackRow {
@@ -35,6 +36,7 @@ export interface EventScheduleTrackRow {
     track_name_th: string;
     track_name_en: string;
     sort_order: number;
+    is_enabled: number;
 }
 
 export interface EventScheduleRow {
@@ -43,4 +45,5 @@ export interface EventScheduleRow {
     schedule_name_th: string;
     schedule_name_en: string;
     timezone: string;
+    is_published: number;
 }

@@ -11,10 +11,13 @@ import {
     createContactChannelSchema,
     updateContactChannelSchema,
     reorderContactChannelsSchema,
+    createScheduleItemSchema,
+    updateScheduleItemSchema,
 } from './admin.schema.js';
 import * as service from './admin.service.js';
 import * as contentService from '../content/content.service.js';
 import * as authService from '../auth/auth.service.js';
+import * as eventService from '../events/events.service.js';
 import { ok } from '../../shared/response.js';
 import { AppError } from '../../shared/errors.js';
 import type { JwtPayload } from '../auth/auth.types.js';
@@ -443,6 +446,78 @@ export async function handleReorderContactChannelsAdmin(
             parsedBody.data.updates || []
         );
         return reply.send(ok({ success: true }, 'จัดลำดับช่องทางติดต่อสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleGetScheduleAdminBundle(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const result = await eventService.getScheduleAdminBundle(req.server.ctx.db);
+        return reply.send(ok(result));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleCreateScheduleItemAdmin(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = createScheduleItemSchema.safeParse(req.body);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await eventService.createScheduleItemAdmin(req.server.ctx.db, parsed.data);
+        return reply.status(201).send(ok(result, 'เพิ่มรายการกำหนดการสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateScheduleItemAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = updateScheduleItemSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await eventService.updateScheduleItemAdmin(req.server.ctx.db, parsedParams.data.id, parsedBody.data);
+        return reply.send(ok(result, 'อัปเดตรายการกำหนดการสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleDeleteScheduleItemAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await eventService.deleteScheduleItemAdmin(req.server.ctx.db, parsedParams.data.id);
+        return reply.send(ok({ success: true }, 'ลบรายการกำหนดการสำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });

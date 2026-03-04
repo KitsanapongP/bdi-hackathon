@@ -79,3 +79,28 @@ export const reorderContactChannelsSchema = z.object({
         sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป'),
     })),
 });
+
+const scheduleAudienceEnum = z.enum(['public', 'all_users', 'approved_teams', 'specific_teams']);
+
+const scheduleTimeField = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'รูปแบบเวลาต้องเป็น HH:mm หรือ HH:mm:ss');
+
+export const createScheduleItemSchema = z.object({
+    dayId: z.number().int().positive('dayId ไม่ถูกต้อง'),
+    trackId: z.number().int().positive('trackId ไม่ถูกต้อง').nullable().optional(),
+    startTime: scheduleTimeField,
+    endTime: scheduleTimeField,
+    titleTh: z.string().trim().min(1, 'titleTh ต้องไม่ว่าง'),
+    titleEn: z.string().trim().min(1, 'titleEn ต้องไม่ว่าง'),
+    descriptionTh: nullableText,
+    descriptionEn: nullableText,
+    locationTh: nullableText,
+    locationEn: nullableText,
+    speakerTh: nullableText,
+    speakerEn: nullableText,
+    audience: scheduleAudienceEnum.optional(),
+    isHighlight: z.boolean().optional(),
+    sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป').optional(),
+    isEnabled: z.boolean().optional(),
+});
+
+export const updateScheduleItemSchema = createScheduleItemSchema.partial();
