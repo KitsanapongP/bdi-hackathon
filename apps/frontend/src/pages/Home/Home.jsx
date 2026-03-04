@@ -234,6 +234,24 @@ function HomePage() {
         return [otherRewards[0], championReward, otherRewards[1]];
     })();
 
+    const formatScheduleDateLabel = (dayDate) => {
+        if (!dayDate) return '-';
+        const parsed = new Date(dayDate);
+        if (Number.isNaN(parsed.getTime())) return dayDate;
+
+        return parsed.toLocaleDateString('th-TH', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+        });
+    };
+
+    const formatScheduleTime = (startTime, endTime) => {
+        const start = startTime?.substring(0, 5) || '--:--';
+        const end = endTime?.substring(0, 5) || '--:--';
+        return `${start} - ${end}`;
+    };
+
     /* Observe banner — when it leaves the viewport the pill nav slides up */
     useEffect(() => {
         const banner = bannerRef.current;
@@ -602,29 +620,35 @@ function HomePage() {
                                 </div>
                             ) : schedulesData && schedulesData.days && schedulesData.days.length > 0 ? (
                                 schedulesData.days.map((day, dIdx) => (
-                                    <div key={dIdx} className="gt-schedule-day-group" style={{ marginBottom: '30px' }}>
-                                        {schedulesData.days.length > 1 && (
-                                            <h3 style={{ marginBottom: '15px', color: 'var(--gt-text-primary)' }}>
-                                                {day.day_name_th || day.day_date}
-                                            </h3>
-                                        )}
-                                        {day.items.map((item, i) => (
-                                            <div key={item.item_id} className="gt-schedule-card gt-reveal active" style={{ transitionDelay: `${i * 80}ms` }}>
-                                                <div className="gt-time">
-                                                    {item.start_time?.substring(0, 5)} - {item.end_time?.substring(0, 5)}
-                                                </div>
-                                                <div>
-                                                    <h3>{item.title_th}</h3>
-                                                    {item.description_th && <p>{item.description_th}</p>}
-                                                    {(item.location_th || item.speaker_th) && (
-                                                        <div className="gt-schedule-meta" style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--gt-text-muted)', display: 'flex', gap: '15px' }}>
-                                                            {item.location_th && <span><Target size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {item.location_th}</span>}
-                                                            {item.speaker_th && <span><Users size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {item.speaker_th}</span>}
+                                    <div key={dIdx} className="gt-schedule-day-group gt-reveal active" style={{ transitionDelay: `${dIdx * 80}ms` }}>
+                                        <div className="gt-schedule-day-content">
+                                            <div className="gt-schedule-day-items">
+                                                {day.items.map((item, i) => (
+                                                    <div key={item.item_id} className="gt-schedule-card" style={{ transitionDelay: `${(dIdx + i) * 60}ms` }}>
+                                                        <div className="gt-time">
+                                                            {formatScheduleTime(item.start_time, item.end_time)}
                                                         </div>
-                                                    )}
+                                                        <div>
+                                                            <h3>{item.title_th}</h3>
+                                                            {item.description_th && <p>{item.description_th}</p>}
+                                                            {(item.location_th || item.speaker_th) && (
+                                                                <div className="gt-schedule-meta" style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--gt-text-muted)', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                                                                    {item.location_th && <span><Target size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {item.location_th}</span>}
+                                                                    {item.speaker_th && <span><Users size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {item.speaker_th}</span>}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="gt-schedule-day-header">
+                                                <Calendar size={18} />
+                                                <div>
+                                                    <h3>{day.day_name_th || 'วันกิจกรรม'}</h3>
+                                                    <div className="gt-schedule-day-date">{formatScheduleDateLabel(day.day_date)}</div>
                                                 </div>
                                             </div>
-                                        ))}
+                                        </div>
                                     </div>
                                 ))
                             ) : (

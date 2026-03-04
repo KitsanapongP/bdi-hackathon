@@ -782,29 +782,78 @@ section.gt-hero {
 .gt-schedule {
     display: grid;
     gap: 16px;
-    max-width: 720px;
+    width: 100%;
+    max-width: 1020px;
     margin: 0 auto;
 }
 
 
 .gt-schedule-day-group {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
-.gt-schedule-card {
     background: var(--gt-surface);
     border: 1px solid var(--gt-border);
     border-radius: var(--gt-radius);
-    padding: 22px 24px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.gt-schedule-day-content {
+    display: grid;
+    grid-template-columns: 210px 1fr;
+    gap: 14px;
+    align-items: start;
+}
+
+.gt-schedule-day-header {
+    order: -1;
     display: flex;
     align-items: flex-start;
-    gap: 20px;
+    gap: 10px;
+    color: var(--gt-primary);
+    background: var(--gt-bg);
+    border: 1px solid var(--gt-border);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.gt-schedule-day-header h3 {
+    margin: 0;
+    color: var(--gt-text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.gt-schedule-day-date {
+    margin-top: 4px;
+    color: var(--gt-text);
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    border-bottom: 2px solid var(--gt-primary);
+    padding-bottom: 2px;
+    display: inline-flex;
+}
+
+.gt-schedule-day-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.gt-schedule-card {
+    background: var(--gt-bg);
+    border: 1px solid var(--gt-border);
+    border-radius: 14px;
+    padding: 16px;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
     z-index: 2;
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 14px;
+    align-items: start;
 }
 
 .gt-schedule-card::before {
@@ -831,12 +880,13 @@ section.gt-hero {
 .gt-time {
     background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(59, 130, 246, 0.1));
     color: var(--gt-primary);
-    padding: 8px 16px;
+    padding: 6px 12px;
     border-radius: 10px;
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     white-space: nowrap;
     border: 1px solid rgba(124, 58, 237, 0.15);
+    width: fit-content;
 }
 
 .gt-schedule-card h3 {
@@ -1199,10 +1249,22 @@ section.gt-hero {
     }
 
     .gt-schedule-card {
-        flex-direction: column;
-        align-items: flex-start;
+        padding: 14px;
+        grid-template-columns: 1fr;
         gap: 10px;
-        padding: 18px 20px;
+    }
+
+    .gt-schedule-day-group {
+        padding: 14px;
+    }
+
+    .gt-schedule-day-content {
+        grid-template-columns: 1fr;
+    }
+
+    .gt-schedule-day-header {
+        order: -1;
+        align-items: center;
     }
 
     .gt-hero-sub {
