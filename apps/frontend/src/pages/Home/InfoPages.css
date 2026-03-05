@@ -95,6 +95,30 @@
     text-decoration: underline;
 }
 
+.gt-faq-list {
+    display: grid;
+    gap: 14px;
+}
+
+.gt-faq-item {
+    border: 1px solid var(--gt-border);
+    border-radius: 14px;
+    padding: 18px;
+    background: var(--gt-surface-alt);
+}
+
+.gt-faq-item h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--gt-text);
+}
+
+.gt-faq-item p {
+    margin: 10px 0 0;
+    color: var(--gt-text-muted);
+    line-height: 1.7;
+}
+
 @media (max-width: 900px) {
     .gt-contact-grid {
         grid-template-columns: 1fr;

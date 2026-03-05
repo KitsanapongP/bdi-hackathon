@@ -717,7 +717,7 @@ function HomePage() {
                                     <div className="gt-footer-col">
                                         <h4>Support</h4>
                                         <Link to="/home/contact">ติดต่อสอบถาม</Link>
-                                        <a href="#">FAQs</a>
+                                        <Link to="/home/faqs">FAQs</Link>
                                     </div>
                                     <div className="gt-footer-col">
                                         <h4>Follow us</h4>
