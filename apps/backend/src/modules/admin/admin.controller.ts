@@ -23,6 +23,11 @@ import { ok } from '../../shared/response.js';
 import { AppError } from '../../shared/errors.js';
 import type { JwtPayload } from '../auth/auth.types.js';
 
+function buildAttachmentHeader(fileName: string): string {
+    const safeName = encodeURIComponent(fileName || 'export.zip');
+    return `attachment; filename*=UTF-8''${safeName}`;
+}
+
 export async function handleGetAdminMe(req: FastifyRequest, reply: FastifyReply) {
     const user = req.user as JwtPayload;
     const freshUser = await authService.getUserById(req.server.ctx.db, user.userId);
@@ -537,6 +542,20 @@ export async function handleDeleteScheduleItemAdmin(req: FastifyRequest<{ Params
     try {
         await eventService.deleteScheduleItemAdmin(req.server.ctx.db, parsedParams.data.id);
         return reply.send(ok({ success: true }, 'ลบรายการกำหนดการสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleExportSubmittedVerificationBundle(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const result = await service.exportSubmittedVerificationBundle(req.server.ctx.db);
+        reply.header('Content-Type', 'application/zip');
+        reply.header('Content-Disposition', buildAttachmentHeader(result.fileName));
+        return reply.send(result.stream);
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });

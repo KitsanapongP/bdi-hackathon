@@ -903,11 +903,11 @@ function AdminLayout() {
 }
 
 function DashboardPage() {
-  const navigate = useNavigate()
   const { pushToast } = useAdminToast()
   const [selectedStatuses, setSelectedStatuses] = useState(['submitted', 'approved'])
   const [days, setDays] = useState(30)
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
   const [overview, setOverview] = useState(null)
 
   const fetchOverview = useCallback(async () => {
@@ -937,6 +937,48 @@ function DashboardPage() {
   useEffect(() => {
     fetchOverview()
   }, [fetchOverview])
+
+  const handleExportSubmittedTeams = useCallback(async () => {
+    try {
+      setExporting(true)
+      pushToast({
+        title: 'กำลังเริ่ม Export',
+        description: 'ระบบจะดึงเฉพาะทีมที่สถานะ submitted เท่านั้น',
+      })
+
+      const response = await fetch(apiUrl('/api/admin/exports/submitted-verification-bundle'), {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload?.message || 'ไม่สามารถ export ได้')
+      }
+
+      const blob = await response.blob()
+      const disposition = response.headers.get('content-disposition') || ''
+      const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+      const fileName = encodedName ? decodeURIComponent(encodedName) : `verification_export_${Date.now()}.zip`
+
+      const downloadUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = downloadUrl
+      anchor.download = fileName
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(downloadUrl)
+
+      pushToast({
+        title: 'Export สำเร็จ',
+        description: 'ไฟล์จะมีเฉพาะทีมสถานะ submitted พร้อมข้อมูลสมาชิกแต่ละทีม',
+      })
+    } catch (error) {
+      pushToast({ type: 'error', title: error?.message || 'ไม่สามารถ export ได้' })
+    } finally {
+      setExporting(false)
+    }
+  }, [pushToast])
 
   const statusCards = useMemo(() => {
     const map = new Map((overview?.statusCounts || []).map((item) => [item.status, item.count]))
@@ -972,16 +1014,22 @@ function DashboardPage() {
     <div className="ad-stack">
       <SectionHeading
         title="Admin Dashboard"
-        description="ภาพรวมทีมตามสถานะ, demographic, และตรวจชื่อซ้ำของผู้ส่งเข้าพิจารณา"
+        description="ภาพรวมทีมตามสถานะ, demographic, และตรวจชื่อซ้ำของผู้ส่งเข้าพิจารณา (ปุ่ม Export จะดึงเฉพาะทีม status = submitted)"
         right={
           <div className="ad-head-actions">
             <button type="button" className="ad-btn" onClick={fetchOverview}>
               <RefreshCw size={15} />
               Refresh
             </button>
-            <button type="button" className="ad-btn ad-btn-primary" onClick={() => navigate('/admin/review/queue')}>
-              <ClipboardCheck size={15} />
-              เปิด Review Queue
+            <button
+              type="button"
+              className="ad-btn ad-btn-primary"
+              onClick={handleExportSubmittedTeams}
+              disabled={exporting}
+              title="Export เฉพาะทีมสถานะ submitted"
+            >
+              <FolderArchive size={15} />
+              {exporting ? 'กำลัง Export...' : 'Export Submitted Teams'}
             </button>
           </div>
         }

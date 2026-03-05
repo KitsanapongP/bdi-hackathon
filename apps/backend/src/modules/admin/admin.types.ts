@@ -62,3 +62,65 @@ export interface DashboardDuplicateMemberRow {
     first_name_en: string | null;
     last_name_en: string | null;
 }
+
+export interface ExportSubmittedTeamRow {
+    team_id: number;
+    team_code: string;
+    team_name_th: string;
+    team_name_en: string;
+    status: string;
+    visibility: 'public' | 'private';
+    current_leader_user_id: number;
+    video_link: string | null;
+    approved_at: Date | null;
+    selected_at: Date | null;
+    rejected_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
+}
+
+export interface ExportTeamAdvisorRow {
+    team_id: number;
+    prefix: string | null;
+    first_name_th: string;
+    last_name_th: string;
+    first_name_en: string | null;
+    last_name_en: string | null;
+    email: string | null;
+    phone: string | null;
+    institution_name_th: string | null;
+    position: string | null;
+}
+
+export interface ExportTeamMemberRow {
+    team_id: number;
+    team_code: string;
+    team_name_th: string;
+    team_name_en: string;
+    team_status: string;
+    user_id: number;
+    user_name: string;
+    role: 'leader' | 'member';
+    member_status: 'active' | 'left' | 'removed';
+    joined_at: Date;
+    left_at: Date | null;
+    first_name_th: string | null;
+    last_name_th: string | null;
+    first_name_en: string | null;
+    last_name_en: string | null;
+    email: string | null;
+    phone: string | null;
+    institution_name_th: string | null;
+    institution_name_en: string | null;
+    gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+    birth_date: string | null;
+    education_level: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | null;
+    home_province: string | null;
+    verify_round_id: number | null;
+    is_profile_complete: number | null;
+    is_member_confirmed: number | null;
+    member_confirmed_at: Date | null;
+    member_unconfirmed_at: Date | null;
+    profile_completed_at: Date | null;
+    profile_updated_at: Date | null;
+}

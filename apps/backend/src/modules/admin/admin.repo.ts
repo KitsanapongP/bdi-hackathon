@@ -8,6 +8,9 @@ import type {
     DashboardTeamMemberCountRow,
     DashboardTeamStatus,
     DashboardTrendRow,
+    ExportSubmittedTeamRow,
+    ExportTeamAdvisorRow,
+    ExportTeamMemberRow,
 } from './admin.types.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import type { AllowlistInput, UpdateAllowlistInput } from './admin.schema.js';
@@ -311,4 +314,131 @@ export async function getDashboardDuplicateMembers(
         params
     );
     return rows as DashboardDuplicateMemberRow[];
+}
+
+export async function getSubmittedTeamsForExport(db: DB): Promise<ExportSubmittedTeamRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT
+            t.team_id,
+            t.team_code,
+            t.team_name_th,
+            t.team_name_en,
+            t.status,
+            t.visibility,
+            t.current_leader_user_id,
+            t.video_link,
+            t.approved_at,
+            t.selected_at,
+            t.rejected_at,
+            t.created_at,
+            t.updated_at
+        FROM team_teams t
+        WHERE t.deleted_at IS NULL
+          AND t.status = 'submitted'
+        ORDER BY t.team_id ASC
+    `);
+    return rows as ExportSubmittedTeamRow[];
+}
+
+export async function getTeamAdvisorsForExport(db: DB, teamIds: number[]): Promise<ExportTeamAdvisorRow[]> {
+    if (teamIds.length === 0) return [];
+
+    const params: Record<string, number> = {};
+    const tokens = teamIds.map((teamId, idx) => {
+        const key = `teamId${idx}`;
+        params[key] = teamId;
+        return `:${key}`;
+    });
+
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT
+            a.team_id,
+            a.prefix,
+            a.first_name_th,
+            a.last_name_th,
+            a.first_name_en,
+            a.last_name_en,
+            a.email,
+            a.phone,
+            a.institution_name_th,
+            a.position
+        FROM team_advisors a
+        WHERE a.team_id IN (${tokens.join(', ')})
+        ORDER BY a.team_id ASC, a.created_at ASC
+    `, params);
+
+    return rows as ExportTeamAdvisorRow[];
+}
+
+export async function getTeamMembersForExport(db: DB, teamIds: number[]): Promise<ExportTeamMemberRow[]> {
+    if (teamIds.length === 0) return [];
+
+    const params: Record<string, number> = {};
+    const tokens = teamIds.map((teamId, idx) => {
+        const key = `teamId${idx}`;
+        params[key] = teamId;
+        return `:${key}`;
+    });
+
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT
+            t.team_id,
+            t.team_code,
+            t.team_name_th,
+            t.team_name_en,
+            t.status AS team_status,
+            m.user_id,
+            u.user_name,
+            m.role,
+            m.member_status,
+            m.joined_at,
+            m.left_at,
+            u.first_name_th,
+            u.last_name_th,
+            u.first_name_en,
+            u.last_name_en,
+            u.email,
+            u.phone,
+            u.institution_name_th,
+            u.institution_name_en,
+            u.gender,
+            u.birth_date,
+            u.education_level,
+            u.home_province,
+            vr.verify_round_id,
+            vp.is_profile_complete,
+            vp.is_member_confirmed,
+            vp.member_confirmed_at,
+            vp.member_unconfirmed_at,
+            vp.completed_at AS profile_completed_at,
+            vp.updated_at AS profile_updated_at
+        FROM team_teams t
+        JOIN team_members m
+          ON m.team_id = t.team_id
+         AND m.member_status = 'active'
+        JOIN user_users u
+          ON u.user_id = m.user_id
+        LEFT JOIN (
+            SELECT v1.team_id, v1.verify_round_id
+            FROM verify_review_rounds v1
+            INNER JOIN (
+                SELECT team_id, MAX(round_no) AS max_round_no
+                FROM verify_review_rounds
+                GROUP BY team_id
+            ) latest
+                ON latest.team_id = v1.team_id
+               AND latest.max_round_no = v1.round_no
+        ) vr
+          ON vr.team_id = t.team_id
+        LEFT JOIN verify_member_profiles vp
+          ON vp.team_id = t.team_id
+         AND vp.user_id = m.user_id
+         AND vp.verify_round_id = vr.verify_round_id
+        WHERE t.team_id IN (${tokens.join(', ')})
+        ORDER BY t.team_id ASC,
+                 CASE WHEN m.role = 'leader' THEN 0 ELSE 1 END,
+                 m.joined_at ASC
+    `, params);
+
+    return rows as ExportTeamMemberRow[];
 }
