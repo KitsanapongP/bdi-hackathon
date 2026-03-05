@@ -65,7 +65,6 @@ import {
   approvedTeamsSeed,
   auditLogsSeed,
   dashboardDeadlines,
-  dashboardStats,
   returnedTeamsSeed,
   rewardsSeed,
   reviewTeamDetailsSeed,
@@ -256,6 +255,74 @@ function normalizeAdminMe(payload) {
       : null)
 
   return { isAdmin, user }
+}
+
+const dashboardStatusOptions = [
+  { value: 'submitted', label: 'Submitted', color: '#3b82f6' },
+  { value: 'approved', label: 'Approved', color: '#10b981' },
+  { value: 'rejected', label: 'Rejected', color: '#ef4444' },
+]
+
+const genderLabelMap = {
+  male: 'Male',
+  female: 'Female',
+  other: 'Other',
+  prefer_not_to_say: 'Prefer not to say',
+  unknown: 'Unknown',
+}
+
+function DashboardDonut({ values }) {
+  const total = values.reduce((sum, item) => sum + item.count, 0)
+  if (!total) {
+    return <div className="ad-donut-empty">No data</div>
+  }
+
+  let current = 0
+  const segments = values
+    .map((item) => {
+      const start = current
+      const end = current + (item.count / total) * 360
+      current = end
+      return `${item.color} ${start}deg ${end}deg`
+    })
+    .join(', ')
+
+  return (
+    <div className="ad-donut-wrap">
+      <div className="ad-donut" style={{ background: `conic-gradient(${segments})` }}>
+        <div>
+          <strong>{total}</strong>
+          <span>teams</span>
+        </div>
+      </div>
+      <div className="ad-donut-legend">
+        {values.map((item) => (
+          <div key={item.key}>
+            <span style={{ backgroundColor: item.color }} />
+            <strong>{item.label}</strong>
+            <small>{item.count}</small>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function DashboardBars({ rows, max = 0, valueKey = 'count', labelKey = 'label' }) {
+  const maxValue = max || rows.reduce((acc, row) => Math.max(acc, row[valueKey]), 0)
+  return (
+    <div className="ad-chart-bars">
+      {rows.map((row) => (
+        <div key={row[labelKey]}>
+          <span>{row[labelKey]}</span>
+          <div>
+            <i style={{ width: `${maxValue ? Math.max(6, (row[valueKey] / maxValue) * 100) : 0}%` }} />
+          </div>
+          <strong>{row[valueKey]}</strong>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function useAdminToast() {
@@ -837,24 +904,161 @@ function AdminLayout() {
 
 function DashboardPage() {
   const navigate = useNavigate()
+  const { pushToast } = useAdminToast()
+  const [selectedStatuses, setSelectedStatuses] = useState(['submitted', 'approved'])
+  const [days, setDays] = useState(30)
+  const [loading, setLoading] = useState(true)
+  const [overview, setOverview] = useState(null)
+
+  const fetchOverview = useCallback(async () => {
+    try {
+      setLoading(true)
+      const query = new URLSearchParams({
+        statuses: selectedStatuses.join(','),
+        days: String(days),
+      })
+      const response = await fetch(apiUrl(`/api/admin/dashboard/overview?${query.toString()}`), {
+        credentials: 'include',
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.message || 'load failed')
+      }
+      setOverview(payload.data)
+    } catch (error) {
+      console.error(error)
+      setOverview(null)
+      pushToast({ type: 'error', title: 'โหลด dashboard ไม่สำเร็จ' })
+    } finally {
+      setLoading(false)
+    }
+  }, [days, pushToast, selectedStatuses])
+
+  useEffect(() => {
+    fetchOverview()
+  }, [fetchOverview])
+
+  const statusCards = useMemo(() => {
+    const map = new Map((overview?.statusCounts || []).map((item) => [item.status, item.count]))
+    return dashboardStatusOptions.map((item) => ({
+      id: item.value,
+      label: item.label,
+      value: map.get(item.value) || 0,
+      color: item.color,
+    }))
+  }, [overview])
+
+  const teamSizeRows = useMemo(
+    () => (overview?.teamSizeBuckets || []).map((item) => ({ label: `${item.bucket} members`, count: item.count })),
+    [overview]
+  )
+
+  const genderRows = useMemo(
+    () =>
+      (overview?.genderCounts || [])
+        .map((item) => ({ label: genderLabelMap[item.gender] || item.gender, count: item.count }))
+        .filter((item) => item.count > 0),
+    [overview]
+  )
+
+  const provinceRows = useMemo(
+    () => (overview?.provinceCounts || []).slice(0, 8).map((item) => ({ label: item.province, count: item.count })),
+    [overview]
+  )
+
+  const duplicateRows = overview?.duplicateNames || []
+
   return (
     <div className="ad-stack">
       <SectionHeading
         title="Admin Dashboard"
-        description="ภาพรวมคิวตรวจสอบทีม, สถานะการแก้ไข และการจัดการเนื้อหาเว็บ"
+        description="ภาพรวมทีมตามสถานะ, demographic, และตรวจชื่อซ้ำของผู้ส่งเข้าพิจารณา"
         right={
-          <button type="button" className="ad-btn ad-btn-primary" onClick={() => navigate('/admin/review/queue')}>
-            <ClipboardCheck size={15} />
-            เปิด Review Queue
-          </button>
+          <div className="ad-head-actions">
+            <button type="button" className="ad-btn" onClick={fetchOverview}>
+              <RefreshCw size={15} />
+              Refresh
+            </button>
+            <button type="button" className="ad-btn ad-btn-primary" onClick={() => navigate('/admin/review/queue')}>
+              <ClipboardCheck size={15} />
+              เปิด Review Queue
+            </button>
+          </div>
         }
       />
 
+      <section className="ad-panel">
+        <div className="ad-dashboard-filters">
+          <strong>Status filter</strong>
+          <div className="ad-chip-row">
+            {dashboardStatusOptions.map((option) => {
+              const active = selectedStatuses.includes(option.value)
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`ad-chip-btn ${active ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedStatuses((prev) => {
+                      if (prev.includes(option.value)) {
+                        if (prev.length === 1) return prev
+                        return prev.filter((status) => status !== option.value)
+                      }
+                      return [...prev, option.value]
+                    })
+                  }}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+          <label className="ad-days-filter">
+            Trend days
+            <select value={days} onChange={(event) => setDays(Number(event.target.value))}>
+              <option value={14}>14</option>
+              <option value={30}>30</option>
+              <option value={60}>60</option>
+              <option value={90}>90</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
       <section className="ad-stat-grid">
-        {dashboardStats.map((item) => (
-          <article key={item.id} className={`ad-stat-card ${item.tone}`}>
+        {[
+          {
+            id: 'teamsCreated',
+            label: 'Teams Created',
+            value: overview?.totals?.teamsCreated ?? 0,
+            trend: 'ทีมที่ถูกสร้างทั้งหมด',
+            tone: 'info',
+          },
+          {
+            id: 'filtered',
+            label: 'Teams In Selected Statuses',
+            value: overview?.totals?.teamsInSelectedStatuses ?? 0,
+            trend: `filter: ${selectedStatuses.join(', ')}`,
+            tone: 'warn',
+          },
+          {
+            id: 'submittedOrApproved',
+            label: 'Submitted + Approved',
+            value: overview?.totals?.submittedOrApproved ?? 0,
+            trend: 'ตรงกับโจทย์ทีมที่ส่งเข้าพิจารณา',
+            tone: 'success',
+          },
+          {
+            id: 'members',
+            label: 'Members In Selection',
+            value: overview?.totals?.totalMembersInSelectedStatuses ?? 0,
+            trend: `${duplicateRows.length} duplicate-name groups`,
+            tone: 'neutral',
+          },
+        ].map((item) => (
+          <article key={item.id} className={`ad-stat-card ${item.tone} ${loading ? 'is-loading' : ''}`}>
             <span>{item.label}</span>
-            <strong>{item.value}</strong>
+            <strong>{loading ? '-' : item.value}</strong>
             <small>{item.trend}</small>
           </article>
         ))}
@@ -863,66 +1067,127 @@ function DashboardPage() {
       <section className="ad-two-col">
         <article className="ad-panel">
           <h3>
-            <Clock3 size={17} />
-            Upcoming Deadlines
+            <Filter size={17} />
+            Team Status Distribution
           </h3>
-          <div className="ad-timeline-mini">
-            {dashboardDeadlines.map((item) => (
-              <div key={item.id}>
-                <div>
-                  <strong>{item.name}</strong>
-                  <span>{formatDateTime(item.at)}</span>
-                </div>
-                <StatusBadge status={item.status === 'upcoming' ? 'IN_REVIEW' : 'SUBMITTED'} />
-              </div>
-            ))}
-          </div>
+          <DashboardDonut
+            values={statusCards.map((item) => ({
+              key: item.id,
+              label: item.label,
+              count: item.value,
+              color: item.color,
+            }))}
+          />
         </article>
 
         <article className="ad-panel">
           <h3>
-            <History size={17} />
-            Recent Audit Activity
+            <Users size={17} />
+            Team Size Distribution
           </h3>
-          <div className="ad-list-mini">
-            {auditLogsSeed.slice(0, 4).map((item) => (
-              <div key={item.id}>
-                <strong>{item.actionType}</strong>
-                <span>
-                  {item.actor} • {formatDateTime(item.createdAt)}
-                </span>
-              </div>
-            ))}
-          </div>
+          <DashboardBars rows={teamSizeRows} />
+        </article>
+      </section>
+
+      <section className="ad-two-col">
+        <article className="ad-panel">
+          <h3>
+            <Users size={17} />
+            Gender Breakdown
+          </h3>
+          <DashboardBars rows={genderRows} />
+        </article>
+
+        <article className="ad-panel">
+          <h3>
+            <Globe size={17} />
+            Top Provinces
+          </h3>
+          <DashboardBars rows={provinceRows} />
         </article>
       </section>
 
       <section className="ad-panel">
         <h3>
-          <ListChecks size={17} />
-          Fast Links
+          <Clock3 size={17} />
+          Status Trend (Last {days} Days)
         </h3>
-        <div className="ad-quick-grid">
-          <button type="button" onClick={() => navigate('/admin/static/sponsors')}>
-            <Building2 size={16} />
-            Manage Sponsors
-          </button>
-          <button type="button" onClick={() => navigate('/admin/static/winners')}>
-            <Crown size={16} />
-            Manage Winners
-          </button>
-          <button type="button" onClick={() => navigate('/admin/static/schedule')}>
-            <Clock3 size={16} />
-            Manage Schedule
-          </button>
-          <button type="button" onClick={() => navigate('/admin/review/returned')}>
-            <RotateCcw size={16} />
-            Returned Monitor
-          </button>
-          <button type="button" onClick={() => navigate('/admin/settings')}>
-            <Settings size={16} />
-            Site Settings
-          </button>
+        <div className="ad-trend-grid">
+          {(overview?.submissionTrend || []).slice(-14).map((row) => {
+            const total = row.submitted + row.approved + row.rejected
+            return (
+              <div key={row.date}>
+                <div>
+                  <i style={{ height: `${Math.max(4, row.submitted * 8)}px`, background: '#3b82f6' }} />
+                  <i style={{ height: `${Math.max(4, row.approved * 8)}px`, background: '#10b981' }} />
+                  <i style={{ height: `${Math.max(4, row.rejected * 8)}px`, background: '#ef4444' }} />
+                </div>
+                <strong>{total}</strong>
+                <span>{row.date.slice(5)}</span>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="ad-panel">
+        <h3>
+          <ShieldAlert size={17} />
+          Duplicate Real Names
+        </h3>
+        <div className="ad-duplicate-list">
+          {duplicateRows.length ? (
+            duplicateRows.slice(0, 10).map((group) => (
+              <div key={group.normalizedName}>
+                <div>
+                  <strong>{group.fullNameTh || group.fullNameEn || group.normalizedName}</strong>
+                  <span>{group.count} records</span>
+                </div>
+                <small>
+                  {group.members
+                    .map((member) => `${member.userName} (${member.teamCode}, ${member.status})`)
+                    .join(' | ')}
+                </small>
+              </div>
+            ))
+          ) : (
+            <div className="ad-table-empty">ไม่พบชื่อซ้ำในสถานะที่เลือก</div>
+          )}
+        </div>
+      </section>
+
+      <section className="ad-panel">
+        <h3>
+          <History size={17} />
+          Recent Audit Activity
+        </h3>
+        <div className="ad-list-mini">
+          {auditLogsSeed.slice(0, 4).map((item) => (
+            <div key={item.id}>
+              <strong>{item.actionType}</strong>
+              <span>
+                {item.actor} • {formatDateTime(item.createdAt)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="ad-panel">
+        <h3>
+          <ListChecks size={17} />
+          Upcoming Deadlines
+        </h3>
+        <div className="ad-timeline-mini">
+          {dashboardDeadlines.map((item) => (
+            <div key={item.id}>
+              <div>
+                <strong>{item.name}</strong>
+                <span>{formatDateTime(item.at)}</span>
+              </div>
+              <StatusBadge status={item.status === 'upcoming' ? 'IN_REVIEW' : 'SUBMITTED'} />
+            </div>
+          ))}
         </div>
       </section>
     </div>

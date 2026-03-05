@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import {
     allowlistSchema,
+    dashboardQuerySchema,
     updateAllowlistSchema,
     idParamSchema,
     contactIdParamSchema,
@@ -32,6 +33,24 @@ export async function handleGetAdminMe(req: FastifyRequest, reply: FastifyReply)
         accessRole: freshUser.accessRole,
         is_admin: freshUser.accessRole === 'admin',
     }));
+}
+
+export async function handleGetDashboardOverview(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = dashboardQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูล query ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await service.getDashboardOverview(req.server.ctx.db, parsed.data);
+        return reply.send(ok(result));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
 }
 
 export async function handleGetAllowlist(req: FastifyRequest, reply: FastifyReply) {

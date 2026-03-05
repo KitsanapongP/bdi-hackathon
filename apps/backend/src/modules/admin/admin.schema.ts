@@ -16,6 +16,27 @@ export const updateAllowlistSchema = z.object({
 
 export type UpdateAllowlistInput = z.infer<typeof updateAllowlistSchema>;
 
+export const dashboardStatusEnum = z.enum(['submitted', 'approved', 'rejected']);
+
+export const dashboardQuerySchema = z.object({
+    statuses: z
+        .string()
+        .optional()
+        .transform((value) => {
+            if (!value) return ['submitted', 'approved', 'rejected'] as const;
+            return value
+                .split(',')
+                .map((item) => item.trim().toLowerCase())
+                .filter((item): item is 'submitted' | 'approved' | 'rejected' =>
+                    item === 'submitted' || item === 'approved' || item === 'rejected'
+                );
+        })
+        .refine((items) => items.length > 0, 'statuses ต้องมีอย่างน้อย 1 ค่า'),
+    days: z.coerce.number().int().min(7).max(180).default(30),
+});
+
+export type DashboardQueryInput = z.infer<typeof dashboardQuerySchema>;
+
 export const idParamSchema = z.object({
     id: z.coerce.number().int().positive('ID ไม่ถูกต้อง'),
 });

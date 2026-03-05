@@ -3,6 +3,7 @@ import { authRequired } from '../../middleware/authRequired.js';
 import { isAdmin } from '../../middleware/isAdmin.js';
 import {
     handleGetAllowlist,
+    handleGetDashboardOverview,
     handleCreateAllowlist,
     handleUpdateAllowlist,
     handleGetAdminMe,
@@ -36,6 +37,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.addHook('preHandler', isAdmin);
 
     fastify.get('/me', handleGetAdminMe);
+    fastify.get('/dashboard/overview', handleGetDashboardOverview);
     fastify.get('/allowlist', handleGetAllowlist);
     fastify.post('/allowlist', handleCreateAllowlist);
     fastify.patch('/allowlist/:allowId', handleUpdateAllowlist);
