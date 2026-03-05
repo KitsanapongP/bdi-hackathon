@@ -8,6 +8,7 @@ export interface TeamRow {
     status: 'draft' | 'forming' | 'ready' | 'submitted' | 'approved' | 'returned' | 'archived' | 'disbanded';
     approved_at: Date | null;
     selected_at: Date | null;
+    video_link: string | null;
     created_at: Date;
     updated_at: Date;
     deleted_at: Date | null;

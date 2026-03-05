@@ -39,6 +39,8 @@ import {
     Eye,
     Download,
     Edit2,
+    Link,
+    Paperclip,
 } from 'lucide-react';
 import { TEAM_STATUS_CONFIG } from './mockData';
 import { apiUrl } from '../../lib/api';
@@ -57,6 +59,7 @@ const CARDS = [
     { id: 'rules', icon: <BookOpen />, label: 'กติกา', color: '#ec4899' },
     { id: 'schedule', icon: <Calendar />, label: 'กำหนดการ', color: '#8b5cf6' },
     { id: 'manage', icon: <Settings />, label: 'จัดการทีม', color: '#6366f1' },
+    { id: 'advisor', icon: <GraduationCap />, label: 'อาจารย์ที่ปรึกษา', color: '#6366f1' },
     { id: 'contact', icon: <MessageSquare />, label: 'ติดต่อผู้จัด', color: '#0ea5e9' },
     { id: 'help', icon: <HelpCircle />, label: 'ช่วยเหลือ', color: '#10b981' },
 ];
@@ -159,6 +162,16 @@ export default function TeamContent({ user }) {
     const [profileSaving, setProfileSaving] = useState(false);
     const [disbandReason, setDisbandReason] = useState('');
 
+    // ── Submission state ──
+    const [submissionData, setSubmissionData] = useState(null);
+    const [submissionLoading, setSubmissionLoading] = useState(false);
+    const [videoLinkInput, setVideoLinkInput] = useState('');
+    const [videoLinkSaving, setVideoLinkSaving] = useState(false);
+
+    // ── Advisor state ──
+    const [advisorForm, setAdvisorForm] = useState({ open: false, editId: null, prefix: '', firstNameTh: '', lastNameTh: '', firstNameEn: '', lastNameEn: '', email: '', phone: '', institutionNameTh: '', position: '' });
+    const resetAdvisorForm = () => setAdvisorForm({ open: false, editId: null, prefix: '', firstNameTh: '', lastNameTh: '', firstNameEn: '', lastNameEn: '', email: '', phone: '', institutionNameTh: '', position: '' });
+
     // โ”€โ”€ Verification fetch (hook must be before ANY conditional returns) โ”€โ”€
     const fetchVerifyStatus = useCallback(async () => {
         if (!team?.id) return;
@@ -198,6 +211,27 @@ export default function TeamContent({ user }) {
             fetchVerifyStatus();
         }
     }, [selectedCard, loadProfileForVerification, fetchVerifyStatus]);
+
+    // ── Submission fetch ──
+    const fetchSubmissionData = useCallback(async () => {
+        if (!team?.id) return;
+        setSubmissionLoading(true);
+        try {
+            const res = await fetch(apiUrl(`/api/submissions/team/${team.id}`), { credentials: 'include' });
+            const payload = await res.json();
+            if (payload.ok) {
+                setSubmissionData(payload.data);
+                setVideoLinkInput(payload.data.videoLink || '');
+            }
+        } catch (err) { console.error('failed to fetch submission data', err); }
+        finally { setSubmissionLoading(false); }
+    }, [team?.id]);
+
+    useEffect(() => {
+        if (selectedCard === 'works' || selectedCard === 'advisor') {
+            fetchSubmissionData();
+        }
+    }, [selectedCard, fetchSubmissionData]);
 
     const openConfirm = (title, message, onConfirm, variant = 'danger') => {
         setConfirmState({ open: true, title, message, onConfirm, variant, hideCancel: false, confirmLabel: 'ยืนยัน', cancelLabel: 'ยกเลิก' });
@@ -1039,7 +1073,137 @@ export default function TeamContent({ user }) {
 
     const DETAIL_MAP = {
         announce: () => renderSimpleDetail('ประกาศ', <Megaphone size={20} />, <div className="gl-empty-state"><Megaphone size={40} /><h3>ยังไม่มีประกาศ</h3></div>),
-        works: () => renderSimpleDetail('ส่งผลงาน', <Award size={20} />, <div className="gl-empty-state"><Award size={40} /><h3>ยังไม่มีผลงานที่ส่ง</h3></div>),
+        works: () => {
+            if (submissionLoading && !submissionData) return renderSimpleDetail('ส่งผลงาน', <Award size={20} />, <div className="gl-empty-state"><Loader2 size={40} /><h3>กำลังโหลด...</h3></div>);
+
+            const files = submissionData?.files || [];
+            const handleSaveVideoLink = async () => {
+                if (!team?.id) return;
+                setVideoLinkSaving(true);
+                try {
+                    const res = await fetch(apiUrl(`/api/submissions/team/${team.id}/video-link`), {
+                        method: 'PUT', credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ videoLink: videoLinkInput.trim() || null }),
+                    });
+                    const payload = await res.json();
+                    if (!payload.ok) throw new Error(payload.message || 'บันทึกไม่สำเร็จ');
+                    showToast('บันทึกลิงก์วิดีโอสำเร็จ', 'success');
+                    fetchSubmissionData();
+                } catch (err) { showToast(getReadableErrorMessage(err, 'บันทึกไม่สำเร็จ'), 'error'); }
+                finally { setVideoLinkSaving(false); }
+            };
+
+            const handleUploadSubmissionFiles = async (fileList) => {
+                if (!team?.id || !fileList?.length) return;
+                await withAction(async () => {
+                    const formData = new FormData();
+                    for (const f of fileList) formData.append('files', f);
+                    const res = await fetch(apiUrl(`/api/submissions/team/${team.id}/files`), {
+                        method: 'POST', credentials: 'include', body: formData,
+                    });
+                    const payload = await res.json();
+                    if (!payload.ok) throw new Error(payload.message || 'อัปโหลดไม่สำเร็จ');
+                    showToast(`อัปโหลดสำเร็จ ${payload.data.length} ไฟล์`, 'success');
+                    fetchSubmissionData();
+                }, { toastError: true });
+            };
+
+            const handleDeleteSubmissionFile = (fileId, fileName) => {
+                openConfirm('ลบไฟล์', `ต้องการลบไฟล์ "${fileName}" หรือไม่?`, () => {
+                    closeConfirm();
+                    withAction(async () => {
+                        const res = await fetch(apiUrl(`/api/submissions/team/${team.id}/files/${fileId}`), {
+                            method: 'DELETE', credentials: 'include',
+                        });
+                        const payload = await res.json();
+                        if (!payload.ok) throw new Error(payload.message || 'ลบไม่สำเร็จ');
+                        showToast('ลบไฟล์สำเร็จ', 'success');
+                        fetchSubmissionData();
+                    }, { toastError: true });
+                }, 'danger');
+            };
+
+            return renderSimpleDetail('ส่งผลงาน', <Award size={20} />, (
+                <div>
+                    <div className="vf-info-banner">
+                        <Info size={16} />
+                        <span>หัวหน้าทีมเท่านั้นที่สามารถ่ส่งลิงก์วิดีโอและแนบไฟล์ผลงานได้</span>
+                    </div>
+
+                    {/* Video Link Section */}
+                    <div className="gl-team-info-card">
+                        <span className="gl-team-info-label"><Link size={13} /> ลิงก์วิดีโอ</span>
+                        <p className="vf-hint" style={{ marginBottom: 8 }}>ระบุลิงก์ YouTube หรือ Google Drive เท่านั้น</p>
+                        <div className="sub-video-input-row">
+                            <input
+                                className="pf-input"
+                                value={videoLinkInput}
+                                onChange={(e) => setVideoLinkInput(e.target.value)}
+                                placeholder="https://www.youtube.com/watch?v=... หรือ https://drive.google.com/..."
+                                disabled={!isLeader || videoLinkSaving}
+                            />
+                            {isLeader && (
+                                <button className="gl-action-btn gl-submit-btn" onClick={handleSaveVideoLink} disabled={videoLinkSaving}>
+                                    {videoLinkSaving ? <Loader2 size={16} /> : <Save size={16} />}
+                                    บันทึก
+                                </button>
+                            )}
+                        </div>
+                        {submissionData?.videoLink && (
+                            <a href={submissionData.videoLink} target="_blank" rel="noopener noreferrer" className="sub-video-link-preview">
+                                <Link size={14} /> {submissionData.videoLink}
+                            </a>
+                        )}
+                    </div>
+
+                    {/* File Attachments Section */}
+                    <div className="gl-team-info-card">
+                        <span className="gl-team-info-label"><Paperclip size={13} /> ไฟล์แนบผลงาน ({files.length} ไฟล์)</span>
+                        <p className="vf-hint" style={{ marginBottom: 8 }}>รองรับไฟล์ .pdf, .docx, .png, .pptx</p>
+
+                        {files.length === 0 && (
+                            <div className="vf-empty-docs">
+                                <Upload size={28} />
+                                <span>ยังไม่มีไฟล์แนบ</span>
+                            </div>
+                        )}
+
+                        {files.map(f => (
+                            <div key={f.file_id} className="vf-doc-row">
+                                <div className="vf-doc-info">
+                                    <FileText size={16} />
+                                    <span className="vf-doc-name">{f.file_original_name}</span>
+                                    <span className="vf-doc-size">{(f.file_size_bytes / 1024).toFixed(0)} KB</span>
+                                </div>
+                                <div className="vf-doc-actions">
+                                    <a href={apiUrl(`/api/submissions/team/${team.id}/files/${f.file_id}/download`)} target="_blank" rel="noopener noreferrer" className="vf-doc-open">
+                                        <Eye size={14} /> ดู
+                                    </a>
+                                    <a href={apiUrl(`/api/submissions/team/${team.id}/files/${f.file_id}/download?download=1`)} target="_blank" rel="noopener noreferrer" className="vf-doc-download">
+                                        <Download size={14} /> ดาวน์โหลด
+                                    </a>
+                                    {isLeader && (
+                                        <button className="vf-doc-delete" disabled={actionLoading} onClick={() => handleDeleteSubmissionFile(f.file_id, f.file_original_name)}>
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+
+                        {isLeader && (
+                            <label className="vf-upload-btn">
+                                <Upload size={16} /> เลือกไฟล์
+                                <input type="file" accept=".pdf,.docx,.png,.pptx,.jpg,.jpeg" multiple hidden
+                                    onChange={(e) => { handleUploadSubmissionFiles(Array.from(e.target.files)); e.target.value = ''; }}
+                                />
+                            </label>
+                        )}
+                    </div>
+                </div>
+            ));
+        },
         verify: () => {
             if (!verifyData && !verifyLoading) fetchVerifyStatus();
             if (verifyLoading) return renderSimpleDetail('ยืนยันตัวตน', <ShieldCheck size={20} />, <div className="gl-empty-state"><ShieldCheck size={40} /><h3>กำลังโหลด...</h3></div>);
@@ -1337,6 +1501,170 @@ export default function TeamContent({ user }) {
         rules: () => renderSimpleDetail('กติกา', <BookOpen size={20} />, <div className="gl-info-card"><p>แต่ละทีมต้องมีสมาชิก 2-5 คน</p></div>),
         schedule: () => renderSimpleDetail('กำหนดการ', <Calendar size={20} />, <div className="gl-info-card"><p>กำหนดการจะแจ้งโดยผู้จัดงาน</p></div>),
         manage: renderManage,
+        advisor: () => {
+            if (submissionLoading && !submissionData) return renderSimpleDetail('อาจารย์ที่ปรึกษา', <GraduationCap size={20} />, <div className="gl-empty-state"><Loader2 size={40} /><h3>กำลังโหลด...</h3></div>);
+
+            const advisors = submissionData?.advisors || [];
+
+            const handleSaveAdvisor = async () => {
+                if (!team?.id) return;
+                const body = {
+                    prefix: advisorForm.prefix || undefined,
+                    firstNameTh: advisorForm.firstNameTh,
+                    lastNameTh: advisorForm.lastNameTh,
+                    firstNameEn: advisorForm.firstNameEn || undefined,
+                    lastNameEn: advisorForm.lastNameEn || undefined,
+                    email: advisorForm.email || undefined,
+                    phone: advisorForm.phone || undefined,
+                    institutionNameTh: advisorForm.institutionNameTh || undefined,
+                    position: advisorForm.position || undefined,
+                };
+                if (!body.firstNameTh || !body.lastNameTh) {
+                    showToast('กรุณากรอกชื่อและนามสกุล (ภาษาไทย)', 'error');
+                    return;
+                }
+                await withAction(async () => {
+                    const isEdit = !!advisorForm.editId;
+                    const url = isEdit
+                        ? apiUrl(`/api/submissions/team/${team.id}/advisors/${advisorForm.editId}`)
+                        : apiUrl(`/api/submissions/team/${team.id}/advisors`);
+                    const res = await fetch(url, {
+                        method: isEdit ? 'PUT' : 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body),
+                    });
+                    const payload = await res.json();
+                    if (!payload.ok) throw new Error(payload.message || 'บันทึกไม่สำเร็จ');
+                    showToast(isEdit ? 'แก้ไขข้อมูลสำเร็จ' : 'เพิ่มอาจารย์ที่ปรึกษาสำเร็จ', 'success');
+                    resetAdvisorForm();
+                    fetchSubmissionData();
+                }, { toastError: true });
+            };
+
+            const handleDeleteAdvisor = (advisorId, name) => {
+                openConfirm('ลบอาจารย์ที่ปรึกษา', `ต้องการลบ "${name}" หรือไม่?`, () => {
+                    closeConfirm();
+                    withAction(async () => {
+                        const res = await fetch(apiUrl(`/api/submissions/team/${team.id}/advisors/${advisorId}`), {
+                            method: 'DELETE', credentials: 'include',
+                        });
+                        const payload = await res.json();
+                        if (!payload.ok) throw new Error(payload.message);
+                        showToast('ลบอาจารย์ที่ปรึกษาสำเร็จ', 'success');
+                        fetchSubmissionData();
+                    }, { toastError: true });
+                }, 'danger');
+            };
+
+            const handleEditAdvisor = (adv) => {
+                setAdvisorForm({
+                    open: true, editId: adv.advisor_id,
+                    prefix: adv.prefix || '', firstNameTh: adv.first_name_th || '', lastNameTh: adv.last_name_th || '',
+                    firstNameEn: adv.first_name_en || '', lastNameEn: adv.last_name_en || '',
+                    email: adv.email || '', phone: adv.phone || '',
+                    institutionNameTh: adv.institution_name_th || '', position: adv.position || '',
+                });
+            };
+
+            return renderSimpleDetail('อาจารย์ที่ปรึกษา', <GraduationCap size={20} />, (
+                <div>
+                    <div className="vf-info-banner">
+                        <Info size={16} />
+                        <span>1 ทีมสามารถมีอาจารย์ที่ปรึกษาได้หลายท่าน แต่อาจารย์ 1 ท่านเป็นที่ปรึกษาได้แค่ทีมเดียว หัวหน้าทีมเท่านั้นที่สามารถจัดการได้</span>
+                    </div>
+
+                    {/* Advisor list */}
+                    <div className="gl-team-info-card">
+                        <span className="gl-team-info-label"><GraduationCap size={13} /> รายชื่ออาจารย์ที่ปรึกษา ({advisors.length} ท่าน)</span>
+
+                        {advisors.length === 0 && (
+                            <div className="vf-empty-docs">
+                                <GraduationCap size={28} />
+                                <span>ยังไม่มีอาจารย์ที่ปรึกษา</span>
+                            </div>
+                        )}
+
+                        {advisors.map(adv => (
+                            <div key={adv.advisor_id} className="sub-advisor-card">
+                                <div className="sub-advisor-info">
+                                    <div className="sub-advisor-name">
+                                        {adv.prefix && <span>{adv.prefix}</span>}
+                                        {adv.first_name_th} {adv.last_name_th}
+                                        {adv.first_name_en && <span className="sub-advisor-en"> ({adv.first_name_en} {adv.last_name_en})</span>}
+                                    </div>
+                                    {adv.position && <div className="sub-advisor-detail">ตำแหน่ง: {adv.position}</div>}
+                                    {adv.institution_name_th && <div className="sub-advisor-detail">สถาบัน: {adv.institution_name_th}</div>}
+                                    {adv.email && <div className="sub-advisor-detail">Email: {adv.email}</div>}
+                                    {adv.phone && <div className="sub-advisor-detail">โทร: {adv.phone}</div>}
+                                </div>
+                                {isLeader && (
+                                    <div className="sub-advisor-actions">
+                                        <button className="vf-doc-open" onClick={() => handleEditAdvisor(adv)}><Edit2 size={14} /> แก้ไข</button>
+                                        <button className="vf-doc-delete" disabled={actionLoading} onClick={() => handleDeleteAdvisor(adv.advisor_id, `${adv.first_name_th} ${adv.last_name_th}`)}>
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Add/Edit advisor form */}
+                    {isLeader && (
+                        <div className="gl-team-info-card">
+                            <span className="gl-team-info-label"><Plus size={13} /> {advisorForm.editId ? 'แก้ไขอาจารย์ที่ปรึกษา' : 'เพิ่มอาจารย์ที่ปรึกษา'}</span>
+                            <div className="pf-form-grid" style={{ marginTop: 8 }}>
+                                <div className="pf-field">
+                                    <span className="pf-label">คำนำหน้า</span>
+                                    <input className="pf-input" value={advisorForm.prefix} onChange={e => setAdvisorForm(f => ({ ...f, prefix: e.target.value }))} placeholder="เช่น ผศ.ดร." />
+                                </div>
+                                <div className="pf-field">
+                                    <span className="pf-label">ชื่อ (TH) *</span>
+                                    <input className="pf-input" value={advisorForm.firstNameTh} onChange={e => setAdvisorForm(f => ({ ...f, firstNameTh: e.target.value }))} placeholder="ชื่อภาษาไทย" />
+                                </div>
+                                <div className="pf-field">
+                                    <span className="pf-label">นามสกุล (TH) *</span>
+                                    <input className="pf-input" value={advisorForm.lastNameTh} onChange={e => setAdvisorForm(f => ({ ...f, lastNameTh: e.target.value }))} placeholder="นามสกุลภาษาไทย" />
+                                </div>
+                                <div className="pf-field">
+                                    <span className="pf-label">First Name (EN)</span>
+                                    <input className="pf-input" value={advisorForm.firstNameEn} onChange={e => setAdvisorForm(f => ({ ...f, firstNameEn: e.target.value }))} placeholder="First name" />
+                                </div>
+                                <div className="pf-field">
+                                    <span className="pf-label">Last Name (EN)</span>
+                                    <input className="pf-input" value={advisorForm.lastNameEn} onChange={e => setAdvisorForm(f => ({ ...f, lastNameEn: e.target.value }))} placeholder="Last name" />
+                                </div>
+                                <div className="pf-field">
+                                    <span className="pf-label">Email</span>
+                                    <input className="pf-input" type="email" value={advisorForm.email} onChange={e => setAdvisorForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" />
+                                </div>
+                                <div className="pf-field">
+                                    <span className="pf-label">เบอร์โทร</span>
+                                    <input className="pf-input" value={advisorForm.phone} onChange={e => setAdvisorForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="08x-xxx-xxxx" maxLength={10} />
+                                </div>
+                                <div className="pf-field">
+                                    <span className="pf-label">สถาบัน</span>
+                                    <input className="pf-input" value={advisorForm.institutionNameTh} onChange={e => setAdvisorForm(f => ({ ...f, institutionNameTh: e.target.value }))} placeholder="เช่น มหาวิทยาลัยขอนแก่น" />
+                                </div>
+                                <div className="pf-field full">
+                                    <span className="pf-label">ตำแหน่งทางวิชาการ</span>
+                                    <input className="pf-input" value={advisorForm.position} onChange={e => setAdvisorForm(f => ({ ...f, position: e.target.value }))} placeholder="เช่น ผู้ช่วยศาสตราจารย์" />
+                                </div>
+                            </div>
+                            <div className="pf-actions" style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                                <button className="gl-action-btn gl-submit-btn" onClick={handleSaveAdvisor} disabled={actionLoading}>
+                                    <Save size={16} /> {advisorForm.editId ? 'บันทึก' : 'เพิ่ม'}
+                                </button>
+                                {advisorForm.editId && (
+                                    <button className="gt-btn" onClick={resetAdvisorForm}>ยกเลิก</button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            ));
+        },
         contact: () => renderSimpleDetail('ติดต่อผู้จัด', <MessageSquare size={20} />, <div className="gl-info-card"><p>ติดต่อ: gameevent@university.ac.th</p></div>),
         help: () => renderSimpleDetail('ช่วยเหลือ', <HelpCircle size={20} />, <div className="gl-info-card"><p>คำถามที่พบบ่อยจะอัปเดตเร็ว ๆ นี้</p></div>),
     };

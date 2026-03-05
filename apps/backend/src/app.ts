@@ -21,6 +21,7 @@ import { teamsRoutes } from './modules/teams/teams.routes.js';
 import { sysLogsRoutes } from './modules/sys-logs/sys-logs.routes.js';
 import { contentRoutes } from './modules/content/content.routes.js';
 import { verificationRoutes } from './modules/verification/verification.routes.js';
+import { submissionsRoutes } from './modules/submissions/submissions.routes.js';
 
 export type AppContext = { env: Env; db: DB };
 
@@ -131,6 +132,7 @@ export function buildApp(ctx: AppContext) {
   app.register(sysLogsRoutes, { prefix: '/api/sys-logs' });
   app.register(contentRoutes, { prefix: '/api/content' });
   app.register(verificationRoutes, { prefix: '/api/verification' });
+  app.register(submissionsRoutes, { prefix: '/api/submissions' });
 
   // Log incoming request body
   app.addHook('preHandler', async (request, reply) => {
