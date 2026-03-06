@@ -228,7 +228,7 @@ export default function TeamContent({ user }) {
     }, [team?.id]);
 
     useEffect(() => {
-        if (selectedCard === 'works' || selectedCard === 'advisor') {
+        if (selectedCard === 'works' || selectedCard === 'advisor' || selectedCard === 'verify') {
             fetchSubmissionData();
         }
     }, [selectedCard, fetchSubmissionData]);
@@ -901,6 +901,21 @@ export default function TeamContent({ user }) {
                     throw new Error(`สมาชิกที่ยังไม่ยืนยันเอกสาร: ${names}`);
                 }
 
+                const submissionRes = await fetch(apiUrl(`/api/submissions/team/${team.id}`), { credentials: 'include' });
+                const submissionPayload = await submissionRes.json();
+                if (!submissionPayload.ok) throw new Error(submissionPayload.message || 'ไม่สามารถตรวจสอบข้อมูลส่งผลงานได้');
+                const latestSubmission = submissionPayload?.data || {};
+                const hasSubmissionFile = Array.isArray(latestSubmission.files) && latestSubmission.files.length > 0;
+                const hasSubmissionLink = String(latestSubmission.videoLink || '').trim().length > 0;
+                const hasAdvisor = Array.isArray(latestSubmission.advisors) && latestSubmission.advisors.length > 0;
+                if (!hasSubmissionFile || !hasSubmissionLink || !hasAdvisor) {
+                    const missingSubmissionParts = [];
+                    if (!hasSubmissionFile) missingSubmissionParts.push('ไฟล์ผลงาน');
+                    if (!hasSubmissionLink) missingSubmissionParts.push('ลิงก์ผลงาน');
+                    if (!hasAdvisor) missingSubmissionParts.push('อาจารย์ที่ปรึกษา');
+                    throw new Error(`ยังส่งเอกสารทั้งทีมไม่ได้ กรุณากรอกข้อมูลให้ครบ: ${missingSubmissionParts.join(', ')}`);
+                }
+
                 const res = await fetch(apiUrl(`/api/verification/team/${team.id}/submit`), {
                     method: 'POST', credentials: 'include',
                 });
@@ -1216,6 +1231,12 @@ export default function TeamContent({ user }) {
             const isTeamSizeValid = memberCount >= 2 && memberCount <= MAX_MEMBERS;
             const isSubmitted = vd?.isTeamSubmitted;
             const myDocs = vd?.myDocuments || [];
+            const submissionFiles = submissionData?.files || [];
+            const submissionAdvisors = submissionData?.advisors || [];
+            const hasSubmissionFile = submissionFiles.length > 0;
+            const hasSubmissionLink = String(submissionData?.videoLink || '').trim().length > 0;
+            const hasSubmissionAdvisor = submissionAdvisors.length > 0;
+            const isSubmissionReadyForTeamSubmit = hasSubmissionFile && hasSubmissionLink && hasSubmissionAdvisor;
             const profileComplete = isProfileComplete(profileData);
             const missingFields = getProfileMissingFields(profileData);
             const canEditGeneralInfo = !isSubmitted && !myConfirmed;
@@ -1469,11 +1490,14 @@ export default function TeamContent({ user }) {
                                 <AlertTriangle size={14} />
                                 <span>เมื่อส่งเอกสารยืนยันตัวตนทั้งทีมแล้ว จะไม่สามารถยกเลิกหรือแก้ไขได้</span>
                             </div>
-                            <button className="vf-action-btn vf-btn-submit" disabled={actionLoading || !allConfirmed || !isTeamSizeValid} onClick={handleSubmitTeam}>
+                            <button className="vf-action-btn vf-btn-submit" disabled={actionLoading || submissionLoading || !allConfirmed || !isTeamSizeValid || !isSubmissionReadyForTeamSubmit} onClick={handleSubmitTeam}>
                                 <ShieldCheck size={16} /> ส่งเอกสารยืนยันตัวตนทั้งทีม
                             </button>
                             {!allConfirmed && <p className="vf-hint">สมาชิกทุกคนต้องยืนยันเอกสารก่อนส่ง</p>}
                             {!isTeamSizeValid && <p className="vf-hint">ทีมต้องมีสมาชิก 2-5 คนก่อนส่งเอกสารทั้งทีม (ตอนนี้ {memberCount} คน)</p>}
+                            {!hasSubmissionFile && <p className="vf-hint">ต้องแนบไฟล์ผลงานจากหน้าส่งผลงานอย่างน้อย 1 ไฟล์</p>}
+                            {!hasSubmissionLink && <p className="vf-hint">ต้องใส่ลิงก์ผลงานจากหน้าส่งผลงานก่อน</p>}
+                            {!hasSubmissionAdvisor && <p className="vf-hint">ต้องเพิ่มอาจารย์ที่ปรึกษาอย่างน้อย 1 ท่านก่อน</p>}
                         </div>
                     )}
 
