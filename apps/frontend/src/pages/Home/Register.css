@@ -384,6 +384,11 @@ body:has(.gr-page) {
     backdrop-filter: blur(6px);
 }
 
+.gr-login-card.is-register {
+    max-width: 980px;
+    padding: 34px 34px 28px;
+}
+
 .gr-login-card h2 {
     text-align: center;
     margin: 0 0 24px;
@@ -398,6 +403,43 @@ body:has(.gr-page) {
 
 .gr-input-group {
     margin-bottom: 16px;
+}
+
+.gr-register-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.gr-form-section {
+    border: 1px solid var(--gt-border);
+    border-radius: 16px;
+    background: color-mix(in oklab, var(--gt-surface) 85%, transparent);
+    padding: 16px;
+}
+
+.gr-form-section h3 {
+    margin: 0 0 14px;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--gt-text);
+}
+
+.gr-form-grid {
+    display: grid;
+    gap: 12px 14px;
+}
+
+.gr-form-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gr-form-grid .gr-input-group {
+    margin-bottom: 0;
+}
+
+.gr-grid-span-2 {
+    grid-column: span 2;
 }
 
 .gr-input-group label {
@@ -475,6 +517,58 @@ body:has(.gr-page) {
 
 .gr-consent-loading-spinner {
     color: var(--gt-primary);
+}
+
+.gr-consent-inline-wrap {
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+.gr-consent-checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--gt-border);
+    border-radius: 12px;
+    background: var(--gt-surface);
+}
+
+.gr-consent-checkbox {
+    margin-top: 3px;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--gt-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.gr-consent-inline-text {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--gt-text);
+}
+
+.gr-consent-inline-link {
+    border: none;
+    background: none;
+    color: var(--gt-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.gr-consent-inline-link:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.gr-consent-inline-link:not(:disabled):hover {
+    color: color-mix(in oklab, var(--gt-primary) 80%, #1d4ed8);
 }
 
 /* List */
@@ -915,6 +1009,14 @@ body:has(.gr-page) {
     background: linear-gradient(180deg, rgba(30, 41, 59, 0.45), rgba(15, 23, 42, 0.5));
 }
 
+.dark .gr-form-section {
+    background: color-mix(in oklab, var(--gt-surface-alt) 84%, transparent);
+}
+
+.dark .gr-consent-checkbox-row {
+    background: var(--gt-surface-alt);
+}
+
 /* --- No Team State --- */
 .gr-no-team {
     display: flex;
@@ -1086,6 +1188,19 @@ body:has(.gr-page) {
 
     .gr-login-card {
         padding: 28px 20px;
+    }
+
+    .gr-login-card.is-register {
+        max-width: 100%;
+        padding: 24px 16px;
+    }
+
+    .gr-form-grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .gr-grid-span-2 {
+        grid-column: auto;
     }
 
     .gr-modal {
