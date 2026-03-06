@@ -1,11 +1,17 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Gamepad2,
     Loader2,
     Rocket,
     Eye,
     EyeOff,
+    ScrollText,
+    ExternalLink,
+    CheckCircle2,
+    FileText,
+    X,
+    ChevronDown,
+    ShieldCheck,
 } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 import GameShapes from '../../components/GameShapes';
@@ -55,12 +61,75 @@ function RegisterPage() {
     const [showRegPass, setShowRegPass] = useState(false);
     const [showRegConfirmPass, setShowRegConfirmPass] = useState(false);
 
+    const [consentDocs, setConsentDocs] = useState([]);
+    const [consentAcceptedMap, setConsentAcceptedMap] = useState({});
+    const [isConsentLoading, setIsConsentLoading] = useState(false);
+    const [selectedConsentDoc, setSelectedConsentDoc] = useState(null);
+    const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+    const [consentScrollPercent, setConsentScrollPercent] = useState(0);
+    const consentContentRef = useRef(null);
+
     useEffect(() => {
         const saved = localStorage.getItem('gt_user');
         if (saved) {
             navigate('/home', { replace: true });
         }
     }, [navigate]);
+
+    useEffect(() => {
+        if (!isRegisterMode) return;
+
+        let cancelled = false;
+
+        const loadConsentDocuments = async () => {
+            setIsConsentLoading(true);
+            try {
+                const res = await fetch(apiUrl('/api/consent/documents'), {
+                    credentials: 'include',
+                });
+                const data = await res.json();
+
+                if (!res.ok || !data.ok) {
+                    throw new Error(data.message || 'ไม่สามารถโหลดเอกสารข้อตกลงได้');
+                }
+
+                if (cancelled) return;
+
+                const docs = Array.isArray(data.data) ? data.data : [];
+                setConsentDocs(docs);
+                setConsentAcceptedMap((prev) => {
+                    const next = { ...prev };
+                    docs.forEach((doc) => {
+                        if (next[doc.consentDocId] === undefined) {
+                            next[doc.consentDocId] = false;
+                        }
+                    });
+                    return next;
+                });
+            } catch (err) {
+                if (!cancelled) {
+                    setErrorMsg(err instanceof Error ? err.message : 'ไม่สามารถโหลดเอกสารข้อตกลงได้');
+                }
+            } finally {
+                if (!cancelled) setIsConsentLoading(false);
+            }
+        };
+
+        loadConsentDocuments();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isRegisterMode]);
+
+    useEffect(() => {
+        if (!selectedConsentDoc || !consentContentRef.current) return;
+        const el = consentContentRef.current;
+        const isScrollable = el.scrollHeight > el.clientHeight + 1;
+        const reachedBottom = !isScrollable;
+        setHasScrolledToBottom(reachedBottom);
+        setConsentScrollPercent(reachedBottom ? 100 : 0);
+    }, [selectedConsentDoc]);
 
     const saveUserAndRedirect = (user) => {
         const userInfo = {
@@ -103,7 +172,7 @@ function RegisterPage() {
             }
 
             saveUserAndRedirect(data.data);
-        } catch (err) {
+        } catch (_err) {
             setErrorMsg('เกิดข้อผิดพลาด กรุณาลองใหม่');
         } finally {
             setIsLoading(false);
@@ -115,6 +184,35 @@ function RegisterPage() {
         const idx = trimmed.indexOf(' ');
         if (idx === -1) return { firstName: trimmed, lastName: '' };
         return { firstName: trimmed.substring(0, idx), lastName: trimmed.substring(idx + 1).trim() };
+    };
+
+    const openConsentModal = (doc) => {
+        setSelectedConsentDoc(doc);
+        setHasScrolledToBottom(false);
+    };
+
+    const closeConsentModal = () => {
+        setSelectedConsentDoc(null);
+        setHasScrolledToBottom(false);
+        setConsentScrollPercent(0);
+    };
+
+    const handleConsentScroll = (e) => {
+        const target = e.currentTarget;
+        const maxScroll = target.scrollHeight - target.clientHeight;
+        const percent = maxScroll <= 0 ? 100 : Math.min(100, (target.scrollTop / maxScroll) * 100);
+        setConsentScrollPercent(percent);
+        const reachedBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 8;
+        if (reachedBottom) setHasScrolledToBottom(true);
+    };
+
+    const acceptSelectedConsent = () => {
+        if (!selectedConsentDoc || !hasScrolledToBottom) return;
+        setConsentAcceptedMap((prev) => ({
+            ...prev,
+            [selectedConsentDoc.consentDocId]: true,
+        }));
+        closeConsentModal();
     };
 
     const handleRegister = async (e) => {
@@ -139,6 +237,20 @@ function RegisterPage() {
         }
         if (regPass.length < 6) {
             setErrorMsg('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+            return;
+        }
+        if (isConsentLoading) {
+            setErrorMsg('กำลังโหลดเอกสารข้อตกลง กรุณารอสักครู่');
+            return;
+        }
+        if (consentDocs.length === 0) {
+            setErrorMsg('ไม่พบเอกสารข้อตกลงสำหรับการสมัครสมาชิก');
+            return;
+        }
+
+        const allAccepted = consentDocs.every((doc) => consentAcceptedMap[doc.consentDocId]);
+        if (!allAccepted) {
+            setErrorMsg('กรุณาอ่านข้อตกลงและยินยอมให้ครบก่อนสมัครสมาชิก');
             return;
         }
 
@@ -174,9 +286,25 @@ function RegisterPage() {
                 return;
             }
 
+            await Promise.all(
+                consentDocs.map(async (doc) => {
+                    const consentRes = await fetch(apiUrl('/api/consent/accept'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ consentDocId: doc.consentDocId }),
+                    });
+
+                    const consentData = await consentRes.json();
+                    if (!consentRes.ok || !consentData.ok) {
+                        throw new Error(consentData.message || 'บันทึกการยินยอมไม่สำเร็จ');
+                    }
+                })
+            );
+
             saveUserAndRedirect(data.data);
         } catch (err) {
-            setErrorMsg('เกิดข้อผิดพลาด กรุณาลองใหม่');
+            setErrorMsg(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
         } finally {
             setIsLoading(false);
         }
@@ -210,7 +338,7 @@ function RegisterPage() {
                             <div className="gr-input-group"><label>วันเดือนปีเกิด (Date of Birth)</label><input type="date" lang="en-GB" className="gr-input" autoComplete="off" data-lpignore="true" value={regBirthDate} onChange={(e) => setRegBirthDate(e.target.value)} required disabled={isLoading} /></div>
                             <div className="gr-input-group"><label>ระดับการศึกษา (Education Level)</label><select className="gr-input" autoComplete="off" data-lpignore="true" value={regEducationLevel} onChange={(e) => setRegEducationLevel(e.target.value)} disabled={isLoading}>{EDUCATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
                             <div className="gr-input-group"><label>ชื่อสถาบันศึกษา (ภาษาไทย)</label><input type="text" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="เช่น มหาวิทยาลัยขอนแก่น" value={regInstitutionNameTh} onChange={(e) => setRegInstitutionNameTh(e.target.value)} required disabled={isLoading} /></div>
-                            <div className="gr-input-group"><label>ชื่อสถาบันศึกษา (ภาษาอังกฤษ)</label><input type="text" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="e.g. Khonkaen University" value={regInstitutionNameEn} onChange={(e) => setRegInstitutionNameEn(e.target.value)} required disabled={isLoading} /></div>
+                            <div className="gr-input-group"><label>ชื่อสถาบันศึกษา (ภาษาอังกฤษ)</label><input type="text" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="e.g. Khon Kaen University" value={regInstitutionNameEn} onChange={(e) => setRegInstitutionNameEn(e.target.value)} required disabled={isLoading} /></div>
                             <div className="gr-input-group"><label>ภูมิลำเนา (Province)</label><input type="text" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="เช่น ขอนแก่น" value={regHomeProvince} onChange={(e) => setRegHomeProvince(e.target.value)} required disabled={isLoading} /></div>
                             <div className="gr-input-group"><label>ชื่อผู้ใช้ (Username)</label><input type="text" name="registerUsername" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="อย่างน้อย 3 ตัวอักษร" value={regUserName} onChange={(e) => setRegUserName(e.target.value)} required disabled={isLoading} minLength={3} maxLength={50} /></div>
                             <div className="gr-input-group"><label>เบอร์โทรศัพท์ (Phone Number)</label><input type="tel" name="registerPhone" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="เช่น 0812345678" value={regPhone} onChange={(e) => {
@@ -220,7 +348,43 @@ function RegisterPage() {
                             <div className="gr-input-group"><label>อีเมล (Email)</label><input type="email" name="registerEmail" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="somchai.jaidee@kku.ac.th" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required disabled={isLoading} /></div>
                             <div className="gr-input-group"><label>รหัสผ่าน (Password)</label><div className="gr-password-wrap"><input type={showRegPass ? 'text' : 'password'} name="registerPassword" autoComplete="new-password" data-lpignore="true" className="gr-input" placeholder="อย่างน้อย 6 ตัวอักษร" value={regPass} onChange={(e) => setRegPass(e.target.value)} required disabled={isLoading} minLength={6} /><button type="button" className="gr-password-toggle" onClick={() => setShowRegPass(!showRegPass)} tabIndex={-1}>{showRegPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
                             <div className="gr-input-group"><label>ยืนยันรหัสผ่าน (Confirm Password)</label><div className="gr-password-wrap"><input type={showRegConfirmPass ? 'text' : 'password'} name="registerConfirmPassword" autoComplete="new-password" data-lpignore="true" className="gr-input" placeholder="ยืนยันรหัสผ่านอีกครั้ง" value={regConfirmPass} onChange={(e) => setRegConfirmPass(e.target.value)} required disabled={isLoading} minLength={6} /><button type="button" className="gr-password-toggle" onClick={() => setShowRegConfirmPass(!showRegConfirmPass)} tabIndex={-1}>{showRegConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
-                            <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={isLoading}>{isLoading ? <><Loader2 size={18} className="spin" /> กำลังสมัครสมาชิก...</> : 'สมัครสมาชิก'}</button>
+
+                            {isConsentLoading ? (
+                                <div className="gr-consent-loading">
+                                    <div className="gr-consent-loading-spinner"><Loader2 size={20} className="spin" /></div>
+                                    <span>กำลังโหลดเอกสารข้อตกลง...</span>
+                                </div>
+                            ) : (
+                                <div className="gr-consent-list">
+                                    {consentDocs.map((doc) => {
+                                        const accepted = consentAcceptedMap[doc.consentDocId];
+                                        return (
+                                            <button
+                                                key={doc.consentDocId}
+                                                type="button"
+                                                className={`gr-consent-card ${accepted ? 'accepted' : ''}`}
+                                                onClick={() => openConsentModal(doc)}
+                                                disabled={isLoading}
+                                            >
+                                                <div className="gr-consent-card-icon">
+                                                    {accepted ? <CheckCircle2 size={20} /> : <ScrollText size={20} />}
+                                                </div>
+                                                <div className="gr-consent-card-body">
+                                                    <span className="gr-consent-card-title">
+                                                        {doc.titleTh || doc.titleEn || 'ข้อตกลง'}
+                                                    </span>
+                                                    <span className="gr-consent-card-status">
+                                                        {accepted ? 'ยินยอมแล้ว ✓' : 'กดเพื่ออ่านและยินยอม'}
+                                                    </span>
+                                                </div>
+                                                <ExternalLink size={14} className="gr-consent-card-arrow" />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%'}} disabled={isLoading}>{isLoading ? <><Loader2 size={18} className="spin" /> กำลังสมัครสมาชิก...</> : 'สมัครสมาชิก'}</button>
                         </form>
                     )}
 
@@ -232,6 +396,61 @@ function RegisterPage() {
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}><ThemeToggle /></div>
                 </div>
             </div>
+
+            {selectedConsentDoc && (
+                <div className="gr-consent-modal-backdrop" onClick={closeConsentModal}>
+                    <div className="gr-consent-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="gr-consent-modal-header">
+                            <div className="gr-consent-modal-header-left">
+                                <div className="gr-consent-modal-icon">
+                                    <FileText size={18} />
+                                </div>
+                                <div>
+                                    <h3>{selectedConsentDoc.titleTh || selectedConsentDoc.titleEn || 'ข้อตกลงและเงื่อนไข'}</h3>
+                                </div>
+                            </div>
+                            <button type="button" className="gr-consent-close-btn" onClick={closeConsentModal} aria-label="ปิด">
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="gr-consent-scroll-indicator">
+                            <div className="gr-consent-scroll-progress" style={{ width: `${consentScrollPercent}%` }} />
+                        </div>
+
+                        <div
+                            ref={consentContentRef}
+                            className="gr-consent-content"
+                            onScroll={handleConsentScroll}
+                        >
+                            {(selectedConsentDoc.contentTh || selectedConsentDoc.contentEn || '').split('\n').map((line, idx) => (
+                                <p key={`${selectedConsentDoc.consentDocId}-${idx}`}>{line || '\u00A0'}</p>
+                            ))}
+                        </div>
+
+                        <div className="gr-consent-modal-footer">
+                            {!hasScrolledToBottom && (
+                                <div className="gr-consent-hint">
+                                    <ChevronDown size={14} className="gr-consent-hint-bounce" />
+                                    กรุณาเลื่อนอ่านเอกสารให้สุดก่อนกดยินยอม
+                                </div>
+                            )}
+                            <div className="gr-consent-actions">
+                                <button type="button" className="gr-consent-btn-cancel" onClick={closeConsentModal}>ปิด</button>
+                                <button
+                                    type="button"
+                                    className="gr-consent-btn-accept"
+                                    onClick={acceptSelectedConsent}
+                                    disabled={!hasScrolledToBottom}
+                                >
+                                    <ShieldCheck size={16} />
+                                    ยินยอม
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
