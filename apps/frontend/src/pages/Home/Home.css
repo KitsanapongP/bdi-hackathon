@@ -1097,6 +1097,12 @@ section.gt-hero {
     color: #fff;
 }
 
+.gt-footer-contact {
+    max-width: 620px;
+    word-break: keep-all;
+    overflow-wrap: normal;
+}
+
 .gt-footer h4 {
     color: #fff;
     margin: 0 0 14px;
@@ -1279,6 +1285,10 @@ section.gt-hero {
     .gt-footer-cols {
         flex-direction: column;
         gap: 28px;
+    }
+
+    .gt-footer-contact {
+        max-width: 100%;
     }
 
     .gt-section {

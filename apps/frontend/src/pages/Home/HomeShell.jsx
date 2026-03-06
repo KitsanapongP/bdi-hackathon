@@ -12,7 +12,6 @@ import {
     LogIn,
     LogOut,
     Facebook,
-    Instagram,
 } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 import GameShapes from '../../components/GameShapes';
@@ -29,7 +28,7 @@ function HomeShell({ children }) {
     const bannerRef = useRef(null);
     const bannerTrackRef = useRef(null);
 
-    const navItems = ['หน้าแรก', 'เกี่ยวกับ', 'ตารางกิจกรรม', 'ลงทะเบียน'];
+    const navItems = ['หน้าแรก', 'เกี่ยวกับ', 'กำหนดการกิจกรรม', 'ลงทะเบียน'];
 
     const handleNavClick = (index) => {
         setMobileOpen(false);
@@ -45,7 +44,7 @@ function HomeShell({ children }) {
         }
 
         if (index === 2) {
-            navigate('/home#schedule');
+            navigate('/home', { state: { scrollTo: 'schedule' } });
             return;
         }
 
@@ -259,21 +258,23 @@ function HomeShell({ children }) {
                             <div className="gt-logo" style={{ marginBottom: 14 }}>
                                 <Rocket size={20} /> Khon Kaen Intelligent Living Hackathon 2026
                             </div>
-                            <p style={{ maxWidth: 350, color: 'var(--gt-footer-text)', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
+                            <p className="gt-footer-contact" style={{ color: 'var(--gt-footer-text)', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
                                 <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px' }} />
-                                คณะสาธารณสุขศาสตร์ ม.ขอนแก่น<br />
+                                วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น<br />
+                                123 อาคารวิทยวิภาส ถ.มิตรภาพ ต.ในเมือง อ.เมืองขอนแก่น จ.ขอนแก่น 40002<br />
                                 <Phone size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px', marginTop: '8px' }} />
-                                08 1561 6471<br />
+                                โทรศัพท์ 043 009 700 ต่อ 44463, 50525<br />
+                                <Phone size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px', marginTop: '8px' }} />
+                                Hotline : 089 710 2651, 089 710 2645<br />
                                 <Mail size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px', marginTop: '8px' }} />
-                                niphatthra.the@mahidol.ac.th
+                                Email : computing.kku@kku.ac.th
                             </p>
                         </div>
                         <div className="gt-footer-cols">
                             <div className="gt-footer-col">
                                 <h4>Quick Links</h4>
-                                <a href="#">คุณสมบัติ</a>
-                                <a href="#">กำหนดการ</a>
-                                <a href="#">รางวัล</a>
+                                <Link to="/home" state={{ scrollTo: 'schedule' }}>กำหนดการ</Link>
+                                <Link to="/home" state={{ scrollTo: 'prizes' }}>รางวัล</Link>
                             </div>
                             <div className="gt-footer-col">
                                 <h4>Support</h4>
@@ -284,9 +285,6 @@ function HomeShell({ children }) {
                                 <h4>Follow us</h4>
                                 <a href="https://www.facebook.com/hackathonthailand" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <Facebook size={16} /> Facebook
-                                </a>
-                                <a href="https://www.instagram.com/hackathonth" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Instagram size={16} /> Instagram
                                 </a>
                             </div>
                         </div>
