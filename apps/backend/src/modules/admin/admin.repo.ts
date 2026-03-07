@@ -8,6 +8,7 @@ import type {
     DashboardTeamMemberCountRow,
     DashboardTeamStatus,
     DashboardTrendRow,
+    ExportMemberDocumentRow,
     ExportSubmittedTeamRow,
     ExportTeamAdvisorRow,
     ExportTeamMemberRow,
@@ -388,6 +389,13 @@ export async function getTeamMembersForExport(db: DB, teamIds: number[]): Promis
             t.team_name_th,
             t.team_name_en,
             t.status AS team_status,
+            ROW_NUMBER() OVER (
+                PARTITION BY m.team_id
+                ORDER BY
+                    CASE WHEN m.role = 'leader' THEN 0 ELSE 1 END,
+                    m.joined_at ASC,
+                    m.team_member_id ASC
+            ) AS member_order,
             m.user_id,
             u.user_name,
             m.role,
@@ -438,10 +446,44 @@ export async function getTeamMembersForExport(db: DB, teamIds: number[]): Promis
         WHERE t.team_id IN (${tokens.join(', ')})
         ORDER BY t.team_id ASC,
                  CASE WHEN m.role = 'leader' THEN 0 ELSE 1 END,
-                 m.joined_at ASC
+                 m.joined_at ASC,
+                 m.team_member_id ASC
     `, params);
 
     return rows as ExportTeamMemberRow[];
+}
+
+export async function getMemberDocumentsForExport(db: DB, teamIds: number[]): Promise<ExportMemberDocumentRow[]> {
+    if (teamIds.length === 0) return [];
+
+    const params: Record<string, number> = {};
+    const tokens = teamIds.map((teamId, idx) => {
+        const key = `teamId${idx}`;
+        params[key] = teamId;
+        return `:${key}`;
+    });
+
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT
+            d.team_id,
+            d.user_id,
+            u.user_name,
+            u.first_name_th,
+            u.last_name_th,
+            u.first_name_en,
+            u.last_name_en,
+            d.file_storage_key,
+            d.file_original_name,
+            d.uploaded_at
+        FROM verify_member_documents d
+        JOIN user_users u ON u.user_id = d.user_id
+        WHERE d.team_id IN (${tokens.join(', ')})
+          AND d.is_current = 1
+          AND d.deleted_at IS NULL
+        ORDER BY d.team_id ASC, d.user_id ASC, d.uploaded_at ASC
+    `, params);
+
+    return rows as ExportMemberDocumentRow[];
 }
 
 export async function listSelectionTeams(db: DB, status?: 'submitted' | 'passed' | 'failed'): Promise<SelectionTeamRow[]> {
