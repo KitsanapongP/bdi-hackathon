@@ -98,6 +98,7 @@ export interface ExportTeamMemberRow {
     team_name_th: string;
     team_name_en: string;
     team_status: string;
+    member_order: number;
     user_id: number;
     user_name: string;
     role: 'leader' | 'member';
@@ -123,4 +124,17 @@ export interface ExportTeamMemberRow {
     member_unconfirmed_at: Date | null;
     profile_completed_at: Date | null;
     profile_updated_at: Date | null;
+}
+
+export interface ExportMemberDocumentRow {
+    team_id: number;
+    user_id: number;
+    user_name: string;
+    first_name_th: string | null;
+    last_name_th: string | null;
+    first_name_en: string | null;
+    last_name_en: string | null;
+    file_storage_key: string;
+    file_original_name: string;
+    uploaded_at: Date;
 }

@@ -5,6 +5,7 @@ import type {
     AllowlistResponse,
     DashboardDuplicateMemberRow,
     DashboardTeamStatus,
+    ExportMemberDocumentRow,
     ExportSubmittedTeamRow,
     ExportTeamAdvisorRow,
     ExportTeamMemberRow,
@@ -15,6 +16,7 @@ import fs from 'node:fs';
 import { PassThrough } from 'node:stream';
 import ExcelJS from 'exceljs';
 import archiver from 'archiver';
+import { PDFDocument } from 'pdf-lib';
 
 interface TeamExportBundle {
     team: ExportSubmittedTeamRow;
@@ -262,10 +264,87 @@ function sanitizeFileSegment(value: string, fallback: string): string {
     return cleaned || fallback;
 }
 
+function truncateText(value: string, maxLength: number): string {
+    const normalized = String(value || '').trim();
+    if (!normalized) return '';
+    if (normalized.length <= maxLength) return normalized;
+    return normalized.slice(0, Math.max(0, maxLength)).trim();
+}
+
+function buildMergedMemberPdfName(
+    memberOrder: number,
+    firstNameRaw: string,
+    lastNameRaw: string,
+    originalStemRaw: string,
+    userId: number,
+): string {
+    const maxBaseLength = 120; // keep below common OS filename limits
+    const orderText = String(Math.max(1, Math.floor(memberOrder || 1))).padStart(2, '0');
+    const firstName = truncateText(sanitizeFileSegment(firstNameRaw, `user${userId}`), 32) || `user${userId}`;
+    const lastName = truncateText(sanitizeFileSegment(lastNameRaw, 'member'), 32) || 'member';
+    const stemBudget = Math.max(20, maxBaseLength - orderText.length - firstName.length - lastName.length - 3);
+    const originalStem = truncateText(sanitizeFileSegment(originalStemRaw, 'document'), stemBudget) || 'document';
+    const baseName = `${orderText}_${firstName}_${lastName}_${originalStem}`;
+    return `${truncateText(baseName, maxBaseLength)}.pdf`;
+}
+
 function formatDateTime(value: Date | string | null | undefined): string {
     if (!value) return '';
     if (value instanceof Date) return value.toISOString();
     return String(value);
+}
+
+function stripFileExtension(fileName: string): string {
+    const trimmed = String(fileName || '').trim();
+    if (!trimmed) return 'document';
+    const parsed = path.parse(trimmed);
+    return parsed.name || trimmed;
+}
+
+function pickMemberName(document: ExportMemberDocumentRow): { firstName: string; lastName: string } {
+    const firstName = document.first_name_th || document.first_name_en || document.user_name || `user${document.user_id}`;
+    const lastName = document.last_name_th || document.last_name_en || '';
+    return { firstName, lastName };
+}
+
+function resolveDocumentAbsolutePath(storageKey: string): string | null {
+    const normalizedStorageKey = String(storageKey || '').replace(/\\/g, '/');
+    const candidates = [
+        path.join(process.cwd(), 'public', normalizedStorageKey),
+        path.join(VERIFICATION_UPLOADS_DIR, normalizedStorageKey.replace(/^verification\//, '')),
+    ];
+
+    for (const candidate of candidates) {
+        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+            return candidate;
+        }
+    }
+
+    return null;
+}
+
+async function mergeMemberDocumentsToPdf(documents: ExportMemberDocumentRow[]): Promise<Buffer | null> {
+    if (documents.length === 0) return null;
+
+    const merged = await PDFDocument.create();
+    let copiedPageCount = 0;
+
+    for (const document of documents) {
+        const absolutePath = resolveDocumentAbsolutePath(document.file_storage_key);
+        if (!absolutePath) continue;
+
+        const bytes = fs.readFileSync(absolutePath);
+        const source = await PDFDocument.load(bytes);
+        const pageIndices = source.getPageIndices();
+        const copiedPages = await merged.copyPages(source, pageIndices);
+        copiedPages.forEach((page) => merged.addPage(page));
+        copiedPageCount += copiedPages.length;
+    }
+
+    if (copiedPageCount === 0) return null;
+
+    const mergedBytes = await merged.save();
+    return Buffer.from(mergedBytes);
 }
 
 function buildAdvisorDisplayNameTh(advisor: ExportTeamAdvisorRow): string {
@@ -335,6 +414,7 @@ async function buildTeamWorkbookBuffer(bundle: TeamExportBundle): Promise<Buffer
         { header: 'member_status', key: 'member_status' },
         { header: 'joined_at', key: 'joined_at' },
         { header: 'left_at', key: 'left_at' },
+        { header: 'member_order', key: 'member_order' },
         { header: 'first_name_th', key: 'first_name_th' },
         { header: 'last_name_th', key: 'last_name_th' },
         { header: 'first_name_en', key: 'first_name_en' },
@@ -396,6 +476,7 @@ async function buildTeamWorkbookBuffer(bundle: TeamExportBundle): Promise<Buffer
             user_name: member.user_name,
             role: member.role,
             member_status: member.member_status,
+            member_order: member.member_order,
             joined_at: formatDateTime(member.joined_at),
             left_at: formatDateTime(member.left_at),
             first_name_th: member.first_name_th || '',
@@ -431,13 +512,15 @@ export async function exportSubmittedVerificationBundle(db: DB): Promise<{ fileN
     }
 
     const teamIds = teams.map((team) => team.team_id);
-    const [advisors, members] = await Promise.all([
+    const [advisors, members, memberDocuments] = await Promise.all([
         repo.getTeamAdvisorsForExport(db, teamIds),
         repo.getTeamMembersForExport(db, teamIds),
+        repo.getMemberDocumentsForExport(db, teamIds),
     ]);
 
     const advisorsByTeam = new Map<number, ExportTeamAdvisorRow[]>();
     const membersByTeam = new Map<number, ExportTeamMemberRow[]>();
+    const documentsByTeamAndUser = new Map<string, ExportMemberDocumentRow[]>();
 
     for (const advisor of advisors) {
         const bucket = advisorsByTeam.get(advisor.team_id) ?? [];
@@ -449,6 +532,13 @@ export async function exportSubmittedVerificationBundle(db: DB): Promise<{ fileN
         const bucket = membersByTeam.get(member.team_id) ?? [];
         bucket.push(member);
         membersByTeam.set(member.team_id, bucket);
+    }
+
+    for (const document of memberDocuments) {
+        const key = `${document.team_id}:${document.user_id}`;
+        const bucket = documentsByTeamAndUser.get(key) ?? [];
+        bucket.push(document);
+        documentsByTeamAndUser.set(key, bucket);
     }
 
     const output = new PassThrough();
@@ -475,7 +565,40 @@ export async function exportSubmittedVerificationBundle(db: DB): Promise<{ fileN
 
         const sourceFolder = resolveTeamSourceFolder(team);
         if (sourceFolder) {
-            archive.directory(sourceFolder, `${exportFolderName}/`);
+            const submissionFilesPath = path.join(sourceFolder, 'submission_files');
+            if (fs.existsSync(submissionFilesPath) && fs.statSync(submissionFilesPath).isDirectory()) {
+                archive.directory(submissionFilesPath, `${exportFolderName}/submission_files/`);
+            }
+        }
+
+        const teamMembers = membersByTeam.get(team.team_id) ?? [];
+        for (const member of teamMembers) {
+            const docs = documentsByTeamAndUser.get(`${team.team_id}:${member.user_id}`) ?? [];
+            if (docs.length === 0) continue;
+
+            const sortedDocs = [...docs].sort((a, b) => {
+                const left = new Date(a.uploaded_at).getTime();
+                const right = new Date(b.uploaded_at).getTime();
+                return left - right;
+            });
+            const firstDocument = sortedDocs[0];
+            if (!firstDocument) continue;
+            const mergedPdf = await mergeMemberDocumentsToPdf(sortedDocs);
+            if (!mergedPdf) continue;
+
+            const { firstName, lastName } = pickMemberName(firstDocument);
+            const originalFileStem = stripFileExtension(firstDocument.file_original_name);
+            const mergedFileName = buildMergedMemberPdfName(
+                member.member_order,
+                firstName,
+                lastName || 'member',
+                originalFileStem,
+                member.user_id,
+            );
+
+            archive.append(mergedPdf, {
+                name: `${exportFolderName}/members/${mergedFileName}`,
+            });
         }
 
         const workbookBuffer = await buildTeamWorkbookBuffer(bundle);
