@@ -53,6 +53,7 @@ const MAX_MEMBERS = 5;
 
 const CARDS = [
     { id: 'announce', icon: <Megaphone />, label: 'ประกาศ', color: '#f97316' },
+    { id: 'inbox', icon: <Mail />, label: 'กล่องข้อความ', color: '#0ea5e9' },
     { id: 'works', icon: <Award />, label: 'ส่งผลงาน', color: '#eab308' },
     { id: 'verify', icon: <ShieldCheck />, label: 'ยืนยันตัวตน', color: '#14b8a6' },
     { id: 'status', icon: <BarChart3 />, label: 'สถานะทีม', color: '#3b82f6' },
@@ -77,6 +78,45 @@ const formatDate = (dateStr) => {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return '';
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    const raw = String(dateStr).trim();
+    // Normalize MySQL DATETIME (YYYY-MM-DD HH:mm:ss) to ISO-like format.
+    const normalized = raw.includes(' ') && !raw.includes('T') ? raw.replace(' ', 'T') : raw;
+    const d = new Date(normalized);
+    if (isNaN(d.getTime())) return '-';
+    return d.toLocaleString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+};
+
+const toDateMs = (dateStr) => {
+    if (!dateStr) return null;
+    const raw = String(dateStr).trim();
+    const normalized = raw.includes(' ') && !raw.includes('T') ? raw.replace(' ', 'T') : raw;
+    const d = new Date(normalized);
+    if (isNaN(d.getTime())) return null;
+    return d.getTime();
+};
+
+const formatCountdown = (ms) => {
+    if (ms <= 0) return 'หมดเวลาแล้ว';
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (days > 0) {
+        return `${days} วัน ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
 const isProfileComplete = (profile) => {
@@ -275,6 +315,9 @@ export default function TeamContent({ user }) {
     const [publicTeams, setPublicTeams] = useState([]);
     const [myInvitations, setMyInvitations] = useState([]);
     const [pendingJoinRequests, setPendingJoinRequests] = useState([]);
+    const [inboxItems, setInboxItems] = useState([]);
+    const [inboxLoading, setInboxLoading] = useState(false);
+    const [nowMs, setNowMs] = useState(Date.now());
 
     const isLeader = useMemo(() => team?.leaderUserId === user?.userId, [team, user]);
     const hasPendingJoinRequests = pendingJoinRequests.length > 0;
@@ -316,6 +359,9 @@ export default function TeamContent({ user }) {
                     code: dbTeam.team_code || '------',
                     inviteCode: activeCode || '------',
                     leaderUserId: dbTeam.current_leader_user_id,
+                    confirmationDeadlineAt: dbTeam.confirmation_deadline_at || null,
+                    confirmedAt: dbTeam.confirmed_at || null,
+                    confirmedByUserId: dbTeam.confirmed_by_user_id || null,
                     members: mappedMembers,
                     announcements: [],
                     works: [],
@@ -365,6 +411,33 @@ export default function TeamContent({ user }) {
             })
             .catch((err) => console.error('failed to fetch join requests', err));
     }, [user, isLeader]);
+
+    const fetchInbox = useCallback(async () => {
+        if (!team?.id) return;
+        setInboxLoading(true);
+        try {
+            const res = await fetch(apiUrl(`/api/teams/${team.id}/inbox`), { credentials: 'include' });
+            const payload = await res.json();
+            if (payload.ok && Array.isArray(payload.data)) {
+                setInboxItems(payload.data);
+            }
+        } catch (err) {
+            console.error('failed to fetch inbox', err);
+        } finally {
+            setInboxLoading(false);
+        }
+    }, [team?.id]);
+
+    useEffect(() => {
+        if (selectedCard === 'inbox') fetchInbox();
+    }, [selectedCard, fetchInbox]);
+
+    useEffect(() => {
+        const shouldTick = team?.status === 'passed' && !team?.confirmedAt && !!team?.confirmationDeadlineAt;
+        if (!shouldTick) return;
+        const timer = setInterval(() => setNowMs(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, [team?.status, team?.confirmedAt, team?.confirmationDeadlineAt]);
 
     const withAction = async (fn, opts = {}) => {
         try {
@@ -746,6 +819,8 @@ export default function TeamContent({ user }) {
     const statusInfo = TEAM_STATUS_CONFIG[team.status] || TEAM_STATUS_CONFIG.forming;
     const emptySlots = Math.max(0, MAX_MEMBERS - team.members.length);
     const teamInviteCode = team.inviteCode || '------';
+    const deadlineMs = toDateMs(team?.confirmationDeadlineAt);
+    const countdownText = deadlineMs ? formatCountdown(deadlineMs - nowMs) : '-';
 
     const handleUploadDocs = async (files) => {
         if (!team?.id || !files?.length) return;
@@ -970,6 +1045,22 @@ export default function TeamContent({ user }) {
         }, 'danger');
     };
 
+    const handleConfirmParticipation = () => {
+        openConfirm('ยืนยันการเข้าร่วมโครงการ', 'ยืนยันการเข้าร่วมตามผลคัดเลือกใช่หรือไม่?', () => {
+            closeConfirm();
+            withAction(async () => {
+                const res = await fetch(apiUrl(`/api/teams/${team.id}/confirm-participation`), {
+                    method: 'POST',
+                    credentials: 'include',
+                });
+                const payload = await res.json();
+                if (!payload.ok) throw new Error(payload.message || 'ยืนยันการเข้าร่วมไม่สำเร็จ');
+                showToast('ยืนยันการเข้าร่วมสำเร็จ', 'success');
+                window.location.reload();
+            }, { toastError: true });
+        }, 'success');
+    };
+
     const renderSimpleDetail = (title, icon, body) => (
         <div className="gl-detail-view">
             <div className="gl-detail-top">
@@ -988,6 +1079,8 @@ export default function TeamContent({ user }) {
             <div className="gl-status-row"><div className="gl-status-label">สมาชิก</div><span>{team.members.length}/{MAX_MEMBERS}</span></div>
             <div className="gl-status-row"><div className="gl-status-label">สมาชิกที่ยืนยันตัวตน</div><span>{team.members.filter((m) => m.verified).length}/{team.members.length}</span></div>
             <div className="gl-status-row"><div className="gl-status-label">ผลงานที่ส่ง</div><span>{team.works.length}</span></div>
+            <div className="gl-status-row"><div className="gl-status-label">หมดเขตยืนยันเข้าร่วม</div><span>{formatDateTime(team.confirmationDeadlineAt)}</span></div>
+            <div className="gl-status-row"><div className="gl-status-label">ยืนยันเข้าร่วมแล้วเมื่อ</div><span>{formatDateTime(team.confirmedAt)}</span></div>
         </div>
     );
 
@@ -1088,6 +1181,25 @@ export default function TeamContent({ user }) {
 
     const DETAIL_MAP = {
         announce: () => renderSimpleDetail('ประกาศ', <Megaphone size={20} />, <div className="gl-empty-state"><Megaphone size={40} /><h3>ยังไม่มีประกาศ</h3></div>),
+        inbox: () => renderSimpleDetail('กล่องข้อความ', <Mail size={20} />, (
+            <div className="gl-info-card">
+                {inboxLoading && <div className="gl-empty-state"><Loader2 size={40} /><h3>กำลังโหลด...</h3></div>}
+                {!inboxLoading && inboxItems.length === 0 && <div className="gl-empty-state"><Mail size={36} /><h3>ยังไม่มีข้อความ</h3></div>}
+                {!inboxLoading && inboxItems.map((item) => (
+                    <div key={item.notificationLogId} className="sub-advisor-card">
+                        <div className="sub-advisor-info">
+                            <div className="sub-advisor-name">
+                                {item.subject || item.eventCode}
+                            </div>
+                            <div className="sub-advisor-detail">{item.message || '-'}</div>
+                            <div className="sub-advisor-detail">
+                                ช่องทาง: {item.channel} | สถานะ: {item.status} | เวลา: {formatDateTime(item.createdAt)}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )),
         works: () => {
             if (submissionLoading && !submissionData) return renderSimpleDetail('ส่งผลงาน', <Award size={20} />, <div className="gl-empty-state"><Loader2 size={40} /><h3>กำลังโหลด...</h3></div>);
 
@@ -1244,6 +1356,9 @@ export default function TeamContent({ user }) {
                 ? JSON.stringify(toVerificationProfilePayload(profileData)) !== JSON.stringify(toVerificationProfilePayload(savedProfileData))
                 : false;
             const profileReadyForConfirm = profileComplete && !hasUnsavedProfileChanges;
+            const confirmationExpired = team?.confirmationDeadlineAt
+                ? new Date(team.confirmationDeadlineAt).getTime() < Date.now()
+                : false;
 
             return renderSimpleDetail('ยืนยันตัวตน', <ShieldCheck size={20} />, (
                 <div>
@@ -1252,6 +1367,28 @@ export default function TeamContent({ user }) {
                         <Info size={16} />
                         <span>เมื่อยื่นเอกสารแล้วหากกดยืนยัน จะสามารถยกเลิกการยืนยันเพื่อกลับมาแก้ไขได้ แต่ถ้าหัวหน้าทีมกดส่งทีมแล้วจะไม่สามารถแก้ไขได้ กรุณาตรวจสอบความถูกต้อง และตั้งชื่อไฟล์ตามที่กำหนด</span>
                     </div>
+
+                    {isLeader && team.status === 'passed' && !team.confirmedAt && (
+                        <div className="gl-team-info-card">
+                            <span className="gl-team-info-label"><CheckCircle size={13} /> ยืนยันการเข้าร่วมโครงการ</span>
+                            <div className="gl-status-row"><div className="gl-status-label">หมดเขตยืนยัน</div><span>{formatDateTime(team.confirmationDeadlineAt)}</span></div>
+                            <div className="gl-status-row"><div className="gl-status-label"><Clock size={13} /> เวลาที่เหลือ</div><span>{countdownText}</span></div>
+                            {confirmationExpired ? (
+                                <p className="vf-hint">เลยเวลายืนยันแล้ว ระบบจะปรับสถานะเป็น failed อัตโนมัติ</p>
+                            ) : (
+                                <button className="gl-action-btn gl-submit-btn" disabled={actionLoading} onClick={handleConfirmParticipation}>
+                                    <CheckCircle size={16} /> ยืนยันการเข้าร่วมโครงการ
+                                </button>
+                            )}
+                        </div>
+                    )}
+                    {!isLeader && team.status === 'passed' && !team.confirmedAt && (
+                        <div className="gl-team-info-card">
+                            <span className="gl-team-info-label"><Clock size={13} /> กำหนดเวลายืนยันของทีม</span>
+                            <div className="gl-status-row"><div className="gl-status-label">หมดเขตยืนยัน</div><span>{formatDateTime(team.confirmationDeadlineAt)}</span></div>
+                            <div className="gl-status-row"><div className="gl-status-label">เวลาที่เหลือ</div><span>{countdownText}</span></div>
+                        </div>
+                    )}
 
 
                     {/* General info section */}

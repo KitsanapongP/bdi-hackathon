@@ -2,9 +2,26 @@ import type { DB } from '../../config/db.js';
 import * as repo from './teams.repo.js';
 import { AppError } from '../../shared/errors.js';
 import * as crypto from 'crypto';
+import * as notificationService from '../notifications/notifications.service.js';
 
 function generateRandomCode(length: number = 6): string {
     return crypto.randomBytes(3).toString('hex').toUpperCase().substring(0, length);
+}
+
+async function applySelectionExpiryIfNeeded(db: DB, teamId: number): Promise<void> {
+    const changed = await repo.failTeamIfConfirmationExpired(db, teamId);
+    if (!changed) return;
+    const refreshed = await repo.getTeamById(db, teamId);
+    if (!refreshed) return;
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: refreshed.current_leader_user_id,
+        actionCode: 'TEAM_CONFIRMATION_EXPIRED_AUTO_FAILED',
+        actionDetail: {
+            status: refreshed.status,
+            confirmation_deadline_at: refreshed.confirmation_deadline_at,
+        },
+    });
 }
 
 export async function createTeam(db: DB, userId: number, data: { teamNameTh: string; teamNameEn: string; visibility: 'public' | 'private' }) {
@@ -272,6 +289,7 @@ export async function respondJoinRequest(db: DB, teamId: number, requestId: numb
 }
 
 export async function getTeamDetails(db: DB, teamId: number) {
+    await applySelectionExpiryIfNeeded(db, teamId);
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
     const members = await repo.getTeamMembers(db, teamId);
@@ -386,5 +404,57 @@ export async function respondToInvitation(db: DB, invitationId: number, userId: 
     });
 
     return { success: true, status };
+}
+
+export async function getTeamInbox(db: DB, teamId: number, userId: number, limit = 50) {
+    await applySelectionExpiryIfNeeded(db, teamId);
+    const member = await repo.getTeamMemberByTeamAndUser(db, teamId, userId);
+    if (!member || member.member_status !== 'active') {
+        throw new AppError('คุณไม่มีสิทธิ์เข้าถึงกล่องข้อความของทีมนี้', 403);
+    }
+    return notificationService.getTeamNotificationInbox(db, teamId, userId, limit);
+}
+
+export async function markTeamInboxAsRead(db: DB, notificationLogId: number, userId: number) {
+    await notificationService.markInboxAsRead(db, notificationLogId, userId);
+}
+
+export async function confirmParticipation(db: DB, teamId: number, leaderUserId: number) {
+    await applySelectionExpiryIfNeeded(db, teamId);
+    const team = await repo.getTeamById(db, teamId);
+    if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
+    if (team.current_leader_user_id !== leaderUserId) {
+        throw new AppError('เฉพาะหัวหน้าทีมเท่านั้นที่ยืนยันได้', 403);
+    }
+    if (team.status !== 'passed') {
+        throw new AppError('ทีมนี้ยังไม่อยู่ในสถานะผ่านการคัดเลือก', 400);
+    }
+    if (team.confirmed_at) {
+        throw new AppError('ทีมนี้ยืนยันการเข้าร่วมไปแล้ว', 400);
+    }
+
+    const now = new Date();
+    if (team.confirmation_deadline_at && new Date(team.confirmation_deadline_at).getTime() < now.getTime()) {
+        throw new AppError('หมดเวลายืนยันการเข้าร่วมแล้ว', 400);
+    }
+
+    await repo.confirmTeamParticipation(db, teamId, leaderUserId);
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: leaderUserId,
+        actionCode: 'TEAM_CONFIRMED_PARTICIPATION',
+        actionDetail: {
+            status: team.status,
+            confirmation_deadline_at: team.confirmation_deadline_at,
+        },
+    });
+
+    await notificationService.triggerNotificationEvent(db, {
+        eventCode: 'TEAM_CONFIRMED',
+        teamId,
+        actorUserId: leaderUserId,
+    });
+
+    return { success: true };
 }
 

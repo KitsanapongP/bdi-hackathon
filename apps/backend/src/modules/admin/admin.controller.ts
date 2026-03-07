@@ -14,6 +14,9 @@ import {
     reorderContactChannelsSchema,
     createScheduleItemSchema,
     updateScheduleItemSchema,
+    selectionTeamsQuerySchema,
+    selectionResultSchema,
+    updateGlobalSelectionDeadlineSchema,
 } from './admin.schema.js';
 import * as service from './admin.service.js';
 import * as contentService from '../content/content.service.js';
@@ -556,6 +559,86 @@ export async function handleExportSubmittedVerificationBundle(req: FastifyReques
         reply.header('Content-Type', 'application/zip');
         reply.header('Content-Disposition', buildAttachmentHeader(result.fileName));
         return reply.send(result.stream);
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleGetSelectionTeams(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = selectionTeamsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const rows = await service.getSelectionTeams(req.server.ctx.db, parsed.data.status);
+        return reply.send(ok(rows));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleSetSelectionResult(
+    req: FastifyRequest<{ Params: { teamId: string } }>,
+    reply: FastifyReply,
+) {
+    const teamId = Number(req.params.teamId);
+    if (!Number.isFinite(teamId)) {
+        return reply.status(400).send({ ok: false, message: 'teamId ไม่ถูกต้อง' });
+    }
+
+    const parsed = selectionResultSchema.safeParse(req.body);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const user = req.user as JwtPayload;
+        const row = await service.setSelectionResult(req.server.ctx.db, {
+            teamId,
+            adminUserId: user.userId,
+            status: parsed.data.status,
+            confirmDeadlineAt: parsed.data.confirmDeadlineAt ?? null,
+        });
+        return reply.send(ok(row, 'บันทึกผลคัดเลือกสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleGetGlobalSelectionDeadline(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const value = await service.getGlobalSelectionDeadline(req.server.ctx.db);
+        return reply.send(ok({ confirmDeadlineAt: value }));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleSetGlobalSelectionDeadline(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = updateGlobalSelectionDeadlineSchema.safeParse(req.body);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await service.setGlobalSelectionDeadline(req.server.ctx.db, parsed.data.confirmDeadlineAt);
+        return reply.send(ok(result, 'ตั้งค่า Global deadline สำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });

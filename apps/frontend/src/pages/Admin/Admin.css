@@ -1551,3 +1551,10 @@ body:has(.ad-page) {
     padding-bottom: 6px;
   }
 }
+
+.ad-inline-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+

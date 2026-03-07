@@ -8,13 +8,18 @@ import type {
     ExportSubmittedTeamRow,
     ExportTeamAdvisorRow,
     ExportTeamMemberRow,
+    SelectionTeamRow,
 } from './admin.types.js';
-import { ConflictError, NotFoundError } from '../../shared/errors.js';
+import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import { PassThrough } from 'node:stream';
 import ExcelJS from 'exceljs';
 import archiver from 'archiver';
+import { createTeamAuditLog } from '../teams/teams.repo.js';
+import { triggerNotificationEvent } from '../notifications/notifications.service.js';
+
+const GLOBAL_SELECTION_DEADLINE_KEY = 'GLOBAL_SELECTION_CONFIRM_DEADLINE_AT';
 
 interface TeamExportBundle {
     team: ExportSubmittedTeamRow;
@@ -111,8 +116,8 @@ export async function getDashboardOverview(db: DB, input: DashboardQueryInput) {
 
     const statusMap = new Map<DashboardTeamStatus, number>([
         ['submitted', 0],
-        ['approved', 0],
-        ['rejected', 0],
+        ['passed', 0],
+        ['failed', 0],
     ]);
     statusCountsRows.forEach((row) => {
         statusMap.set(row.status, Number(row.count));
@@ -224,8 +229,8 @@ export async function getDashboardOverview(db: DB, input: DashboardQueryInput) {
         },
         statusCounts: [
             { status: 'submitted', count: statusMap.get('submitted') ?? 0 },
-            { status: 'approved', count: statusMap.get('approved') ?? 0 },
-            { status: 'rejected', count: statusMap.get('rejected') ?? 0 },
+            { status: 'passed', count: statusMap.get('passed') ?? 0 },
+            { status: 'failed', count: statusMap.get('failed') ?? 0 },
         ],
         teamSizeBuckets: Object.entries(teamSizeBuckets).map(([bucket, count]) => ({ bucket, count })),
         genderCounts: Object.entries(genderCounts).map(([gender, count]) => ({ gender, count })),
@@ -233,8 +238,8 @@ export async function getDashboardOverview(db: DB, input: DashboardQueryInput) {
         submissionTrend: trendRows.map((row) => ({
             date: row.date_label,
             submitted: Number(row.submitted),
-            approved: Number(row.approved),
-            rejected: Number(row.rejected),
+            passed: Number(row.passed),
+            failed: Number(row.failed),
         })),
         duplicateNames,
     };
@@ -316,9 +321,9 @@ async function buildTeamWorkbookBuffer(bundle: TeamExportBundle): Promise<Buffer
         { header: 'advisor_phone', key: 'advisor_phone' },
         { header: 'advisor_institution_name_th', key: 'advisor_institution_name_th' },
         { header: 'advisor_position', key: 'advisor_position' },
-        { header: 'approved_at', key: 'approved_at' },
-        { header: 'selected_at', key: 'selected_at' },
-        { header: 'rejected_at', key: 'rejected_at' },
+        { header: 'confirmation_deadline_at', key: 'confirmation_deadline_at' },
+        { header: 'confirmed_at', key: 'confirmed_at' },
+        { header: 'confirmed_by_user_id', key: 'confirmed_by_user_id' },
         { header: 'created_at', key: 'created_at' },
         { header: 'updated_at', key: 'updated_at' },
     ];
@@ -378,9 +383,9 @@ async function buildTeamWorkbookBuffer(bundle: TeamExportBundle): Promise<Buffer
         advisor_phone: advisorPhones,
         advisor_institution_name_th: advisorInstitutions,
         advisor_position: advisorPositions,
-        approved_at: formatDateTime(bundle.team.approved_at),
-        selected_at: formatDateTime(bundle.team.selected_at),
-        rejected_at: formatDateTime(bundle.team.rejected_at),
+        confirmation_deadline_at: formatDateTime(bundle.team.confirmation_deadline_at),
+        confirmed_at: formatDateTime(bundle.team.confirmed_at),
+        confirmed_by_user_id: bundle.team.confirmed_by_user_id ?? '',
         created_at: formatDateTime(bundle.team.created_at),
         updated_at: formatDateTime(bundle.team.updated_at),
     });
@@ -493,4 +498,93 @@ export async function exportSubmittedVerificationBundle(db: DB): Promise<{ fileN
         fileName: `verification_export_${timestamp}.zip`,
         stream: output,
     };
+}
+
+export async function getSelectionTeams(
+    db: DB,
+    status?: 'submitted' | 'passed' | 'failed',
+): Promise<SelectionTeamRow[]> {
+    return repo.listSelectionTeams(db, status);
+}
+
+export async function setSelectionResult(
+    db: DB,
+    data: {
+        teamId: number;
+        adminUserId: number;
+        status: 'passed' | 'failed';
+        confirmDeadlineAt?: string | null;
+    },
+): Promise<SelectionTeamRow> {
+    const team = await repo.getSelectionTeamById(db, data.teamId);
+    if (!team) throw new NotFoundError('ไม่พบทีม');
+
+    const confirmDeadlineAt = data.status === 'passed'
+        ? await getGlobalSelectionDeadline(db)
+        : null;
+    if (data.status === 'passed' && !confirmDeadlineAt) {
+        throw new BadRequestError('ยังไม่ได้ตั้งค่า Global confirm deadline จากหน้า admin');
+    }
+
+    await repo.updateSelectionResult(db, {
+        teamId: data.teamId,
+        status: data.status,
+        confirmationDeadlineAt: confirmDeadlineAt,
+    });
+
+    await createTeamAuditLog(db, {
+        teamId: data.teamId,
+        actorUserId: data.adminUserId,
+        actionCode: data.status === 'passed' ? 'TEAM_SELECTION_PASSED' : 'TEAM_SELECTION_FAILED',
+        actionDetail: {
+            previous_status: team.status,
+            next_status: data.status,
+            confirmation_deadline_at: confirmDeadlineAt,
+        },
+    });
+
+    await triggerNotificationEvent(db, {
+        eventCode: data.status === 'passed' ? 'SELECTION_PASSED' : 'SELECTION_FAILED',
+        teamId: data.teamId,
+        actorUserId: data.adminUserId,
+        extra: {
+            confirmation_deadline_at: confirmDeadlineAt,
+        },
+    });
+
+    const updated = await repo.getSelectionTeamById(db, data.teamId);
+    if (!updated) throw new NotFoundError('ไม่พบทีมหลังอัปเดตผลคัดเลือก');
+    return updated;
+}
+
+function normalizeDeadlineToDb(rawInput: string): string {
+    const raw = String(rawInput || '').trim();
+    let date: Date;
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) {
+        date = new Date(`${raw}:00`);
+    } else {
+        date = new Date(raw);
+    }
+    if (Number.isNaN(date.getTime())) {
+        throw new BadRequestError('รูปแบบวันเวลาหมดเขตไม่ถูกต้อง');
+    }
+
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mi = String(date.getMinutes()).padStart(2, '0');
+    const ss = String(date.getSeconds()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+}
+
+export async function getGlobalSelectionDeadline(db: DB): Promise<string | null> {
+    return repo.getSysConfigValue(db, GLOBAL_SELECTION_DEADLINE_KEY);
+}
+
+export async function setGlobalSelectionDeadline(db: DB, rawDeadline: string): Promise<{ confirmDeadlineAt: string }> {
+    const deadline = normalizeDeadlineToDb(rawDeadline);
+    await repo.upsertSysConfigValue(db, GLOBAL_SELECTION_DEADLINE_KEY, deadline);
+    await repo.applyGlobalSelectionDeadlineToPassedTeams(db, deadline);
+    return { confirmDeadlineAt: deadline };
 }

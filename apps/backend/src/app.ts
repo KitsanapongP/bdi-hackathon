@@ -22,6 +22,7 @@ import { sysLogsRoutes } from './modules/sys-logs/sys-logs.routes.js';
 import { contentRoutes } from './modules/content/content.routes.js';
 import { verificationRoutes } from './modules/verification/verification.routes.js';
 import { submissionsRoutes } from './modules/submissions/submissions.routes.js';
+import { notificationsRoutes } from './modules/notifications/notifications.routes.js';
 
 export type AppContext = { env: Env; db: DB };
 
@@ -133,6 +134,7 @@ export function buildApp(ctx: AppContext) {
   app.register(contentRoutes, { prefix: '/api/content' });
   app.register(verificationRoutes, { prefix: '/api/verification' });
   app.register(submissionsRoutes, { prefix: '/api/submissions' });
+  app.register(notificationsRoutes, { prefix: '/api/notifications' });
 
   // Log incoming request body
   app.addHook('preHandler', async (request, reply) => {

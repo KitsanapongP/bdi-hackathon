@@ -223,3 +223,51 @@ export async function handleJoinByCode(req: FastifyRequest, reply: FastifyReply)
         throw err;
     }
 }
+
+export async function handleGetTeamInbox(req: FastifyRequest<{ Params: { id: string }; Querystring: { limit?: string } }>, reply: FastifyReply) {
+    const teamId = parseInt(req.params.id, 10);
+    if (isNaN(teamId)) return reply.status(400).send({ ok: false, message: 'Invalid team ID' });
+    const user = req.user as JwtPayload;
+    const limit = Number(req.query.limit || 50);
+    try {
+        const data = await service.getTeamInbox(req.server.ctx.db, teamId, user.userId, limit);
+        return reply.send(ok(data));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleMarkTeamInboxRead(req: FastifyRequest<{ Params: { notificationLogId: string } }>, reply: FastifyReply) {
+    const notificationLogId = Number(req.params.notificationLogId);
+    if (!Number.isFinite(notificationLogId)) {
+        return reply.status(400).send({ ok: false, message: 'Invalid notification log id' });
+    }
+    const user = req.user as JwtPayload;
+    try {
+        await service.markTeamInboxAsRead(req.server.ctx.db, notificationLogId, user.userId);
+        return reply.send(ok(null, 'อ่านข้อความสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleConfirmParticipation(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const teamId = parseInt(req.params.id, 10);
+    if (isNaN(teamId)) return reply.status(400).send({ ok: false, message: 'Invalid team ID' });
+    const user = req.user as JwtPayload;
+    try {
+        const result = await service.confirmParticipation(req.server.ctx.db, teamId, user.userId);
+        return reply.send(ok(result, 'ยืนยันการเข้าร่วมสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}

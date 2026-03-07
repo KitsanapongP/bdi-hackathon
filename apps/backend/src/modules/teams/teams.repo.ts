@@ -324,3 +324,31 @@ export async function checkTeamHasSubmittedVerification(db: DB, teamId: number):
     `, { teamId });
     return rows.length > 0;
 }
+
+export async function confirmTeamParticipation(
+    db: DB,
+    teamId: number,
+    leaderUserId: number,
+): Promise<void> {
+    await db.query(`
+        UPDATE team_teams
+        SET confirmed_at = NOW(),
+            confirmed_by_user_id = :leaderUserId,
+            updated_at = NOW()
+        WHERE team_id = :teamId
+    `, { teamId, leaderUserId });
+}
+
+export async function failTeamIfConfirmationExpired(db: DB, teamId: number): Promise<boolean> {
+    const [result] = await db.query<ResultSetHeader>(`
+        UPDATE team_teams
+        SET status = 'failed',
+            updated_at = NOW()
+        WHERE team_id = :teamId
+          AND status = 'passed'
+          AND confirmed_at IS NULL
+          AND confirmation_deadline_at IS NOT NULL
+          AND confirmation_deadline_at < NOW()
+    `, { teamId });
+    return result.affectedRows > 0;
+}

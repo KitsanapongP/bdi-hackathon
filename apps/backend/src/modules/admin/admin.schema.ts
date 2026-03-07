@@ -16,19 +16,19 @@ export const updateAllowlistSchema = z.object({
 
 export type UpdateAllowlistInput = z.infer<typeof updateAllowlistSchema>;
 
-export const dashboardStatusEnum = z.enum(['submitted', 'approved', 'rejected']);
+export const dashboardStatusEnum = z.enum(['submitted', 'passed', 'failed']);
 
 export const dashboardQuerySchema = z.object({
     statuses: z
         .string()
         .optional()
         .transform((value) => {
-            if (!value) return ['submitted', 'approved', 'rejected'] as const;
+            if (!value) return ['submitted', 'passed', 'failed'] as const;
             return value
                 .split(',')
                 .map((item) => item.trim().toLowerCase())
-                .filter((item): item is 'submitted' | 'approved' | 'rejected' =>
-                    item === 'submitted' || item === 'approved' || item === 'rejected'
+                .filter((item): item is 'submitted' | 'passed' | 'failed' =>
+                    item === 'submitted' || item === 'passed' || item === 'failed'
                 );
         })
         .refine((items) => items.length > 0, 'statuses ต้องมีอย่างน้อย 1 ค่า'),
@@ -125,3 +125,16 @@ export const createScheduleItemSchema = z.object({
 });
 
 export const updateScheduleItemSchema = createScheduleItemSchema.partial();
+
+export const selectionTeamsQuerySchema = z.object({
+    status: z.enum(['submitted', 'passed', 'failed']).optional(),
+});
+
+export const selectionResultSchema = z.object({
+    status: z.enum(['passed', 'failed']),
+    confirmDeadlineAt: z.string().trim().min(1).nullable().optional(),
+});
+
+export const updateGlobalSelectionDeadlineSchema = z.object({
+    confirmDeadlineAt: z.string().trim().min(1, 'กรุณาระบุวันเวลาหมดเขต'),
+});

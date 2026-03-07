@@ -18,7 +18,7 @@ export interface AllowlistResponse {
     grantedByUserId: number | null;
 }
 
-export type DashboardTeamStatus = 'submitted' | 'approved' | 'rejected';
+export type DashboardTeamStatus = 'submitted' | 'passed' | 'failed';
 
 export interface DashboardStatusCountRow {
     status: DashboardTeamStatus;
@@ -28,8 +28,8 @@ export interface DashboardStatusCountRow {
 export interface DashboardTrendRow {
     date_label: string;
     submitted: number;
-    approved: number;
-    rejected: number;
+    passed: number;
+    failed: number;
 }
 
 export interface DashboardTeamMemberCountRow {
@@ -72,9 +72,9 @@ export interface ExportSubmittedTeamRow {
     visibility: 'public' | 'private';
     current_leader_user_id: number;
     video_link: string | null;
-    approved_at: Date | null;
-    selected_at: Date | null;
-    rejected_at: Date | null;
+    confirmation_deadline_at: Date | null;
+    confirmed_at: Date | null;
+    confirmed_by_user_id: number | null;
     created_at: Date;
     updated_at: Date;
 }
@@ -123,4 +123,19 @@ export interface ExportTeamMemberRow {
     member_unconfirmed_at: Date | null;
     profile_completed_at: Date | null;
     profile_updated_at: Date | null;
+}
+
+export interface SelectionTeamRow {
+    team_id: number;
+    team_code: string;
+    team_name_th: string;
+    team_name_en: string;
+    status: 'submitted' | 'passed' | 'failed' | 'forming' | 'disbanded';
+    current_leader_user_id: number;
+    leader_name: string | null;
+    member_count: number;
+    confirmation_deadline_at: Date | null;
+    confirmed_at: Date | null;
+    confirmed_by_user_id: number | null;
+    updated_at: Date;
 }

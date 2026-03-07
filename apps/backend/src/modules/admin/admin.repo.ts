@@ -11,6 +11,7 @@ import type {
     ExportSubmittedTeamRow,
     ExportTeamAdvisorRow,
     ExportTeamMemberRow,
+    SelectionTeamRow,
 } from './admin.types.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import type { AllowlistInput, UpdateAllowlistInput } from './admin.schema.js';
@@ -127,7 +128,7 @@ export async function getDashboardSubmittedOrApprovedCount(db: DB): Promise<numb
         `SELECT COUNT(*) AS total
          FROM team_teams
          WHERE deleted_at IS NULL
-           AND status IN ('submitted', 'approved')`
+           AND status IN ('submitted', 'passed')`
     );
     return Number(rows[0]?.total ?? 0);
 }
@@ -212,8 +213,8 @@ export async function getDashboardTrend(
         `SELECT
             DATE(d.day_date) AS date_label,
             COALESCE(SUM(CASE WHEN e.event_status = 'submitted' THEN 1 ELSE 0 END), 0) AS submitted,
-            COALESCE(SUM(CASE WHEN e.event_status = 'approved' THEN 1 ELSE 0 END), 0) AS approved,
-            COALESCE(SUM(CASE WHEN e.event_status = 'rejected' THEN 1 ELSE 0 END), 0) AS rejected
+            COALESCE(SUM(CASE WHEN e.event_status = 'passed' THEN 1 ELSE 0 END), 0) AS passed,
+            COALESCE(SUM(CASE WHEN e.event_status = 'failed' THEN 1 ELSE 0 END), 0) AS failed
          FROM (
             SELECT DATE(NOW()) - INTERVAL seq.day DAY AS day_date
             FROM (
@@ -264,17 +265,17 @@ export async function getDashboardTrend(
 
             UNION ALL
 
-            SELECT DATE(t2.approved_at) AS event_date, 'approved' AS event_status
+            SELECT DATE(t2.updated_at) AS event_date, 'passed' AS event_status
             FROM team_teams t2
             WHERE t2.deleted_at IS NULL
-              AND t2.approved_at IS NOT NULL
+              AND t2.status = 'passed'
 
             UNION ALL
 
-            SELECT DATE(t3.rejected_at) AS event_date, 'rejected' AS event_status
+            SELECT DATE(t3.updated_at) AS event_date, 'failed' AS event_status
             FROM team_teams t3
             WHERE t3.deleted_at IS NULL
-              AND t3.rejected_at IS NOT NULL
+              AND t3.status = 'failed'
          ) e
            ON e.event_date = d.day_date
          GROUP BY DATE(d.day_date)
@@ -327,9 +328,9 @@ export async function getSubmittedTeamsForExport(db: DB): Promise<ExportSubmitte
             t.visibility,
             t.current_leader_user_id,
             t.video_link,
-            t.approved_at,
-            t.selected_at,
-            t.rejected_at,
+            t.confirmation_deadline_at,
+            t.confirmed_at,
+            t.confirmed_by_user_id,
             t.created_at,
             t.updated_at
         FROM team_teams t
@@ -441,4 +442,122 @@ export async function getTeamMembersForExport(db: DB, teamIds: number[]): Promis
     `, params);
 
     return rows as ExportTeamMemberRow[];
+}
+
+export async function listSelectionTeams(db: DB, status?: 'submitted' | 'passed' | 'failed'): Promise<SelectionTeamRow[]> {
+    const params: Record<string, unknown> = {};
+    let whereClause = `WHERE t.deleted_at IS NULL AND t.status IN ('submitted','passed','failed')`;
+    if (status) {
+        whereClause += ` AND t.status = :status`;
+        params.status = status;
+    }
+
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT
+          t.team_id,
+          t.team_code,
+          t.team_name_th,
+          t.team_name_en,
+          t.status,
+          t.current_leader_user_id,
+          u.user_name AS leader_name,
+          COUNT(m.team_member_id) AS member_count,
+          t.confirmation_deadline_at,
+          t.confirmed_at,
+          t.confirmed_by_user_id,
+          t.updated_at
+        FROM team_teams t
+        LEFT JOIN user_users u ON u.user_id = t.current_leader_user_id
+        LEFT JOIN team_members m
+          ON m.team_id = t.team_id
+         AND m.member_status = 'active'
+        ${whereClause}
+        GROUP BY
+          t.team_id, t.team_code, t.team_name_th, t.team_name_en, t.status,
+          t.current_leader_user_id, u.user_name, t.confirmation_deadline_at,
+          t.confirmed_at, t.confirmed_by_user_id, t.updated_at
+        ORDER BY t.updated_at DESC, t.team_id DESC
+    `, params);
+
+    return rows as SelectionTeamRow[];
+}
+
+export async function getSelectionTeamById(db: DB, teamId: number): Promise<SelectionTeamRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT
+          t.team_id,
+          t.team_code,
+          t.team_name_th,
+          t.team_name_en,
+          t.status,
+          t.current_leader_user_id,
+          u.user_name AS leader_name,
+          (
+            SELECT COUNT(*)
+            FROM team_members m
+            WHERE m.team_id = t.team_id
+              AND m.member_status = 'active'
+          ) AS member_count,
+          t.confirmation_deadline_at,
+          t.confirmed_at,
+          t.confirmed_by_user_id,
+          t.updated_at
+        FROM team_teams t
+        LEFT JOIN user_users u ON u.user_id = t.current_leader_user_id
+        WHERE t.team_id = :teamId
+          AND t.deleted_at IS NULL
+        LIMIT 1
+    `, { teamId });
+
+    return (rows[0] as SelectionTeamRow | undefined) ?? null;
+}
+
+export async function updateSelectionResult(
+    db: DB,
+    data: {
+        teamId: number;
+        status: 'passed' | 'failed';
+        confirmationDeadlineAt: string | null;
+    },
+): Promise<void> {
+    await db.query(`
+        UPDATE team_teams
+        SET status = :status,
+            confirmation_deadline_at = :confirmationDeadlineAt,
+            confirmed_at = NULL,
+            confirmed_by_user_id = NULL,
+            updated_at = NOW()
+        WHERE team_id = :teamId
+    `, data);
+}
+
+export async function getSysConfigValue(db: DB, key: string): Promise<string | null> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT config_value
+        FROM sys_configs
+        WHERE config_key = :key
+        LIMIT 1
+    `, { key });
+    return (rows[0] as { config_value: string } | undefined)?.config_value ?? null;
+}
+
+export async function upsertSysConfigValue(db: DB, key: string, value: string): Promise<void> {
+    await db.query(`
+        INSERT INTO sys_configs (config_key, config_value, updated_at)
+        VALUES (:key, :value, NOW())
+        ON DUPLICATE KEY UPDATE
+            config_value = VALUES(config_value),
+            updated_at = NOW()
+    `, { key, value });
+}
+
+export async function applyGlobalSelectionDeadlineToPassedTeams(db: DB, confirmationDeadlineAt: string): Promise<void> {
+    await db.query(`
+        UPDATE team_teams
+        SET confirmation_deadline_at = :confirmationDeadlineAt,
+            updated_at = NOW()
+        WHERE status = 'passed'
+          AND confirmed_at IS NULL
+          AND deleted_at IS NULL
+    `, { confirmationDeadlineAt });
 }

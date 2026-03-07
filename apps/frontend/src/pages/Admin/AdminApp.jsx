@@ -133,6 +133,11 @@ const adminNavGroups = [
     title: 'Team Review',
     links: [
       {
+        to: '/admin/selection',
+        label: 'Selection Result',
+        icon: ListChecks,
+      },
+      {
         to: '/admin/review/queue',
         label: 'Review Queue',
         icon: ClipboardCheck,
@@ -152,6 +157,11 @@ const adminNavGroups = [
   {
     title: 'System',
     links: [
+      {
+        to: '/admin/notifications',
+        label: 'Notifications',
+        icon: Mail,
+      },
       {
         to: '/admin/audit',
         label: 'Audit Logs',
@@ -259,8 +269,8 @@ function normalizeAdminMe(payload) {
 
 const dashboardStatusOptions = [
   { value: 'submitted', label: 'Submitted', color: '#3b82f6' },
-  { value: 'approved', label: 'Approved', color: '#10b981' },
-  { value: 'rejected', label: 'Rejected', color: '#ef4444' },
+  { value: 'passed', label: 'Passed', color: '#10b981' },
+  { value: 'failed', label: 'Failed', color: '#ef4444' },
 ]
 
 const genderLabelMap = {
@@ -803,6 +813,8 @@ function AdminLayout() {
       '/admin/review/queue': 'Team Review / Queue',
       '/admin/review/returned': 'Team Review / Returned',
       '/admin/review/approved': 'Team Review / Approved',
+      '/admin/selection': 'Team Selection',
+      '/admin/notifications': 'Notification Settings',
       '/admin/audit': 'Audit Logs',
       '/admin/settings': 'Settings',
     }
@@ -904,7 +916,7 @@ function AdminLayout() {
 
 function DashboardPage() {
   const { pushToast } = useAdminToast()
-  const [selectedStatuses, setSelectedStatuses] = useState(['submitted', 'approved'])
+  const [selectedStatuses, setSelectedStatuses] = useState(['submitted', 'passed'])
   const [days, setDays] = useState(30)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
@@ -1162,13 +1174,13 @@ function DashboardPage() {
         </h3>
         <div className="ad-trend-grid">
           {(overview?.submissionTrend || []).slice(-14).map((row) => {
-            const total = row.submitted + row.approved + row.rejected
+            const total = row.submitted + row.passed + row.failed
             return (
               <div key={row.date}>
                 <div>
                   <i style={{ height: `${Math.max(4, row.submitted * 8)}px`, background: '#3b82f6' }} />
-                  <i style={{ height: `${Math.max(4, row.approved * 8)}px`, background: '#10b981' }} />
-                  <i style={{ height: `${Math.max(4, row.rejected * 8)}px`, background: '#ef4444' }} />
+                  <i style={{ height: `${Math.max(4, row.passed * 8)}px`, background: '#10b981' }} />
+                  <i style={{ height: `${Math.max(4, row.failed * 8)}px`, background: '#ef4444' }} />
                 </div>
                 <strong>{total}</strong>
                 <span>{row.date.slice(5)}</span>
@@ -4553,6 +4565,292 @@ function ApprovedTeamsPage() {
   )
 }
 
+function SelectionPage() {
+  const { pushToast } = useAdminToast()
+  const [loading, setLoading] = useState(true)
+  const [rows, setRows] = useState([])
+  const [status, setStatus] = useState('submitted')
+  const [deadline, setDeadline] = useState('')
+  const [savingDeadline, setSavingDeadline] = useState(false)
+
+  const fetchRows = useCallback(async () => {
+    try {
+      setLoading(true)
+      const query = new URLSearchParams()
+      if (status) query.set('status', status)
+      const res = await fetch(apiUrl(`/api/admin/selection/teams?${query.toString()}`), { credentials: 'include' })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'load failed')
+      setRows(payload.data || [])
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'โหลดข้อมูล selection ไม่สำเร็จ' })
+    } finally {
+      setLoading(false)
+    }
+  }, [pushToast, status])
+
+  useEffect(() => {
+    fetchRows()
+  }, [fetchRows])
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await fetch(apiUrl('/api/admin/selection/global-deadline'), { credentials: 'include' })
+        const payload = await res.json()
+        if (!mounted) return
+        if (res.ok && payload?.ok) {
+          const raw = String(payload?.data?.confirmDeadlineAt || '')
+          if (!raw) {
+            setDeadline('')
+            return
+          }
+          const normalized = raw.includes(' ') && !raw.includes('T') ? raw.replace(' ', 'T') : raw
+          const date = new Date(normalized)
+          if (Number.isNaN(date.getTime())) {
+            setDeadline('')
+            return
+          }
+          const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+          setDeadline(offsetDate.toISOString().slice(0, 16))
+        }
+      } catch {
+        // no-op
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
+
+  const saveGlobalDeadline = async () => {
+    try {
+      setSavingDeadline(true)
+      const res = await fetch(apiUrl('/api/admin/selection/global-deadline'), {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmDeadlineAt: deadline }),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'save failed')
+      pushToast({ title: 'บันทึก Global deadline สำเร็จ' })
+      fetchRows()
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'บันทึก Global deadline ไม่สำเร็จ' })
+    } finally {
+      setSavingDeadline(false)
+    }
+  }
+
+  const setResult = async (teamId, nextStatus) => {
+    try {
+      const body = {
+        status: nextStatus,
+      }
+      const res = await fetch(apiUrl(`/api/admin/selection/teams/${teamId}/result`), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'update failed')
+      pushToast({ title: 'บันทึกผลคัดเลือกสำเร็จ' })
+      fetchRows()
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'บันทึกผลคัดเลือกไม่สำเร็จ' })
+    }
+  }
+
+  return (
+    <div className="ad-stack">
+      <SectionHeading title="Selection Result" description="ประกาศผลผ่าน/ไม่ผ่าน และกำหนดเวลาให้ทีมยืนยันเข้าร่วม" />
+      <article className="ad-panel">
+        <div className="ad-dashboard-filters">
+          <label>
+            Team status
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="submitted">submitted</option>
+              <option value="passed">passed</option>
+              <option value="failed">failed</option>
+            </select>
+          </label>
+          <label>
+            Confirm deadline (for passed)
+            <input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+          </label>
+          <button
+            type="button"
+            className="ad-btn ad-btn-primary"
+            onClick={saveGlobalDeadline}
+            disabled={savingDeadline || !deadline}
+            title="บันทึก deadline กลางสำหรับทุกทีมที่ passed"
+          >
+            {savingDeadline ? 'Saving...' : 'Save Global deadline'}
+          </button>
+          <button
+            type="button"
+            className="ad-btn"
+            onClick={() => setDeadline('')}
+            title="ล้างค่า deadline ที่กรอกไว้"
+          >
+            Clear deadline
+          </button>
+          <button type="button" className="ad-btn" onClick={fetchRows}>
+            <RefreshCw size={14} />
+            Refresh
+          </button>
+        </div>
+      </article>
+
+      <AdminDataTable
+        rows={rows.map((r) => ({ ...r, id: r.team_id }))}
+        loading={loading}
+        searchKeys={['team_code', 'team_name_th', 'team_name_en', 'leader_name']}
+        searchPlaceholder="ค้นหา team code / team name / leader"
+        columns={[
+          { key: 'team_code', label: 'Team Code' },
+          {
+            key: 'team_name_th',
+            label: 'Team',
+            render: (row) => row.team_name_th || row.team_name_en,
+          },
+          { key: 'leader_name', label: 'Leader' },
+          { key: 'status', label: 'Status' },
+          {
+            key: 'confirmation_deadline_at',
+            label: 'Confirm Deadline',
+            render: (row) => formatDateTime(row.confirmation_deadline_at),
+          },
+          {
+            key: 'confirmed_at',
+            label: 'Confirmed At',
+            render: (row) => formatDateTime(row.confirmed_at),
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="ad-inline-actions">
+                <button type="button" className="ad-mini-btn" onClick={() => setResult(row.team_id, 'passed')}>
+                  Set passed
+                </button>
+                <button type="button" className="ad-mini-btn" onClick={() => setResult(row.team_id, 'failed')}>
+                  Set failed
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+    </div>
+  )
+}
+
+function NotificationSettingsPage() {
+  const { pushToast } = useAdminToast()
+  const [settings, setSettings] = useState([])
+  const [templates, setTemplates] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true)
+      const [settingsRes, templatesRes] = await Promise.all([
+        fetch(apiUrl('/api/notifications/admin/settings'), { credentials: 'include' }),
+        fetch(apiUrl('/api/notifications/admin/templates'), { credentials: 'include' }),
+      ])
+      const settingsPayload = await settingsRes.json()
+      const templatesPayload = await templatesRes.json()
+      if (!settingsRes.ok || !settingsPayload?.ok) throw new Error(settingsPayload?.message || 'load settings failed')
+      if (!templatesRes.ok || !templatesPayload?.ok) throw new Error(templatesPayload?.message || 'load templates failed')
+      setSettings(settingsPayload.data || [])
+      setTemplates(templatesPayload.data || [])
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'โหลด notification settings ไม่สำเร็จ' })
+    } finally {
+      setLoading(false)
+    }
+  }, [pushToast])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const updateSetting = async (eventCode, patch) => {
+    try {
+      const res = await fetch(apiUrl(`/api/notifications/admin/settings/${eventCode}`), {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'update failed')
+      pushToast({ title: 'บันทึกการตั้งค่าแจ้งเตือนสำเร็จ' })
+      load()
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'บันทึกไม่สำเร็จ' })
+    }
+  }
+
+  return (
+    <div className="ad-stack">
+      <SectionHeading title="Notification Settings" description="ตั้งค่าเปิด/ปิดช่องทางแจ้งเตือน และแก้ไข template จากฐานข้อมูล" />
+      <AdminDataTable
+        rows={settings.map((s) => ({ ...s, id: s.eventCode }))}
+        loading={loading}
+        searchKeys={['eventCode']}
+        searchPlaceholder="ค้นหา event code"
+        columns={[
+          { key: 'eventCode', label: 'Event' },
+          {
+            key: 'isInAppEnabled',
+            label: 'In-App',
+            render: (row) => String(row.isInAppEnabled),
+          },
+          {
+            key: 'isEmailEnabled',
+            label: 'Email',
+            render: (row) => String(row.isEmailEnabled),
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="ad-inline-actions">
+                <button type="button" className="ad-mini-btn" onClick={() => updateSetting(row.eventCode, { isInAppEnabled: !row.isInAppEnabled })}>
+                  Toggle In-App
+                </button>
+                <button type="button" className="ad-mini-btn" onClick={() => updateSetting(row.eventCode, { isEmailEnabled: !row.isEmailEnabled })}>
+                  Toggle Email
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <AdminDataTable
+        rows={templates.map((t) => ({ ...t, id: t.templateCode }))}
+        loading={loading}
+        searchKeys={['templateCode', 'templateNameTh', 'templateNameEn']}
+        searchPlaceholder="ค้นหา template"
+        columns={[
+          { key: 'templateCode', label: 'Template Code' },
+          { key: 'templateNameTh', label: 'Name TH' },
+          { key: 'subjectTh', label: 'Subject TH' },
+          {
+            key: 'isEnabled',
+            label: 'Enabled',
+            render: (row) => String(row.isEnabled),
+          },
+        ]}
+      />
+    </div>
+  )
+}
+
 function AuditLogsPage() {
   const [selectedLog, setSelectedLog] = useState(null)
   return (
@@ -4741,11 +5039,13 @@ function AdminAppRoutes() {
         <Route path="static/winners" element={<StaticWinnersPage />} />
 
         <Route path="review" element={<Navigate to="queue" replace />} />
+        <Route path="selection" element={<SelectionPage />} />
         <Route path="review/queue" element={<ReviewQueuePage />} />
         <Route path="review/teams/:teamId" element={<TeamReviewDetailPage />} />
         <Route path="review/returned" element={<ReturnedMonitorPage />} />
         <Route path="review/approved" element={<ApprovedTeamsPage />} />
 
+        <Route path="notifications" element={<NotificationSettingsPage />} />
         <Route path="audit" element={<AuditLogsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

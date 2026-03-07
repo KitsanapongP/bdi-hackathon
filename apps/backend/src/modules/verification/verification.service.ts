@@ -2,7 +2,8 @@
 import type { TeamVerificationResponse } from './verification.types.js';
 import * as repo from './verification.repo.js';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../../shared/errors.js';
-import { getTeamById, getTeamMembers } from '../teams/teams.repo.js';
+import { failTeamIfConfirmationExpired, getTeamById, getTeamMembers } from '../teams/teams.repo.js';
+import * as notificationService from '../notifications/notifications.service.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -26,6 +27,7 @@ export async function getTeamVerificationStatus(
     teamId: number,
     userId: number
 ): Promise<TeamVerificationResponse> {
+    await failTeamIfConfirmationExpired(db, teamId);
     const team = await getTeamById(db, teamId);
     if (!team) throw new NotFoundError('\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e17\u0e35\u0e21');
 
@@ -34,7 +36,7 @@ export async function getTeamVerificationStatus(
     const myDocs = await repo.getDocumentsByTeamAndUser(db, teamId, userId);
     const myProfile = await repo.getVerifyProfile(db, teamId, userId, round?.verify_round_id ?? null);
 
-    const isTeamSubmitted = team.status === 'submitted' || team.status === 'approved' ||
+    const isTeamSubmitted = team.status === 'submitted' || team.status === 'passed' ||
         (round?.status === 'submitted' || round?.status === 'completed');
 
     return {
@@ -342,6 +344,12 @@ export async function submitTeam(
         teamId,
         actorUserId: leaderUserId,
         actionCode: 'TEAM_SUBMITTED',
+    });
+
+    await notificationService.triggerNotificationEvent(db, {
+        eventCode: 'IDENTITY_SUBMITTED',
+        teamId,
+        actorUserId: leaderUserId,
     });
 }
 

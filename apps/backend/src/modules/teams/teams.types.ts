@@ -5,9 +5,10 @@ export interface TeamRow {
     team_name_en: string;
     visibility: 'public' | 'private';
     current_leader_user_id: number;
-    status: 'draft' | 'forming' | 'ready' | 'submitted' | 'approved' | 'returned' | 'rejected' | 'archived' | 'disbanded';
-    approved_at: Date | null;
-    selected_at: Date | null;
+    status: 'forming' | 'submitted' | 'disbanded' | 'passed' | 'failed';
+    confirmation_deadline_at: Date | null;
+    confirmed_at: Date | null;
+    confirmed_by_user_id: number | null;
     video_link: string | null;
     created_at: Date;
     updated_at: Date;

@@ -31,6 +31,10 @@ import {
     handleUpdateScheduleItemAdmin,
     handleDeleteScheduleItemAdmin,
     handleExportSubmittedVerificationBundle,
+    handleGetSelectionTeams,
+    handleSetSelectionResult,
+    handleGetGlobalSelectionDeadline,
+    handleSetGlobalSelectionDeadline,
 } from './admin.controller.js';
 
 const adminRoutes: FastifyPluginAsync = async (fastify) => {
@@ -72,6 +76,10 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.delete('/schedules/items/:id', handleDeleteScheduleItemAdmin);
 
     fastify.get('/exports/submitted-verification-bundle', handleExportSubmittedVerificationBundle);
+    fastify.get('/selection/teams', handleGetSelectionTeams);
+    fastify.post('/selection/teams/:teamId/result', handleSetSelectionResult);
+    fastify.get('/selection/global-deadline', handleGetGlobalSelectionDeadline);
+    fastify.put('/selection/global-deadline', handleSetGlobalSelectionDeadline);
 };
 
 export default adminRoutes;
