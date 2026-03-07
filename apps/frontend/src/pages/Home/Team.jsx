@@ -1417,7 +1417,7 @@ export default function TeamContent({ user }) {
                                     </button>
                                     {!isSubmitted && !myConfirmed && (
                                         <button type="button" className="vf-doc-rename" onClick={() => handleRenameDoc(doc)}>
-                                            <Edit2 size={14} /> เปลี่ยนชื่อ
+                                            <Edit2 size={14} /> แก้ไขชื่อเอกสาร
                                         </button>
                                     )}
                                     {!isSubmitted && !myConfirmed && (

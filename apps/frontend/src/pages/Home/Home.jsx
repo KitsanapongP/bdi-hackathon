@@ -413,7 +413,7 @@ function HomePage() {
                                     className={`gt-pill-link gt-auth-btn gt-team-btn ${showLobby ? 'active' : ''}`}
                                     onClick={() => { setShowLobby(true); setShowProfile(false); window.scrollTo(0, 0); }}
                                 >
-                                    <Users size={15} /> ทีมของคุณ
+                                    <Users size={15} /> ทีมของฉัน
                                 </button>
                                 <button
                                     className={`gt-pill-link gt-auth-btn gt-login ${showProfile ? 'active' : ''}`}
@@ -490,13 +490,13 @@ function HomePage() {
 
             {/* MAIN CONTENT AREA */}
             {(showLobby || showProfile) && user ? (
-                    <div className="gt-subpage-wrap">
-                        {showLobby && <TeamContent user={user} />}
-                        {showProfile && <ProfileContent user={user} />}
-                        <div style={{ textAlign: 'center', padding: 20, fontSize: '0.8rem', opacity: 0.6, marginTop: 'auto' }}>
-                            © 2026 Khon Kaen Intelligent Living Hackathon 2026
-                        </div>
+                <div className="gt-subpage-wrap">
+                    {showLobby && <TeamContent user={user} />}
+                    {showProfile && <ProfileContent user={user} />}
+                    <div style={{ textAlign: 'center', padding: 20, fontSize: '0.8rem', opacity: 0.6, marginTop: 'auto' }}>
+                        © 2026 Khon Kaen Intelligent Living Hackathon 2026
                     </div>
+                </div>
             ) : (
                 <>
                     {/* Hero */}
