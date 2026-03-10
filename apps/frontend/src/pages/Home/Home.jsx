@@ -49,6 +49,52 @@ const config = {
     },
 };
 
+const competitionSteps = [
+    {
+        number: '01',
+        title: '📝 สมัครสมาชิก',
+        items: [
+            'สมัครด้วย Email หรือ SSO',
+            'ตั้งชื่อผู้ใช้ในระบบ',
+            'กรอกข้อมูลพื้นฐานให้ครบถ้วน',
+        ],
+    },
+    {
+        number: '02',
+        title: '👥 สร้างทีม / เข้าร่วมทีม',
+        items: [
+            'หัวหน้าทีมสร้างทีม',
+            'สมาชิกขอเข้าร่วม หรือใช้รหัสเชิญ',
+            'หัวหน้าทีมอนุมัติสมาชิก',
+        ],
+    },
+    {
+        number: '03',
+        title: '📄 ยืนยันตัวตนและแนบผลงาน',
+        items: [
+            'สมาชิกทุกคนกรอกข้อมูล',
+            'แนบเอกสารที่จำเป็น',
+            'แนบรายละเอียดข้อเสนอโครงการพร้อมคลิปนำเสนอ',
+        ],
+    },
+    {
+        number: '04',
+        title: '🚀 ส่งทีมเข้าพิจารณา',
+        items: [
+            'หัวหน้าทีมกดยืนยันการเข้าร่วม',
+            'รอคณะกรรมการตรวจสอบ',
+        ],
+    },
+    {
+        number: '05',
+        title: '🏆 ทีมที่ผ่านการคัดเลือก',
+        items: [
+            'ประกาศผลผ่านระบบและ Email',
+            'หัวหน้าทีมกดยืนยันเข้าร่วม',
+        ],
+    },
+];
+
 
 
 /* ═══════════════════════ Component ═══════════════════════ */
@@ -586,30 +632,24 @@ function HomePage() {
                         </div>
                     </section>
 
-                    {/* 3-Step Process */}
+                    {/* Competition Process */}
                     <section id="process" className="gt-section gt-container" style={{ paddingTop: '20px' }}>
                         <div className="gt-section-header gt-reveal">
                             <h2>ขั้นตอนการแข่งขัน</h2>
                             <p>เตรียมตัวเพื่อเป็นผู้ชนะใน Hackathon</p>
                         </div>
                         <div className="gt-process-steps gt-reveal">
-                            <div className="gt-step">
-                                <div className="step-num">01</div>
-                                <h3>คัดกรองคุณสมบัติ</h3>
-                                <p>ตรวจสอบคุณสมบัติและรับสมัคร</p>
-                            </div>
-                            <div className="gt-step-arrow"><ArrowRight size={24} /></div>
-                            <div className="gt-step">
-                                <div className="step-num">02</div>
-                                <h3>พิจารณารอบคัดเลือก</h3>
-                                <p>คัดเลือก 12 ทีม เข้าสู่รอบสุดท้าย</p>
-                            </div>
-                            <div className="gt-step-arrow"><ArrowRight size={24} /></div>
-                            <div className="gt-step">
-                                <div className="step-num">03</div>
-                                <h3>ตัดสินรอบ Final</h3>
-                                <p>แข่งขันและนำเสนอผลงาน (Pitching)</p>
-                            </div>
+                            {competitionSteps.map((step) => (
+                                <div key={step.number} className="gt-step">
+                                    <div className="step-num">{step.number}</div>
+                                    <h3>{step.title}</h3>
+                                    <ul className="gt-step-list">
+                                        {step.items.map((item) => (
+                                            <li key={item}>{item}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            ))}
                         </div>
                     </section>
 
