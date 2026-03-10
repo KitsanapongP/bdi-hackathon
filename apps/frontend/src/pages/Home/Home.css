@@ -586,8 +586,9 @@ section.gt-hero {
 .gt-hero h1 {
     font-size: 3.2rem;
     font-weight: 800;
-    line-height: 1.15;
+    line-height: 1.22;
     margin: 0 0 20px;
+    padding-bottom: 0.08em;
     background: var(--gt-gradient);
     background-size: 200% 200%;
     -webkit-background-clip: text;
@@ -688,6 +689,10 @@ section.gt-hero {
     text-align: center;
     max-width: 600px;
     margin: 0 auto 36px;
+}
+
+#about .gt-section-header {
+    max-width: 900px;
 }
 
 .gt-section-header h2 {
