@@ -36,18 +36,64 @@ const config = {
     locale: {
         nav: ['หน้าแรก', 'เกี่ยวกับ', 'กำหนดการกิจกรรม', 'ลงทะเบียน'],
         heroBadge: '🏆 Hackathon 2026',
-        heroTitle: 'Khon Kaen Intelligent Living Hackathon 2026',
+        heroTitle: 'Intelligent Living Hackathon 2026',
         heroSubtitle:
             'โครงการกิจกรรมส่งเสริมการพัฒนานวัตกรรมและทักษะด้านการประยุกต์ใช้เทคโนโลยี\nการวิเคราะห์ข้อมูลและปัญญาประดิษฐ์ ประจำปี 2569\nIntelligent Living เพื่อส่งเสริมสุขภาพและคุณภาพชีวิตอย่างยั่งยืน\nณ อุทยานวิทยาศาสตร์ ภาคตะวันออกเฉียงเหนือ มหาวิทยาลัยขอนแก่น',
         ctaPrimary: 'ลงทะเบียนเลย',
         ctaSecondary: 'ดูกำหนดการ',
         aboutTitle: 'ทำไมต้องร่วมกิจกรรมนี้?',
-        aboutDesc: 'โอกาสที่จะพัฒนาตนเองและสร้างนวัตกรรมเพื่อสุขภาพของทุกคน',
+        aboutDesc: 'Intelligent Living คือเวที Hackathon ที่ผสาน AI และ Big Data เพื่อส่งเสริมสุขภาพและคุณภาพชีวิตอย่างยั่งยืน',
         scheduleTitle: 'กำหนดการกิจกรรม',
         scheduleDesc: 'ตารางเวลาของกิจกรรมทั้งหมดตลอดทั้งงาน',
-        footer: '© 2026 Khon Kaen Intelligent Living Hackathon 2026',
+        footer: '© 2026 Intelligent Living Hackathon 2026',
     },
 };
+
+const competitionSteps = [
+    {
+        number: '01',
+        title: '📝 สมัครสมาชิก',
+        items: [
+            'สมัครด้วย Email',
+            'ตั้งชื่อผู้ใช้ในระบบ',
+            'กรอกข้อมูลพื้นฐานให้ครบถ้วน',
+        ],
+    },
+    {
+        number: '02',
+        title: '👥 สร้างทีม / เข้าร่วมทีม',
+        items: [
+            'หัวหน้าทีมสร้างทีม',
+            'สมาชิกขอเข้าร่วม หรือใช้รหัสเชิญ',
+            'หัวหน้าทีมอนุมัติสมาชิก',
+        ],
+    },
+    {
+        number: '03',
+        title: '📄 ยืนยันตัวตนและแนบผลงาน',
+        items: [
+            'สมาชิกทุกคนกรอกข้อมูล',
+            'แนบเอกสารที่จำเป็น',
+            'แนบรายละเอียดข้อเสนอโครงการพร้อมคลิปนำเสนอ',
+        ],
+    },
+    {
+        number: '04',
+        title: '🚀 ส่งทีมเข้าพิจารณา',
+        items: [
+            'หัวหน้าทีมกดยืนยันการเข้าร่วม',
+            'รอคณะกรรมการตรวจสอบ',
+        ],
+    },
+    {
+        number: '05',
+        title: '🏆 ทีมที่ผ่านการคัดเลือก',
+        items: [
+            'ประกาศผลผ่านระบบและ Email',
+            'หัวหน้าทีมกดยืนยันเข้าร่วม',
+        ],
+    },
+];
 
 
 
@@ -494,7 +540,7 @@ function HomePage() {
                     {showLobby && <TeamContent user={user} />}
                     {showProfile && <ProfileContent user={user} />}
                     <div style={{ textAlign: 'center', padding: 20, fontSize: '0.8rem', opacity: 0.6, marginTop: 'auto' }}>
-                        © 2026 Khon Kaen Intelligent Living Hackathon 2026
+                        © 2026 Intelligent Living Hackathon 2026
                     </div>
                 </div>
             ) : (
@@ -557,59 +603,53 @@ function HomePage() {
                         <div className="gt-bento">
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-purple"><Sparkles color="#fff" size={24} /></div>
-                                <h3>นวัตกรรมสาธารณสุข</h3>
-                                <p>สร้างสรรค์ผลงานที่ช่วยแก้ปัญหาสาธารณสุขและสิ่งแวดล้อมอย่างยั่งยืน</p>
+                                <h3>AI &amp; Big Data เพื่อ Smart Life</h3>
+                                <p>ฝึกใช้ข้อมูลขนาดใหญ่และปัญญาประดิษฐ์เพื่อวิเคราะห์ วางแผน และออกแบบโซลูชันที่ตอบโจทย์การใช้ชีวิตจริง</p>
                             </div>
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-pink"><Users color="#fff" size={24} /></div>
-                                <h3>ทีมข้ามศาสตร์</h3>
-                                <p>ทำงานร่วมกับเพื่อนจากหลากหลายคณะและมหาวิทยาลัยทั่วประเทศ</p>
+                                <h3>เครือข่ายข้ามศาสตร์</h3>
+                                <p>ร่วมทีมกับนักเรียน นักศึกษา อาจารย์ และผู้เชี่ยวชาญจากหลายสาขา เช่น คอมพิวเตอร์ แพทย์ พยาบาล สาธารณสุข และท้องถิ่น</p>
                             </div>
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-blue"><Rocket color="#fff" size={24} /></div>
-                                <h3>Workshop & Mentoring</h3>
-                                <p>รับคำแนะนำจากการอบรมเข้มข้น มุ่งเป้าในการ Pitching ให้เข้าเป้ากระแทกใจ</p>
+                                <h3>อบรมเข้มข้น + Mentoring</h3>
+                                <p>เสริมพื้นฐานถึงขั้นสูงด้าน AI, Machine Learning และ Data Analytics พร้อมพี่เลี้ยงช่วยพัฒนาแนวคิดจนพร้อมนำเสนอ</p>
                             </div>
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-orange"><Trophy color="#fff" size={24} /></div>
-                                <h3>รางวัล 135,000 บาท + ถ้วยพระราชทาน</h3>
-                                <p>ชิงเงินรางวัลรวมกว่า 135,000 บาท พร้อมถ้วยพระราชทาน</p>
+                                <h3>ต่อยอดสู่นวัตกรรมใช้งานจริง</h3>
+                                <p>พัฒนาผลงานต้นแบบที่วัดผลกระทบต่อสุขภาพและคุณภาพชีวิตได้ และมีโอกาสต่อยอดเป็นโครงการวิจัยหรือขยายผลเชิงพื้นที่</p>
                             </div>
                             <div className="gt-bento-card large gt-reveal">
                                 <div className="gt-bento-icon gt-icon-teal"><Target color="#fff" size={24} /></div>
-                                <h3>Theme: Climate Talent for Public Health Benefits</h3>
+                                <h3>Theme: Intelligent Living</h3>
                                 <p>
-                                    ร่วมเป็นส่วนหนึ่งในการพัฒนาคนรุ่นใหม่ที่มีความรู้ความเข้าใจด้านการเปลี่ยนแปลงสภาพภูมิอากาศ
-                                    เพื่อสร้างประโยชน์ต่อระบบสาธารณสุขไทย
+                                    ขับเคลื่อนแนวคิด Smart Life Ecosystem ผ่าน Health Promotion, Preventive Approach,
+                                    การพัฒนาทุนมนุษย์ดิจิทัล และการลดความเหลื่อมล้ำด้านคุณภาพชีวิต
                                 </p>
                             </div>
                         </div>
                     </section>
 
-                    {/* 3-Step Process */}
+                    {/* Competition Process */}
                     <section id="process" className="gt-section gt-container" style={{ paddingTop: '20px' }}>
                         <div className="gt-section-header gt-reveal">
                             <h2>ขั้นตอนการแข่งขัน</h2>
                             <p>เตรียมตัวเพื่อเป็นผู้ชนะใน Hackathon</p>
                         </div>
                         <div className="gt-process-steps gt-reveal">
-                            <div className="gt-step">
-                                <div className="step-num">01</div>
-                                <h3>คัดกรองคุณสมบัติ</h3>
-                                <p>ตรวจสอบคุณสมบัติและรับสมัคร</p>
-                            </div>
-                            <div className="gt-step-arrow"><ArrowRight size={24} /></div>
-                            <div className="gt-step">
-                                <div className="step-num">02</div>
-                                <h3>พิจารณารอบคัดเลือก</h3>
-                                <p>คัดเลือก 12 ทีม เข้าสู่รอบสุดท้าย</p>
-                            </div>
-                            <div className="gt-step-arrow"><ArrowRight size={24} /></div>
-                            <div className="gt-step">
-                                <div className="step-num">03</div>
-                                <h3>ตัดสินรอบ Final</h3>
-                                <p>แข่งขันและนำเสนอผลงาน (Pitching)</p>
-                            </div>
+                            {competitionSteps.map((step) => (
+                                <div key={step.number} className="gt-step">
+                                    <div className="step-num">{step.number}</div>
+                                    <h3>{step.title}</h3>
+                                    <ul className="gt-step-list">
+                                        {step.items.map((item) => (
+                                            <li key={item}>{item}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            ))}
                         </div>
                     </section>
 
@@ -706,7 +746,7 @@ function HomePage() {
                             <div className="gt-footer-inner">
                                 <div>
                                     <div className="gt-logo" style={{ marginBottom: 14 }}>
-                                        <Rocket size={20} /> Khon Kaen Intelligent Living Hackathon 2026
+                                        <Rocket size={20} /> Intelligent Living Hackathon 2026
                                     </div>
                                     <p className="gt-footer-contact" style={{ color: 'var(--gt-footer-text)', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
                                         <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px' }} />
