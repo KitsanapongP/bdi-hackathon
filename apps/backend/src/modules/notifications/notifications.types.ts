@@ -10,6 +10,8 @@ export interface AdminNotificationSettingRow extends RowDataPacket {
   event_code: NotificationEventCode;
   is_in_app_enabled: number;
   is_email_enabled: number;
+  custom_subject: string | null;
+  custom_message: string | null;
   updated_by_user_id: number | null;
   updated_at: Date;
 }
@@ -46,4 +48,15 @@ export interface NotificationLogRow extends RowDataPacket {
   sent_at: Date | null;
   read_at: Date | null;
   created_at: Date;
+}
+
+export interface AdminNotificationRecipientRow extends RowDataPacket {
+  user_id: number;
+  user_name: string;
+  email: string | null;
+  first_name_th: string | null;
+  last_name_th: string | null;
+  first_name_en: string | null;
+  last_name_en: string | null;
+  is_enabled: number;
 }

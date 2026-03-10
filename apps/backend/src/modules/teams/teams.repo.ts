@@ -332,10 +332,13 @@ export async function confirmTeamParticipation(
 ): Promise<void> {
     await db.query(`
         UPDATE team_teams
-        SET confirmed_at = NOW(),
+        SET status = 'confirmed',
+            confirmed_at = NOW(),
             confirmed_by_user_id = :leaderUserId,
             updated_at = NOW()
         WHERE team_id = :teamId
+          AND status = 'passed'
+          AND confirmed_at IS NULL
     `, { teamId, leaderUserId });
 }
 

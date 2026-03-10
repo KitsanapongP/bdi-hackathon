@@ -1,6 +1,7 @@
 ﻿import type { DB } from '../../config/db.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import type {
+  AdminNotificationRecipientRow,
   AdminNotificationSettingRow,
   NotifyEmailTemplateRow,
   NotificationEventCode,
@@ -31,21 +32,29 @@ export async function upsertNotificationSetting(
     eventCode: NotificationEventCode;
     isInAppEnabled: boolean;
     isEmailEnabled: boolean;
+    customSubject: string | null;
+    customMessage: string | null;
     updatedByUserId: number;
   },
 ): Promise<void> {
   await db.query(`
-    INSERT INTO admin_notification_settings (event_code, is_in_app_enabled, is_email_enabled, updated_by_user_id, updated_at)
-    VALUES (:eventCode, :isInAppEnabled, :isEmailEnabled, :updatedByUserId, NOW())
+    INSERT INTO admin_notification_settings (
+      event_code, is_in_app_enabled, is_email_enabled, custom_subject, custom_message, updated_by_user_id, updated_at
+    )
+    VALUES (:eventCode, :isInAppEnabled, :isEmailEnabled, :customSubject, :customMessage, :updatedByUserId, NOW())
     ON DUPLICATE KEY UPDATE
       is_in_app_enabled = VALUES(is_in_app_enabled),
       is_email_enabled = VALUES(is_email_enabled),
+      custom_subject = VALUES(custom_subject),
+      custom_message = VALUES(custom_message),
       updated_by_user_id = VALUES(updated_by_user_id),
       updated_at = NOW()
   `, {
     eventCode: data.eventCode,
     isInAppEnabled: data.isInAppEnabled ? 1 : 0,
     isEmailEnabled: data.isEmailEnabled ? 1 : 0,
+    customSubject: data.customSubject,
+    customMessage: data.customMessage,
     updatedByUserId: data.updatedByUserId,
   });
 }
@@ -213,14 +222,78 @@ export async function getTeamRecipients(db: DB, teamId: number): Promise<Array<{
 export async function getAdminRecipients(db: DB): Promise<Array<{ user_id: number; email: string | null }>> {
   const [rows] = await db.query<RowDataPacket[]>(`
     SELECT DISTINCT u.user_id, u.email
-    FROM access_allowlist a
-    JOIN user_users u ON u.user_id = a.user_id
-    WHERE a.access_role = 'admin'
-      AND a.is_active = 1
+    FROM user_users u
+    JOIN access_allowlist a
+      ON a.user_id = u.user_id
+     AND a.access_role = 'admin'
+     AND a.is_active = 1
+    LEFT JOIN notify_admin_recipients r
+      ON r.user_id = u.user_id
+    WHERE COALESCE(r.is_enabled, 1) = 1
       AND u.is_active = 1
       AND u.deleted_at IS NULL
   `);
   return rows as Array<{ user_id: number; email: string | null }>;
+}
+
+export async function getAdminNotificationRecipients(db: DB): Promise<AdminNotificationRecipientRow[]> {
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT DISTINCT
+      u.user_id,
+      u.user_name,
+      u.email,
+      u.first_name_th,
+      u.last_name_th,
+      u.first_name_en,
+      u.last_name_en,
+      COALESCE(r.is_enabled, 1) AS is_enabled
+    FROM user_users u
+    JOIN access_allowlist a
+      ON a.user_id = u.user_id
+     AND a.access_role = 'admin'
+     AND a.is_active = 1
+    LEFT JOIN notify_admin_recipients r
+      ON r.user_id = u.user_id
+    WHERE u.is_active = 1
+      AND u.deleted_at IS NULL
+    ORDER BY
+      COALESCE(NULLIF(TRIM(CONCAT(COALESCE(u.first_name_th, ''), ' ', COALESCE(u.last_name_th, ''))), ''), u.user_name) ASC,
+      u.user_id ASC
+  `);
+  return rows as AdminNotificationRecipientRow[];
+}
+
+export async function setAdminNotificationRecipient(
+  db: DB,
+  userId: number,
+  enabled: boolean,
+): Promise<boolean> {
+  const [adminRows] = await db.query<RowDataPacket[]>(`
+    SELECT u.user_id
+    FROM user_users u
+    JOIN access_allowlist a
+      ON a.user_id = u.user_id
+     AND a.access_role = 'admin'
+     AND a.is_active = 1
+    WHERE u.user_id = :userId
+      AND u.is_active = 1
+      AND u.deleted_at IS NULL
+    LIMIT 1
+  `, { userId });
+  if (adminRows.length === 0) return false;
+
+  await db.query<ResultSetHeader>(`
+    INSERT INTO notify_admin_recipients (user_id, is_enabled, updated_by_user_id, created_at, updated_at)
+    VALUES (:userId, :enabled, NULL, NOW(), NOW())
+    ON DUPLICATE KEY UPDATE
+      is_enabled = VALUES(is_enabled),
+      updated_at = NOW()
+  `, {
+    userId,
+    enabled: enabled ? 1 : 0,
+  });
+
+  return true;
 }
 
 export async function getTeamContext(db: DB, teamId: number): Promise<{ team_id: number; team_name_th: string; team_name_en: string; team_code: string } | null> {
@@ -247,4 +320,3 @@ export async function getUserDisplayName(db: DB, userId: number): Promise<string
   const fullName = `${row.first_name_th ?? ''} ${row.last_name_th ?? ''}`.trim();
   return fullName || row.user_name || `user-${userId}`;
 }
-

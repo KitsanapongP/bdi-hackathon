@@ -8,6 +8,9 @@ import {
   handleUpdateNotificationTemplate,
   handleGetTeamInbox,
   handleMarkTeamInboxRead,
+  handleAdminSendCustomEmail,
+  handleGetAdminNotificationRecipients,
+  handleUpdateAdminNotificationRecipient,
 } from './notifications.controller.js';
 
 export async function notificationsRoutes(app: FastifyInstance) {
@@ -23,5 +26,8 @@ export async function notificationsRoutes(app: FastifyInstance) {
     adminApp.put('/admin/settings/:eventCode', handleUpdateNotificationSetting);
     adminApp.get('/admin/templates', handleGetNotificationTemplates);
     adminApp.put('/admin/templates/:templateCode', handleUpdateNotificationTemplate);
+    adminApp.post('/admin/custom-email', handleAdminSendCustomEmail);
+    adminApp.get('/admin/recipients', handleGetAdminNotificationRecipients);
+    adminApp.put('/admin/recipients/:userId', handleUpdateAdminNotificationRecipient);
   });
 }

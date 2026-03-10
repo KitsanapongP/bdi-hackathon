@@ -1,8 +1,9 @@
-﻿import { createRequire } from 'node:module';
+import { createRequire } from 'node:module';
 import type { DB } from '../../config/db.js';
 import * as repo from './notifications.repo.js';
 import type { NotificationEventCode } from './notifications.types.js';
 import { NotFoundError } from '../../shared/errors.js';
+import { createTeamAuditLog } from '../teams/teams.repo.js';
 
 const DEFAULT_EVENT_CHANNELS: Record<NotificationEventCode, { inApp: boolean; email: boolean }> = {
   IDENTITY_SUBMITTED: { inApp: true, email: true },
@@ -25,6 +26,13 @@ type TriggerEventInput = {
   teamId: number;
   actorUserId: number | null;
   extra?: Record<string, string | number | null | undefined>;
+};
+
+type EventSetting = {
+  inApp: boolean;
+  email: boolean;
+  customSubject: string | null;
+  customMessage: string | null;
 };
 
 function renderTemplate(text: string | null | undefined, variables: Record<string, string>): string {
@@ -61,12 +69,20 @@ function getTransporter() {
   return { transporter, reason: null };
 }
 
-async function resolveEventSetting(db: DB, eventCode: NotificationEventCode) {
+async function resolveEventSetting(db: DB, eventCode: NotificationEventCode): Promise<EventSetting> {
   const row = await repo.getNotificationSettingByEvent(db, eventCode);
-  if (!row) return DEFAULT_EVENT_CHANNELS[eventCode];
+  if (!row) {
+    return {
+      ...DEFAULT_EVENT_CHANNELS[eventCode],
+      customSubject: null,
+      customMessage: null,
+    };
+  }
   return {
     inApp: row.is_in_app_enabled === 1,
     email: row.is_email_enabled === 1,
+    customSubject: row.custom_subject,
+    customMessage: row.custom_message,
   };
 }
 
@@ -91,6 +107,7 @@ async function resolveTemplateAndVariables(
   eventCode: NotificationEventCode,
   teamId: number,
   actorUserId: number | null,
+  setting: EventSetting,
   extra?: Record<string, string | number | null | undefined>,
 ) {
   const team = await repo.getTeamContext(db, teamId);
@@ -105,6 +122,7 @@ async function resolveTemplateAndVariables(
   const variables: Record<string, string> = {
     team_id: String(team.team_id),
     team_code: team.team_code || '',
+    team_name: team.team_name_th || team.team_name_en || '',
     team_name_th: team.team_name_th || '',
     team_name_en: team.team_name_en || '',
     actor_name: actorName,
@@ -138,11 +156,15 @@ async function resolveTemplateAndVariables(
   const resolvedSubject = template && template.is_enabled === 1
     ? renderTemplate(template.subject_th || template.subject_en, variables) || fallbackSubject
     : fallbackSubject;
-  const subject = resolvedSubject.includes(teamLabel) ? resolvedSubject : `${teamLabel} | ${resolvedSubject}`;
+  const subjectFromSetting = renderTemplate(setting.customSubject, variables).trim();
+  const baseSubject = subjectFromSetting || resolvedSubject;
+  const subject = baseSubject.includes(teamLabel) ? baseSubject : `${teamLabel} | ${baseSubject}`;
 
-  const htmlBody = template && template.is_enabled === 1
+  const renderedMessage = template && template.is_enabled === 1
     ? renderTemplate(template.html_th || template.html_en, variables) || fallbackMessage
     : fallbackMessage;
+  const messageFromSetting = renderTemplate(setting.customMessage, variables).trim();
+  const htmlBody = messageFromSetting || renderedMessage;
 
   return {
     templateCode,
@@ -151,30 +173,38 @@ async function resolveTemplateAndVariables(
   };
 }
 
-export async function triggerNotificationEvent(db: DB, input: TriggerEventInput): Promise<void> {
-  const setting = await resolveEventSetting(db, input.eventCode);
-  const recipients = await resolveRecipients(db, input.eventCode, input.teamId);
-  if (recipients.length === 0) return;
-
-  const composed = await resolveTemplateAndVariables(db, input.eventCode, input.teamId, input.actorUserId, input.extra);
-
-  if (!setting.email) return;
-
+async function sendEmailWithLog(
+  db: DB,
+  input: {
+    eventCode: string;
+    teamId: number;
+    actorUserId: number | null;
+    templateCode: string | null;
+    subject: string;
+    message: string;
+    recipients: Array<{ user_id: number; email: string | null }>;
+  },
+) {
   const { transporter, reason } = getTransporter();
   const fromEmail = process.env.SMTP_FROM?.trim() || process.env.SMTP_USER?.trim() || 'noreply@hackathon.local';
 
+  let sent = 0;
+  let failed = 0;
+  let skipped = 0;
+
   await Promise.all(
-    recipients.map(async (recipient) => {
+    input.recipients.map(async (recipient) => {
       if (!recipient.email) {
+        skipped += 1;
         await repo.createNotificationLog(db, {
           eventCode: input.eventCode,
           channel: 'email',
           teamId: input.teamId,
           recipientUserId: recipient.user_id,
           actorUserId: input.actorUserId,
-          templateCode: composed.templateCode,
-          subjectText: composed.subject,
-          messageText: composed.message,
+          templateCode: input.templateCode,
+          subjectText: input.subject,
+          messageText: input.message,
           status: 'skipped',
           errorMessage: 'recipient email is empty',
         });
@@ -182,15 +212,16 @@ export async function triggerNotificationEvent(db: DB, input: TriggerEventInput)
       }
 
       if (!transporter) {
+        skipped += 1;
         await repo.createNotificationLog(db, {
           eventCode: input.eventCode,
           channel: 'email',
           teamId: input.teamId,
           recipientUserId: recipient.user_id,
           actorUserId: input.actorUserId,
-          templateCode: composed.templateCode,
-          subjectText: composed.subject,
-          messageText: composed.message,
+          templateCode: input.templateCode,
+          subjectText: input.subject,
+          messageText: input.message,
           status: 'skipped',
           errorMessage: `SMTP is not configured: ${reason ?? 'unknown reason'}`,
         });
@@ -201,39 +232,70 @@ export async function triggerNotificationEvent(db: DB, input: TriggerEventInput)
         const result = await transporter.sendMail({
           from: fromEmail,
           to: recipient.email,
-          subject: composed.subject,
-          html: composed.message,
+          subject: input.subject,
+          html: input.message,
         });
 
+        sent += 1;
         await repo.createNotificationLog(db, {
           eventCode: input.eventCode,
           channel: 'email',
           teamId: input.teamId,
           recipientUserId: recipient.user_id,
           actorUserId: input.actorUserId,
-          templateCode: composed.templateCode,
-          subjectText: composed.subject,
-          messageText: composed.message,
+          templateCode: input.templateCode,
+          subjectText: input.subject,
+          messageText: input.message,
           status: 'sent',
           providerMessageId: result.messageId,
           sentAt: new Date(),
         });
       } catch (error: any) {
+        failed += 1;
         await repo.createNotificationLog(db, {
           eventCode: input.eventCode,
           channel: 'email',
           teamId: input.teamId,
           recipientUserId: recipient.user_id,
           actorUserId: input.actorUserId,
-          templateCode: composed.templateCode,
-          subjectText: composed.subject,
-          messageText: composed.message,
+          templateCode: input.templateCode,
+          subjectText: input.subject,
+          messageText: input.message,
           status: 'failed',
           errorMessage: String(error?.message || error),
         });
       }
     }),
   );
+
+  return { sent, failed, skipped, totalRecipients: input.recipients.length };
+}
+
+export async function triggerNotificationEvent(db: DB, input: TriggerEventInput): Promise<void> {
+  const setting = await resolveEventSetting(db, input.eventCode);
+  const recipients = await resolveRecipients(db, input.eventCode, input.teamId);
+  if (recipients.length === 0) return;
+
+  const composed = await resolveTemplateAndVariables(
+    db,
+    input.eventCode,
+    input.teamId,
+    input.actorUserId,
+    setting,
+    input.extra,
+  );
+
+  if (!setting.email) return;
+
+  await sendEmailWithLog(db, {
+    eventCode: input.eventCode,
+    teamId: input.teamId,
+    actorUserId: input.actorUserId,
+    templateCode: composed.templateCode,
+    subject: composed.subject,
+    message: composed.message,
+    recipients,
+  });
 }
 
 export async function getAdminNotificationSettings(db: DB) {
@@ -242,6 +304,8 @@ export async function getAdminNotificationSettings(db: DB) {
     eventCode: row.event_code,
     isInAppEnabled: row.is_in_app_enabled === 1,
     isEmailEnabled: row.is_email_enabled === 1,
+    customSubject: row.custom_subject,
+    customMessage: row.custom_message,
     updatedByUserId: row.updated_by_user_id,
     updatedAt: row.updated_at,
   }));
@@ -250,17 +314,26 @@ export async function getAdminNotificationSettings(db: DB) {
 export async function updateAdminNotificationSetting(
   db: DB,
   eventCode: NotificationEventCode,
-  patch: { isInAppEnabled?: boolean | undefined; isEmailEnabled?: boolean | undefined },
+  patch: {
+    isInAppEnabled?: boolean | undefined;
+    isEmailEnabled?: boolean | undefined;
+    customSubject?: string | null | undefined;
+    customMessage?: string | null | undefined;
+  },
   updatedByUserId: number,
 ) {
   const current = await resolveEventSetting(db, eventCode);
   const nextInApp = patch.isInAppEnabled ?? current.inApp;
   const nextEmail = patch.isEmailEnabled ?? current.email;
+  const nextCustomSubject = patch.customSubject === undefined ? current.customSubject : patch.customSubject;
+  const nextCustomMessage = patch.customMessage === undefined ? current.customMessage : patch.customMessage;
 
   await repo.upsertNotificationSetting(db, {
     eventCode,
     isInAppEnabled: nextInApp,
     isEmailEnabled: nextEmail,
+    customSubject: nextCustomSubject,
+    customMessage: nextCustomMessage,
     updatedByUserId,
   });
 
@@ -268,6 +341,115 @@ export async function updateAdminNotificationSetting(
     eventCode,
     isInAppEnabled: nextInApp,
     isEmailEnabled: nextEmail,
+    customSubject: nextCustomSubject,
+    customMessage: nextCustomMessage,
+  };
+}
+
+function toRecipientDisplayName(row: {
+  user_name: string;
+  first_name_th: string | null;
+  last_name_th: string | null;
+  first_name_en: string | null;
+  last_name_en: string | null;
+}): string {
+  const fullNameTh = `${row.first_name_th ?? ''} ${row.last_name_th ?? ''}`.trim();
+  if (fullNameTh) return fullNameTh;
+  const fullNameEn = `${row.first_name_en ?? ''} ${row.last_name_en ?? ''}`.trim();
+  return fullNameEn || row.user_name;
+}
+
+export async function getAdminNotificationRecipients(db: DB) {
+  const rows = await repo.getAdminNotificationRecipients(db);
+  return rows.map((row) => ({
+    userId: row.user_id,
+    userName: row.user_name,
+    displayName: toRecipientDisplayName(row),
+    email: row.email,
+    enabled: row.is_enabled === 1,
+  }));
+}
+
+export async function updateAdminNotificationRecipient(
+  db: DB,
+  userId: number,
+  enabled: boolean,
+) {
+  const updated = await repo.setAdminNotificationRecipient(db, userId, enabled);
+  if (!updated) {
+    throw new NotFoundError('ไม่พบผู้ดูแลที่ต้องการอัปเดต');
+  }
+
+  const rows = await repo.getAdminNotificationRecipients(db);
+  const row = rows.find((item) => item.user_id === userId);
+  if (!row) {
+    throw new NotFoundError('ไม่พบผู้ดูแลที่ต้องการอัปเดต');
+  }
+
+  return {
+    userId: row.user_id,
+    userName: row.user_name,
+    displayName: toRecipientDisplayName(row),
+    email: row.email,
+    enabled: row.is_enabled === 1,
+  };
+}
+
+export async function sendCustomEmailToTeam(
+  db: DB,
+  data: {
+    teamId: number;
+    actorUserId: number;
+    subject: string;
+    message: string;
+  },
+) {
+  const team = await repo.getTeamContext(db, data.teamId);
+  if (!team) {
+    throw new NotFoundError('ไม่พบทีมที่ต้องการส่งอีเมล');
+  }
+
+  const recipients = await repo.getTeamRecipients(db, data.teamId);
+  if (recipients.length === 0) {
+    return {
+      teamId: data.teamId,
+      subject: data.subject,
+      totalRecipients: 0,
+      sent: 0,
+      failed: 0,
+      skipped: 0,
+    };
+  }
+
+  const teamLabel = `${team.team_name_th || team.team_name_en} [${team.team_code}]`;
+  const subject = data.subject.includes(teamLabel) ? data.subject : `${teamLabel} | ${data.subject}`;
+  const result = await sendEmailWithLog(db, {
+    eventCode: 'ADMIN_CUSTOM_EMAIL',
+    teamId: data.teamId,
+    actorUserId: data.actorUserId,
+    templateCode: null,
+    subject,
+    message: data.message,
+    recipients,
+  });
+
+  await createTeamAuditLog(db, {
+    teamId: data.teamId,
+    actorUserId: data.actorUserId,
+    actionCode: 'ADMIN_CUSTOM_EMAIL_SENT',
+    actionDetail: {
+      subject,
+      totalRecipients: result.totalRecipients,
+      sent: result.sent,
+      failed: result.failed,
+      skipped: result.skipped,
+    },
+  });
+
+  return {
+    teamId: data.teamId,
+    subject,
+    ...result,
   };
 }
 
@@ -346,5 +528,3 @@ export async function getTeamNotificationInbox(db: DB, teamId: number, userId: n
 export async function markInboxAsRead(db: DB, notificationLogId: number, userId: number): Promise<void> {
   await repo.markNotificationAsRead(db, notificationLogId, userId);
 }
-
-

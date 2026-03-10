@@ -2,7 +2,14 @@
 import { ok } from '../../shared/response.js';
 import { AppError } from '../../shared/errors.js';
 import * as service from './notifications.service.js';
-import { eventCodeSchema, updateNotificationSettingSchema, updateTemplateSchema } from './notifications.schema.js';
+import {
+  adminSendCustomEmailSchema,
+  eventCodeSchema,
+  notificationRecipientParamSchema,
+  updateNotificationRecipientSchema,
+  updateNotificationSettingSchema,
+  updateTemplateSchema,
+} from './notifications.schema.js';
 import type { JwtPayload } from '../auth/auth.types.js';
 
 export async function handleGetNotificationSettings(req: FastifyRequest, reply: FastifyReply) {
@@ -105,4 +112,62 @@ export async function handleMarkTeamInboxRead(
   const user = req.user as JwtPayload;
   await service.markInboxAsRead(req.server.ctx.db, notificationLogId, user.userId);
   return reply.send(ok(null, 'อ่านข้อความแล้ว'));
+}
+
+export async function handleAdminSendCustomEmail(req: FastifyRequest, reply: FastifyReply) {
+  const parsed = adminSendCustomEmailSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+  }
+
+  try {
+    const user = req.user as JwtPayload;
+    const result = await service.sendCustomEmailToTeam(req.server.ctx.db, {
+      teamId: parsed.data.teamId,
+      subject: parsed.data.subject,
+      message: parsed.data.message,
+      actorUserId: user.userId,
+    });
+    return reply.send(ok(result, 'ส่งอีเมลสำเร็จ'));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleGetAdminNotificationRecipients(req: FastifyRequest, reply: FastifyReply) {
+  try {
+    const rows = await service.getAdminNotificationRecipients(req.server.ctx.db);
+    return reply.send(ok(rows));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleUpdateAdminNotificationRecipient(
+  req: FastifyRequest<{ Params: { userId: string } }>,
+  reply: FastifyReply,
+) {
+  const paramsParsed = notificationRecipientParamSchema.safeParse(req.params);
+  if (!paramsParsed.success) {
+    return reply.status(400).send({ ok: false, message: paramsParsed.error.issues[0]?.message ?? 'userId ไม่ถูกต้อง' });
+  }
+
+  const bodyParsed = updateNotificationRecipientSchema.safeParse(req.body);
+  if (!bodyParsed.success) {
+    return reply.status(400).send({ ok: false, message: bodyParsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+  }
+
+  try {
+    const data = await service.updateAdminNotificationRecipient(
+      req.server.ctx.db,
+      paramsParsed.data.userId,
+      bodyParsed.data.enabled,
+    );
+    return reply.send(ok(data, 'อัปเดตรายชื่อผู้รับแจ้งเตือนสำเร็จ'));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
 }

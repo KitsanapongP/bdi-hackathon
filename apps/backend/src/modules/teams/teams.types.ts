@@ -5,7 +5,7 @@ export interface TeamRow {
     team_name_en: string;
     visibility: 'public' | 'private';
     current_leader_user_id: number;
-    status: 'forming' | 'submitted' | 'disbanded' | 'passed' | 'failed';
+    status: 'forming' | 'submitted' | 'disbanded' | 'passed' | 'failed' | 'confirmed';
     confirmation_deadline_at: Date | null;
     confirmed_at: Date | null;
     confirmed_by_user_id: number | null;

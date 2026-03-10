@@ -42,7 +42,6 @@ import {
     Link,
     Paperclip,
 } from 'lucide-react';
-import { TEAM_STATUS_CONFIG } from './mockData';
 import { apiUrl } from '../../lib/api';
 import ConfirmModal from '../../components/ConfirmModal';
 import './Team.css';
@@ -65,8 +64,18 @@ const CARDS = [
     { id: 'help', icon: <HelpCircle />, label: 'ช่วยเหลือ', color: '#10b981' },
 ];
 
+const TEAM_STATUS_CONFIG = {
+    forming: { label: 'กำลังก่อตั้งทีม', color: 'bg-cyan-100 text-cyan-800' },
+    submitted: { label: 'ส่งตรวจแล้ว', color: 'bg-amber-100 text-amber-800' },
+    passed: { label: 'ผ่านการคัดเลือก', color: 'bg-green-100 text-green-800' },
+    confirmed: { label: 'ยืนยันการเข้าร่วมแล้ว', color: 'bg-emerald-100 text-emerald-800' },
+    failed: { label: 'ไม่ผ่านการคัดเลือก', color: 'bg-red-100 text-red-800' },
+    disbanded: { label: 'ยุบทีม', color: 'bg-zinc-100 text-zinc-800' },
+};
+
 const normalizeStatus = (raw) => {
     const key = String(raw || 'forming').toLowerCase();
+    if (key === 'confirmed') return 'confirmed';
     return TEAM_STATUS_CONFIG[key] ? key : 'forming';
 };
 
@@ -816,7 +825,9 @@ export default function TeamContent({ user }) {
 
     if (!team) return <div className="gl-page-container"><div className="gl-frame gl-frame-center"><h3>กำลังโหลดข้อมูลทีม...</h3></div></div>;
 
-    const statusInfo = TEAM_STATUS_CONFIG[team.status] || TEAM_STATUS_CONFIG.forming;
+    const statusInfo = team.status === 'confirmed'
+        ? { label: 'ยืนยันการเข้าร่วมแล้ว', color: 'bg-emerald-100 text-emerald-800' }
+        : (TEAM_STATUS_CONFIG[team.status] || TEAM_STATUS_CONFIG.forming);
     const emptySlots = Math.max(0, MAX_MEMBERS - team.members.length);
     const teamInviteCode = team.inviteCode || '------';
     const deadlineMs = toDateMs(team?.confirmationDeadlineAt);

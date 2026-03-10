@@ -486,9 +486,12 @@ export async function getMemberDocumentsForExport(db: DB, teamIds: number[]): Pr
     return rows as ExportMemberDocumentRow[];
 }
 
-export async function listSelectionTeams(db: DB, status?: 'submitted' | 'passed' | 'failed'): Promise<SelectionTeamRow[]> {
+export async function listSelectionTeams(
+    db: DB,
+    status?: 'submitted' | 'passed' | 'failed' | 'confirmed',
+): Promise<SelectionTeamRow[]> {
     const params: Record<string, unknown> = {};
-    let whereClause = `WHERE t.deleted_at IS NULL AND t.status IN ('submitted','passed','failed')`;
+    let whereClause = `WHERE t.deleted_at IS NULL AND t.status IN ('submitted','passed','failed','confirmed')`;
     if (status) {
         whereClause += ` AND t.status = :status`;
         params.status = status;

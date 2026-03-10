@@ -625,7 +625,7 @@ export async function exportSubmittedVerificationBundle(db: DB): Promise<{ fileN
 
 export async function getSelectionTeams(
     db: DB,
-    status?: 'submitted' | 'passed' | 'failed',
+    status?: 'submitted' | 'passed' | 'failed' | 'confirmed',
 ): Promise<SelectionTeamRow[]> {
     return repo.listSelectionTeams(db, status);
 }
