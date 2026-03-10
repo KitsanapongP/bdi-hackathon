@@ -289,7 +289,7 @@ const genderLabelMap = {
 function DashboardDonut({ values }) {
   const total = values.reduce((sum, item) => sum + item.count, 0)
   if (!total) {
-    return <div className="ad-donut-empty">No data</div>
+    return <div className="admin-ui-donut-empty">No data</div>
   }
 
   let current = 0
@@ -303,14 +303,14 @@ function DashboardDonut({ values }) {
     .join(', ')
 
   return (
-    <div className="ad-donut-wrap">
-      <div className="ad-donut" style={{ background: `conic-gradient(${segments})` }}>
+    <div className="admin-ui-donut-wrap">
+      <div className="admin-ui-donut" style={{ background: `conic-gradient(${segments})` }}>
         <div>
           <strong>{total}</strong>
           <span>teams</span>
         </div>
       </div>
-      <div className="ad-donut-legend">
+      <div className="admin-ui-donut-legend">
         {values.map((item) => (
           <div key={item.key}>
             <span style={{ backgroundColor: item.color }} />
@@ -326,7 +326,7 @@ function DashboardDonut({ values }) {
 function DashboardBars({ rows, max = 0, valueKey = 'count', labelKey = 'label' }) {
   const maxValue = max || rows.reduce((acc, row) => Math.max(acc, row[valueKey]), 0)
   return (
-    <div className="ad-chart-bars">
+    <div className="admin-ui-chart-bars">
       {rows.map((row) => (
         <div key={row[labelKey]}>
           <span>{row[labelKey]}</span>
@@ -350,7 +350,7 @@ function useAdminSession() {
 
 function StatusBadge({ status, label }) {
   return (
-    <span className={`ad-status ad-status-${getStatusTone(status)}`}>
+    <span className={`admin-ui-status admin-ui-status-${getStatusTone(status)}`}>
       {label || teamStateLabel[status] || memberStateLabel[status] || status}
     </span>
   )
@@ -358,10 +358,10 @@ function StatusBadge({ status, label }) {
 
 function AdminToastViewport({ toasts, onClose }) {
   return (
-    <div className="ad-toast-wrap" aria-live="polite">
+    <div className="admin-ui-toast-wrap" aria-live="polite">
       {toasts.map((toast) => (
-        <div key={toast.id} className={`ad-toast ad-toast-${toast.type}`}>
-          <div className="ad-toast-text">
+        <div key={toast.id} className={`admin-ui-toast admin-ui-toast-${toast.type}`}>
+          <div className="admin-ui-toast-text">
             <strong>{toast.title}</strong>
             {toast.description ? <span>{toast.description}</span> : null}
           </div>
@@ -423,9 +423,9 @@ function AdminDataTable({
   }, [filteredRows, page, pageSize])
 
   return (
-    <div className="ad-table-card">
-      <div className="ad-table-tools">
-        <div className="ad-table-search">
+    <div className="admin-ui-table-card">
+      <div className="admin-ui-table-tools">
+        <div className="admin-ui-table-search">
           <Search size={16} />
           <input
             value={search}
@@ -436,7 +436,7 @@ function AdminDataTable({
           />
         </div>
         {filters.length ? (
-          <div className="ad-filter-row">
+          <div className="admin-ui-filter-row">
             <Filter size={15} />
             {filters.map((filter) => (
               <button
@@ -455,8 +455,8 @@ function AdminDataTable({
         {toolbarExtra}
       </div>
 
-      <div className="ad-table-wrap">
-        <table className="ad-table">
+      <div className="admin-ui-table-wrap">
+        <table className="admin-ui-table">
           <thead>
             <tr>
               {columns.map((column) => (
@@ -468,7 +468,7 @@ function AdminDataTable({
             {loading ? (
               <tr>
                 <td colSpan={columns.length}>
-                  <div className="ad-table-empty">กำลังโหลด...</div>
+                  <div className="admin-ui-table-empty">กำลังโหลด...</div>
                 </td>
               </tr>
             ) : pagedRows.length ? (
@@ -484,7 +484,7 @@ function AdminDataTable({
             ) : (
               <tr>
                 <td colSpan={columns.length}>
-                  <div className="ad-table-empty">{emptyMessage}</div>
+                  <div className="admin-ui-table-empty">{emptyMessage}</div>
                 </td>
               </tr>
             )}
@@ -492,8 +492,8 @@ function AdminDataTable({
         </table>
       </div>
 
-      <div className="ad-table-pager">
-        <div className="ad-page-size-selector">
+      <div className="admin-ui-table-pager">
+        <div className="admin-ui-page-size-selector">
           <span>Rows:</span>
           <select
             value={pageSize}
@@ -538,9 +538,9 @@ function DetailDrawer({ open, title, subtitle, onClose, children }) {
   if (!open) return null
 
   return (
-    <div className="ad-drawer-layer" role="dialog" aria-modal="true">
-      <button type="button" className="ad-drawer-backdrop" onClick={onClose} aria-label="close drawer" />
-      <aside className="ad-drawer">
+    <div className="admin-ui-drawer-layer" role="dialog" aria-modal="true">
+      <button type="button" className="admin-ui-drawer-backdrop" onClick={onClose} aria-label="close drawer" />
+      <aside className="admin-ui-drawer">
         <header>
           <div>
             <h3>{title}</h3>
@@ -550,7 +550,7 @@ function DetailDrawer({ open, title, subtitle, onClose, children }) {
             <X size={18} />
           </button>
         </header>
-        <div className="ad-drawer-body">{children}</div>
+        <div className="admin-ui-drawer-body">{children}</div>
       </aside>
     </div>
   )
@@ -566,8 +566,8 @@ function FileListViewer({ files, teamCode, memberName }) {
   }, [files])
 
   return (
-    <div className="ad-file-viewer">
-      <div className="ad-file-header">
+    <div className="admin-ui-file-viewer">
+      <div className="admin-ui-file-header">
         <h4>Verification Files</h4>
         <div>
           <button
@@ -599,7 +599,7 @@ function FileListViewer({ files, teamCode, memberName }) {
         </div>
       </div>
 
-      <div className="ad-file-list">
+      <div className="admin-ui-file-list">
         {files.map((file) => (
           <button
             type="button"
@@ -614,7 +614,7 @@ function FileListViewer({ files, teamCode, memberName }) {
               </span>
               <span>uploaded: {formatDateTime(file.uploadedAt)}</span>
             </div>
-            <div className="ad-file-actions">
+            <div className="admin-ui-file-actions">
               <span
                 role="button"
                 tabIndex={0}
@@ -668,10 +668,10 @@ function FileListViewer({ files, teamCode, memberName }) {
         ))}
       </div>
 
-      <div className="ad-file-preview">
+      <div className="admin-ui-file-preview">
         <h5>Inline Preview</h5>
         {selectedFile ? (
-          <div className="ad-file-preview-box">
+          <div className="admin-ui-file-preview-box">
             {selectedFile.type.startsWith('image/') ? <FileImage size={28} /> : null}
             {selectedFile.type.includes('pdf') ? <FileType2 size={28} /> : null}
             {selectedFile.type.includes('spreadsheet') ? <FileSpreadsheet size={28} /> : null}
@@ -685,7 +685,7 @@ function FileListViewer({ files, teamCode, memberName }) {
             <small>หน้านี้เป็น UI mockup สำหรับ flow preview/download</small>
           </div>
         ) : (
-          <div className="ad-file-preview-box">
+          <div className="admin-ui-file-preview-box">
             <span>ไม่มีไฟล์</span>
           </div>
         )}
@@ -696,7 +696,7 @@ function FileListViewer({ files, teamCode, memberName }) {
 
 function SectionHeading({ title, description, right = null }) {
   return (
-    <header className="ad-section-head">
+    <header className="admin-ui-section-head">
       <div>
         <h2>{title}</h2>
         {description ? <p>{description}</p> : null}
@@ -761,7 +761,7 @@ function AdminGuard({ children }) {
 
   if (state.loading) {
     return (
-      <div className="ad-gate-screen">
+      <div className="admin-ui-gate-screen">
         <RefreshCw size={20} className="spin" />
         <span>Checking admin capability...</span>
       </div>
@@ -840,7 +840,7 @@ function AdminLayout() {
 
   return (
     <AdminToastContext.Provider value={{ pushToast }}>
-      <div className="ad-page">
+      <div className="admin-ui-page">
         <GameShapes
           shapeCount={22}
           sizeRange={[20, 42]}
@@ -850,10 +850,10 @@ function AdminLayout() {
           seed={15}
         />
 
-        <div className={`ad-shell ${mobileOpen ? 'mobile-open' : ''}`}>
-          <aside className="ad-sidebar">
-            <div className="ad-brand">
-              <div className="ad-brand-icon">
+        <div className={`admin-ui-shell ${mobileOpen ? 'mobile-open' : ''}`}>
+          <aside className="admin-ui-sidebar">
+            <div className="admin-ui-brand">
+              <div className="admin-ui-brand-icon">
                 <ShieldAlert size={18} />
               </div>
               <div>
@@ -864,7 +864,7 @@ function AdminLayout() {
 
             <nav>
               {adminNavGroups.map((group) => (
-                <div key={group.title} className="ad-nav-group">
+                <div key={group.title} className="admin-ui-nav-group">
                   <span>{group.title}</span>
                   {group.links.map((link) => (
                     <NavLink
@@ -882,12 +882,12 @@ function AdminLayout() {
             </nav>
           </aside>
 
-          <div className="ad-main">
-            <header className="ad-topbar">
-              <button type="button" className="ad-menu-btn" onClick={() => setMobileOpen((prev) => !prev)}>
+          <div className="admin-ui-main">
+            <header className="admin-ui-topbar">
+              <button type="button" className="admin-ui-menu-btn" onClick={() => setMobileOpen((prev) => !prev)}>
                 {mobileOpen ? <X size={18} /> : <Menu size={18} />}
               </button>
-              <div className="ad-topbar-title">
+              <div className="admin-ui-topbar-title">
                 <h1>{pageLabel}</h1>
                 {demoMode ? (
                   <span>
@@ -896,20 +896,20 @@ function AdminLayout() {
                   </span>
                 ) : null}
               </div>
-              <div className="ad-topbar-right">
+              <div className="admin-ui-topbar-right">
                 <ThemeToggle />
-                <div className="ad-user-chip">
+                <div className="admin-ui-user-chip">
                   <strong>{adminUser?.userName || adminUser?.name || 'Admin User'}</strong>
                   <span>{adminUser?.email || '-'}</span>
                 </div>
-                <button type="button" onClick={handleLogout} className="ad-logout-btn">
+                <button type="button" onClick={handleLogout} className="admin-ui-logout-btn">
                   <LogOut size={14} />
                   Logout
                 </button>
               </div>
             </header>
 
-            <main className="ad-content">
+            <main className="admin-ui-content">
               <Outlet />
             </main>
           </div>
@@ -1029,19 +1029,19 @@ function DashboardPage() {
   const duplicateRows = overview?.duplicateNames || []
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Admin Dashboard"
         description="ภาพรวมทีมตามสถานะ, demographic, และตรวจชื่อซ้ำของผู้ส่งเข้าพิจารณา (ปุ่ม Export จะดึงเฉพาะทีม status = submitted)"
         right={
-          <div className="ad-head-actions">
-            <button type="button" className="ad-btn" onClick={fetchOverview}>
+          <div className="admin-ui-headmin-ui-actions">
+            <button type="button" className="admin-ui-btn" onClick={fetchOverview}>
               <RefreshCw size={15} />
               Refresh
             </button>
             <button
               type="button"
-              className="ad-btn ad-btn-primary"
+              className="admin-ui-btn admin-ui-btn-primary"
               onClick={handleExportSubmittedTeams}
               disabled={exporting}
               title="Export เฉพาะทีมสถานะ submitted"
@@ -1053,17 +1053,17 @@ function DashboardPage() {
         }
       />
 
-      <section className="ad-panel">
-        <div className="ad-dashboard-filters">
+      <section className="admin-ui-panel">
+        <div className="admin-ui-dashboard-filters">
           <strong>Status filter</strong>
-          <div className="ad-chip-row">
+          <div className="admin-ui-chip-row">
             {dashboardStatusOptions.map((option) => {
               const active = selectedStatuses.includes(option.value)
               return (
                 <button
                   key={option.value}
                   type="button"
-                  className={`ad-chip-btn ${active ? 'active' : ''}`}
+                  className={`admin-ui-chip-btn ${active ? 'active' : ''}`}
                   onClick={() => {
                     setSelectedStatuses((prev) => {
                       if (prev.includes(option.value)) {
@@ -1079,7 +1079,7 @@ function DashboardPage() {
               )
             })}
           </div>
-          <label className="ad-days-filter">
+          <label className="admin-ui-days-filter">
             Trend days
             <select value={days} onChange={(event) => setDays(Number(event.target.value))}>
               <option value={14}>14</option>
@@ -1091,7 +1091,7 @@ function DashboardPage() {
         </div>
       </section>
 
-      <section className="ad-stat-grid">
+      <section className="admin-ui-stat-grid">
         {[
           {
             id: 'teamsCreated',
@@ -1122,7 +1122,7 @@ function DashboardPage() {
             tone: 'neutral',
           },
         ].map((item) => (
-          <article key={item.id} className={`ad-stat-card ${item.tone} ${loading ? 'is-loading' : ''}`}>
+          <article key={item.id} className={`admin-ui-stat-card ${item.tone} ${loading ? 'is-loading' : ''}`}>
             <span>{item.label}</span>
             <strong>{loading ? '-' : item.value}</strong>
             <small>{item.trend}</small>
@@ -1130,8 +1130,8 @@ function DashboardPage() {
         ))}
       </section>
 
-      <section className="ad-two-col">
-        <article className="ad-panel">
+      <section className="admin-ui-two-col">
+        <article className="admin-ui-panel">
           <h3>
             <Filter size={17} />
             Team Status Distribution
@@ -1146,7 +1146,7 @@ function DashboardPage() {
           />
         </article>
 
-        <article className="ad-panel">
+        <article className="admin-ui-panel">
           <h3>
             <Users size={17} />
             Team Size Distribution
@@ -1155,8 +1155,8 @@ function DashboardPage() {
         </article>
       </section>
 
-      <section className="ad-two-col">
-        <article className="ad-panel">
+      <section className="admin-ui-two-col">
+        <article className="admin-ui-panel">
           <h3>
             <Users size={17} />
             Gender Breakdown
@@ -1164,7 +1164,7 @@ function DashboardPage() {
           <DashboardBars rows={genderRows} />
         </article>
 
-        <article className="ad-panel">
+        <article className="admin-ui-panel">
           <h3>
             <Globe size={17} />
             Top Provinces
@@ -1173,12 +1173,12 @@ function DashboardPage() {
         </article>
       </section>
 
-      <section className="ad-panel">
+      <section className="admin-ui-panel">
         <h3>
           <Clock3 size={17} />
           Status Trend (Last {days} Days)
         </h3>
-        <div className="ad-trend-grid">
+        <div className="admin-ui-trend-grid">
           {(overview?.submissionTrend || []).slice(-14).map((row) => {
             const total = row.submitted + row.passed + row.failed
             return (
@@ -1196,12 +1196,12 @@ function DashboardPage() {
         </div>
       </section>
 
-      <section className="ad-panel">
+      <section className="admin-ui-panel">
         <h3>
           <ShieldAlert size={17} />
           Duplicate Real Names
         </h3>
-        <div className="ad-duplicate-list">
+        <div className="admin-ui-duplicate-list">
           {duplicateRows.length ? (
             duplicateRows.slice(0, 10).map((group) => (
               <div key={group.normalizedName}>
@@ -1217,17 +1217,17 @@ function DashboardPage() {
               </div>
             ))
           ) : (
-            <div className="ad-table-empty">ไม่พบชื่อซ้ำในสถานะที่เลือก</div>
+            <div className="admin-ui-table-empty">ไม่พบชื่อซ้ำในสถานะที่เลือก</div>
           )}
         </div>
       </section>
 
-      <section className="ad-panel">
+      <section className="admin-ui-panel">
         <h3>
           <History size={17} />
           Recent Audit Activity
         </h3>
-        <div className="ad-list-mini">
+        <div className="admin-ui-list-mini">
           {auditLogsSeed.slice(0, 4).map((item) => (
             <div key={item.id}>
               <strong>{item.actionType}</strong>
@@ -1239,12 +1239,12 @@ function DashboardPage() {
         </div>
       </section>
 
-      <section className="ad-panel">
+      <section className="admin-ui-panel">
         <h3>
           <ListChecks size={17} />
           Upcoming Deadlines
         </h3>
-        <div className="ad-timeline-mini">
+        <div className="admin-ui-timeline-mini">
           {dashboardDeadlines.map((item) => (
             <div key={item.id}>
               <div>
@@ -1503,12 +1503,12 @@ function StaticSponsorsPage() {
   }
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Static Content: Sponsors"
         description=""
         right={
-          <button type="button" className="ad-btn ad-btn-primary" onClick={openCreate}>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
             <Plus size={15} />
             Add Sponsor
           </button>
@@ -1530,7 +1530,7 @@ function StaticSponsorsPage() {
             key: 'logo',
             label: 'Logo + Name',
             render: (row) => (
-              <div className="ad-inline-logo">
+              <div className="admin-ui-inline-logo">
                 <img src={apiUrl(row.logo)} alt={row.name} loading="lazy" decoding="async" />
                 <div>
                   <strong>{row.name}</strong>
@@ -1544,7 +1544,7 @@ function StaticSponsorsPage() {
             label: 'Link',
             render: (row) => (
               row.link ? (
-                <a href={row.link} target="_blank" rel="noreferrer" className="ad-link">
+                <a href={row.link} target="_blank" rel="noreferrer" className="admin-ui-link">
                   <Link2 size={13} />
                   {row.link}
                 </a>
@@ -1566,7 +1566,7 @@ function StaticSponsorsPage() {
             key: 'actions',
             label: 'Actions',
             render: (row) => (
-              <div className="ad-row-actions">
+              <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => moveItem(row.id, 'up')} aria-label="move up">
                   <ArrowUp size={14} />
                 </button>
@@ -1591,7 +1591,7 @@ function StaticSponsorsPage() {
         title={editingId ? 'Edit Sponsor' : 'Create Sponsor'}
         subtitle="รองรับการอัปโหลดโลโก้และตรวจสอบไฟล์ภาพ"
       >
-        <div className="ad-form">
+        <div className="admin-ui-form">
           <label htmlFor="sponsor-name-en">
             sponsor_name_en *
             <input
@@ -1679,7 +1679,7 @@ function StaticSponsorsPage() {
               }}
             />
             {form.logoFileName ? (
-              <span className="ad-file-chip">
+              <span className="admin-ui-file-chip">
                 <Upload size={13} />
                 {form.logoFileName}
               </span>
@@ -1707,26 +1707,26 @@ function StaticSponsorsPage() {
             />
           </label>
 
-          <div className="ad-toggle-row">
-            <label htmlFor="sponsor-active" className="ad-toggle-label">
+          <div className="admin-ui-toggle-row">
+            <label htmlFor="sponsor-active" className="admin-ui-toggle-label">
               Status
             </label>
-            <label className="ad-toggle">
+            <label className="admin-ui-toggle">
               <input
                 type="checkbox"
                 checked={form.isEnabled}
                 onChange={(event) => setForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
               />
-              <span className="ad-toggle-switch"></span>
-              <span className="ad-toggle-text">{form.isEnabled ? 'Enabled' : 'Disabled'}</span>
+              <span className="admin-ui-toggle-switch"></span>
+              <span className="admin-ui-toggle-text">{form.isEnabled ? 'Enabled' : 'Disabled'}</span>
             </label>
           </div>
 
-          <div className="ad-form-actions">
-            <button type="button" className="ad-btn" onClick={() => setDrawerOpen(false)}>
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setDrawerOpen(false)}>
               ยกเลิก
             </button>
-            <button type="button" className="ad-btn ad-btn-primary" onClick={onSubmit}>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={onSubmit}>
               <Save size={14} />
               บันทึก
             </button>
@@ -2035,12 +2035,12 @@ function StaticCarouselsPage() {
   }
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Static Content: Carousel"
         description="จัดการภาพสไลด์หน้าแรก พร้อม URL, publish window, และลำดับการแสดงผล"
         right={
-          <button type="button" className="ad-btn ad-btn-primary" onClick={openCreate}>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
             <Plus size={15} />
             Add Slide
           </button>
@@ -2062,9 +2062,9 @@ function StaticCarouselsPage() {
             key: 'image',
             label: 'Image + Title',
             render: (row) => (
-              <div className="ad-inline-banner">
+              <div className="admin-ui-inline-banner">
                 <img src={apiUrl(row.imageUrl || row.imageStorageKey)} alt={row.titleTh || row.titleEn || 'carousel'} loading="lazy" decoding="async" />
-                <div className="ad-col-stack">
+                <div className="admin-ui-col-stack">
                   <strong>{row.titleTh || row.titleEn || '-'}</strong>
                   <span>{row.titleEn && row.titleTh ? row.titleEn : row.descriptionTh || row.descriptionEn || '-'}</span>
                 </div>
@@ -2076,7 +2076,7 @@ function StaticCarouselsPage() {
             label: 'Target URL',
             render: (row) => (
               row.targetUrl ? (
-                <a href={row.targetUrl} target="_blank" rel="noreferrer" className="ad-link">
+                <a href={row.targetUrl} target="_blank" rel="noreferrer" className="admin-ui-link">
                   <Link2 size={13} />
                   {row.targetUrl}
                 </a>
@@ -2089,7 +2089,7 @@ function StaticCarouselsPage() {
             key: 'publishWindow',
             label: 'Publish Window',
             render: (row) => (
-              <div className="ad-col-stack">
+              <div className="admin-ui-col-stack">
                 <strong>{formatDateTime(row.startAt)}</strong>
                 <span>{formatDateTime(row.endAt)}</span>
               </div>
@@ -2108,7 +2108,7 @@ function StaticCarouselsPage() {
             key: 'actions',
             label: 'Actions',
             render: (row) => (
-              <div className="ad-row-actions">
+              <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => moveItem(row.id, 'up')} aria-label="move up">
                   <ArrowUp size={14} />
                 </button>
@@ -2133,7 +2133,7 @@ function StaticCarouselsPage() {
         title={editingId ? 'Edit Carousel Slide' : 'Create Carousel Slide'}
         subtitle="รองรับ image upload, URL click-through, และช่วงเวลาเผยแพร่"
       >
-        <div className="ad-form">
+        <div className="admin-ui-form">
           <label htmlFor="carousel-title-th">
             title_th
             <input
@@ -2192,7 +2192,7 @@ function StaticCarouselsPage() {
               }}
             />
             {form.imageFileName ? (
-              <span className="ad-file-chip">
+              <span className="admin-ui-file-chip">
                 <Upload size={13} />
                 {form.imageFileName}
               </span>
@@ -2249,19 +2249,19 @@ function StaticCarouselsPage() {
             {errors.targetUrl ? <small>{errors.targetUrl}</small> : null}
           </label>
 
-          <div className="ad-toggle-row">
-            <label htmlFor="carousel-open-in-new-tab" className="ad-toggle-label">
+          <div className="admin-ui-toggle-row">
+            <label htmlFor="carousel-open-in-new-tab" className="admin-ui-toggle-label">
               open_in_new_tab
             </label>
-            <label className="ad-toggle">
+            <label className="admin-ui-toggle">
               <input
                 id="carousel-open-in-new-tab"
                 type="checkbox"
                 checked={form.openInNewTab}
                 onChange={(event) => setForm((prev) => ({ ...prev, openInNewTab: event.target.checked }))}
               />
-              <span className="ad-toggle-switch"></span>
-              <span className="ad-toggle-text">{form.openInNewTab ? 'Open New Tab' : 'Open Same Tab'}</span>
+              <span className="admin-ui-toggle-switch"></span>
+              <span className="admin-ui-toggle-text">{form.openInNewTab ? 'Open New Tab' : 'Open Same Tab'}</span>
             </label>
           </div>
 
@@ -2297,27 +2297,27 @@ function StaticCarouselsPage() {
             {errors.endAt ? <small>{errors.endAt}</small> : null}
           </label>
 
-          <div className="ad-toggle-row">
-            <label htmlFor="carousel-is-enabled" className="ad-toggle-label">
+          <div className="admin-ui-toggle-row">
+            <label htmlFor="carousel-is-enabled" className="admin-ui-toggle-label">
               Status
             </label>
-            <label className="ad-toggle">
+            <label className="admin-ui-toggle">
               <input
                 id="carousel-is-enabled"
                 type="checkbox"
                 checked={form.isEnabled}
                 onChange={(event) => setForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
               />
-              <span className="ad-toggle-switch"></span>
-              <span className="ad-toggle-text">{form.isEnabled ? 'Enabled' : 'Disabled'}</span>
+              <span className="admin-ui-toggle-switch"></span>
+              <span className="admin-ui-toggle-text">{form.isEnabled ? 'Enabled' : 'Disabled'}</span>
             </label>
           </div>
 
-          <div className="ad-form-actions">
-            <button type="button" className="ad-btn" onClick={() => setDrawerOpen(false)}>
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setDrawerOpen(false)}>
               ยกเลิก
             </button>
-            <button type="button" className="ad-btn ad-btn-primary" onClick={onSubmit}>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={onSubmit}>
               <Save size={14} />
               บันทึก
             </button>
@@ -2522,12 +2522,12 @@ function StaticRewardsPage() {
   }
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Static Content: Rewards"
         description=""
         right={
-          <button type="button" className="ad-btn ad-btn-primary" onClick={openCreate}>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
             <Plus size={15} />
             Add Reward
           </button>
@@ -2551,7 +2551,7 @@ function StaticRewardsPage() {
             render: (row) => (
               <div>
                 <div>{row.titleTh || row.title}</div>
-                {(row.titleTh && row.title) && <div className="ad-text-muted">{row.title}</div>}
+                {(row.titleTh && row.title) && <div className="admin-ui-text-muted">{row.title}</div>}
               </div>
             ),
           },
@@ -2578,7 +2578,7 @@ function StaticRewardsPage() {
             key: 'actions',
             label: '',
             render: (row) => (
-              <div className="ad-row-actions">
+              <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => moveItem(row.id, 'up')} aria-label="move up">
                   <ArrowUp size={14} />
                 </button>
@@ -2603,7 +2603,7 @@ function StaticRewardsPage() {
         title={editingId ? 'Edit Reward' : 'Create Reward'}
         subtitle="ฟอร์มมี required validation และคง format ที่พร้อมต่อ API"
       >
-        <div className="ad-form">
+        <div className="admin-ui-form">
           <label htmlFor="reward-rank">
             Rank
             <input
@@ -2686,25 +2686,25 @@ function StaticRewardsPage() {
               onChange={(event) => setForm((prev) => ({ ...prev, descriptionEn: event.target.value }))}
             />
           </label>
-          <div className="ad-toggle-row">
-            <label htmlFor="reward-active" className="ad-toggle-label">
+          <div className="admin-ui-toggle-row">
+            <label htmlFor="reward-active" className="admin-ui-toggle-label">
               Status
             </label>
-            <label className="ad-toggle">
+            <label className="admin-ui-toggle">
               <input
                 type="checkbox"
                 checked={form.isActive}
                 onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
               />
-              <span className="ad-toggle-switch"></span>
-              <span className="ad-toggle-text">{form.isActive ? 'Enabled' : 'Disabled'}</span>
+              <span className="admin-ui-toggle-switch"></span>
+              <span className="admin-ui-toggle-text">{form.isActive ? 'Enabled' : 'Disabled'}</span>
             </label>
           </div>
-          <div className="ad-form-actions">
-            <button type="button" className="ad-btn" onClick={() => setDrawerOpen(false)}>
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setDrawerOpen(false)}>
               ยกเลิก
             </button>
-            <button type="button" className="ad-btn ad-btn-primary" onClick={save}>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={save}>
               <Save size={14} />
               บันทึก
             </button>
@@ -2733,14 +2733,14 @@ function StaticAboutPage() {
   const [lang, setLang] = useState('th')
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Static Content: About"
         description="Rich text editor (Markdown) + Preview mode รองรับ TH/EN"
         right={
           <button
             type="button"
-            className="ad-btn ad-btn-primary"
+            className="admin-ui-btn admin-ui-btn-primary"
             onClick={() =>
               pushToast({
                 title: 'บันทึก About content แล้ว',
@@ -2754,7 +2754,7 @@ function StaticAboutPage() {
         }
       />
 
-      <div className="ad-tab-row">
+      <div className="admin-ui-tab-row">
         <button type="button" className={tab === 'editor' ? 'active' : ''} onClick={() => setTab('editor')}>
           Editor
         </button>
@@ -2763,7 +2763,7 @@ function StaticAboutPage() {
         </button>
       </div>
 
-      <div className="ad-tab-row">
+      <div className="admin-ui-tab-row">
         <button type="button" className={lang === 'th' ? 'active' : ''} onClick={() => setLang('th')}>
           ภาษาไทย
         </button>
@@ -2773,8 +2773,8 @@ function StaticAboutPage() {
       </div>
 
       {tab === 'editor' ? (
-        <article className="ad-panel">
-          <label htmlFor="about-editor" className="ad-label">
+        <article className="admin-ui-panel">
+          <label htmlFor="about-editor" className="admin-ui-label">
             Markdown Content ({lang.toUpperCase()})
           </label>
           <textarea
@@ -2785,7 +2785,7 @@ function StaticAboutPage() {
           />
         </article>
       ) : (
-        <article className="ad-panel ad-markdown-preview">{renderMarkdownSimple(lang === 'th' ? contentTh : contentEn)}</article>
+        <article className="admin-ui-panel admin-ui-markdown-preview">{renderMarkdownSimple(lang === 'th' ? contentTh : contentEn)}</article>
       )}
     </div>
   )
@@ -3188,12 +3188,12 @@ function StaticContactsPage() {
   const channelTypeOptions = ['email', 'phone', 'line', 'facebook', 'instagram', 'linkedin', 'x', 'website', 'map', 'other']
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Static Content: Contacts"
         description="จัดการ content_contacts และ content_contact_channels ครบทุกคอลัมน์ พร้อมโฟลว์ที่แก้ไขง่าย"
         right={
-          <button type="button" className="ad-btn ad-btn-primary" onClick={openCreateContact}>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateContact}>
             <Plus size={15} />
             Add Contact
           </button>
@@ -3216,7 +3216,7 @@ function StaticContactsPage() {
             key: 'displayName',
             label: 'Display Name / Role',
             render: (row) => (
-              <div className="ad-col-stack">
+              <div className="admin-ui-col-stack">
                 <strong>{row.displayNameTh || '-'}</strong>
                 <span>{row.displayNameEn || '-'}</span>
                 <span>{row.roleTh || row.roleEn || '-'}</span>
@@ -3227,7 +3227,7 @@ function StaticContactsPage() {
             key: 'organization',
             label: 'Organization / Department',
             render: (row) => (
-              <div className="ad-col-stack">
+              <div className="admin-ui-col-stack">
                 <strong>{row.organizationTh || row.organizationEn || '-'}</strong>
                 <span>{row.organizationEn || '-'}</span>
                 <span>{row.departmentTh || row.departmentEn || '-'}</span>
@@ -3238,7 +3238,7 @@ function StaticContactsPage() {
             key: 'channelsCount',
             label: 'Channels',
             render: (row) => (
-              <span className="ad-icon-text">
+              <span className="admin-ui-icon-text">
                 <Contact size={13} />
                 {(row.channels || []).length}
               </span>
@@ -3254,9 +3254,9 @@ function StaticContactsPage() {
             key: 'state',
             label: 'Flags',
             render: (row) => (
-              <div className="ad-col-stack">
+              <div className="admin-ui-col-stack">
                 <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} />
-                {row.isFeatured ? <StatusBadge status="READY_TO_RESUBMIT" label="FEATURED" /> : <span className="ad-text-muted">-</span>}
+                {row.isFeatured ? <StatusBadge status="READY_TO_RESUBMIT" label="FEATURED" /> : <span className="admin-ui-text-muted">-</span>}
               </div>
             ),
           },
@@ -3264,7 +3264,7 @@ function StaticContactsPage() {
             key: 'actions',
             label: 'Actions',
             render: (row) => (
-              <div className="ad-row-actions">
+              <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => moveContact(row.id, 'up')} aria-label="move up">
                   <ArrowUp size={14} />
                 </button>
@@ -3283,15 +3283,15 @@ function StaticContactsPage() {
         ]}
       />
 
-      <article className="ad-panel ad-stack">
-        <div className="ad-section-head">
+      <article className="admin-ui-panel admin-ui-stack">
+        <div className="admin-ui-section-head">
           <div>
             <h3>Step 1: Select Contact</h3>
             <p>เลือก contact ที่ต้องการ แล้วค่อยเพิ่มหรือแก้ไข channels ของ contact นั้น</p>
           </div>
         </div>
-        <div className="ad-contact-selector-row">
-          <label htmlFor="channel-contact-select" className="ad-label">
+        <div className="admin-ui-contact-selector-row">
+          <label htmlFor="channel-contact-select" className="admin-ui-label">
             Selected Contact
             <select
               id="channel-contact-select"
@@ -3306,12 +3306,12 @@ function StaticContactsPage() {
               ))}
             </select>
           </label>
-          <div className="ad-chip-row">
+          <div className="admin-ui-chip-row">
             {sortedContacts.map((contact) => (
               <button
                 type="button"
                 key={contact.id}
-                className={`ad-chip-btn ${selectedContact?.id === contact.id ? 'active' : ''}`}
+                className={`admin-ui-chip-btn ${selectedContact?.id === contact.id ? 'active' : ''}`}
                 onClick={() => setSelectedContactId((prev) => (prev === contact.id ? null : contact.id))}
               >
                 {contact.displayNameEn || contact.displayNameTh}
@@ -3321,8 +3321,8 @@ function StaticContactsPage() {
         </div>
       </article>
 
-      <article className="ad-panel ad-stack">
-        <div className="ad-section-head">
+      <article className="admin-ui-panel admin-ui-stack">
+        <div className="admin-ui-section-head">
           <div>
             <h3>Contact Channels</h3>
             <p>
@@ -3331,7 +3331,7 @@ function StaticContactsPage() {
                 : 'เลือก contact เพื่อจัดการช่องทางการติดต่อ'}
             </p>
           </div>
-          <button type="button" className="ad-btn ad-btn-primary" onClick={openCreateChannel} disabled={!selectedContact}>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateChannel} disabled={!selectedContact}>
             <Plus size={15} />
             Add Channel
           </button>
@@ -3359,7 +3359,7 @@ function StaticContactsPage() {
                 key: 'labels',
                 label: 'Label TH/EN',
                 render: (row) => (
-                  <div className="ad-col-stack">
+                  <div className="admin-ui-col-stack">
                     <span>{row.labelTh || '-'}</span>
                     <span>{row.labelEn || '-'}</span>
                   </div>
@@ -3369,15 +3369,15 @@ function StaticContactsPage() {
                 key: 'value',
                 label: 'Value / URL',
                 render: (row) => (
-                  <div className="ad-col-stack">
+                  <div className="admin-ui-col-stack">
                     <span>{row.value}</span>
                     {row.url ? (
-                      <a className="ad-link" href={row.url} target="_blank" rel="noreferrer">
+                      <a className="admin-ui-link" href={row.url} target="_blank" rel="noreferrer">
                         <Globe size={13} />
                         {row.url}
                       </a>
                     ) : (
-                      <span className="ad-text-muted">-</span>
+                      <span className="admin-ui-text-muted">-</span>
                     )}
                   </div>
                 ),
@@ -3386,9 +3386,9 @@ function StaticContactsPage() {
                 key: 'flags',
                 label: 'Flags',
                 render: (row) => (
-                  <div className="ad-col-stack">
+                  <div className="admin-ui-col-stack">
                     <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} />
-                    {row.isPrimary ? <StatusBadge status="APPROVED" label="PRIMARY" /> : <span className="ad-text-muted">-</span>}
+                    {row.isPrimary ? <StatusBadge status="APPROVED" label="PRIMARY" /> : <span className="admin-ui-text-muted">-</span>}
                   </div>
                 ),
               },
@@ -3397,7 +3397,7 @@ function StaticContactsPage() {
                 key: 'actions',
                 label: 'Actions',
                 render: (row) => (
-                  <div className="ad-row-actions">
+                  <div className="admin-ui-row-actions">
                     <button type="button" onClick={() => moveChannel(row.id, 'up')} aria-label="move up">
                       <ArrowUp size={14} />
                     </button>
@@ -3416,7 +3416,7 @@ function StaticContactsPage() {
             ]}
           />
         ) : (
-          <div className="ad-table-empty">ยังไม่มี contact ให้กำหนดช่องทาง</div>
+          <div className="admin-ui-table-empty">ยังไม่มี contact ให้กำหนดช่องทาง</div>
         )}
       </article>
 
@@ -3426,7 +3426,7 @@ function StaticContactsPage() {
         title={editingContactId ? 'Edit Contact' : 'Create Contact'}
         subtitle="ตั้งค่าทุกคอลัมน์ของ content_contacts"
       >
-        <div className="ad-form">
+        <div className="admin-ui-form">
           <label htmlFor="contact-display-name-th">
             display_name_th *
             <input
@@ -3447,7 +3447,7 @@ function StaticContactsPage() {
             {contactErrors.displayNameEn ? <small>{contactErrors.displayNameEn}</small> : null}
           </label>
 
-          <div className="ad-two-col">
+          <div className="admin-ui-two-col">
             <label htmlFor="contact-role-th">
               role_th
               <input
@@ -3466,7 +3466,7 @@ function StaticContactsPage() {
             </label>
           </div>
 
-          <div className="ad-two-col">
+          <div className="admin-ui-two-col">
             <label htmlFor="contact-organization-th">
               organization_th
               <input
@@ -3485,7 +3485,7 @@ function StaticContactsPage() {
             </label>
           </div>
 
-          <div className="ad-two-col">
+          <div className="admin-ui-two-col">
             <label htmlFor="contact-department-th">
               department_th
               <input
@@ -3533,7 +3533,7 @@ function StaticContactsPage() {
             />
           </label>
 
-          <div className="ad-two-col">
+          <div className="admin-ui-two-col">
             <label htmlFor="contact-avatar-alt-th">
               avatar_alt_th
               <input
@@ -3552,7 +3552,7 @@ function StaticContactsPage() {
             </label>
           </div>
 
-          <div className="ad-two-col">
+          <div className="admin-ui-two-col">
             <label htmlFor="contact-sort-order">
               sort_order
               <input
@@ -3575,8 +3575,8 @@ function StaticContactsPage() {
             </label>
           </div>
 
-          <div className="ad-two-col">
-            <label className="ad-check">
+          <div className="admin-ui-two-col">
+            <label className="admin-ui-check">
               <input
                 type="checkbox"
                 checked={contactForm.isFeatured}
@@ -3584,7 +3584,7 @@ function StaticContactsPage() {
               />
               <span>is_featured</span>
             </label>
-            <label className="ad-check">
+            <label className="admin-ui-check">
               <input
                 type="checkbox"
                 checked={contactForm.isEnabled}
@@ -3594,11 +3594,11 @@ function StaticContactsPage() {
             </label>
           </div>
 
-          <div className="ad-form-actions">
-            <button type="button" className="ad-btn" onClick={() => setContactDrawerOpen(false)}>
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setContactDrawerOpen(false)}>
               ยกเลิก
             </button>
-            <button type="button" className="ad-btn ad-btn-primary" onClick={saveContact}>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={saveContact}>
               <Save size={14} />
               บันทึก
             </button>
@@ -3612,7 +3612,7 @@ function StaticContactsPage() {
         title={editingChannelId ? 'Edit Contact Channel' : 'Create Contact Channel'}
         subtitle={`ตั้งค่าช่องทางของ ${selectedContact?.displayNameEn || selectedContact?.displayNameTh || '-'}`}
       >
-        <div className="ad-form">
+        <div className="admin-ui-form">
           <label htmlFor="channel-type">
             channel_type *
             <select
@@ -3629,7 +3629,7 @@ function StaticContactsPage() {
             {channelErrors.channelType ? <small>{channelErrors.channelType}</small> : null}
           </label>
 
-          <div className="ad-two-col">
+          <div className="admin-ui-two-col">
             <label htmlFor="channel-label-th">
               label_th
               <input
@@ -3679,8 +3679,8 @@ function StaticContactsPage() {
             {channelErrors.sortOrder ? <small>{channelErrors.sortOrder}</small> : null}
           </label>
 
-          <div className="ad-two-col">
-            <label className="ad-check">
+          <div className="admin-ui-two-col">
+            <label className="admin-ui-check">
               <input
                 type="checkbox"
                 checked={channelForm.isPrimary}
@@ -3688,7 +3688,7 @@ function StaticContactsPage() {
               />
               <span>is_primary</span>
             </label>
-            <label className="ad-check">
+            <label className="admin-ui-check">
               <input
                 type="checkbox"
                 checked={channelForm.isEnabled}
@@ -3698,21 +3698,21 @@ function StaticContactsPage() {
             </label>
           </div>
 
-          <div className="ad-panel">
+          <div className="admin-ui-panel">
             <h3>Preview</h3>
-            <p className="ad-text-muted">{selectedContact?.displayNameEn || selectedContact?.displayNameTh || '-'}</p>
-            <div className="ad-col-stack">
+            <p className="admin-ui-text-muted">{selectedContact?.displayNameEn || selectedContact?.displayNameTh || '-'}</p>
+            <div className="admin-ui-col-stack">
               <span>{channelForm.channelType}</span>
               <span>{channelForm.value || '-'}</span>
               <span>{channelForm.url || '-'}</span>
             </div>
           </div>
 
-          <div className="ad-form-actions">
-            <button type="button" className="ad-btn" onClick={() => setChannelDrawerOpen(false)}>
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setChannelDrawerOpen(false)}>
               ยกเลิก
             </button>
-            <button type="button" className="ad-btn ad-btn-primary" onClick={saveChannel}>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={saveChannel}>
               <Save size={14} />
               บันทึก
             </button>
@@ -3997,17 +3997,17 @@ function StaticSchedulePage() {
   }, [items])
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Static Content: Schedule"
         description="จัดการรายการกำหนดการจากตาราง event_schedule_items พร้อมตัวกรองรายวันและการแสดงผลครบทุกข้อมูล"
         right={
-          <div className="ad-form-actions">
-            <button type="button" className="ad-btn" onClick={fetchScheduleBundle}>
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={fetchScheduleBundle}>
               <RefreshCw size={15} />
               Refresh
             </button>
-            <button type="button" className="ad-btn ad-btn-primary" onClick={openCreate}>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
               <Plus size={15} />
               Add Session
             </button>
@@ -4015,35 +4015,35 @@ function StaticSchedulePage() {
         }
       />
 
-      <section className="ad-stat-grid">
-        <article className="ad-stat-card">
+      <section className="admin-ui-stat-grid">
+        <article className="admin-ui-stat-card">
           <span>Items</span>
           <strong>{stats.total}</strong>
           <small>sessions in schedule</small>
         </article>
-        <article className="ad-stat-card success">
+        <article className="admin-ui-stat-card success">
           <span>Enabled</span>
           <strong>{stats.activeItems}</strong>
           <small>visible on website</small>
         </article>
-        <article className="ad-stat-card info">
+        <article className="admin-ui-stat-card info">
           <span>Highlight</span>
           <strong>{stats.highlighted}</strong>
           <small>featured sessions</small>
         </article>
-        <article className="ad-stat-card warn">
+        <article className="admin-ui-stat-card warn">
           <span>Active Days</span>
           <strong>{stats.usedDays}</strong>
           <small>days with sessions</small>
         </article>
       </section>
 
-      <div className="ad-chip-row">
+      <div className="admin-ui-chip-row">
         {dayFilters.map((filter) => (
           <button
             key={filter.value}
             type="button"
-            className={`ad-chip-btn ${activeDayFilter === filter.value ? 'active' : ''}`}
+            className={`admin-ui-chip-btn ${activeDayFilter === filter.value ? 'active' : ''}`}
             onClick={() => setActiveDayFilter(filter.value)}
           >
             {filter.label}
@@ -4067,7 +4067,7 @@ function StaticSchedulePage() {
             key: 'timeLabel',
             label: 'Time',
             render: (row) => (
-              <div className="ad-col-stack">
+              <div className="admin-ui-col-stack">
                 <strong>{row.timeLabel}</strong>
                 <span>Sort #{row.sortOrder}</span>
               </div>
@@ -4077,7 +4077,7 @@ function StaticSchedulePage() {
             key: 'dayLabel',
             label: 'Day / Track',
             render: (row) => (
-              <div className="ad-col-stack">
+              <div className="admin-ui-col-stack">
                 <strong>{row.dayLabel || '-'}</strong>
                 <span>{row.trackLabel}</span>
               </div>
@@ -4087,7 +4087,7 @@ function StaticSchedulePage() {
             key: 'titleEn',
             label: 'Session',
             render: (row) => (
-              <div className="ad-col-stack">
+              <div className="admin-ui-col-stack">
                 <strong>{row.titleEn}</strong>
                 <span>{row.titleTh}</span>
                 <span>{row.locationEn || row.locationTh || '-'}</span>
@@ -4098,7 +4098,7 @@ function StaticSchedulePage() {
             key: 'audience',
             label: 'Audience / State',
             render: (row) => (
-              <div className="ad-col-stack">
+              <div className="admin-ui-col-stack">
                 <span>{scheduleAudienceLabel[row.audience] || row.audience}</span>
                 <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} label={row.isEnabled ? 'Enabled' : 'Disabled'} />
                 {row.isHighlight ? <StatusBadge status="RESUBMITTED" label="Highlight" /> : null}
@@ -4109,7 +4109,7 @@ function StaticSchedulePage() {
             key: 'actions',
             label: 'Actions',
             render: (row) => (
-              <div className="ad-row-actions">
+              <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => openEdit(row)} aria-label="edit">
                   <Pencil size={14} />
                 </button>
@@ -4128,8 +4128,8 @@ function StaticSchedulePage() {
         title={editingId ? 'Edit Schedule Session' : 'Create Schedule Session'}
         subtitle="ข้อมูลจะถูก sync เข้าตาราง event_schedule_items และแสดงผลในหน้า Home"
       >
-        <div className="ad-form">
-          <div className="ad-two-col">
+        <div className="admin-ui-form">
+          <div className="admin-ui-two-col">
             <label htmlFor="schedule-day">
               Day *
               <select
@@ -4164,7 +4164,7 @@ function StaticSchedulePage() {
             </label>
           </div>
 
-          <div className="ad-two-col">
+          <div className="admin-ui-two-col">
             <label htmlFor="schedule-start-time">
               Start Time *
               <input
@@ -4188,7 +4188,7 @@ function StaticSchedulePage() {
             </label>
           </div>
 
-          <div className="ad-two-col">
+          <div className="admin-ui-two-col">
             <label htmlFor="schedule-title-th">
               title_th *
               <input
@@ -4210,7 +4210,7 @@ function StaticSchedulePage() {
             </label>
           </div>
 
-          <div className="ad-two-col">
+          <div className="admin-ui-two-col">
             <label htmlFor="schedule-location-th">
               location_th
               <input
@@ -4230,7 +4230,7 @@ function StaticSchedulePage() {
             </label>
           </div>
 
-          <div className="ad-two-col">
+          <div className="admin-ui-two-col">
             <label htmlFor="schedule-speaker-th">
               speaker_th
               <input
@@ -4250,7 +4250,7 @@ function StaticSchedulePage() {
             </label>
           </div>
 
-          <div className="ad-two-col">
+          <div className="admin-ui-two-col">
             <label htmlFor="schedule-audience">
               audience
               <select
@@ -4278,7 +4278,7 @@ function StaticSchedulePage() {
             </label>
           </div>
 
-          <div className="ad-two-col">
+          <div className="admin-ui-two-col">
             <label htmlFor="schedule-description-th">
               description_th
               <textarea
@@ -4300,8 +4300,8 @@ function StaticSchedulePage() {
             </label>
           </div>
 
-          <div className="ad-two-col">
-            <label className="ad-check">
+          <div className="admin-ui-two-col">
+            <label className="admin-ui-check">
               <input
                 type="checkbox"
                 checked={form.isHighlight}
@@ -4310,7 +4310,7 @@ function StaticSchedulePage() {
               <span>is_highlight</span>
             </label>
 
-            <label className="ad-check">
+            <label className="admin-ui-check">
               <input
                 type="checkbox"
                 checked={form.isEnabled}
@@ -4320,9 +4320,9 @@ function StaticSchedulePage() {
             </label>
           </div>
 
-          <div className="ad-panel">
+          <div className="admin-ui-panel">
             <h3>Preview</h3>
-            <div className="ad-col-stack">
+            <div className="admin-ui-col-stack">
               <strong>{form.titleEn || '-'}</strong>
               <span>{form.titleTh || '-'}</span>
               <span>
@@ -4333,11 +4333,11 @@ function StaticSchedulePage() {
             </div>
           </div>
 
-          <div className="ad-form-actions">
-            <button type="button" className="ad-btn" onClick={() => setDrawerOpen(false)}>
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setDrawerOpen(false)}>
               Cancel
             </button>
-            <button type="button" className="ad-btn ad-btn-primary" onClick={save}>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={save}>
               <Save size={14} />
               Save
             </button>
@@ -4465,19 +4465,19 @@ function StaticWinnersPage() {
   }
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Static Content: Winners"
         description="จัดการผลการแข่งขันตาม season/year พร้อม publish/unpublish"
         right={
-          <button type="button" className="ad-btn ad-btn-primary" onClick={openCreate}>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
             <Plus size={15} />
             Add Winner
           </button>
         }
       />
 
-      <div className="ad-season-filter">
+      <div className="admin-ui-season-filter">
         <button type="button" className={season === 'all' ? 'active' : ''} onClick={() => setSeason('all')}>
           All Seasons
         </button>
@@ -4510,7 +4510,7 @@ function StaticWinnersPage() {
             key: 'team',
             label: 'Team',
             render: (row) => (
-              <div className="ad-col-stack">
+              <div className="admin-ui-col-stack">
                 <strong>{row.team}</strong>
                 <span>{row.projectTitle}</span>
               </div>
@@ -4519,13 +4519,13 @@ function StaticWinnersPage() {
           {
             key: 'description',
             label: 'Description',
-            render: (row) => <span className="ad-truncate">{row.description}</span>,
+            render: (row) => <span className="admin-ui-truncate">{row.description}</span>,
           },
           {
             key: 'demoLink',
             label: 'Demo',
             render: (row) => (
-              <a className="ad-link" href={row.demoLink} target="_blank" rel="noreferrer">
+              <a className="admin-ui-link" href={row.demoLink} target="_blank" rel="noreferrer">
                 <Link2 size={13} />
                 Demo Link
               </a>
@@ -4535,7 +4535,7 @@ function StaticWinnersPage() {
             key: 'publish',
             label: 'Publish',
             render: (row) => (
-              <button type="button" className="ad-pill-btn" onClick={() => togglePublish(row.id)}>
+              <button type="button" className="admin-ui-pill-btn" onClick={() => togglePublish(row.id)}>
                 {row.isPublished ? (
                   <>
                     <Check size={13} />
@@ -4554,7 +4554,7 @@ function StaticWinnersPage() {
             key: 'actions',
             label: 'Actions',
             render: (row) => (
-              <div className="ad-row-actions">
+              <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => openEdit(row)} aria-label="edit">
                   <Pencil size={14} />
                 </button>
@@ -4579,7 +4579,7 @@ function StaticWinnersPage() {
         onClose={() => setDrawerOpen(false)}
         title={editingId ? 'Edit Winner' : 'Create Winner'}
       >
-        <div className="ad-form">
+        <div className="admin-ui-form">
           <label htmlFor="winner-season">
             Season (Year)
             <input
@@ -4648,13 +4648,13 @@ function StaticWinnersPage() {
               }}
             />
             {form.imageName ? (
-              <span className="ad-file-chip">
+              <span className="admin-ui-file-chip">
                 <Upload size={13} />
                 {form.imageName}
               </span>
             ) : null}
           </label>
-          <label className="ad-check">
+          <label className="admin-ui-check">
             <input
               type="checkbox"
               checked={form.isPublished}
@@ -4663,11 +4663,11 @@ function StaticWinnersPage() {
             <span>Publish now</span>
           </label>
 
-          <div className="ad-form-actions">
-            <button type="button" className="ad-btn" onClick={() => setDrawerOpen(false)}>
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setDrawerOpen(false)}>
               ยกเลิก
             </button>
-            <button type="button" className="ad-btn ad-btn-primary" onClick={save}>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={save}>
               <Save size={14} />
               บันทึก
             </button>
@@ -4682,7 +4682,7 @@ function ReviewQueuePage() {
   const navigate = useNavigate()
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Team Review: Queue"
         description="คิวตรวจสอบทีม พร้อม filter/search/pagination สำหรับรีวิวเร็ว"
@@ -4703,7 +4703,7 @@ function ReviewQueuePage() {
             key: 'team',
             label: 'Team',
             render: (row) => (
-              <div className="ad-col-stack">
+              <div className="admin-ui-col-stack">
                 <strong>{row.teamCode}</strong>
                 <span>
                   {row.teamName} • {row.university}
@@ -4715,7 +4715,7 @@ function ReviewQueuePage() {
             key: 'counts',
             label: 'Member States',
             render: (row) => (
-              <div className="ad-count-badges">
+              <div className="admin-ui-count-badges">
                 <span className="ok">A {row.counts.approved}</span>
                 <span className="warn">R {row.counts.resubmitted}</span>
                 <span className="danger">F {row.counts.needFix}</span>
@@ -4737,7 +4737,7 @@ function ReviewQueuePage() {
             key: 'actions',
             label: 'Actions',
             render: (row) => (
-              <div className="ad-row-actions">
+              <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => navigate(`/admin/review/teams/${row.teamId}`)}>
                   <Eye size={14} />
                 </button>
@@ -4776,7 +4776,7 @@ function TeamReviewDetailPage() {
 
   if (!team) {
     return (
-      <div className="ad-panel">
+      <div className="admin-ui-panel">
         <h3>ไม่พบทีมที่ต้องการ</h3>
         <p>กรุณากลับไปหน้า Review Queue</p>
       </div>
@@ -4902,17 +4902,17 @@ function TeamReviewDetailPage() {
   }
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title={`${team.teamCode} • ${team.teamName}`}
         description={`State: ${team.teamState} • Submitted: ${formatDateTime(team.submittedAt)} • Lock owner: ${team.lockOwner}`}
         right={
-          <div className="ad-head-actions">
-            <button type="button" className="ad-btn" onClick={returnTeamBulk}>
+          <div className="admin-ui-headmin-ui-actions">
+            <button type="button" className="admin-ui-btn" onClick={returnTeamBulk}>
               <UserRoundX size={15} />
               Return Team (Bulk)
             </button>
-            <button type="button" className="ad-btn ad-btn-primary" onClick={approveTeam}>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={approveTeam}>
               <UserRoundCheck size={15} />
               Approve Team
             </button>
@@ -4920,13 +4920,13 @@ function TeamReviewDetailPage() {
         }
       />
 
-      <div className="ad-review-layout">
-        <aside className="ad-review-members">
+      <div className="admin-ui-review-layout">
+        <aside className="admin-ui-review-members">
           <h3>
             <Users size={15} />
             Members
           </h3>
-          <div className="ad-member-list">
+          <div className="admin-ui-member-list">
             {team.members.map((member) => (
               <button
                 type="button"
@@ -4934,7 +4934,7 @@ function TeamReviewDetailPage() {
                 className={member.memberId === selectedMemberId ? 'active' : ''}
                 onClick={() => setSelectedMemberId(member.memberId)}
               >
-                <label className="ad-check-inline" onClick={(event) => event.stopPropagation()}>
+                <label className="admin-ui-check-inline" onClick={(event) => event.stopPropagation()}>
                   <input
                     type="checkbox"
                     checked={bulkSelection.includes(member.memberId)}
@@ -4957,12 +4957,12 @@ function TeamReviewDetailPage() {
           </div>
         </aside>
 
-        <section className="ad-review-detail">
+        <section className="admin-ui-review-detail">
           {selectedMember ? (
             <>
-              <article className="ad-panel">
+              <article className="admin-ui-panel">
                 <h3>Member Profile</h3>
-                <div className="ad-profile-grid">
+                <div className="admin-ui-profile-grid">
                   <div>
                     <span>Full name</span>
                     <strong>{selectedMember.fullName}</strong>
@@ -4989,7 +4989,7 @@ function TeamReviewDetailPage() {
                   </div>
                 </div>
 
-                <label htmlFor="return-reason" className="ad-label">
+                <label htmlFor="return-reason" className="admin-ui-label">
                   Return Reason *
                 </label>
                 <textarea
@@ -5000,18 +5000,18 @@ function TeamReviewDetailPage() {
                   placeholder="ระบุเหตุผลที่ต้องแก้ไขไฟล์"
                 />
 
-                <div className="ad-form-actions">
-                  <button type="button" className="ad-btn ad-btn-primary" onClick={approveMember}>
+                <div className="admin-ui-form-actions">
+                  <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={approveMember}>
                     <UserRoundCheck size={14} />
                     Approve Member
                   </button>
-                  <button type="button" className="ad-btn" onClick={returnMember}>
+                  <button type="button" className="admin-ui-btn" onClick={returnMember}>
                     <UserRoundX size={14} />
                     Return Member (Need Fix)
                   </button>
                 </div>
                 {selectedMember.needFixReason ? (
-                  <p className="ad-warning-text">
+                  <p className="admin-ui-warning-text">
                     Current reason: <strong>{selectedMember.needFixReason}</strong>
                   </p>
                 ) : null}
@@ -5023,9 +5023,9 @@ function TeamReviewDetailPage() {
         </section>
       </div>
 
-      <article className="ad-panel">
+      <article className="admin-ui-panel">
         <h3>Review Timeline</h3>
-        <div className="ad-timeline-list">
+        <div className="admin-ui-timeline-list">
           {team.timeline.map((item) => (
             <div key={item.id}>
               <strong>{item.action}</strong>
@@ -5044,7 +5044,7 @@ function TeamReviewDetailPage() {
 function ReturnedMonitorPage() {
   const navigate = useNavigate()
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Team Review: Returned Monitor"
         description="ติดตามทีมที่ถูกส่งกลับและความคืบหน้าการ resubmission แบบ real-time"
@@ -5067,7 +5067,7 @@ function ReturnedMonitorPage() {
             key: 'team',
             label: 'Team',
             render: (row) => (
-              <div className="ad-col-stack">
+              <div className="admin-ui-col-stack">
                 <strong>{row.teamCode}</strong>
                 <span>{row.teamName}</span>
               </div>
@@ -5087,8 +5087,8 @@ function ReturnedMonitorPage() {
             key: 'progress',
             label: 'Resubmission Progress',
             render: (row) => (
-              <div className="ad-progress-wrap">
-                <div className="ad-progress-bar">
+              <div className="admin-ui-progress-wrap">
+                <div className="admin-ui-progress-bar">
                   <span style={{ width: `${Math.round((row.changedMembers / row.totalNeedFixMembers) * 100)}%` }} />
                 </div>
                 <small>
@@ -5106,7 +5106,7 @@ function ReturnedMonitorPage() {
             key: 'actions',
             label: 'Actions',
             render: (row) => (
-              <button type="button" className="ad-mini-btn" onClick={() => navigate(`/admin/review/teams/${row.teamId}`)}>
+              <button type="button" className="admin-ui-mini-btn" onClick={() => navigate(`/admin/review/teams/${row.teamId}`)}>
                 Open
               </button>
             ),
@@ -5119,7 +5119,7 @@ function ReturnedMonitorPage() {
 
 function ApprovedTeamsPage() {
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Team Review: Approved Teams"
         description="รายชื่อทีมที่ APPROVED แล้ว พร้อมข้อมูลผู้อนุมัติและเวลาอนุมัติ"
@@ -5134,7 +5134,7 @@ function ApprovedTeamsPage() {
             key: 'team',
             label: 'Team',
             render: (row) => (
-              <div className="ad-col-stack">
+              <div className="admin-ui-col-stack">
                 <strong>{row.teamCode}</strong>
                 <span>
                   {row.teamName} • {row.university}
@@ -5260,10 +5260,10 @@ function SelectionPage() {
   }
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading title="Selection Result" description="ประกาศผลผ่าน/ไม่ผ่าน และกำหนดเวลาให้ทีมยืนยันเข้าร่วม" />
-      <article className="ad-panel">
-        <div className="ad-dashboard-filters">
+      <article className="admin-ui-panel">
+        <div className="admin-ui-dashboard-filters">
           <label>
             Team status
             <select value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -5279,7 +5279,7 @@ function SelectionPage() {
           </label>
           <button
             type="button"
-            className="ad-btn ad-btn-primary"
+            className="admin-ui-btn admin-ui-btn-primary"
             onClick={saveGlobalDeadline}
             disabled={savingDeadline || !deadline}
             title="บันทึก deadline กลางสำหรับทุกทีมที่ passed"
@@ -5288,13 +5288,13 @@ function SelectionPage() {
           </button>
           <button
             type="button"
-            className="ad-btn"
+            className="admin-ui-btn"
             onClick={() => setDeadline('')}
             title="ล้างค่า deadline ที่กรอกไว้"
           >
             Clear deadline
           </button>
-          <button type="button" className="ad-btn" onClick={fetchRows}>
+          <button type="button" className="admin-ui-btn" onClick={fetchRows}>
             <RefreshCw size={14} />
             Refresh
           </button>
@@ -5329,11 +5329,11 @@ function SelectionPage() {
             key: 'actions',
             label: 'Actions',
             render: (row) => (
-              <div className="ad-inline-actions">
-                <button type="button" className="ad-mini-btn" onClick={() => setResult(row.team_id, 'passed')}>
+              <div className="admin-ui-inline-actions">
+                <button type="button" className="admin-ui-mini-btn" onClick={() => setResult(row.team_id, 'passed')}>
                   Set passed
                 </button>
-                <button type="button" className="ad-mini-btn" onClick={() => setResult(row.team_id, 'failed')}>
+                <button type="button" className="admin-ui-mini-btn" onClick={() => setResult(row.team_id, 'failed')}>
                   Set failed
                 </button>
               </div>
@@ -5496,10 +5496,10 @@ function NotificationSettingsPage() {
   }
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading title="Notification Settings" description="ตั้งค่า event email, แก้ข้อความ template ราย event และส่งเมล custom ถึงทีมที่เลือก" />
 
-      <article className="ad-panel">
+      <article className="admin-ui-panel">
         <h3>Admin Recipient List</h3>
         <AdminDataTable
           rows={recipients.map((r) => ({ ...r, id: r.userId }))}
@@ -5525,7 +5525,7 @@ function NotificationSettingsPage() {
               render: (row) => (
                 <button
                   type="button"
-                  className="ad-mini-btn"
+                  className="admin-ui-mini-btn"
                   disabled={updatingRecipientUserId === row.userId}
                   onClick={() => toggleRecipient(row)}
                 >
@@ -5563,11 +5563,11 @@ function NotificationSettingsPage() {
             key: 'actions',
             label: 'Actions',
             render: (row) => (
-              <div className="ad-inline-actions">
-                <button type="button" className="ad-mini-btn" onClick={() => updateSetting(row.eventCode, { isInAppEnabled: !row.isInAppEnabled })}>
+              <div className="admin-ui-inline-actions">
+                <button type="button" className="admin-ui-mini-btn" onClick={() => updateSetting(row.eventCode, { isInAppEnabled: !row.isInAppEnabled })}>
                   Toggle In-App
                 </button>
-                <button type="button" className="ad-mini-btn" onClick={() => updateSetting(row.eventCode, { isEmailEnabled: !row.isEmailEnabled })}>
+                <button type="button" className="admin-ui-mini-btn" onClick={() => updateSetting(row.eventCode, { isEmailEnabled: !row.isEmailEnabled })}>
                   Toggle Email
                 </button>
               </div>
@@ -5576,11 +5576,11 @@ function NotificationSettingsPage() {
         ]}
       />
 
-      <article className="ad-panel">
+      <article className="admin-ui-panel">
         <h3>Event Message Overrides</h3>
-        <div className="ad-form">
+        <div className="admin-ui-form">
           {settings.map((row) => (
-            <div key={row.eventCode} className="ad-panel" style={{ marginBottom: 12 }}>
+            <div key={row.eventCode} className="admin-ui-panel" style={{ marginBottom: 12 }}>
               <strong>{row.eventCode}</strong>
               <label>
                 Subject Override
@@ -5611,7 +5611,7 @@ function NotificationSettingsPage() {
                   placeholder="รองรับตัวแปร {{team_name_th}}, {{team_code}}"
                 />
               </label>
-              <button type="button" className="ad-btn ad-btn-primary" onClick={() => saveEventMessage(row.eventCode)}>
+              <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={() => saveEventMessage(row.eventCode)}>
                 <Save size={14} />
                 Save Override
               </button>
@@ -5620,9 +5620,9 @@ function NotificationSettingsPage() {
         </div>
       </article>
 
-      <article className="ad-panel">
+      <article className="admin-ui-panel">
         <h3>Send Custom Email To Team</h3>
-        <div className="ad-form">
+        <div className="admin-ui-form">
           <label>
             Team
             <select
@@ -5652,7 +5652,7 @@ function NotificationSettingsPage() {
               placeholder="เนื้อความที่จะส่งถึงสมาชิกทีมที่เลือก"
             />
           </label>
-          <button type="button" className="ad-btn ad-btn-primary" disabled={sending} onClick={sendCustomEmail}>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={sending} onClick={sendCustomEmail}>
             <Mail size={14} />
             {sending ? 'Sending...' : 'Send Custom Email'}
           </button>
@@ -5682,7 +5682,7 @@ function NotificationSettingsPage() {
 function AuditLogsPage() {
   const [selectedLog, setSelectedLog] = useState(null)
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Audit Logs"
         description="ติดตามการเปลี่ยนแปลงว่าใครแก้อะไร เมื่อไร"
@@ -5727,7 +5727,7 @@ function AuditLogsPage() {
             key: 'payload',
             label: 'Payload',
             render: (row) => (
-              <button type="button" className="ad-mini-btn" onClick={() => setSelectedLog(row)}>
+              <button type="button" className="admin-ui-mini-btn" onClick={() => setSelectedLog(row)}>
                 View JSON
               </button>
             ),
@@ -5741,7 +5741,7 @@ function AuditLogsPage() {
         title={selectedLog?.actionType || ''}
         subtitle={selectedLog ? `${selectedLog.entityType}:${selectedLog.entityId}` : ''}
       >
-        <pre className="ad-json-box">{selectedLog?.payload}</pre>
+        <pre className="admin-ui-json-box">{selectedLog?.payload}</pre>
       </DetailDrawer>
     </div>
   )
@@ -5770,14 +5770,14 @@ function SettingsPage() {
   }
 
   return (
-    <div className="ad-stack">
+    <div className="admin-ui-stack">
       <SectionHeading
         title="Site Settings"
         description="กำหนด deadline และ feature toggles ระดับระบบ"
       />
-      <article className="ad-panel">
-        <div className="ad-form ad-settings-form">
-          <label className="ad-check">
+      <article className="admin-ui-panel">
+        <div className="admin-ui-form admin-ui-settings-form">
+          <label className="admin-ui-check">
             <input
               type="checkbox"
               checked={form.registrationOpen}
@@ -5785,7 +5785,7 @@ function SettingsPage() {
             />
             <span>เปิดรับสมัครทีม</span>
           </label>
-          <label className="ad-check">
+          <label className="admin-ui-check">
             <input
               type="checkbox"
               checked={form.allowTeamResubmission}
@@ -5840,8 +5840,8 @@ function SettingsPage() {
             />
           </label>
 
-          <div className="ad-form-actions">
-            <button type="button" className="ad-btn ad-btn-primary" onClick={save}>
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={save}>
               <Save size={14} />
               Save Settings
             </button>
