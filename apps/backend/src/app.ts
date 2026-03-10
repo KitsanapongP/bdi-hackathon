@@ -121,6 +121,17 @@ export function buildApp(ctx: AppContext) {
     lastModified: true,
   });
 
+  app.register(fastifyStatic, {
+    root: path.join(process.cwd(), 'public', 'content', 'carousels'),
+    prefix: '/static/content/carousels/',
+    decorateReply: false,
+    cacheControl: true,
+    maxAge: '7d',
+    immutable: false,
+    etag: true,
+    lastModified: true,
+  });
+
 
   app.register(healthRoutes, { prefix: '/api/health' });
   app.register(authRoutes, { prefix: '/api/auth' });

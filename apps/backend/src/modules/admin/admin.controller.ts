@@ -9,6 +9,9 @@ import {
     createContactSchema,
     updateContactSchema,
     reorderContactsSchema,
+    createCarouselSchema,
+    updateCarouselSchema,
+    reorderCarouselsSchema,
     createContactChannelSchema,
     updateContactChannelSchema,
     reorderContactChannelsSchema,
@@ -268,6 +271,127 @@ export async function handleReorderSponsorsAdmin(req: FastifyRequest, reply: Fas
         const body = req.body as { updates: { id: number; displayOrder: number }[] };
         await contentService.reorderSponsorsAdmin(req.server.ctx.db, body.updates);
         return reply.send(ok({ success: true }, 'จัดลำดับ Sponsor สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleGetAllCarouselsAdmin(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const carousels = await contentService.getAllCarouselsAdmin(req.server.ctx.db);
+        return reply.send(ok(carousels));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleCreateCarouselAdmin(req: FastifyRequest, reply: FastifyReply) {
+    const parsedBody = createCarouselSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const user = req.user as JwtPayload;
+        const result = await contentService.createCarouselAdmin(req.server.ctx.db, parsedBody.data, user.userId);
+        return reply.status(201).send(ok(result, 'เพิ่ม carousel slide สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateCarouselAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = updateCarouselSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await contentService.updateCarouselAdmin(req.server.ctx.db, parsedParams.data.id, parsedBody.data);
+        return reply.send(ok(result, 'อัปเดต carousel slide สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleDeleteCarouselAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await contentService.deleteCarouselAdmin(req.server.ctx.db, parsedParams.data.id);
+        return reply.send(ok({ success: true }, 'ลบ carousel slide สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleReorderCarouselsAdmin(req: FastifyRequest, reply: FastifyReply) {
+    const parsedBody = reorderCarouselsSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await contentService.reorderCarouselsAdmin(req.server.ctx.db, parsedBody.data.updates || []);
+        return reply.send(ok({ success: true }, 'จัดลำดับ carousel สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUploadCarouselImageAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const file = await (req as any).file();
+        if (!file) {
+            return reply.status(400).send({ ok: false, message: 'กรุณาแนบไฟล์รูปภาพ' });
+        }
+
+        const requestedFileName = (file.fields?.fileName?.value || '').toString();
+        const result = await contentService.uploadCarouselImageAdmin(req.server.ctx.db, parsedParams.data.id, {
+            stream: file.file,
+            originalName: file.filename,
+            mimeType: file.mimetype,
+            requestedFileName: requestedFileName || null,
+        });
+
+        return reply.send(ok(result, 'อัปโหลดรูปภาพสำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });

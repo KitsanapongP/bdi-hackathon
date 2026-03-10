@@ -724,6 +724,21 @@ body:has(.ad-page) {
   gap: 10px;
 }
 
+.ad-inline-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ad-inline-banner img {
+  width: 96px;
+  height: 54px;
+  object-fit: cover;
+  border: 1px solid var(--ad-border);
+  border-radius: 10px;
+  background: #fff;
+}
+
 .ad-inline-logo img {
   width: 34px;
   height: 34px;

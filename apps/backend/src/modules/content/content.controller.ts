@@ -13,6 +13,11 @@ export async function handleGetSponsors(req: FastifyRequest<{ Querystring: { tie
     return reply.send(ok(sponsors));
 }
 
+export async function handleGetCarousels(req: FastifyRequest, reply: FastifyReply) {
+    const carousels = await service.getCarousels(req.server.ctx.db);
+    return reply.send(ok(carousels));
+}
+
 export async function handleGetPageByCode(
     req: FastifyRequest<{ Params: { pageCode: string } }>,
     reply: FastifyReply

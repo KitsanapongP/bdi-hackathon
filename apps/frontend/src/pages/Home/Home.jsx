@@ -20,11 +20,17 @@ import {
 } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 import GameShapes from '../../components/GameShapes';
+import HeroCarousel from './HeroCarousel';
 import TeamContent from './Team';
 import ProfileContent from './Profile';
 import './Home.css';
 import { apiUrl } from '../../lib/api';
-import { getCachedCoOrganizerSponsors, setCachedCoOrganizerSponsors } from '../../lib/contentCache';
+import {
+    getCachedCoOrganizerSponsors,
+    setCachedCoOrganizerSponsors,
+    getCachedHomeCarouselSlides,
+    setCachedHomeCarouselSlides,
+} from '../../lib/contentCache';
 
 /* Sponsor logos are loaded from content API */
 
@@ -115,6 +121,7 @@ function HomePage() {
     const [rewards, setRewards] = useState([]);
     const [rewardsLoading, setRewardsLoading] = useState(true);
     const [rewardsError, setRewardsError] = useState(null);
+    const [carouselSlides, setCarouselSlides] = useState(() => getCachedHomeCarouselSlides() || []);
     const [coOrganizerSponsors, setCoOrganizerSponsors] = useState(() => getCachedCoOrganizerSponsors() || []);
     const [sponsors, setSponsors] = useState([]);
     const [sponsorsLoading, setSponsorsLoading] = useState(true);
@@ -205,6 +212,42 @@ function HomePage() {
             }
         };
 
+        const fetchCarousels = async () => {
+            try {
+                const response = await fetch(apiUrl('/api/content/carousels'), {
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch carousels: ${response.status}`);
+                }
+
+                const payload = await response.json();
+                const items = Array.isArray(payload?.data) ? payload.data : [];
+                const normalized = items
+                    .map((item, index) => {
+                        const title = item.titleTh || item.titleEn || `Slide ${index + 1}`;
+                        const imagePath = item.imageUrl || item.imageStorageKey || '';
+                        return {
+                            id: item.id ?? `slide-${index + 1}`,
+                            title,
+                            description: item.descriptionTh || item.descriptionEn || '',
+                            imageUrl: imagePath ? apiUrl(imagePath) : '',
+                            imageAlt: item.imageAltTh || item.imageAltEn || title,
+                            targetUrl: item.targetUrl || '',
+                            openInNewTab: item.openInNewTab !== false,
+                        };
+                    })
+                    .filter((item) => item.imageUrl);
+
+                setCarouselSlides(normalized);
+                setCachedHomeCarouselSlides(normalized);
+            } catch (err) {
+                console.error('Failed to fetch carousels', err);
+                setCarouselSlides(getCachedHomeCarouselSlides() || []);
+            }
+        };
+
 
         const fetchSponsors = async () => {
             try {
@@ -240,6 +283,7 @@ function HomePage() {
         };
         fetchSchedules();
         fetchRewards();
+        fetchCarousels();
         fetchSponsors();
     }, [location]);
 
@@ -550,6 +594,7 @@ function HomePage() {
                         <div className="gt-badge">
                             <Rocket size={16} /> {config.locale.heroBadge}
                         </div>
+                        <HeroCarousel slides={carouselSlides} />
                         <h1 style={{ whiteSpace: 'pre-line' }}>{config.locale.heroTitle}</h1>
                         {config.locale.heroSubtitle && <p className="gt-hero-sub" style={{ whiteSpace: 'pre-line' }}>{config.locale.heroSubtitle}</p>}
                         <div className="gt-hero-actions">

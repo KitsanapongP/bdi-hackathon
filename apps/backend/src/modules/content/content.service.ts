@@ -5,6 +5,8 @@ import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import * as repo from './content.repo.js';
 import type {
+    ContentCarouselSlide,
+    ContentCarouselSlideAdmin,
     ContentContact,
     ContentContactAdmin,
     ContentContactChannelAdmin,
@@ -96,6 +98,230 @@ function extensionFromMimeType(mimeType: string): string {
         case 'image/svg+xml': return '.svg';
         default: return '';
     }
+}
+
+function normalizeNullableText(value: string | null | undefined): string | null {
+    if (value === undefined || value === null) return null;
+    const normalized = String(value).trim();
+    return normalized || null;
+}
+
+function normalizeCarouselImageStorageKey(imageInput: string): string {
+    let normalizedPath = (imageInput || '').trim();
+    if (!normalizedPath) {
+        throw new BadRequestError('กรุณาระบุรูปภาพสไลด์');
+    }
+
+    if (/^https?:\/\//i.test(normalizedPath)) {
+        try {
+            normalizedPath = new URL(normalizedPath).pathname;
+        } catch {
+            normalizedPath = '';
+        }
+    }
+
+    normalizedPath = normalizedPath.replace(/^\/+/, '');
+
+    if (normalizedPath.startsWith('static/content/carousels/')) {
+        return `/${normalizedPath}`;
+    }
+
+    if (normalizedPath.startsWith('content/carousels/')) {
+        return `/static/${normalizedPath}`;
+    }
+
+    const fileName = path.posix.basename(normalizedPath);
+    if (!fileName) {
+        throw new BadRequestError('รูปแบบ image_storage_key ไม่ถูกต้อง');
+    }
+
+    return `/static/content/carousels/${fileName}`;
+}
+
+function normalizeNullableHttpUrl(value: string | null | undefined, fieldName: string): string | null {
+    const normalized = normalizeNullableText(value);
+    if (!normalized) return null;
+
+    let parsed: URL;
+    try {
+        parsed = new URL(normalized);
+    } catch {
+        throw new BadRequestError(`${fieldName} ต้องเป็น URL ที่ถูกต้อง`);
+    }
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new BadRequestError(`${fieldName} รองรับเฉพาะ http หรือ https`);
+    }
+
+    return parsed.toString();
+}
+
+function parseDateTimeToDb(value: string | null | undefined, fieldName: string): string | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) {
+        throw new BadRequestError(`รูปแบบ ${fieldName} ไม่ถูกต้อง`);
+    }
+
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function ensureStartEndValid(startAt: string | null, endAt: string | null): void {
+    if (!startAt || !endAt) return;
+    if (new Date(startAt).getTime() > new Date(endAt).getTime()) {
+        throw new BadRequestError('startAt ต้องน้อยกว่าหรือเท่ากับ endAt');
+    }
+}
+
+function toCarouselResponse(row: {
+    slide_id: number;
+    title_th: string | null;
+    title_en: string | null;
+    description_th: string | null;
+    description_en: string | null;
+    image_storage_key: string;
+    image_alt_th: string | null;
+    image_alt_en: string | null;
+    target_url: string | null;
+    open_in_new_tab: number;
+    sort_order: number;
+}): ContentCarouselSlide {
+    return {
+        id: row.slide_id,
+        titleTh: row.title_th,
+        titleEn: row.title_en,
+        descriptionTh: row.description_th,
+        descriptionEn: row.description_en,
+        imageStorageKey: row.image_storage_key,
+        imageUrl: row.image_storage_key,
+        imageAltTh: row.image_alt_th,
+        imageAltEn: row.image_alt_en,
+        targetUrl: row.target_url,
+        openInNewTab: row.open_in_new_tab === 1,
+        sortOrder: row.sort_order,
+    };
+}
+
+function toCarouselAdminResponse(row: {
+    slide_id: number;
+    title_th: string | null;
+    title_en: string | null;
+    description_th: string | null;
+    description_en: string | null;
+    image_storage_key: string;
+    image_alt_th: string | null;
+    image_alt_en: string | null;
+    target_url: string | null;
+    open_in_new_tab: number;
+    sort_order: number;
+    is_enabled: number;
+    start_at: string | null;
+    end_at: string | null;
+    created_by_user_id: number | null;
+}): ContentCarouselSlideAdmin {
+    return {
+        ...toCarouselResponse(row),
+        isEnabled: row.is_enabled === 1,
+        startAt: row.start_at,
+        endAt: row.end_at,
+        createdByUserId: row.created_by_user_id,
+    };
+}
+
+function normalizeCarouselPayload(
+    data: {
+        titleTh?: string | null | undefined;
+        titleEn?: string | null | undefined;
+        descriptionTh?: string | null | undefined;
+        descriptionEn?: string | null | undefined;
+        imageStorageKey?: string | undefined;
+        imageAltTh?: string | null | undefined;
+        imageAltEn?: string | null | undefined;
+        targetUrl?: string | null | undefined;
+        openInNewTab?: boolean | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+        startAt?: string | null | undefined;
+        endAt?: string | null | undefined;
+    },
+    requireRequired: boolean,
+): {
+    titleTh?: string | null;
+    titleEn?: string | null;
+    descriptionTh?: string | null;
+    descriptionEn?: string | null;
+    imageStorageKey?: string;
+    imageAltTh?: string | null;
+    imageAltEn?: string | null;
+    targetUrl?: string | null;
+    openInNewTab?: boolean;
+    sortOrder?: number;
+    isEnabled?: boolean;
+    startAt?: string | null;
+    endAt?: string | null;
+} {
+    const output: {
+        titleTh?: string | null;
+        titleEn?: string | null;
+        descriptionTh?: string | null;
+        descriptionEn?: string | null;
+        imageStorageKey?: string;
+        imageAltTh?: string | null;
+        imageAltEn?: string | null;
+        targetUrl?: string | null;
+        openInNewTab?: boolean;
+        sortOrder?: number;
+        isEnabled?: boolean;
+        startAt?: string | null;
+        endAt?: string | null;
+    } = {};
+
+    if (data.titleTh !== undefined) output.titleTh = normalizeNullableText(data.titleTh);
+    if (data.titleEn !== undefined) output.titleEn = normalizeNullableText(data.titleEn);
+    if (data.descriptionTh !== undefined) output.descriptionTh = normalizeNullableText(data.descriptionTh);
+    if (data.descriptionEn !== undefined) output.descriptionEn = normalizeNullableText(data.descriptionEn);
+    if (data.imageAltTh !== undefined) output.imageAltTh = normalizeNullableText(data.imageAltTh);
+    if (data.imageAltEn !== undefined) output.imageAltEn = normalizeNullableText(data.imageAltEn);
+
+    if (data.imageStorageKey !== undefined) {
+        output.imageStorageKey = normalizeCarouselImageStorageKey(data.imageStorageKey);
+    } else if (requireRequired) {
+        throw new BadRequestError('กรุณาระบุ imageStorageKey');
+    }
+
+    if (data.targetUrl !== undefined) {
+        output.targetUrl = normalizeNullableHttpUrl(data.targetUrl, 'targetUrl');
+    }
+
+    if (data.openInNewTab !== undefined) output.openInNewTab = Boolean(data.openInNewTab);
+    if (data.isEnabled !== undefined) output.isEnabled = Boolean(data.isEnabled);
+
+    if (data.sortOrder !== undefined) {
+        const sortOrder = Number(data.sortOrder);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+            throw new BadRequestError('sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+        }
+        output.sortOrder = Math.trunc(sortOrder);
+    }
+
+    const startAt = parseDateTimeToDb(data.startAt, 'startAt');
+    if (startAt !== undefined) output.startAt = startAt;
+    const endAt = parseDateTimeToDb(data.endAt, 'endAt');
+    if (endAt !== undefined) output.endAt = endAt;
+
+    if (requireRequired) {
+        const hasAnyTitle = Boolean((output.titleTh || '').trim() || (output.titleEn || '').trim());
+        if (!hasAnyTitle) {
+            throw new BadRequestError('กรุณาระบุ titleTh หรือ titleEn อย่างน้อย 1 ค่า');
+        }
+    }
+
+    return output;
 }
 
 function toContactChannelAdminResponse(row: {
@@ -476,6 +702,11 @@ export async function getSponsors(db: DB, tierCode?: string): Promise<ContentSpo
     }));
 }
 
+export async function getCarousels(db: DB): Promise<ContentCarouselSlide[]> {
+    const rows = await repo.getEnabledCarouselSlides(db);
+    return rows.map(toCarouselResponse);
+}
+
 function toSponsorAdminResponse(row: any): ContentSponsorAdmin {
     return {
         id: row.sponsor_id,
@@ -650,6 +881,166 @@ export async function uploadSponsorLogoAdmin(
 
 export async function reorderSponsorsAdmin(db: DB, updates: { id: number; displayOrder: number }[]): Promise<void> {
     await repo.updateSponsorsOrder(db, updates.map(u => ({ id: u.id, sortOrder: u.displayOrder })));
+}
+
+export async function getAllCarouselsAdmin(db: DB): Promise<ContentCarouselSlideAdmin[]> {
+    const rows = await repo.getAllCarouselSlidesAdmin(db);
+    return rows.map(toCarouselAdminResponse);
+}
+
+export async function createCarouselAdmin(
+    db: DB,
+    data: {
+        titleTh?: string | null | undefined;
+        titleEn?: string | null | undefined;
+        descriptionTh?: string | null | undefined;
+        descriptionEn?: string | null | undefined;
+        imageStorageKey?: string | undefined;
+        imageAltTh?: string | null | undefined;
+        imageAltEn?: string | null | undefined;
+        targetUrl?: string | null | undefined;
+        openInNewTab?: boolean | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+        startAt?: string | null | undefined;
+        endAt?: string | null | undefined;
+    },
+    createdByUserId: number,
+): Promise<ContentCarouselSlideAdmin> {
+    const payload = normalizeCarouselPayload(data, true);
+    const startAt = payload.startAt ?? null;
+    const endAt = payload.endAt ?? null;
+    ensureStartEndValid(startAt, endAt);
+
+    const slideId = await repo.createCarouselSlideAdmin(db, {
+        titleTh: payload.titleTh ?? null,
+        titleEn: payload.titleEn ?? null,
+        descriptionTh: payload.descriptionTh ?? null,
+        descriptionEn: payload.descriptionEn ?? null,
+        imageStorageKey: payload.imageStorageKey!,
+        imageAltTh: payload.imageAltTh ?? null,
+        imageAltEn: payload.imageAltEn ?? null,
+        targetUrl: payload.targetUrl ?? null,
+        openInNewTab: payload.openInNewTab ?? true,
+        sortOrder: payload.sortOrder ?? 0,
+        isEnabled: payload.isEnabled ?? true,
+        startAt,
+        endAt,
+        createdByUserId,
+    });
+
+    const created = await repo.getCarouselSlideByIdAdmin(db, slideId);
+    if (!created) {
+        throw new NotFoundError('ไม่พบข้อมูลสไลด์ที่เพิ่งสร้าง');
+    }
+
+    return toCarouselAdminResponse(created);
+}
+
+export async function updateCarouselAdmin(
+    db: DB,
+    slideId: number,
+    data: {
+        titleTh?: string | null | undefined;
+        titleEn?: string | null | undefined;
+        descriptionTh?: string | null | undefined;
+        descriptionEn?: string | null | undefined;
+        imageStorageKey?: string | undefined;
+        imageAltTh?: string | null | undefined;
+        imageAltEn?: string | null | undefined;
+        targetUrl?: string | null | undefined;
+        openInNewTab?: boolean | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+        startAt?: string | null | undefined;
+        endAt?: string | null | undefined;
+    },
+): Promise<ContentCarouselSlideAdmin> {
+    const existing = await repo.getCarouselSlideByIdAdmin(db, slideId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูล carousel slide นี้');
+    }
+
+    const payload = normalizeCarouselPayload(data, false);
+    const effectiveStart = payload.startAt !== undefined ? payload.startAt : existing.start_at;
+    const effectiveEnd = payload.endAt !== undefined ? payload.endAt : existing.end_at;
+    ensureStartEndValid(effectiveStart, effectiveEnd);
+
+    await repo.updateCarouselSlideAdmin(db, slideId, payload);
+
+    const updated = await repo.getCarouselSlideByIdAdmin(db, slideId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบข้อมูล carousel slide หลังการอัปเดต');
+    }
+
+    return toCarouselAdminResponse(updated);
+}
+
+export async function deleteCarouselAdmin(db: DB, slideId: number): Promise<void> {
+    const existing = await repo.getCarouselSlideByIdAdmin(db, slideId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูล carousel slide นี้');
+    }
+
+    await repo.deleteCarouselSlideAdmin(db, slideId);
+}
+
+export async function reorderCarouselsAdmin(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
+    const normalized = updates.map((update) => {
+        const sortOrder = Number(update.sortOrder);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+            throw new BadRequestError('sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+        }
+        return {
+            id: Number(update.id),
+            sortOrder: Math.trunc(sortOrder),
+        };
+    });
+
+    await repo.updateCarouselSlidesOrderAdmin(db, normalized);
+}
+
+export async function uploadCarouselImageAdmin(
+    db: DB,
+    slideId: number,
+    input: {
+        stream: NodeJS.ReadableStream;
+        originalName: string;
+        mimeType: string;
+        requestedFileName?: string | null;
+    },
+): Promise<ContentCarouselSlideAdmin> {
+    const slide = await repo.getCarouselSlideByIdAdmin(db, slideId);
+    if (!slide) {
+        throw new NotFoundError('ไม่พบข้อมูล carousel slide นี้');
+    }
+
+    const extFromMime = extensionFromMimeType(input.mimeType);
+    if (!extFromMime) {
+        throw new BadRequestError('รองรับเฉพาะ PNG/JPG/WEBP/SVG');
+    }
+
+    const preferredName = (input.requestedFileName || '').trim() || input.originalName;
+    let safeFileName = sanitizeFileName(preferredName);
+    if (!safeFileName || !path.posix.extname(safeFileName)) {
+        safeFileName = `${sanitizeFileName(path.posix.parse(preferredName).name || 'carousel-slide')}${extFromMime}`;
+    }
+
+    const uploadDir = path.join(process.cwd(), 'public', 'content', 'carousels');
+    await mkdir(uploadDir, { recursive: true });
+
+    const diskPath = path.join(uploadDir, safeFileName);
+    await pipeline(input.stream, createWriteStream(diskPath));
+
+    const imageStorageKey = `/static/content/carousels/${safeFileName}`;
+    await repo.updateCarouselSlideAdmin(db, slideId, { imageStorageKey });
+
+    const updated = await repo.getCarouselSlideByIdAdmin(db, slideId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบข้อมูล carousel slide หลังอัปโหลดรูป');
+    }
+
+    return toCarouselAdminResponse(updated);
 }
 
 export async function getAllContactsAdmin(db: DB): Promise<ContentContactAdmin[]> {

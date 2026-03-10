@@ -1,6 +1,7 @@
 import type { RowDataPacket } from 'mysql2/promise';
 import type { DB } from '../../config/db.js';
 import type {
+    ContentCarouselSlideRow,
     ContentContactChannelRow,
     ContentContactRow,
     ContentPageRow,
@@ -231,6 +232,161 @@ export async function deleteSponsor(db: DB, sponsorId: number): Promise<void> {
 export async function updateSponsorsOrder(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
     for (const update of updates) {
         await db.query(`UPDATE content_sponsors SET sort_order = ? WHERE sponsor_id = ?`, [update.sortOrder, update.id]);
+    }
+}
+
+export async function getEnabledCarouselSlides(db: DB): Promise<ContentCarouselSlideRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_carousel_slides
+         WHERE is_enabled = 1
+           AND (start_at IS NULL OR start_at <= NOW())
+           AND (end_at IS NULL OR end_at >= NOW())
+         ORDER BY sort_order ASC, slide_id ASC`
+    );
+
+    return rows as ContentCarouselSlideRow[];
+}
+
+export async function getAllCarouselSlidesAdmin(db: DB): Promise<ContentCarouselSlideRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_carousel_slides
+         ORDER BY sort_order ASC, slide_id ASC`
+    );
+
+    return rows as ContentCarouselSlideRow[];
+}
+
+export async function getCarouselSlideByIdAdmin(db: DB, slideId: number): Promise<ContentCarouselSlideRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_carousel_slides
+         WHERE slide_id = ?
+         LIMIT 1`,
+        [slideId]
+    );
+
+    const result = rows as ContentCarouselSlideRow[];
+    return result[0] ?? null;
+}
+
+export async function createCarouselSlideAdmin(
+    db: DB,
+    data: {
+        titleTh: string | null;
+        titleEn: string | null;
+        descriptionTh: string | null;
+        descriptionEn: string | null;
+        imageStorageKey: string;
+        imageAltTh: string | null;
+        imageAltEn: string | null;
+        targetUrl: string | null;
+        openInNewTab: boolean;
+        sortOrder: number;
+        isEnabled: boolean;
+        startAt: string | null;
+        endAt: string | null;
+        createdByUserId: number | null;
+    }
+): Promise<number> {
+    const [result] = await db.query(
+        `INSERT INTO content_carousel_slides (
+            title_th,
+            title_en,
+            description_th,
+            description_en,
+            image_storage_key,
+            image_alt_th,
+            image_alt_en,
+            target_url,
+            open_in_new_tab,
+            sort_order,
+            is_enabled,
+            start_at,
+            end_at,
+            created_by_user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            data.titleTh,
+            data.titleEn,
+            data.descriptionTh,
+            data.descriptionEn,
+            data.imageStorageKey,
+            data.imageAltTh,
+            data.imageAltEn,
+            data.targetUrl,
+            data.openInNewTab ? 1 : 0,
+            data.sortOrder,
+            data.isEnabled ? 1 : 0,
+            data.startAt,
+            data.endAt,
+            data.createdByUserId,
+        ]
+    );
+
+    return (result as { insertId: number }).insertId;
+}
+
+export async function updateCarouselSlideAdmin(
+    db: DB,
+    slideId: number,
+    data: {
+        titleTh?: string | null | undefined;
+        titleEn?: string | null | undefined;
+        descriptionTh?: string | null | undefined;
+        descriptionEn?: string | null | undefined;
+        imageStorageKey?: string | undefined;
+        imageAltTh?: string | null | undefined;
+        imageAltEn?: string | null | undefined;
+        targetUrl?: string | null | undefined;
+        openInNewTab?: boolean | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+        startAt?: string | null | undefined;
+        endAt?: string | null | undefined;
+    }
+): Promise<void> {
+    const fields: string[] = [];
+    const values: Array<string | number | null> = [];
+
+    if (data.titleTh !== undefined) { fields.push('title_th = ?'); values.push(data.titleTh); }
+    if (data.titleEn !== undefined) { fields.push('title_en = ?'); values.push(data.titleEn); }
+    if (data.descriptionTh !== undefined) { fields.push('description_th = ?'); values.push(data.descriptionTh); }
+    if (data.descriptionEn !== undefined) { fields.push('description_en = ?'); values.push(data.descriptionEn); }
+    if (data.imageStorageKey !== undefined) { fields.push('image_storage_key = ?'); values.push(data.imageStorageKey); }
+    if (data.imageAltTh !== undefined) { fields.push('image_alt_th = ?'); values.push(data.imageAltTh); }
+    if (data.imageAltEn !== undefined) { fields.push('image_alt_en = ?'); values.push(data.imageAltEn); }
+    if (data.targetUrl !== undefined) { fields.push('target_url = ?'); values.push(data.targetUrl); }
+    if (data.openInNewTab !== undefined) { fields.push('open_in_new_tab = ?'); values.push(data.openInNewTab ? 1 : 0); }
+    if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
+    if (data.isEnabled !== undefined) { fields.push('is_enabled = ?'); values.push(data.isEnabled ? 1 : 0); }
+    if (data.startAt !== undefined) { fields.push('start_at = ?'); values.push(data.startAt); }
+    if (data.endAt !== undefined) { fields.push('end_at = ?'); values.push(data.endAt); }
+
+    if (!fields.length) return;
+
+    values.push(slideId);
+    await db.query(
+        `UPDATE content_carousel_slides
+         SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+         WHERE slide_id = ?`,
+        values
+    );
+}
+
+export async function deleteCarouselSlideAdmin(db: DB, slideId: number): Promise<void> {
+    await db.query(`DELETE FROM content_carousel_slides WHERE slide_id = ?`, [slideId]);
+}
+
+export async function updateCarouselSlidesOrderAdmin(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
+    for (const update of updates) {
+        await db.query(
+            `UPDATE content_carousel_slides
+             SET sort_order = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE slide_id = ?`,
+            [update.sortOrder, update.id]
+        );
     }
 }
 

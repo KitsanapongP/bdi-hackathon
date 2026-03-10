@@ -81,6 +81,31 @@ export const reorderContactsSchema = z.object({
     })),
 });
 
+export const createCarouselSchema = z.object({
+    titleTh: nullableText,
+    titleEn: nullableText,
+    descriptionTh: nullableText,
+    descriptionEn: nullableText,
+    imageStorageKey: z.string().trim().min(1, 'imageStorageKey ต้องไม่ว่าง'),
+    imageAltTh: nullableText,
+    imageAltEn: nullableText,
+    targetUrl: nullableText,
+    openInNewTab: z.boolean().optional(),
+    sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป').optional(),
+    isEnabled: z.boolean().optional(),
+    startAt: z.string().datetime({ offset: true }).nullable().optional(),
+    endAt: z.string().datetime({ offset: true }).nullable().optional(),
+});
+
+export const updateCarouselSchema = createCarouselSchema.partial();
+
+export const reorderCarouselsSchema = z.object({
+    updates: z.array(z.object({
+        id: z.number().int().positive('ID ไม่ถูกต้อง'),
+        sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป'),
+    })),
+});
+
 export const createContactChannelSchema = z.object({
     channelType: z.string().trim().min(1, 'channelType ต้องไม่ว่าง'),
     labelTh: nullableText,

@@ -583,6 +583,178 @@ section.gt-hero {
     z-index: 1;
 }
 
+.gt-hero-carousel {
+    width: 100%;
+    margin: 8px auto 28px;
+    position: relative;
+    z-index: 1;
+    perspective: 2000px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-inline: 22px;
+}
+
+.gt-hero-carousel-stage {
+    position: relative;
+    width: min(1160px, 100%);
+    height: 500px;
+    overflow: visible;
+    border-radius: 28px;
+    isolation: isolate;
+}
+
+.gt-hero-carousel-stage::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 52px;
+    width: min(92%, 980px);
+    height: 112px;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse at center, rgba(14, 116, 144, 0.45) 0%, rgba(2, 6, 23, 0.06) 62%, rgba(2, 6, 23, 0) 100%);
+    filter: blur(10px);
+    z-index: 0;
+}
+
+.gt-hero-carousel-card {
+    position: absolute;
+    left: 50%;
+    top: 8px;
+    width: clamp(400px, 58vw, 720px);
+    height: 400px;
+    border-radius: 22px;
+    border: 1px solid rgba(148, 163, 184, 0.34);
+    box-shadow: 0 30px 64px -30px rgba(2, 6, 23, 0.72);
+    transition: transform 0.45s ease, opacity 0.35s ease, box-shadow 0.35s ease;
+    color: #f8fafc;
+    text-decoration: none;
+    overflow: hidden;
+    transform-style: preserve-3d;
+    transform-origin: center center;
+    background: #0f172a;
+    z-index: 1;
+}
+
+.gt-hero-carousel-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 22px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    pointer-events: none;
+}
+
+.gt-hero-carousel-card::before {
+    content: '';
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    bottom: -46px;
+    height: 52px;
+    border-radius: 999px;
+    background: radial-gradient(ellipse at center, rgba(14, 165, 233, 0.46) 0%, rgba(14, 165, 233, 0.18) 48%, rgba(14, 165, 233, 0) 100%);
+    filter: blur(12px);
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.gt-hero-carousel-card-btn {
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.gt-hero-carousel-card.is-active {
+    box-shadow: 0 34px 76px -28px rgba(14, 116, 144, 0.7);
+}
+
+.gt-hero-carousel-card[data-offset='-1'],
+.gt-hero-carousel-card[data-offset='1'] {
+    filter: saturate(0.88) brightness(0.88);
+}
+
+.gt-hero-carousel-card[data-offset='-2'],
+.gt-hero-carousel-card[data-offset='2'] {
+    filter: saturate(0.78) brightness(0.72);
+}
+
+.gt-hero-carousel-card[data-offset='0'] {
+    filter: none;
+}
+
+.gt-hero-carousel-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.gt-hero-carousel-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(2, 6, 23, 0.02) 0%, rgba(2, 6, 23, 0.46) 100%),
+        linear-gradient(130deg, rgba(6, 182, 212, 0.13), rgba(124, 58, 237, 0.08));
+    pointer-events: none;
+}
+
+.gt-hero-carousel-caption {
+    position: relative;
+    width: min(760px, 94%);
+    margin: -56px auto 0;
+    text-align: center;
+    padding: 14px 18px;
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    background: rgba(2, 6, 23, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 45;
+}
+
+.gt-hero-carousel-caption h3 {
+    margin: 0;
+    font-size: clamp(0.98rem, 1.8vw, 1.22rem);
+    font-weight: 800;
+    line-height: 1.2;
+    color: #f8fafc;
+}
+
+.gt-hero-carousel-caption p {
+    margin: 6px 0 0;
+    font-size: clamp(0.77rem, 1.2vw, 0.9rem);
+    line-height: 1.45;
+    color: rgba(226, 232, 240, 0.9);
+}
+
+.gt-hero-carousel-controls {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+}
+
+.gt-hero-carousel-arrow {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    background: rgba(15, 23, 42, 0.78);
+    color: #f8fafc;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.gt-hero-carousel-arrow:hover {
+    transform: translateY(-1px);
+    background: rgba(30, 41, 59, 0.92);
+}
+
 .gt-hero h1 {
     font-size: 3.2rem;
     font-weight: 800;
@@ -1274,6 +1446,45 @@ section.gt-hero {
 
     .gt-hero h1 {
         font-size: 2rem;
+    }
+
+    .gt-hero-carousel {
+        margin-bottom: 22px;
+        padding-inline: 8px;
+    }
+
+    .gt-hero-carousel-stage {
+        height: 290px;
+    }
+
+    .gt-hero-carousel-card {
+        width: min(94vw, 700px);
+        height: 250px;
+    }
+
+    .gt-hero-carousel-card[data-offset='-2'],
+    .gt-hero-carousel-card[data-offset='2'],
+    .gt-hero-carousel-card[data-offset='-1'],
+    .gt-hero-carousel-card[data-offset='1'] {
+        display: none;
+    }
+
+    .gt-hero-carousel-caption {
+        margin-top: -34px;
+        width: min(94vw, 680px);
+        padding: 12px 14px;
+    }
+
+    .gt-hero-carousel-caption h3 {
+        font-size: 0.98rem;
+    }
+
+    .gt-hero-carousel-caption p {
+        font-size: 0.78rem;
+    }
+
+    .gt-hero-carousel-controls {
+        margin-top: 10px;
     }
 
     .gt-hero-actions {

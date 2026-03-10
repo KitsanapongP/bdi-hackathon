@@ -86,6 +86,48 @@ export type ContentSponsorAdmin = {
     tierNameEn: string | null;
 };
 
+export type ContentCarouselSlideRow = {
+    slide_id: number;
+    title_th: string | null;
+    title_en: string | null;
+    description_th: string | null;
+    description_en: string | null;
+    image_storage_key: string;
+    image_alt_th: string | null;
+    image_alt_en: string | null;
+    target_url: string | null;
+    open_in_new_tab: number;
+    sort_order: number;
+    is_enabled: number;
+    start_at: string | null;
+    end_at: string | null;
+    created_by_user_id: number | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type ContentCarouselSlide = {
+    id: number;
+    titleTh: string | null;
+    titleEn: string | null;
+    descriptionTh: string | null;
+    descriptionEn: string | null;
+    imageStorageKey: string;
+    imageUrl: string;
+    imageAltTh: string | null;
+    imageAltEn: string | null;
+    targetUrl: string | null;
+    openInNewTab: boolean;
+    sortOrder: number;
+};
+
+export type ContentCarouselSlideAdmin = ContentCarouselSlide & {
+    isEnabled: boolean;
+    startAt: string | null;
+    endAt: string | null;
+    createdByUserId: number | null;
+};
+
 export type ContentPageRow = {
     page_id: number;
     page_code: string;
