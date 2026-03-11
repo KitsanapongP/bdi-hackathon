@@ -538,7 +538,7 @@ function HomePage() {
                             if (isRegister && user) {
                                 return (
                                     <button key={i} className="gt-collapse-link" onClick={() => { setShowLobby(true); setShowProfile(false); setMobileOpen(false); window.scrollTo(0, 0); }}>
-                                        <Users size={16} /> ทีมของคุณ
+                                        <Users size={16} /> ทีมของฉัน
                                     </button>
                                 );
                             }
