@@ -431,6 +431,11 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
           </div>
         </div>
 
+        <div className="priv-ui-subhead">
+          <strong>Templates List</strong>
+          <span>จัดการ Publish, Edit, Delete จากรายการด้านล่าง</span>
+        </div>
+
         <AdminDataTable
           rows={templates.map((item) => ({ ...item, id: item.privilegeId }))}
           loading={loading}
@@ -498,6 +503,10 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
 
       <article className="admin-ui-panel admin-ui-stack">
         <h3>Claims Correction</h3>
+        <div className="priv-ui-subhead">
+          <strong>Claims List</strong>
+          <span>{pendingClaimsCount} pending / {claimedClaimsCount} claimed</span>
+        </div>
         <div className="admin-ui-form priv-ui-claims-tools">
           <label>Search<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="username / team / privilege" /></label>
           <div className="admin-ui-form-actions"><button type="button" className="admin-ui-btn" onClick={() => fetchData(search)}>Search</button></div>

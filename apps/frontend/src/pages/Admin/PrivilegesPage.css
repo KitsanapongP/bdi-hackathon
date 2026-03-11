@@ -89,6 +89,23 @@
   flex-wrap: wrap;
 }
 
+.priv-ui-subhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.priv-ui-subhead strong {
+  font-size: 0.88rem;
+}
+
+.priv-ui-subhead span {
+  font-size: 0.78rem;
+  color: var(--admin-ui-muted);
+}
+
 .priv-ui-template-actions {
   justify-content: flex-end;
 }
@@ -247,6 +264,11 @@
   .priv-ui-template-actions,
   .priv-ui-bulk-actions {
     justify-content: flex-start;
+  }
+
+  .priv-ui-subhead {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .priv-ui-create-foot {
