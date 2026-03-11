@@ -10,15 +10,32 @@ export function createDB(env: Env): DB {
     user: env.DB_USER,
     password: env.DB_PASSWORD,
     database: env.DB_NAME,
+
     waitForConnections: true,
     connectionLimit: 10,
     namedPlaceholders: true,
+
     enableKeepAlive: true,
     keepAliveInitialDelay: 10000,
     connectTimeout: 20000,
+
+    // Uncomment this if your hosting requires / behaves better with SSL
+    // ssl: {},
   });
 }
 
 export async function pingDB(db: DB) {
-  await db.query('SELECT 1');
+  let conn: mysql.PoolConnection | undefined;
+
+  try {
+    conn = await db.getConnection();
+    await conn.ping();
+    const [rows] = await conn.query('SELECT 1 AS ok');
+    console.log('✅ Database connected:', rows);
+  } catch (err) {
+    console.error('❌ Database ping failed:', err);
+    throw err;
+  } finally {
+    conn?.release();
+  }
 }
