@@ -192,7 +192,7 @@ function HomeShell({ children }) {
                         {user ? (
                             <>
                                 <button className="gt-pill-link gt-auth-btn gt-team-btn" onClick={() => navigate('/home', { state: { open: 'team' } })}>
-                                    <Users size={15} /> ทีมของคุณ
+                                    <Users size={15} /> ทีมของฉัน
                                 </button>
                                 <button className="gt-pill-link gt-auth-btn gt-login" onClick={() => navigate('/home', { state: { open: 'profile' } })}>
                                     <User size={15} /> โปรไฟล์
@@ -220,7 +220,7 @@ function HomeShell({ children }) {
                             if (isRegister && user) {
                                 return (
                                     <button key={label} className="gt-collapse-link" onClick={() => { setMobileOpen(false); navigate('/home', { state: { open: 'team' } }); }}>
-                                        <Users size={16} /> ทีมของคุณ
+                                        <Users size={16} /> ทีมของฉัน
                                     </button>
                                 );
                             }

@@ -150,6 +150,11 @@ export type ContentPage = {
     contentHtmlEn: string | null;
 };
 
+export type ContentPageAdmin = ContentPage & {
+    isPublished: boolean;
+    publishedAt: string | null;
+};
+
 export type ContentContactRow = {
     contact_id: number;
     display_name_th: string;

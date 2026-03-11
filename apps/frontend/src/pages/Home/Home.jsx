@@ -538,7 +538,7 @@ function HomePage() {
                             if (isRegister && user) {
                                 return (
                                     <button key={i} className="gt-collapse-link" onClick={() => { setShowLobby(true); setShowProfile(false); setMobileOpen(false); window.scrollTo(0, 0); }}>
-                                        <Users size={16} /> ทีมของคุณ
+                                        <Users size={16} /> ทีมของฉัน
                                     </button>
                                 );
                             }
@@ -591,11 +591,8 @@ function HomePage() {
                 <>
                     {/* Hero */}
                     <section id="hero" className="gt-section gt-hero gt-container gt-reveal">
-                        <div className="gt-badge">
-                            <Rocket size={16} /> {config.locale.heroBadge}
-                        </div>
-                        <HeroCarousel slides={carouselSlides} />
                         <h1 style={{ whiteSpace: 'pre-line' }}>{config.locale.heroTitle}</h1>
+                        <HeroCarousel slides={carouselSlides} />
                         {config.locale.heroSubtitle && <p className="gt-hero-sub" style={{ whiteSpace: 'pre-line' }}>{config.locale.heroSubtitle}</p>}
                         <div className="gt-hero-actions">
                             <Link to="/home/register" className="gt-btn gt-btn-primary">
