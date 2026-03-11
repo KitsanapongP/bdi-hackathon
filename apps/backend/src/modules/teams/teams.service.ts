@@ -3,6 +3,7 @@ import * as repo from './teams.repo.js';
 import { AppError } from '../../shared/errors.js';
 import * as crypto from 'crypto';
 import * as notificationService from '../notifications/notifications.service.js';
+import * as privilegesService from '../privileges/privileges.service.js';
 
 function generateRandomCode(length: number = 6): string {
     return crypto.randomBytes(3).toString('hex').toUpperCase().substring(0, length);
@@ -439,6 +440,7 @@ export async function confirmParticipation(db: DB, teamId: number, leaderUserId:
     }
 
     await repo.confirmTeamParticipation(db, teamId, leaderUserId);
+    await privilegesService.assignPublishedPrivilegesToTeam(db, teamId);
     await repo.createTeamAuditLog(db, {
         teamId,
         actorUserId: leaderUserId,

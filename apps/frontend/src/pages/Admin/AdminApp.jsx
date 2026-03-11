@@ -13,6 +13,8 @@ import {
   ArrowDown,
   ArrowUp,
   Building2,
+  Camera,
+  CameraOff,
   Check,
   CheckCircle2,
   ChevronLeft,
@@ -44,7 +46,9 @@ import {
   Plus,
   RefreshCw,
   RotateCcw,
+  QrCode,
   Save,
+  ScanLine,
   ScrollText,
   Search,
   Settings,
@@ -60,6 +64,7 @@ import {
 import ThemeToggle from '../../components/ThemeToggle'
 import GameShapes from '../../components/GameShapes'
 import { apiUrl } from '../../lib/api'
+import PrivilegesPage from './PrivilegesPage'
 import {
   aboutSeed,
   approvedTeamsSeed,
@@ -166,6 +171,11 @@ const adminNavGroups = [
         to: '/admin/notifications',
         label: 'Notifications',
         icon: Mail,
+      },
+      {
+        to: '/admin/privileges',
+        label: 'Privileges',
+        icon: QrCode,
       },
       {
         to: '/admin/audit',
@@ -821,6 +831,7 @@ function AdminLayout() {
       '/admin/review/approved': 'Team Review / Approved',
       '/admin/selection': 'Team Selection',
       '/admin/notifications': 'Notification Settings',
+      '/admin/privileges': 'Privileges',
       '/admin/audit': 'Audit Logs',
       '/admin/settings': 'Settings',
     }
@@ -5679,6 +5690,11 @@ function NotificationSettingsPage() {
   )
 }
 
+function PrivilegesAdminPage() {
+  const { pushToast } = useAdminToast()
+  return <PrivilegesPage pushToast={pushToast} SectionHeading={SectionHeading} AdminDataTable={AdminDataTable} />
+}
+
 function AuditLogsPage() {
   const [selectedLog, setSelectedLog] = useState(null)
   return (
@@ -5875,6 +5891,7 @@ function AdminAppRoutes() {
         <Route path="review/approved" element={<ApprovedTeamsPage />} />
 
         <Route path="notifications" element={<NotificationSettingsPage />} />
+        <Route path="privileges" element={<PrivilegesAdminPage />} />
         <Route path="audit" element={<AuditLogsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

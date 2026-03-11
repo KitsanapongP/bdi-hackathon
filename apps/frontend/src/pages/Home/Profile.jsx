@@ -5,13 +5,14 @@ import {
     ChevronLeft, Save, Plus, Edit2, Trash2,
     CheckCircle, Loader2, AlertCircle,
     Lock, PenLine, Handshake, MessageCircle, ClipboardList,
-    Languages, GraduationCap,
+    Languages, GraduationCap, QrCode, RefreshCw, Ticket,
 } from 'lucide-react';
+import QRCode from 'qrcode';
 import './Team.css';
 import './Profile.css';
 import { apiUrl } from '../../lib/api';
 
-const MENU = [
+const BASE_MENU = [
     { id: 'profile', icon: <User size={18} />, label: 'โปรไฟล์', color: '#7c3aed' },
     { id: 'privacy', icon: <Shield size={18} />, label: 'ความเป็นส่วนตัว', color: '#3b82f6' },
     { id: 'social', icon: <Link2 size={18} />, label: 'Social Links', color: '#ec4899' },
@@ -25,6 +26,7 @@ function ProfileContent({ user }) {
     const [tab, setTab] = useState('profile');
     const [toast, setToast] = useState(null);
     const [toastExiting, setToastExiting] = useState(false);
+    const [canViewPrivileges, setCanViewPrivileges] = useState(false);
 
     const showToast = useCallback((message, type = 'success') => {
         setToastExiting(false);
@@ -36,15 +38,41 @@ function ProfileContent({ user }) {
     }, []);
 
     const apiFetch = useCallback(async (path, opts = {}) => {
+        const headers = { ...opts.headers };
+        const hasBody = opts.body !== undefined && opts.body !== null;
+        if (hasBody && !('Content-Type' in headers) && !('content-type' in headers)) {
+            headers['Content-Type'] = 'application/json';
+        }
+
         const res = await fetch(apiUrl(`/api${path}`), {
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json', ...opts.headers },
             ...opts,
+            headers,
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json.message || 'เกิดข้อผิดพลาด');
         return json;
     }, []);
+
+    useEffect(() => {
+        if (!user?.hasTeam || !user?.teamId) {
+            setCanViewPrivileges(false);
+            return;
+        }
+        apiFetch(`/teams/${user.teamId}`)
+            .then((res) => setCanViewPrivileges(res?.data?.team?.status === 'confirmed'))
+            .catch(() => setCanViewPrivileges(false));
+    }, [apiFetch, user]);
+
+    useEffect(() => {
+        if (!canViewPrivileges && tab === 'privileges') {
+            setTab('profile');
+        }
+    }, [canViewPrivileges, tab]);
+
+    const menuItems = canViewPrivileges
+        ? [...BASE_MENU.slice(0, 4), { id: 'privileges', icon: <Ticket size={18} />, label: 'สิทธิประโยชน์', color: '#0ea5e9' }, ...BASE_MENU.slice(4)]
+        : BASE_MENU;
 
     if (!user) return null;
 
@@ -59,7 +87,7 @@ function ProfileContent({ user }) {
                     </div>
 
                     <div className="gl-member-list">
-                        {MENU.map((m) => (
+                        {menuItems.map((m) => (
                             <button
                                 key={m.id}
                                 className={`pf-menu-item ${tab === m.id ? 'active' : ''}`}
@@ -78,6 +106,7 @@ function ProfileContent({ user }) {
                     {tab === 'privacy' && <PrivacyTab apiFetch={apiFetch} showToast={showToast} />}
                     {tab === 'social' && <SocialTab apiFetch={apiFetch} showToast={showToast} />}
                     {tab === 'public' && <PublicTab apiFetch={apiFetch} showToast={showToast} />}
+                    {tab === 'privileges' && canViewPrivileges && <PrivilegesTab apiFetch={apiFetch} showToast={showToast} />}
                     {tab === 'consent' && <ConsentTab apiFetch={apiFetch} showToast={showToast} />}
                 </main>
 
@@ -89,6 +118,283 @@ function ProfileContent({ user }) {
                     {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
                     {toast.message}
                     <div className="pf-toast-progress" />
+                </div>
+            )}
+        </div>
+    );
+}
+
+function PrivilegesTab({ apiFetch, showToast }) {
+    const [loading, setLoading] = useState(true);
+    const [payload, setPayload] = useState({ eligible: false, claims: [] });
+    const [selectedClaim, setSelectedClaim] = useState(null);
+    const [qrImageFailed, setQrImageFailed] = useState(false);
+    const [qrImageSrc, setQrImageSrc] = useState('');
+    const [qrPreparing, setQrPreparing] = useState(false);
+    const [refreshingClaimId, setRefreshingClaimId] = useState(null);
+
+    const load = useCallback(() => {
+        setLoading(true);
+        apiFetch('/privileges/my')
+            .then((res) => setPayload(res.data || { eligible: false, claims: [] }))
+            .catch(() => showToast('โหลดข้อมูลสิทธิประโยชน์ไม่สำเร็จ', 'error'))
+            .finally(() => setLoading(false));
+    }, [apiFetch, showToast]);
+
+    useEffect(() => { load(); }, [load]);
+
+    const buildRemoteQrUrl = useCallback((token) => {
+        return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(token)}`;
+    }, []);
+
+    useEffect(() => {
+        setQrImageFailed(false);
+        setQrImageSrc('');
+
+        const token = selectedClaim?.qrToken;
+        if (!token) {
+            setQrPreparing(false);
+            return;
+        }
+
+        let cancelled = false;
+        setQrPreparing(true);
+
+        QRCode.toDataURL(token, {
+            width: 260,
+            margin: 1,
+            errorCorrectionLevel: 'M',
+        })
+            .then((src) => {
+                if (cancelled) return;
+                setQrImageSrc(src);
+                setQrPreparing(false);
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setQrImageSrc(buildRemoteQrUrl(token));
+                setQrPreparing(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [buildRemoteQrUrl, selectedClaim?.claimId, selectedClaim?.qrToken]);
+
+    const handleQrImageError = useCallback(() => {
+        const token = selectedClaim?.qrToken;
+        if (!token) {
+            setQrImageFailed(true);
+            return;
+        }
+
+        const remoteUrl = buildRemoteQrUrl(token);
+        if (qrImageSrc && qrImageSrc !== remoteUrl) {
+            setQrImageSrc(remoteUrl);
+            return;
+        }
+
+        setQrImageFailed(true);
+    }, [buildRemoteQrUrl, qrImageSrc, selectedClaim]);
+
+    const copyToken = useCallback(async (token) => {
+        const value = String(token || '').trim();
+        if (!value) return false;
+
+        if (navigator?.clipboard?.writeText) {
+            try {
+                await navigator.clipboard.writeText(value);
+                return true;
+            } catch {
+                // fallback below
+            }
+        }
+
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = value;
+            textarea.setAttribute('readonly', 'true');
+            textarea.style.position = 'fixed';
+            textarea.style.top = '-9999px';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            const copied = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            return copied;
+        } catch {
+            return false;
+        }
+    }, []);
+
+    const handleRefreshQr = useCallback(async () => {
+        if (!selectedClaim?.claimId) return;
+        if (selectedClaim.claimStatus !== 'pending') {
+            showToast('สิทธิ์นี้ถูกรับแล้ว ไม่สามารถรีเฟรช QR ได้', 'error');
+            return;
+        }
+
+        setRefreshingClaimId(selectedClaim.claimId);
+        try {
+            const res = await apiFetch(`/privileges/my/${selectedClaim.claimId}/refresh-token`, {
+                method: 'POST',
+                body: JSON.stringify({}),
+            });
+            const updated = res?.data;
+            if (!updated) throw new Error('refresh failed');
+
+            setPayload((prev) => ({
+                ...prev,
+                claims: (prev.claims || []).map((claim) => (claim.claimId === updated.claimId ? updated : claim)),
+            }));
+            setSelectedClaim(updated);
+            setQrImageFailed(false);
+            showToast('รีเฟรช QR สำเร็จ');
+        } catch (error) {
+            showToast(error?.message || 'รีเฟรช QR ไม่สำเร็จ', 'error');
+        } finally {
+            setRefreshingClaimId(null);
+        }
+    }, [apiFetch, selectedClaim, showToast]);
+
+    if (loading) return <div className="gl-empty-state"><Loader2 size={32} /></div>;
+
+    const allClaims = payload.claims || [];
+    const autoAdminClaims = allClaims.filter((claim) => claim.privilegeType === 'auto_admin');
+    const qrClaims = allClaims.filter((claim) => claim.privilegeType !== 'auto_admin');
+
+    if (!payload.eligible) {
+        return (
+            <div className="gl-detail-view">
+                <div className="gl-detail-top">
+                    <h3 className="gl-detail-title"><Ticket size={20} /> สิทธิประโยชน์</h3>
+                </div>
+                <div className="gl-detail-body">
+                    <div className="gl-empty-state">
+                        <Ticket size={44} />
+                        <h3>ยังไม่มีสิทธิ์ที่สามารถใช้งานได้</h3>
+                        <p>ฟีเจอร์นี้จะเปิดเมื่อทีมของคุณอยู่ในสถานะยืนยันเข้าร่วมแล้วเท่านั้น</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="gl-detail-view">
+            <div className="gl-detail-top">
+                <h3 className="gl-detail-title"><Ticket size={20} /> สิทธิประโยชน์</h3>
+            </div>
+            <div className="gl-detail-body">
+                {!allClaims.length ? (
+                    <div className="gl-empty-state">
+                        <QrCode size={44} />
+                        <h3>ยังไม่มีสิทธิ์ที่เผยแพร่</h3>
+                        <p>แอดมินยังไม่ได้เผยแพร่สิทธิ์สำหรับทีมที่ยืนยันเข้าร่วม</p>
+                    </div>
+                ) : (
+                    <>
+                        {autoAdminClaims.length > 0 && (
+                            <div className="gl-info-card">
+                                <h4><Ticket size={16} /> สิทธิ์การเข้าพักและทานอาหาร</h4>
+                                {autoAdminClaims.map((claim) => (
+                                    <div key={claim.claimId} className="pf-priv-item">
+                                        <div>
+                                            <div className="pf-priv-title">{claim.privilegeNameTh || claim.privilegeCode}</div>
+                                            <div className="pf-priv-sub">ประเภท: auto_admin</div>
+                                        </div>
+                                        <div className="pf-priv-right">
+                                            <span className={`pf-priv-status ${claim.claimStatus === 'claimed' ? 'claimed' : 'pending'}`}>
+                                                {claim.claimStatus === 'claimed' ? 'รับสิทธิ์แล้ว' : 'ยังไม่รับสิทธิ์'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {qrClaims.length > 0 && (
+                            <div className="gl-info-card">
+                                <h4><QrCode size={16} /> สิทธิ์การรับของที่ระลึก</h4>
+                                {qrClaims.map((claim) => (
+                                    <div key={claim.claimId} className="pf-priv-item">
+                                        <div>
+                                            <div className="pf-priv-title">{claim.privilegeNameTh || claim.privilegeCode}</div>
+                                            <div className="pf-priv-sub">ประเภท: {claim.privilegeType}</div>
+                                        </div>
+                                        <div className="pf-priv-right">
+                                            <span className={`pf-priv-status ${claim.claimStatus === 'claimed' ? 'claimed' : 'pending'}`}>
+                                                {claim.claimStatus === 'claimed' ? 'รับสิทธิ์แล้ว' : 'ยังไม่รับสิทธิ์'}
+                                            </span>
+                                            <button className="gl-action-btn gl-submit-btn" style={{ padding: '8px 14px' }} onClick={() => setSelectedClaim(claim)}>
+                                                <QrCode size={15} /> ดู QR
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+
+            {selectedClaim && selectedClaim.privilegeType !== 'auto_admin' && (
+                <div className="pf-modal-backdrop" onClick={() => setSelectedClaim(null)}>
+                    <div className="pf-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3><QrCode size={18} /> {selectedClaim.privilegeNameTh || selectedClaim.privilegeCode}</h3>
+                        <div className="pf-qr-wrap">
+                            {qrPreparing ? (
+                                <div className="pf-qr-loading">
+                                    <Loader2 size={26} />
+                                    <p>กำลังสร้าง QR...</p>
+                                </div>
+                            ) : (!qrImageFailed && qrImageSrc) ? (
+                                <img
+                                    src={qrImageSrc}
+                                    alt="Privilege QR"
+                                    onError={handleQrImageError}
+                                />
+                            ) : (
+                                <div className="pf-qr-fallback">
+                                    <QrCode size={42} />
+                                    <p>โหลดรูป QR ไม่สำเร็จบนอุปกรณ์นี้</p>
+                                    <p>สามารถส่ง token ด้านล่างให้เจ้าหน้าที่กรอกแทนได้</p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="pf-qr-token">{selectedClaim.qrToken}</div>
+                        {selectedClaim.claimStatus === 'pending' ? (
+                            <div className="pf-priv-sub">หากกังวลว่า QR ถูกแคปหน้าจอ สามารถกด Refresh QR เพื่อเปลี่ยน token ได้ทันที</div>
+                        ) : (
+                            <div className="pf-priv-sub">สิทธิ์นี้ถูกรับแล้ว จึงไม่สามารถรีเฟรช token ได้</div>
+                        )}
+                        <div className="pf-modal-actions">
+                            <button className="gl-action-btn gl-invite-btn" onClick={() => setSelectedClaim(null)}>ปิด</button>
+                            <button
+                                className="gl-action-btn"
+                                disabled={selectedClaim.claimStatus !== 'pending' || refreshingClaimId === selectedClaim.claimId}
+                                onClick={handleRefreshQr}
+                            >
+                                {refreshingClaimId === selectedClaim.claimId ? <Loader2 size={15} /> : <RefreshCw size={15} />}
+                                Refresh QR
+                            </button>
+                            <button
+                                className="gl-action-btn gl-submit-btn"
+                                style={{ flex: 1 }}
+                                onClick={async () => {
+                                    const copied = await copyToken(selectedClaim.qrToken);
+                                    if (copied) {
+                                        showToast('คัดลอก token แล้ว');
+                                    } else {
+                                        showToast('คัดลอก token ไม่สำเร็จ', 'error');
+                                    }
+                                }}
+                            >
+                                คัดลอก token
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
