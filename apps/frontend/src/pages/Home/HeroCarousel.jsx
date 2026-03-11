@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 function getRelativeOffset(index, activeIndex, total) {
   let diff = index - activeIndex
@@ -9,11 +8,11 @@ function getRelativeOffset(index, activeIndex, total) {
 }
 
 function getCardTransform(offset) {
-  if (offset === -2) return { shift: '-86%', scale: 0.72, rotate: 24, opacity: 0.45 }
-  if (offset === -1) return { shift: '-50%', scale: 0.86, rotate: 14, opacity: 0.72 }
-  if (offset === 0) return { shift: '0%', scale: 1, rotate: 0, opacity: 1 }
-  if (offset === 1) return { shift: '50%', scale: 0.86, rotate: -14, opacity: 0.72 }
-  if (offset === 2) return { shift: '86%', scale: 0.72, rotate: -24, opacity: 0.45 }
+  if (offset === -2) return { shift: '-94%', scale: 0.68, rotate: 20, opacity: 0.42 }
+  if (offset === -1) return { shift: '-58%', scale: 0.9, rotate: 10, opacity: 0.74 }
+  if (offset === 0) return { shift: '0%', scale: 1.24, rotate: 0, opacity: 1 }
+  if (offset === 1) return { shift: '58%', scale: 0.9, rotate: -10, opacity: 0.74 }
+  if (offset === 2) return { shift: '94%', scale: 0.68, rotate: -20, opacity: 0.42 }
   return { shift: '0%', scale: 0.66, rotate: 0, opacity: 0 }
 }
 
@@ -49,16 +48,6 @@ function HeroCarousel({ slides = [] }) {
     [activeIndex, normalizedSlides],
   )
 
-  const activeSlide = normalizedSlides[activeIndex]
-
-  const goPrev = () => {
-    setActiveIndex((prev) => (prev - 1 + normalizedSlides.length) % normalizedSlides.length)
-  }
-
-  const goNext = () => {
-    setActiveIndex((prev) => (prev + 1) % normalizedSlides.length)
-  }
-
   if (!normalizedSlides.length) return null
 
   return (
@@ -89,6 +78,10 @@ function HeroCarousel({ slides = [] }) {
                 loading={isActive ? 'eager' : 'lazy'}
               />
               <span className="gt-hero-carousel-overlay" />
+              <div className="gt-hero-carousel-content">
+                <h3>{slide.title}</h3>
+                <p>{slide.description}</p>
+              </div>
             </>
           )
 
@@ -130,19 +123,6 @@ function HeroCarousel({ slides = [] }) {
         })}
       </div>
 
-      <div className="gt-hero-carousel-caption">
-        <h3>{activeSlide?.title}</h3>
-        <p>{activeSlide?.description}</p>
-      </div>
-
-      <div className="gt-hero-carousel-controls">
-        <button type="button" className="gt-hero-carousel-arrow" onClick={goPrev} aria-label="Previous slide">
-          <ChevronLeft size={24} />
-        </button>
-        <button type="button" className="gt-hero-carousel-arrow" onClick={goNext} aria-label="Next slide">
-          <ChevronRight size={24} />
-        </button>
-      </div>
     </section>
   )
 }

@@ -585,7 +585,7 @@ section.gt-hero {
 
 .gt-hero-carousel {
     width: 100%;
-    margin: 8px auto 28px;
+    margin: 8px auto 4px;
     position: relative;
     z-index: 1;
     perspective: 2000px;
@@ -598,7 +598,7 @@ section.gt-hero {
 .gt-hero-carousel-stage {
     position: relative;
     width: min(1160px, 100%);
-    height: 500px;
+    height: 560px;
     overflow: visible;
     border-radius: 28px;
     isolation: isolate;
@@ -666,7 +666,7 @@ section.gt-hero {
 }
 
 .gt-hero-carousel-card.is-active {
-    box-shadow: 0 34px 76px -28px rgba(14, 116, 144, 0.7);
+    box-shadow: 0 44px 96px -26px rgba(14, 116, 144, 0.78);
 }
 
 .gt-hero-carousel-card[data-offset='-1'],
@@ -694,72 +694,42 @@ section.gt-hero {
     position: absolute;
     inset: 0;
     background:
-        linear-gradient(180deg, rgba(2, 6, 23, 0.02) 0%, rgba(2, 6, 23, 0.46) 100%),
+        linear-gradient(180deg, rgba(2, 6, 23, 0.04) 0%, rgba(2, 6, 23, 0.22) 45%, rgba(2, 6, 23, 0.78) 100%),
         linear-gradient(130deg, rgba(6, 182, 212, 0.13), rgba(124, 58, 237, 0.08));
     pointer-events: none;
 }
 
-.gt-hero-carousel-caption {
-    position: relative;
-    width: min(760px, 94%);
-    margin: -56px auto 0;
-    text-align: center;
-    padding: 14px 18px;
-    border-radius: 14px;
-    border: 1px solid rgba(148, 163, 184, 0.26);
-    background: rgba(2, 6, 23, 0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 45;
+.gt-hero-carousel-content {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    text-align: left;
+    z-index: 3;
 }
 
-.gt-hero-carousel-caption h3 {
+.gt-hero-carousel-content h3 {
     margin: 0;
-    font-size: clamp(0.98rem, 1.8vw, 1.22rem);
+    font-size: clamp(0.96rem, 1.7vw, 1.24rem);
     font-weight: 800;
     line-height: 1.2;
     color: #f8fafc;
+    text-shadow: 0 2px 10px rgba(2, 6, 23, 0.9);
 }
 
-.gt-hero-carousel-caption p {
+.gt-hero-carousel-content p {
     margin: 6px 0 0;
-    font-size: clamp(0.77rem, 1.2vw, 0.9rem);
+    font-size: clamp(0.76rem, 1.1vw, 0.9rem);
     line-height: 1.45;
-    color: rgba(226, 232, 240, 0.9);
-}
-
-.gt-hero-carousel-controls {
-    margin-top: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-}
-
-.gt-hero-carousel-arrow {
-    width: 42px;
-    height: 42px;
-    border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, 0.45);
-    background: rgba(15, 23, 42, 0.78);
-    color: #f8fafc;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: transform 0.2s ease, background 0.2s ease;
-}
-
-.gt-hero-carousel-arrow:hover {
-    transform: translateY(-1px);
-    background: rgba(30, 41, 59, 0.92);
+    color: rgba(226, 232, 240, 0.95);
+    text-shadow: 0 2px 8px rgba(2, 6, 23, 0.92);
 }
 
 .gt-hero h1 {
     font-size: 3.2rem;
     font-weight: 800;
     line-height: 1.22;
-    margin: 0 0 20px;
+    margin: 0 0 52px;
     padding-bottom: 0.08em;
     background: var(--gt-gradient);
     background-size: 200% 200%;
@@ -786,7 +756,7 @@ section.gt-hero {
 
 .gt-hero-sub {
     max-width: 760px;
-    margin: 0 auto 36px;
+    margin: 0 auto 14px;
     color: var(--gt-text-muted);
     font-size: 1.12rem;
     line-height: 1.7;
@@ -1446,6 +1416,7 @@ section.gt-hero {
 
     .gt-hero h1 {
         font-size: 2rem;
+        margin-bottom: 32px;
     }
 
     .gt-hero-carousel {
@@ -1454,7 +1425,7 @@ section.gt-hero {
     }
 
     .gt-hero-carousel-stage {
-        height: 290px;
+        height: 340px;
     }
 
     .gt-hero-carousel-card {
@@ -1469,22 +1440,18 @@ section.gt-hero {
         display: none;
     }
 
-    .gt-hero-carousel-caption {
-        margin-top: -34px;
-        width: min(94vw, 680px);
-        padding: 12px 14px;
+    .gt-hero-carousel-content {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
     }
 
-    .gt-hero-carousel-caption h3 {
+    .gt-hero-carousel-content h3 {
         font-size: 0.98rem;
     }
 
-    .gt-hero-carousel-caption p {
+    .gt-hero-carousel-content p {
         font-size: 0.78rem;
-    }
-
-    .gt-hero-carousel-controls {
-        margin-top: 10px;
     }
 
     .gt-hero-actions {
