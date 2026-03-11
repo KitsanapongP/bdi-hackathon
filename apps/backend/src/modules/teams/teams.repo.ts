@@ -325,6 +325,15 @@ export async function checkTeamHasSubmittedVerification(db: DB, teamId: number):
     return rows.length > 0;
 }
 
+export async function updateTeamVisibility(db: DB, teamId: number, visibility: 'public' | 'private'): Promise<void> {
+    await db.query(`
+        UPDATE team_teams
+        SET visibility = :visibility,
+            updated_at = NOW()
+        WHERE team_id = :teamId
+    `, { teamId, visibility });
+}
+
 export async function confirmTeamParticipation(
     db: DB,
     teamId: number,
@@ -345,7 +354,7 @@ export async function confirmTeamParticipation(
 export async function failTeamIfConfirmationExpired(db: DB, teamId: number): Promise<boolean> {
     const [result] = await db.query<ResultSetHeader>(`
         UPDATE team_teams
-        SET status = 'failed',
+        SET status = 'not_joined',
             updated_at = NOW()
         WHERE team_id = :teamId
           AND status = 'passed'

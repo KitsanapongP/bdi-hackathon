@@ -10,6 +10,13 @@ import crypto from 'node:crypto';
 
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads', 'verification');
 const DEFAULT_REQUIREMENT_ID = 5002; // STUDENT_ID requirement
+const MIN_SUBMIT_MEMBERS = 3;
+const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
+
+function assertTeamEditable(status: string): void {
+    if (!LOCKED_TEAM_STATUSES.has(String(status || '').toLowerCase())) return;
+    throw new BadRequestError('ทีมถูกล็อกหลังส่งเอกสารยืนยันตัวตนแล้ว ไม่สามารถแก้ไขได้');
+}
 
 function sanitizePathSegment(value: string | null | undefined, fallback: string): string {
     const raw = String(value || '').trim();
@@ -325,8 +332,19 @@ export async function submitTeam(
     if (team.current_leader_user_id !== leaderUserId) {
         throw new UnauthorizedError('\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e2b\u0e31\u0e27\u0e2b\u0e19\u0e49\u0e32\u0e17\u0e35\u0e21\u0e40\u0e17\u0e48\u0e32\u0e19\u0e31\u0e49\u0e19\u0e17\u0e35\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e2a\u0e48\u0e07\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23\u0e44\u0e14\u0e49');
     }
+    assertTeamEditable(team.status);
 
     const round = await repo.getOrCreateVerifyRound(db, teamId, leaderUserId);
+    const members = await getTeamMembers(db, teamId);
+    if (members.length < MIN_SUBMIT_MEMBERS) {
+        throw new BadRequestError(`ทีมต้องมีสมาชิกอย่างน้อย ${MIN_SUBMIT_MEMBERS} คนก่อนยืนยันเข้าร่วมการคัดเลือก`);
+    }
+
+    const advisorCount = await repo.countTeamAdvisors(db, teamId);
+    if (advisorCount < 1) {
+        throw new BadRequestError('ทีมต้องมีอาจารย์ที่ปรึกษาอย่างน้อย 1 คนก่อนยืนยันเข้าร่วมการคัดเลือก');
+    }
+
     const allConfirmed = await repo.areAllMembersConfirmed(db, teamId, round.verify_round_id);
     if (!allConfirmed) {
         throw new BadRequestError('\u0e2a\u0e21\u0e32\u0e0a\u0e34\u0e01\u0e17\u0e38\u0e01\u0e04\u0e19\u0e15\u0e49\u0e2d\u0e07\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23\u0e01\u0e48\u0e2d\u0e19\u0e2a\u0e48\u0e07');

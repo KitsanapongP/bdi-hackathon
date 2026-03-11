@@ -152,7 +152,7 @@ export const createScheduleItemSchema = z.object({
 export const updateScheduleItemSchema = createScheduleItemSchema.partial();
 
 export const selectionTeamsQuerySchema = z.object({
-    status: z.enum(['submitted', 'passed', 'failed', 'confirmed']).optional(),
+    status: z.enum(['submitted', 'passed', 'failed', 'confirmed', 'not_joined']).optional(),
 });
 
 export const selectionResultSchema = z.object({

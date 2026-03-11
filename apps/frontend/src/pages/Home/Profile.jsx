@@ -434,8 +434,9 @@ function ProfileTab({ apiFetch, showToast, user }) {
         setLockLoading(true);
         apiFetch(`/verification/team/${user.teamId}/status`)
             .then((r) => {
-                const me = (r.data?.members || []).find((m) => m.user_id === user.userId);
-                setProfileLocked(Boolean(me?.is_member_confirmed));
+                const status = String(r.data?.teamStatus || '').toLowerCase();
+                const lockedStatuses = ['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded'];
+                setProfileLocked(lockedStatuses.includes(status));
             })
             .catch(() => setProfileLocked(false))
             .finally(() => setLockLoading(false));
@@ -488,7 +489,7 @@ function ProfileTab({ apiFetch, showToast, user }) {
                 {profileLocked && (
                     <div className="vf-info-banner vf-submitted">
                         <Lock size={16} />
-                        <span>โปรไฟล์ถูกล็อกเพราะคุณยืนยันตัวตนแล้ว หากต้องการแก้ไขให้ยกเลิกการยืนยันที่หน้ายืนยันตัวตนก่อน</span>
+                        <span>โปรไฟล์ถูกล็อกเพราะทีมส่งเอกสารยืนยันตัวตนแล้ว หากต้องการแก้ไขให้ติดต่อผู้จัดงาน</span>
                     </div>
                 )}
                 <fieldset disabled={profileLocked} style={{ border: 'none', padding: 0, margin: 0 }}>

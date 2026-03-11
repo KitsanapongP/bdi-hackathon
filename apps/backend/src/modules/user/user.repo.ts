@@ -63,6 +63,21 @@ export async function updateProfile(
     );
 }
 
+export async function getActiveTeamByUserId(db: DB, userId: number): Promise<{ team_id: number; status: string } | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT t.team_id, t.status
+         FROM team_members m
+         INNER JOIN team_teams t ON t.team_id = m.team_id
+         WHERE m.user_id = :userId
+           AND m.member_status = 'active'
+           AND t.deleted_at IS NULL
+         ORDER BY m.team_member_id DESC
+         LIMIT 1`,
+        { userId },
+    );
+    return (rows[0] as { team_id: number; status: string } | undefined) ?? null;
+}
+
 /* ═══════════════════════════════════════════════════
    1.7  Privacy settings
    ═══════════════════════════════════════════════════ */

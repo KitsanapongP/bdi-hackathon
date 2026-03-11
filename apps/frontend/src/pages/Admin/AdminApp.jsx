@@ -5282,6 +5282,7 @@ function SelectionPage() {
               <option value="passed">passed</option>
               <option value="failed">failed</option>
               <option value="confirmed">confirmed</option>
+              <option value="not_joined">not_joined</option>
             </select>
           </label>
           <label>
@@ -5369,7 +5370,7 @@ function NotificationSettingsPage() {
   const [updatingRecipientUserId, setUpdatingRecipientUserId] = useState(null)
 
   const loadSelectionTeamOptions = useCallback(async () => {
-    const statuses = ['submitted', 'passed', 'failed', 'confirmed']
+    const statuses = ['submitted', 'passed', 'failed', 'confirmed', 'not_joined']
     const responses = await Promise.all(
       statuses.map(async (status) => {
         const res = await fetch(apiUrl(`/api/admin/selection/teams?status=${status}`), { credentials: 'include' })

@@ -36,7 +36,391 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    gap: 12px;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   TEAM TOP PANEL — Premium Redesign
+   ═══════════════════════════════════════════════════════════ */
+.gl-team-top-panel {
+    position: relative;
+    background: linear-gradient(135deg,
+            rgba(124, 58, 237, 0.28) 0%,
+            rgba(59, 130, 246, 0.18) 50%,
+            rgba(45, 212, 191, 0.15) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--gl-radius-lg);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+        0 4px 24px rgba(124, 58, 237, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Subtle shimmer overlay */
+.gl-team-top-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(105deg,
+            transparent 40%,
+            rgba(255, 255, 255, 0.03) 45%,
+            rgba(255, 255, 255, 0.06) 50%,
+            rgba(255, 255, 255, 0.03) 55%,
+            transparent 60%);
+    background-size: 300% 100%;
+    animation: gl-shimmer 6s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes gl-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -100% 0;
+    }
+}
+
+/* ── Main row: 3 sections ── */
+.gl-top-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+/* — Left: Team identity — */
+.gl-top-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.gl-top-team-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #7c3aed, #6366f1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+    flex-shrink: 0;
+}
+
+.gl-top-team-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.gl-top-team-name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--gl-text);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+
+.gl-top-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--gl-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    width: fit-content;
+}
+
+.gl-top-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fbbf24;
+    box-shadow: 0 0 6px rgba(251, 191, 36, 0.6);
+    animation: gl-dot-pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+@keyframes gl-dot-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.6;
+        transform: scale(0.85);
+    }
+}
+
+/* Status color variants */
+.gl-top-status-chip.forming .gl-top-status-dot {
+    background: #22d3ee;
+    box-shadow: 0 0 6px rgba(34, 211, 238, 0.6);
+}
+
+.gl-top-status-chip.submitted .gl-top-status-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+
+.gl-top-status-chip.passed .gl-top-status-dot {
+    background: #22c55e;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+}
+
+.gl-top-status-chip.confirmed .gl-top-status-dot {
+    background: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.gl-top-status-chip.failed .gl-top-status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+
+.gl-top-status-chip.not_joined .gl-top-status-dot {
+    background: #f97316;
+    box-shadow: 0 0 6px rgba(249, 115, 22, 0.6);
+}
+
+.gl-top-status-chip.disbanded .gl-top-status-dot {
+    background: #a1a1aa;
+    box-shadow: 0 0 6px rgba(161, 161, 170, 0.5);
+    animation: none;
+}
+
+.gl-top-status-chip.returned .gl-top-status-dot {
+    background: #fb7185;
+    box-shadow: 0 0 6px rgba(251, 113, 133, 0.6);
+}
+
+.gl-top-status-chip.ready_to_resubmit .gl-top-status-dot {
+    background: #a78bfa;
+    box-shadow: 0 0 6px rgba(167, 139, 250, 0.6);
+}
+
+/* — Center: Progress — */
+.gl-top-progress-section {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.gl-top-progress-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.gl-top-progress-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gl-top-progress-track {
+    flex: 1;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.gl-top-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #8b5cf6 0%, #22d3ee 50%, #34d399 100%);
+    box-shadow: 0 0 12px rgba(34, 211, 238, 0.4);
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.gl-top-progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.25),
+            transparent);
+    animation: gl-bar-shine 2s ease-in-out infinite;
+}
+
+@keyframes gl-bar-shine {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(200%);
+    }
+}
+
+.gl-top-progress-pct {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: var(--gl-text);
+    min-width: 42px;
+    text-align: right;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #c4b5fd, #67e8f9);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* — Right: Action — */
+.gl-top-action-section {
+    flex-shrink: 0;
+}
+
+.gl-top-submit-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    box-shadow:
+        0 4px 16px rgba(45, 212, 191, 0.35),
+        0 0 0 0 rgba(45, 212, 191, 0);
+    transition: all 0.3s cubic-bezier(.4, 0, .2, 1);
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+.gl-top-submit-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.15) 50%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.gl-top-submit-btn:hover:not(:disabled)::before {
+    opacity: 1;
+}
+
+.gl-top-submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow:
+        0 6px 24px rgba(45, 212, 191, 0.45),
+        0 0 30px rgba(45, 212, 191, 0.2);
+}
+
+.gl-top-submit-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(45, 212, 191, 0.3);
+}
+
+.gl-top-submit-btn:disabled {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.35);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* ── Hints Row ── */
+.gl-top-hints {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    position: relative;
+    z-index: 1;
+}
+
+.gl-top-hint-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.45);
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.gl-top-hint-item.gl-top-hint-warn {
+    color: #fcd34d;
+    background: rgba(234, 179, 8, 0.08);
+}
+
+/* ── Responsive ── */
+@media (max-width: 820px) {
+    .gl-top-main {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .gl-top-identity {
+        justify-content: center;
+    }
+
+    .gl-top-team-name {
+        max-width: none;
+    }
+
+    .gl-top-action-section {
+        display: flex;
+        justify-content: center;
+    }
+
+    .gl-top-submit-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .gl-top-hints {
+        justify-content: center;
+    }
+}
+
 
 /* ═══════════════════════════════════════════════════════════
    MAIN FRAME
@@ -124,6 +508,31 @@
 .gl-status-dot.submitted {
     background: #f59e0b;
     box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+}
+
+.gl-status-dot.passed {
+    background: #22c55e;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
+.gl-status-dot.confirmed {
+    background: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.gl-status-dot.failed {
+    background: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+}
+
+.gl-status-dot.not_joined {
+    background: #f97316;
+    box-shadow: 0 0 6px rgba(249, 115, 22, 0.5);
+}
+
+.gl-status-dot.disbanded {
+    background: #a1a1aa;
+    box-shadow: 0 0 6px rgba(161, 161, 170, 0.45);
 }
 
 .gl-status-dot.returned {
@@ -305,7 +714,7 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 22px 14px;
+    padding: 34px 14px 16px;
     background: var(--gl-card);
     border: 2px solid transparent;
     border-radius: var(--gl-radius-lg);
@@ -367,6 +776,129 @@
     font-weight: 800;
     padding: 0 6px;
     box-shadow: 0 0 8px var(--gl-teal-glow);
+}
+
+.gl-mode-badge-danger {
+    background: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.42);
+}
+
+.gl-mode-badge-success {
+    background: #16a34a;
+    box-shadow: 0 0 8px rgba(22, 163, 74, 0.42);
+}
+
+.gl-mode-badge-optional {
+    background: #eab308;
+    color: #111827;
+    box-shadow: 0 0 8px rgba(234, 179, 8, 0.42);
+}
+
+/* ── Notify pill badges (top-right of cards) ── */
+.gl-notify-pill {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 99px;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+    z-index: 2;
+    pointer-events: none;
+    animation: gl-pill-pop 0.35s ease backwards;
+    line-height: 1.2;
+}
+
+.gl-notify-pill svg {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+}
+
+@keyframes gl-pill-pop {
+    from {
+        opacity: 0;
+        transform: scale(0.7);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.gl-notify-success {
+    background: rgba(22, 163, 74, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(22, 163, 74, 0.45);
+    box-shadow: 0 0 10px rgba(22, 163, 74, 0.25);
+}
+
+.gl-notify-danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
+}
+
+.gl-notify-optional {
+    background: rgba(234, 179, 8, 0.2);
+    color: #facc15;
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.2);
+}
+
+/* ── Manage Grid (2-column layout) ── */
+.gl-manage-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.gl-manage-grid .gl-team-info-card {
+    margin-bottom: 0;
+}
+
+.gl-manage-span-full {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+    .gl-manage-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.gl-visibility-toggle-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.gl-visibility-btn {
+    border: 1px solid var(--gl-border);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--gl-text);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.gl-visibility-btn.active {
+    border-color: rgba(34, 211, 238, 0.6);
+    background: rgba(34, 211, 238, 0.18);
+}
+
+.gl-visibility-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* ═══════════════════════════════════════════════════════════

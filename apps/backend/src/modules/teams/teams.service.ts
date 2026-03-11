@@ -5,6 +5,9 @@ import * as crypto from 'crypto';
 import * as notificationService from '../notifications/notifications.service.js';
 import * as privilegesService from '../privileges/privileges.service.js';
 
+const MAX_TEAM_MEMBERS = 5;
+const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
+
 function generateRandomCode(length: number = 6): string {
     return crypto.randomBytes(3).toString('hex').toUpperCase().substring(0, length);
 }
@@ -17,12 +20,21 @@ async function applySelectionExpiryIfNeeded(db: DB, teamId: number): Promise<voi
     await repo.createTeamAuditLog(db, {
         teamId,
         actorUserId: refreshed.current_leader_user_id,
-        actionCode: 'TEAM_CONFIRMATION_EXPIRED_AUTO_FAILED',
+        actionCode: 'TEAM_CONFIRMATION_EXPIRED_AUTO_NOT_JOINED',
         actionDetail: {
             status: refreshed.status,
             confirmation_deadline_at: refreshed.confirmation_deadline_at,
         },
     });
+}
+
+function isTeamLockedForEdit(status: string): boolean {
+    return LOCKED_TEAM_STATUSES.has(String(status || '').toLowerCase());
+}
+
+function assertTeamEditable(status: string, actionLabel: string): void {
+    if (!isTeamLockedForEdit(status)) return;
+    throw new AppError(`ไม่สามารถ${actionLabel}ได้ เนื่องจากทีมถูกล็อกหลังส่งเอกสารยืนยันตัวตนแล้ว`, 400);
 }
 
 export async function createTeam(db: DB, userId: number, data: { teamNameTh: string; teamNameEn: string; visibility: 'public' | 'private' }) {
@@ -71,6 +83,7 @@ export async function rotateTeamCode(db: DB, teamId: number, userId: number) {
     if (team.current_leader_user_id !== userId) {
         throw new AppError('เฉพาะหัวหน้าทีมเท่านั้นที่สามารถเปลี่ยนรหัสได้ (Only leader can rotate code)', 403);
     }
+    assertTeamEditable(team.status, 'เปลี่ยนรหัสเข้าร่วมทีม');
 
     await repo.deactivateTeamCodes(db, teamId);
     const inviteCode = generateRandomCode(6);
@@ -122,6 +135,7 @@ export async function removeMember(db: DB, teamId: number, leaderUserId: number,
     if (leaderUserId === targetUserId) {
         throw new AppError('หัวหน้าทีมไม่สามารถลบตัวเองได้ (Leader cannot remove self)', 400);
     }
+    assertTeamEditable(team.status, 'เตะสมาชิก');
 
     const targetMember = await repo.getTeamMemberByTeamAndUser(db, teamId, targetUserId);
     if (!targetMember || targetMember.member_status !== 'active') {
@@ -148,11 +162,7 @@ export async function transferLeader(db: DB, teamId: number, currentLeaderUserId
     if (currentLeaderUserId === newLeaderUserId) {
         throw new AppError('หัวหน้าทีมคนใหม่ต้องไม่ใช่คนเดิม', 400);
     }
-
-    const hasSubmitted = await repo.checkTeamHasSubmittedVerification(db, teamId);
-    if (hasSubmitted) {
-        throw new AppError('ไม่สามารถโอนสิทธิ์หัวหน้าทีมได้ เนื่องจากทีมได้ส่งเอกสารยืนยันตัวตนแล้ว', 400);
-    }
+    assertTeamEditable(team.status, 'โอนสิทธิ์หัวหน้าทีม');
 
     const members = await repo.getTeamMembers(db, teamId);
     const target = members.find((m) => m.user_id === newLeaderUserId);
@@ -177,12 +187,18 @@ export async function transferLeader(db: DB, teamId: number, currentLeaderUserId
 export async function submitJoinRequest(db: DB, teamId: number, userId: number, inviteCode?: string) {
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
+    assertTeamEditable(team.status, 'ขอเข้าร่วมทีม');
 
     const inTeam = await repo.checkUserInAnyTeam(db, userId);
     if (inTeam) throw new AppError('คุณอยู่ในทีมอื่นแล้ว (You are already in a team)', 400);
 
     const existingRequest = await repo.getJoinRequestByUserAndTeam(db, userId, teamId);
     if (existingRequest) throw new AppError('คุณได้ส่งคำขอเข้าร่วมทีมนี้ไปแล้ว (Request already pending)', 400);
+
+    const members = await repo.getTeamMembers(db, teamId);
+    if (members.length >= MAX_TEAM_MEMBERS) {
+        throw new AppError('ทีมเต็มแล้ว ไม่สามารถเข้าร่วมได้', 400);
+    }
 
     let source: 'public_listing' | 'invite_code' = 'public_listing';
     let usedCode: string | null = null;
@@ -229,6 +245,7 @@ export async function respondJoinRequest(db: DB, teamId: number, requestId: numb
     if (team.current_leader_user_id !== leaderUserId) {
         throw new AppError('เฉพาะหัวหน้าทีมเท่านั้น (Only leader)', 403);
     }
+    assertTeamEditable(team.status, 'จัดการคำขอเข้าร่วมทีม');
 
     const request = await repo.getJoinRequestById(db, requestId);
     if (!request || request.team_id !== teamId) {
@@ -246,7 +263,7 @@ export async function respondJoinRequest(db: DB, teamId: number, requestId: numb
             throw new AppError('ผู้ใช้นี้อยู่ในทีมอื่นแล้ว', 400);
         }
 
-        if (members.length >= 5) {
+        if (members.length >= MAX_TEAM_MEMBERS) {
             throw new AppError('สมาชิกในทีมเต็มแล้ว (Team is full)', 400);
         }
 
@@ -317,6 +334,12 @@ export async function sendInvitation(
     if (team.current_leader_user_id !== leaderUserId) {
         throw new AppError('เฉพาะหัวหน้าทีมเท่านั้น (Only leader)', 403);
     }
+    assertTeamEditable(team.status, 'เชิญสมาชิกเข้าทีม');
+
+    const members = await repo.getTeamMembers(db, teamId);
+    if (members.length >= MAX_TEAM_MEMBERS) {
+        throw new AppError('ทีมเต็มแล้ว ไม่สามารถเชิญสมาชิกเพิ่มได้', 400);
+    }
 
     let inviteeUserId = input.inviteeUserId ?? null;
     if (!inviteeUserId && input.inviteeUserName) {
@@ -326,7 +349,6 @@ export async function sendInvitation(
         throw new AppError('ไม่พบผู้ใช้จาก username ที่ระบุ', 404);
     }
 
-    const members = await repo.getTeamMembers(db, teamId);
     if (members.some(m => m.user_id === inviteeUserId)) {
         throw new AppError('ผู้ใช้นี้เป็นสมาชิกในทีมอยู่แล้ว (Already a member)', 400);
     }
@@ -365,15 +387,19 @@ export async function respondToInvitation(db: DB, invitationId: number, userId: 
         throw new AppError('คำเชิญนี้ถูกดำเนินการไปแล้ว (Invitation already processed)', 400);
     }
 
+    const team = await repo.getTeamById(db, invitation.team_id);
+    if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
+
     if (status === 'accepted') {
+        assertTeamEditable(team.status, 'รับคำเชิญเข้าร่วมทีม');
         const inTeam = await repo.checkUserInAnyTeam(db, userId);
         if (inTeam) {
             throw new AppError('คุณอยู่ในทีมอื่นแล้ว (You are already in a team)', 400);
         }
 
         const members = await repo.getTeamMembers(db, invitation.team_id);
-        if (members.length >= 5) {
-            throw new AppError('สมาชิกในทีมเต็มแล้ว (Team is full)', 400);
+        if (members.length >= MAX_TEAM_MEMBERS) {
+            throw new AppError('ทีมเต็มแล้ว ไม่สามารถรับคำเชิญเข้าร่วมได้', 400);
         }
 
         const previousMembership = await repo.getTeamMemberByTeamAndUser(db, invitation.team_id, userId);
@@ -460,3 +486,32 @@ export async function confirmParticipation(db: DB, teamId: number, leaderUserId:
     return { success: true };
 }
 
+export async function updateTeamVisibility(
+    db: DB,
+    teamId: number,
+    leaderUserId: number,
+    visibility: 'public' | 'private',
+) {
+    const team = await repo.getTeamById(db, teamId);
+    if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
+    if (team.current_leader_user_id !== leaderUserId) {
+        throw new AppError('เฉพาะหัวหน้าทีมเท่านั้นที่แก้ไขได้', 403);
+    }
+    assertTeamEditable(team.status, 'เปลี่ยนการมองเห็นทีม');
+    if (team.visibility === visibility) {
+        return { visibility: team.visibility };
+    }
+
+    await repo.updateTeamVisibility(db, teamId, visibility);
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: leaderUserId,
+        actionCode: 'TEAM_VISIBILITY_UPDATED',
+        actionDetail: {
+            previous_visibility: team.visibility,
+            next_visibility: visibility,
+        },
+    });
+
+    return { visibility };
+}

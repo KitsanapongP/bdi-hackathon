@@ -147,6 +147,16 @@ export async function areAllMembersConfirmed(
     return Number(row.total) > 0 && Number(row.total) === Number(row.confirmed);
 }
 
+export async function countTeamAdvisors(db: DB, teamId: number): Promise<number> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT COUNT(*) AS advisor_count
+        FROM team_advisors
+        WHERE team_id = :teamId
+    `, { teamId });
+    const row = rows[0] as { advisor_count: number | string } | undefined;
+    return Number(row?.advisor_count ?? 0);
+}
+
 // ── Documents ──
 
 export async function getDocumentsByTeamAndUser(db: DB, teamId: number, userId: number): Promise<VerifyMemberDocumentRow[]> {

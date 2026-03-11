@@ -131,7 +131,7 @@ export interface SelectionTeamRow {
     team_code: string;
     team_name_th: string;
     team_name_en: string;
-    status: 'submitted' | 'passed' | 'failed' | 'confirmed' | 'forming' | 'disbanded';
+    status: 'submitted' | 'passed' | 'failed' | 'confirmed' | 'forming' | 'disbanded' | 'not_joined';
     current_leader_user_id: number;
     leader_name: string | null;
     member_count: number;

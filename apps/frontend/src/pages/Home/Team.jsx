@@ -2,9 +2,6 @@
 import {
     AlertTriangle,
     Award,
-    BarChart3,
-    BookOpen,
-    Calendar,
     CheckCircle,
     ChevronLeft,
     Clock,
@@ -13,13 +10,11 @@ import {
     FileText,
     Gamepad2,
     Globe,
-    HelpCircle,
     Info,
     Lock,
     LogOut,
     Mail,
     Megaphone,
-    MessageSquare,
     Plus,
     Save,
     Search,
@@ -49,19 +44,15 @@ import './Register.css';
 import './Profile.css';
 
 const MAX_MEMBERS = 5;
+const MIN_SUBMIT_MEMBERS = 3;
 
 const CARDS = [
     { id: 'announce', icon: <Megaphone />, label: 'ประกาศ', color: '#f97316' },
-    { id: 'inbox', icon: <Mail />, label: 'กล่องข้อความ', color: '#0ea5e9' },
-    { id: 'works', icon: <Award />, label: 'ส่งผลงาน', color: '#eab308' },
     { id: 'verify', icon: <ShieldCheck />, label: 'ยืนยันตัวตน', color: '#14b8a6' },
-    { id: 'status', icon: <BarChart3 />, label: 'สถานะทีม', color: '#3b82f6' },
-    { id: 'rules', icon: <BookOpen />, label: 'กติกา', color: '#ec4899' },
-    { id: 'schedule', icon: <Calendar />, label: 'กำหนดการ', color: '#8b5cf6' },
-    { id: 'manage', icon: <Settings />, label: 'จัดการทีม', color: '#6366f1' },
     { id: 'advisor', icon: <GraduationCap />, label: 'อาจารย์ที่ปรึกษา', color: '#6366f1' },
-    { id: 'contact', icon: <MessageSquare />, label: 'ติดต่อผู้จัด', color: '#0ea5e9' },
-    { id: 'help', icon: <HelpCircle />, label: 'ช่วยเหลือ', color: '#10b981' },
+    { id: 'works', icon: <Award />, label: 'ส่งผลงาน', color: '#eab308' },
+    { id: 'inbox', icon: <Mail />, label: 'กล่องข้อความ', color: '#0ea5e9' },
+    { id: 'manage', icon: <Settings />, label: 'จัดการทีม', color: '#6366f1' },
 ];
 
 const TEAM_STATUS_CONFIG = {
@@ -70,6 +61,7 @@ const TEAM_STATUS_CONFIG = {
     passed: { label: 'ผ่านการคัดเลือก', color: 'bg-green-100 text-green-800' },
     confirmed: { label: 'ยืนยันการเข้าร่วมแล้ว', color: 'bg-emerald-100 text-emerald-800' },
     failed: { label: 'ไม่ผ่านการคัดเลือก', color: 'bg-red-100 text-red-800' },
+    not_joined: { label: 'ไม่กดเข้าร่วมโครงการ', color: 'bg-orange-100 text-orange-800' },
     disbanded: { label: 'ยุบทีม', color: 'bg-zinc-100 text-zinc-800' },
 };
 
@@ -365,6 +357,7 @@ export default function TeamContent({ user }) {
                     id: dbTeam.team_id,
                     name: dbTeam.team_name_th,
                     status: normalizeStatus(dbTeam.status),
+                    visibility: dbTeam.visibility || 'private',
                     code: dbTeam.team_code || '------',
                     inviteCode: activeCode || '------',
                     leaderUserId: dbTeam.current_leader_user_id,
@@ -605,6 +598,20 @@ export default function TeamContent({ user }) {
         }, 'warning');
     };
 
+    const handleUpdateVisibility = (visibility) => withAction(async () => {
+        if (!team?.id) return;
+        const res = await fetch(apiUrl(`/api/teams/${team.id}/visibility`), {
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ visibility }),
+        });
+        const payload = await res.json();
+        if (!payload.ok) throw new Error(payload.message || 'อัปเดตสถานะทีมไม่สำเร็จ');
+        setTeam((prev) => (prev ? { ...prev, visibility: payload?.data?.visibility || visibility } : prev));
+        showToast(`เปลี่ยนทีมเป็น ${visibility === 'public' ? 'public' : 'private'} สำเร็จ`, 'success');
+    }, { toastError: true });
+
     if (!user) return null;
     if (isLoadingTeam) return <div className="gl-page-container"><div className="gl-frame gl-frame-center"><h3>กำลังโหลดข้อมูลทีม...</h3></div></div>;
 
@@ -832,6 +839,33 @@ export default function TeamContent({ user }) {
     const teamInviteCode = team.inviteCode || '------';
     const deadlineMs = toDateMs(team?.confirmationDeadlineAt);
     const countdownText = deadlineMs ? formatCountdown(deadlineMs - nowMs) : '-';
+    const isTeamLocked = ['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded'].includes(String(team?.status || ''));
+
+    const verifyMembers = verifyData?.members || [];
+    const memberCountForSubmit = verifyMembers.length || team.members.length;
+    const allMembersConfirmed = verifyMembers.length > 0 && verifyMembers.every((m) => m.is_member_confirmed);
+    const advisorCount = Array.isArray(submissionData?.advisors) ? submissionData.advisors.length : 0;
+    const hasAdvisor = advisorCount > 0;
+    const isMinMembersReady = memberCountForSubmit >= MIN_SUBMIT_MEMBERS;
+
+    const submitReadinessRules = [
+        { id: 'members-confirmed', ok: allMembersConfirmed, label: 'สมาชิกทุกคนยืนยันตัวตนครบแล้ว' },
+        { id: 'advisor', ok: hasAdvisor, label: 'มีอาจารย์ที่ปรึกษาอย่างน้อย 1 คน' },
+        { id: 'min-members', ok: isMinMembersReady, label: `มีสมาชิกอย่างน้อย ${MIN_SUBMIT_MEMBERS} คน (ตอนนี้ ${memberCountForSubmit} คน)` },
+    ];
+    const submitMissing = submitReadinessRules.filter((item) => !item.ok).map((item) => item.label);
+    const submitProgress = Math.round((submitReadinessRules.filter((item) => item.ok).length / submitReadinessRules.length) * 100);
+    const canSubmitSelection = isLeader && !isTeamLocked && submitMissing.length === 0;
+
+    const verifyNotify = allMembersConfirmed ? 'success' : 'danger';
+    const advisorNotify = hasAdvisor ? 'success' : 'danger';
+    const workNotify = 'optional';
+    const cardNotifyById = {
+        verify: verifyNotify,
+        advisor: advisorNotify,
+        works: workNotify,
+        manage: hasPendingJoinRequests ? 'count' : null,
+    };
 
     const handleUploadDocs = async (files) => {
         if (!team?.id || !files?.length) return;
@@ -971,13 +1005,20 @@ export default function TeamContent({ user }) {
     };
 
     const handleSubmitTeam = () => {
-        openConfirm('ส่งเอกสารยืนยันตัวตนทั้งทีม', 'เมื่อส่งเอกสารยืนยันตัวตนทั้งทีมแล้ว จะไม่สามารถยกเลิกหรือแก้ไขได้', () => {
+        if (submitMissing.length > 0) {
+            showToast(`ยังยืนยันเข้าร่วมการคัดเลือกไม่ได้: ${submitMissing.join(', ')}`, 'error');
+            return;
+        }
+        openConfirm('ยืนยันเข้าร่วมการคัดเลือก', 'เมื่อยืนยันเข้าร่วมการคัดเลือกแล้ว จะไม่สามารถยกเลิกหรือแก้ไขเอกสารได้', () => {
             closeConfirm();
             withAction(async () => {
                 const statusRes = await fetch(apiUrl(`/api/verification/team/${team.id}/status`), { credentials: 'include' });
                 const statusPayload = await statusRes.json();
                 if (!statusPayload.ok) throw new Error(statusPayload.message || 'ไม่สามารถตรวจสอบสถานะทีมได้');
                 const latestMembers = statusPayload?.data?.members || [];
+                if (latestMembers.length < MIN_SUBMIT_MEMBERS) {
+                    throw new Error(`ทีมต้องมีสมาชิกอย่างน้อย ${MIN_SUBMIT_MEMBERS} คน (ตอนนี้ ${latestMembers.length} คน)`);
+                }
                 const pendingMembers = latestMembers.filter((m) => !m.is_member_confirmed);
                 if (pendingMembers.length > 0) {
                     const names = pendingMembers
@@ -991,15 +1032,9 @@ export default function TeamContent({ user }) {
                 const submissionPayload = await submissionRes.json();
                 if (!submissionPayload.ok) throw new Error(submissionPayload.message || 'ไม่สามารถตรวจสอบข้อมูลส่งผลงานได้');
                 const latestSubmission = submissionPayload?.data || {};
-                const hasSubmissionFile = Array.isArray(latestSubmission.files) && latestSubmission.files.length > 0;
-                const hasSubmissionLink = String(latestSubmission.videoLink || '').trim().length > 0;
                 const hasAdvisor = Array.isArray(latestSubmission.advisors) && latestSubmission.advisors.length > 0;
-                if (!hasSubmissionFile || !hasSubmissionLink || !hasAdvisor) {
-                    const missingSubmissionParts = [];
-                    if (!hasSubmissionFile) missingSubmissionParts.push('ไฟล์ผลงาน');
-                    if (!hasSubmissionLink) missingSubmissionParts.push('ลิงก์ผลงาน');
-                    if (!hasAdvisor) missingSubmissionParts.push('อาจารย์ที่ปรึกษา');
-                    throw new Error(`ยังส่งเอกสารทั้งทีมไม่ได้ กรุณากรอกข้อมูลให้ครบ: ${missingSubmissionParts.join(', ')}`);
+                if (!hasAdvisor) {
+                    throw new Error('ทีมต้องมีอาจารย์ที่ปรึกษาอย่างน้อย 1 คนก่อนยืนยันเข้าร่วมการคัดเลือก');
                 }
 
                 const res = await fetch(apiUrl(`/api/verification/team/${team.id}/submit`), {
@@ -1030,7 +1065,7 @@ export default function TeamContent({ user }) {
                     }
                     throw new Error('ระบบไม่อนุญาตให้ส่งเอกสารทีมในขณะนี้ กรุณารีเฟรชหน้าแล้วลองใหม่อีกครั้ง');
                 }
-                showToast('ส่งเอกสารยืนยันตัวตนทั้งทีมสำเร็จ', 'success');
+                showToast('ยืนยันเข้าร่วมการคัดเลือกสำเร็จ', 'success');
                 fetchVerifyStatus();
             }, { toastError: true, fallbackMessage: 'ยังส่งเอกสารทั้งทีมไม่ได้ กรุณาตรวจสอบข้อมูลทีมและการยืนยันของสมาชิก' });
         }, 'warning');
@@ -1082,74 +1117,90 @@ export default function TeamContent({ user }) {
         </div>
     );
 
-    const renderStatus = () => renderSimpleDetail(
-        'สถานะทีม',
-        <BarChart3 size={20} />,
-        <div className="gl-info-card">
-            <div className="gl-status-row"><div className="gl-status-label">สถานะปัจจุบัน</div><span className="gl-badge-pending"><Clock size={13} /> {statusInfo.label}</span></div>
-            <div className="gl-status-row"><div className="gl-status-label">สมาชิก</div><span>{team.members.length}/{MAX_MEMBERS}</span></div>
-            <div className="gl-status-row"><div className="gl-status-label">สมาชิกที่ยืนยันตัวตน</div><span>{team.members.filter((m) => m.verified).length}/{team.members.length}</span></div>
-            <div className="gl-status-row"><div className="gl-status-label">ผลงานที่ส่ง</div><span>{team.works.length}</span></div>
-            <div className="gl-status-row"><div className="gl-status-label">หมดเขตยืนยันเข้าร่วม</div><span>{formatDateTime(team.confirmationDeadlineAt)}</span></div>
-            <div className="gl-status-row"><div className="gl-status-label">ยืนยันเข้าร่วมแล้วเมื่อ</div><span>{formatDateTime(team.confirmedAt)}</span></div>
-        </div>
-    );
-
     const renderManage = () => renderSimpleDetail(
         'จัดการทีม',
         <Settings size={20} />,
         <div>
-            {/* Team info cards */}
-            <div className="gl-team-info-card">
-                <span className="gl-team-info-label"><Gamepad2 size={13} /> ชื่อทีม</span>
-                <div className="gl-team-info-value">{team.name}</div>
-            </div>
-            <div className="gl-team-info-card">
-                <span className="gl-team-info-label"><Users size={13} /> รหัสทีม</span>
-                <div className="gl-team-info-value">{team.code}</div>
-            </div>
-            <div className="gl-team-info-card">
-                <span className="gl-team-info-label"><BarChart3 size={13} /> สถานะทีม</span>
-                <div className="gl-team-info-value gl-team-info-status">
-                    <span className={`gl-status-dot ${team.status}`} /> {statusInfo.label}
+            {/* 2-column team info grid */}
+            <div className="gl-manage-grid">
+                <div className="gl-team-info-card">
+                    <span className="gl-team-info-label"><Users size={13} /> รหัสทีม</span>
+                    <div className="gl-team-info-value">{team.code}</div>
                 </div>
-            </div>
-            <div className="gl-team-info-card">
-                <span className="gl-team-info-label"><Users size={13} /> จำนวนสมาชิก</span>
-                <div className="gl-team-info-value">{team.members.length} / {MAX_MEMBERS} คน</div>
+                <div className="gl-team-info-card">
+                    <span className="gl-team-info-label"><Users size={13} /> จำนวนสมาชิก</span>
+                    <div className="gl-team-info-value">{team.members.length} / {MAX_MEMBERS} คน</div>
+                </div>
+                <div className="gl-team-info-card">
+                    <span className="gl-team-info-label"><Globe size={13} /> การมองเห็นทีม</span>
+                    <div className="gl-visibility-toggle-row">
+                        <button
+                            className={`gl-visibility-btn ${team.visibility === 'public' ? 'active' : ''}`}
+                            disabled={!isLeader || actionLoading || isTeamLocked}
+                            onClick={() => handleUpdateVisibility('public')}
+                        >
+                            Public
+                        </button>
+                        <button
+                            className={`gl-visibility-btn ${team.visibility === 'private' ? 'active' : ''}`}
+                            disabled={!isLeader || actionLoading || isTeamLocked}
+                            onClick={() => handleUpdateVisibility('private')}
+                        >
+                            Private
+                        </button>
+                    </div>
+                    {isTeamLocked && <p className="vf-hint">ทีมถูกล็อกแล้ว ไม่สามารถเปลี่ยน public/private ได้</p>}
+                </div>
             </div>
 
             {isLeader && (
                 <>
-                    <div className="gl-team-info-card">
-                        <span className="gl-team-info-label"><Copy size={13} /> เชิญเข้าทีม</span>
-                        <div className="gl-invite-row">
-                            <button className="gl-code-chip" onClick={() => navigator.clipboard.writeText(teamInviteCode).then(() => setCopied(true))}>
-                                <Copy size={14} /> {teamInviteCode}
-                            </button>
-                            {copied && <span style={{ color: '#34d399', fontSize: '0.85rem', fontWeight: 600 }}>คัดลอกสำเร็จ</span>}
-                            <div className="gl-invite-input-group">
-                                <input className="gr-input" value={inviteUserNameInput} onChange={(e) => setInviteUserNameInput(e.target.value)} placeholder="ใส่ username เพื่อเชิญ" />
-                                <button className="gt-btn gt-btn-primary" disabled={actionLoading} onClick={handleInviteMember}>เชิญ</button>
+                    <div className="gl-manage-grid">
+                        <div className="gl-team-info-card gl-manage-span-full">
+                            <span className="gl-team-info-label"><Copy size={13} /> เชิญเข้าทีม</span>
+                            <div className="gl-invite-row">
+                                <button className="gl-code-chip" onClick={() => navigator.clipboard.writeText(teamInviteCode).then(() => setCopied(true))}>
+                                    <Copy size={14} /> {teamInviteCode}
+                                </button>
+                                {copied && <span style={{ color: '#34d399', fontSize: '0.85rem', fontWeight: 600 }}>คัดลอกสำเร็จ</span>}
+                                <div className="gl-invite-input-group">
+                                    <input className="gr-input" value={inviteUserNameInput} onChange={(e) => setInviteUserNameInput(e.target.value)} placeholder="ใส่ username เพื่อเชิญ" />
+                                    <button className="gt-btn gt-btn-primary" disabled={actionLoading || isTeamLocked} onClick={handleInviteMember}>เชิญ</button>
+                                </div>
                             </div>
+                            {isTeamLocked && <p className="vf-hint">ทีมถูกล็อกแล้ว ไม่สามารถเชิญสมาชิกเพิ่มได้</p>}
                         </div>
                     </div>
 
-                    <div className="gl-team-info-card">
-                        <span className="gl-team-info-label"><Clock size={13} /> คำขอเข้าร่วมทีมที่รอดำเนินการ</span>
-                        {pendingJoinRequests.length === 0 && <div className="gl-team-info-value" style={{ color: 'var(--gl-text-dim)', fontWeight: 600, fontSize: '0.9rem' }}>ยังไม่มีคำขอใหม่</div>}
-                        {pendingJoinRequests.map((req) => (
-                            <div key={req.join_request_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>ผู้ขอเข้าร่วม: {req.requester_user_name || `user_id: ${req.requester_user_id}`}</span>
-                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
-                                    <button className="gt-btn gt-btn-primary" disabled={actionLoading} onClick={() => handleRespondJoinRequest(req.join_request_id, 'approved')}>อนุมัติ</button>
-                                    <button className="gt-btn" disabled={actionLoading} onClick={() => handleRespondJoinRequest(req.join_request_id, 'rejected')}>ปฏิเสธ</button>
+                    <div className="gl-manage-grid">
+                        <div className="gl-team-info-card">
+                            <span className="gl-team-info-label"><Clock size={13} /> คำขอเข้าร่วมทีม</span>
+                            {pendingJoinRequests.length === 0 && <div className="gl-team-info-value" style={{ color: 'var(--gl-text-dim)', fontWeight: 600, fontSize: '0.9rem' }}>ยังไม่มีคำขอใหม่</div>}
+                            {pendingJoinRequests.map((req) => (
+                                <div key={req.join_request_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>ผู้ขอเข้าร่วม: {req.requester_user_name || `user_id: ${req.requester_user_id}`}</span>
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
+                                        <button className="gt-btn gt-btn-primary" disabled={actionLoading || isTeamLocked} onClick={() => handleRespondJoinRequest(req.join_request_id, 'approved')}>อนุมัติ</button>
+                                        <button className="gt-btn" disabled={actionLoading || isTeamLocked} onClick={() => handleRespondJoinRequest(req.join_request_id, 'rejected')}>ปฏิเสธ</button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                            {isTeamLocked && pendingJoinRequests.length > 0 && <p className="vf-hint">ทีมถูกล็อกแล้ว ไม่สามารถจัดการคำขอเข้าร่วมทีมได้</p>}
+                        </div>
+
+                        <div className="gl-team-info-card">
+                            <span className="gl-team-info-label"><LogOut size={13} /> ออกจากทีม</span>
+                            {isLeader ? (
+                                <div className="gl-team-info-value" style={{ color: 'var(--gl-text-dim)', fontWeight: 600, fontSize: '0.9rem' }}>หากเป็นหัวหน้าทีม ต้องโอนหัวหน้าให้สมาชิกคนอื่นก่อน จึงจะออกจากทีมได้</div>
+                            ) : (
+                                <div className="gl-team-info-value">
+                                    <button className="gl-btn-danger" disabled={actionLoading} onClick={handleLeaveCurrentTeam}>ออกจากทีม</button>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="gl-team-info-card">
+                    <div className="gl-team-info-card gl-manage-span-full">
                         <span className="gl-team-info-label"><UserPlus size={13} /> จัดการสมาชิก</span>
                         {sortedMembers.map((m) => (
                             <div key={`manage-${m.id}`} className="gl-manage-member-row">
@@ -1162,21 +1213,15 @@ export default function TeamContent({ user }) {
                                 </div>
                                 {!m.leader && (
                                     <div className="gl-manage-actions">
-                                        <button className="gl-btn-warning" disabled={actionLoading} onClick={() => handleTransferLeader(m.id)}>โอนหัวหน้า</button>
-                                        <button className="gl-btn-danger" disabled={actionLoading} onClick={() => handleRemoveMember(m.id)}>เตะออก</button>
+                                        <button className="gl-btn-warning" disabled={actionLoading || isTeamLocked} onClick={() => handleTransferLeader(m.id)}>โอนหัวหน้า</button>
+                                        <button className="gl-btn-danger" disabled={actionLoading || isTeamLocked} onClick={() => handleRemoveMember(m.id)}>เตะออก</button>
                                     </div>
                                 )}
                             </div>
                         ))}
+                        {isTeamLocked && <p className="vf-hint">ทีมถูกล็อกแล้ว ไม่สามารถโอนหัวหน้า/เตะสมาชิกได้</p>}
                     </div>
                 </>
-            )}
-
-            {isLeader && (
-                <div className="gl-team-info-card">
-                    <span className="gl-team-info-label"><LogOut size={13} /> ออกจากทีม</span>
-                    <div className="gl-team-info-value" style={{ color: 'var(--gl-text-dim)', fontWeight: 600, fontSize: '0.9rem' }}>หากเป็นหัวหน้าทีม ต้องโอนหัวหน้าให้สมาชิกคนอื่นก่อน จึงจะออกจากทีมได้</div>
-                </div>
             )}
 
             {!isLeader && (
@@ -1349,17 +1394,8 @@ export default function TeamContent({ user }) {
             const vd = verifyData;
             const myMember = vd?.members?.find(m => m.user_id === user?.userId);
             const myConfirmed = myMember?.is_member_confirmed;
-            const allConfirmed = vd?.members?.every(m => m.is_member_confirmed);
-            const memberCount = vd?.members?.length || team?.members?.length || 0;
-            const isTeamSizeValid = memberCount >= 2 && memberCount <= MAX_MEMBERS;
             const isSubmitted = vd?.isTeamSubmitted;
             const myDocs = vd?.myDocuments || [];
-            const submissionFiles = submissionData?.files || [];
-            const submissionAdvisors = submissionData?.advisors || [];
-            const hasSubmissionFile = submissionFiles.length > 0;
-            const hasSubmissionLink = String(submissionData?.videoLink || '').trim().length > 0;
-            const hasSubmissionAdvisor = submissionAdvisors.length > 0;
-            const isSubmissionReadyForTeamSubmit = hasSubmissionFile && hasSubmissionLink && hasSubmissionAdvisor;
             const profileComplete = isProfileComplete(profileData);
             const missingFields = getProfileMissingFields(profileData);
             const canEditGeneralInfo = !isSubmitted && !myConfirmed;
@@ -1385,7 +1421,7 @@ export default function TeamContent({ user }) {
                             <div className="gl-status-row"><div className="gl-status-label">หมดเขตยืนยัน</div><span>{formatDateTime(team.confirmationDeadlineAt)}</span></div>
                             <div className="gl-status-row"><div className="gl-status-label"><Clock size={13} /> เวลาที่เหลือ</div><span>{countdownText}</span></div>
                             {confirmationExpired ? (
-                                <p className="vf-hint">เลยเวลายืนยันแล้ว ระบบจะปรับสถานะเป็น failed อัตโนมัติ</p>
+                                <p className="vf-hint">เลยเวลายืนยันแล้ว ระบบจะปรับสถานะเป็น "ไม่กดเข้าร่วมโครงการ" อัตโนมัติ</p>
                             ) : (
                                 <button className="gl-action-btn gl-submit-btn" disabled={actionLoading} onClick={handleConfirmParticipation}>
                                     <CheckCircle size={16} /> ยืนยันการเข้าร่วมโครงการ
@@ -1630,25 +1666,6 @@ export default function TeamContent({ user }) {
                         </div>
                     )}
 
-                    {/* Leader: Submit team */}
-                    {isLeader && !isSubmitted && (
-                        <div className="gl-team-info-card">
-                            <span className="gl-team-info-label"><ShieldCheck size={13} /> ส่งเอกสารทั้งทีม (หัวหน้าทีม)</span>
-                            <div className="vf-info-banner vf-warning-small">
-                                <AlertTriangle size={14} />
-                                <span>เมื่อส่งเอกสารยืนยันตัวตนทั้งทีมแล้ว จะไม่สามารถยกเลิกหรือแก้ไขได้</span>
-                            </div>
-                            <button className="vf-action-btn vf-btn-submit" disabled={actionLoading || submissionLoading || !allConfirmed || !isTeamSizeValid || !isSubmissionReadyForTeamSubmit} onClick={handleSubmitTeam}>
-                                <ShieldCheck size={16} /> ส่งเอกสารยืนยันตัวตนทั้งทีม
-                            </button>
-                            {!allConfirmed && <p className="vf-hint">สมาชิกทุกคนต้องยืนยันเอกสารก่อนส่ง</p>}
-                            {!isTeamSizeValid && <p className="vf-hint">ทีมต้องมีสมาชิก 2-5 คนก่อนส่งเอกสารทั้งทีม (ตอนนี้ {memberCount} คน)</p>}
-                            {!hasSubmissionFile && <p className="vf-hint">ต้องแนบไฟล์ผลงานจากหน้าส่งผลงานอย่างน้อย 1 ไฟล์</p>}
-                            {!hasSubmissionLink && <p className="vf-hint">ต้องใส่ลิงก์ผลงานจากหน้าส่งผลงานก่อน</p>}
-                            {!hasSubmissionAdvisor && <p className="vf-hint">ต้องเพิ่มอาจารย์ที่ปรึกษาอย่างน้อย 1 ท่านก่อน</p>}
-                        </div>
-                    )}
-
                     {/* Leader: Disband team */}
                     {isLeader && isSubmitted && (
                         <div className="gl-team-info-card vf-disband-card">
@@ -1669,9 +1686,6 @@ export default function TeamContent({ user }) {
                 </div>
             ));
         },
-        status: renderStatus,
-        rules: () => renderSimpleDetail('กติกา', <BookOpen size={20} />, <div className="gl-info-card"><p>แต่ละทีมต้องมีสมาชิก 2-5 คน</p></div>),
-        schedule: () => renderSimpleDetail('กำหนดการ', <Calendar size={20} />, <div className="gl-info-card"><p>กำหนดการจะแจ้งโดยผู้จัดงาน</p></div>),
         manage: renderManage,
         advisor: () => {
             if (submissionLoading && !submissionData) return renderSimpleDetail('อาจารย์ที่ปรึกษา', <GraduationCap size={20} />, <div className="gl-empty-state"><Loader2 size={40} /><h3>กำลังโหลด...</h3></div>);
@@ -1837,8 +1851,6 @@ export default function TeamContent({ user }) {
                 </div>
             ));
         },
-        contact: () => renderSimpleDetail('ติดต่อผู้จัด', <MessageSquare size={20} />, <div className="gl-info-card"><p>ติดต่อ: gameevent@university.ac.th</p></div>),
-        help: () => renderSimpleDetail('ช่วยเหลือ', <HelpCircle size={20} />, <div className="gl-info-card"><p>คำถามที่พบบ่อยจะอัปเดตเร็ว ๆ นี้</p></div>),
     };
 
     return (
@@ -1846,7 +1858,6 @@ export default function TeamContent({ user }) {
             <div className="gl-frame">
                 <aside className="gl-members-panel">
                     <div className="gl-members-header"><h3>สมาชิก {team.members.length}/{MAX_MEMBERS}</h3></div>
-                    <div className="gl-team-badge"><span className="gl-team-badge-name"><Gamepad2 size={18} /> {team.name}</span><span className={`gl-status-dot ${team.status}`} /></div>
                     <div className="gl-member-list">
                         {sortedMembers.map((m) => {
                             const vm = verifyData?.members?.find(v => v.user_id === m.id);
@@ -1877,15 +1888,86 @@ export default function TeamContent({ user }) {
                 </aside>
 
                 <main className="gl-content-panel">
+                    <div className="gl-team-top-panel">
+                        <div className="gl-top-main">
+                            {/* Left: Team identity */}
+                            <div className="gl-top-identity">
+                                <div className="gl-top-team-icon">
+                                    <Gamepad2 size={22} />
+                                </div>
+                                <div className="gl-top-team-meta">
+                                    <span className="gl-top-team-name">{team.name}</span>
+                                    <span className={`gl-top-status-chip ${team.status}`}>
+                                        <span className="gl-top-status-dot" />
+                                        {statusInfo.label}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Center: Progress */}
+                            <div className="gl-top-progress-section">
+                                <div className="gl-top-progress-label">ความพร้อมในการส่งทีมเข้าคัดเลือก</div>
+                                <div className="gl-top-progress-bar-wrap">
+                                    <div className="gl-top-progress-track">
+                                        <div className="gl-top-progress-fill" style={{ width: `${submitProgress}%` }} />
+                                    </div>
+                                    <span className="gl-top-progress-pct">{submitProgress}%</span>
+                                </div>
+                            </div>
+
+                            {/* Right: Action */}
+                            <div className="gl-top-action-section">
+                                <button className="gl-top-submit-btn" disabled={!isLeader || actionLoading || isTeamLocked || submitMissing.length > 0} onClick={handleSubmitTeam}>
+                                    <ShieldCheck size={18} />
+                                    <span>ยืนยันส่งทีมเข้าคัดเลือก</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Hints row */}
+                        {(submitMissing.length > 0 || !isLeader || isTeamLocked) && (
+                            <div className="gl-top-hints">
+                                {!isLeader && <span className="gl-top-hint-item"><Lock size={12} /> เฉพาะหัวหน้าทีม</span>}
+                                {submitMissing.map((msg, i) => (
+                                    <span key={i} className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {msg}</span>
+                                ))}
+                                {isTeamLocked && <span className="gl-top-hint-item"><Lock size={12} /> ทีมอยู่ในสถานะที่แก้ไขไม่ได้</span>}
+                            </div>
+                        )}
+                    </div>
                     {selectedCard === null ? (
                         <div className="gl-card-grid">
-                            {CARDS.map((card) => (
-                                <button key={card.id} className="gl-mode-card" onClick={() => setSelectedCard(card.id)}>
-                                    {card.id === 'manage' && hasPendingJoinRequests && <span className="gl-mode-badge">{pendingJoinRequests.length}</span>}
-                                    <div className="gl-mode-icon" style={{ background: card.color }}>{card.icon}</div>
-                                    <span className="gl-mode-label">{card.label}</span>
-                                </button>
-                            ))}
+                            {CARDS.map((card) => {
+                                const notify = cardNotifyById[card.id];
+                                const notifyConfig = {
+                                    verify: { require: true, label: 'จำเป็น' },
+                                    advisor: { require: true, label: 'จำเป็น' },
+                                    works: { require: false, label: 'ไม่บังคับ' },
+                                };
+                                const cfg = notifyConfig[card.id];
+                                return (
+                                    <button key={card.id} className="gl-mode-card" onClick={() => setSelectedCard(card.id)}>
+                                        {notify === 'count' && <span className="gl-mode-badge">{pendingJoinRequests.length}</span>}
+                                        {cfg && notify === 'success' && (
+                                            <span className="gl-notify-pill gl-notify-success">
+                                                <CheckCircle size={12} /> {cfg.label}
+                                            </span>
+                                        )}
+                                        {cfg && notify === 'danger' && (
+                                            <span className="gl-notify-pill gl-notify-danger">
+                                                <XCircle size={12} /> {cfg.label}
+                                            </span>
+                                        )}
+                                        {cfg && notify === 'optional' && (
+                                            <span className="gl-notify-pill gl-notify-optional">
+                                                <Clock size={12} /> {cfg.label}
+                                            </span>
+                                        )}
+                                        <div className="gl-mode-icon" style={{ background: card.color }}>{card.icon}</div>
+                                        <span className="gl-mode-label">{card.label}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     ) : (
                         DETAIL_MAP[selectedCard]?.() || null

@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 
 const UPLOADS_BASE_DIR = path.join(process.cwd(), 'public', 'uploads', 'verification');
+const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
 
 function sanitizePathSegment(value: string | null | undefined, fallback: string): string {
     if (!value) return fallback;
@@ -18,6 +19,20 @@ async function ensureLeader(db: DB, teamId: number, userId: number): Promise<voi
     if (team.current_leader_user_id !== userId) {
         throw new AppError('เฉพาะหัวหน้าทีมเท่านั้นที่สามารถจัดการได้', 403);
     }
+}
+
+function assertTeamEditable(status: string): void {
+    if (!LOCKED_TEAM_STATUSES.has(String(status || '').toLowerCase())) return;
+    throw new BadRequestError('ทีมถูกล็อกหลังส่งเอกสารยืนยันตัวตนแล้ว ไม่สามารถแก้ไขข้อมูลส่งผลงานได้');
+}
+
+async function ensureLeaderAndEditable(db: DB, teamId: number, userId: number): Promise<void> {
+    const team = await repo.getTeamById(db, teamId);
+    if (!team) throw new NotFoundError('ไม่พบทีม');
+    if (team.current_leader_user_id !== userId) {
+        throw new AppError('เฉพาะหัวหน้าทีมเท่านั้นที่สามารถจัดการได้', 403);
+    }
+    assertTeamEditable(team.status);
 }
 
 async function ensureMember(db: DB, teamId: number, userId: number): Promise<void> {
@@ -42,7 +57,7 @@ export async function getSubmissionData(db: DB, teamId: number, userId: number) 
 // ── Video Link ──
 
 export async function saveVideoLink(db: DB, teamId: number, userId: number, videoLink: string | null) {
-    await ensureLeader(db, teamId, userId);
+    await ensureLeaderAndEditable(db, teamId, userId);
 
     if (videoLink) {
         const trimmed = videoLink.trim();
@@ -66,7 +81,7 @@ export async function uploadSubmissionFile(
     userId: number,
     file: { filename: string; mimetype: string; file: NodeJS.ReadableStream }
 ): Promise<{ fileId: number; fileName: string }> {
-    await ensureLeader(db, teamId, userId);
+    await ensureLeaderAndEditable(db, teamId, userId);
 
     const team = await repo.getTeamById(db, teamId);
     const teamName = sanitizePathSegment(team?.team_name_en || team?.team_name_th, `team_${teamId}`);
@@ -103,7 +118,7 @@ export async function uploadSubmissionFile(
 }
 
 export async function deleteSubmissionFile(db: DB, teamId: number, userId: number, fileId: number) {
-    await ensureLeader(db, teamId, userId);
+    await ensureLeaderAndEditable(db, teamId, userId);
 
     const file = await repo.getSubmissionFileById(db, fileId);
     if (!file || file.team_id !== teamId) throw new NotFoundError('ไม่พบไฟล์');
@@ -150,7 +165,7 @@ export async function addAdvisor(
         position: string | null;
     }
 ) {
-    await ensureLeader(db, teamId, userId);
+    await ensureLeaderAndEditable(db, teamId, userId);
 
     // Check email uniqueness
     if (data.email) {
@@ -186,7 +201,7 @@ export async function updateAdvisor(
         position: string | null;
     }
 ) {
-    await ensureLeader(db, teamId, userId);
+    await ensureLeaderAndEditable(db, teamId, userId);
 
     const advisor = await repo.getAdvisorById(db, advisorId);
     if (!advisor || advisor.team_id !== teamId) throw new NotFoundError('ไม่พบอาจารย์ที่ปรึกษา');
@@ -203,7 +218,7 @@ export async function updateAdvisor(
 }
 
 export async function removeAdvisor(db: DB, teamId: number, userId: number, advisorId: number) {
-    await ensureLeader(db, teamId, userId);
+    await ensureLeaderAndEditable(db, teamId, userId);
 
     const advisor = await repo.getAdvisorById(db, advisorId);
     if (!advisor || advisor.team_id !== teamId) throw new NotFoundError('ไม่พบอาจารย์ที่ปรึกษา');

@@ -39,3 +39,7 @@ export const respondInvitationSchema = z.object({
 export const transferLeaderSchema = z.object({
     newLeaderUserId: z.number().int().positive(),
 });
+
+export const updateTeamVisibilitySchema = z.object({
+    visibility: z.enum(['public', 'private']),
+});

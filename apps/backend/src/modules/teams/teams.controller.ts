@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { createTeamSchema, getTeamsSchema, requestJoinSchema, respondJoinSchema, createInvitationSchema, respondInvitationSchema, joinByCodeSchema, transferLeaderSchema } from './teams.schema.js';
+import { createTeamSchema, getTeamsSchema, requestJoinSchema, respondJoinSchema, createInvitationSchema, respondInvitationSchema, joinByCodeSchema, transferLeaderSchema, updateTeamVisibilitySchema } from './teams.schema.js';
 import * as service from './teams.service.js';
 import { ok } from '../../shared/response.js';
 import { AppError } from '../../shared/errors.js';
@@ -94,6 +94,25 @@ export async function handleTransferLeader(req: FastifyRequest<{ Params: { id: s
     try {
         const result = await service.transferLeader(req.server.ctx.db, teamId, user.userId, parsed.data.newLeaderUserId);
         return reply.send(ok(result, 'โอนหัวหน้าทีมสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateTeamVisibility(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const teamId = parseInt(req.params.id, 10);
+    if (isNaN(teamId)) return reply.status(400).send({ ok: false, message: 'Invalid team ID' });
+    const parsed = updateTeamVisibilitySchema.safeParse(req.body);
+    if (!parsed.success) {
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+    }
+    const user = req.user as JwtPayload;
+    try {
+        const result = await service.updateTeamVisibility(req.server.ctx.db, teamId, user.userId, parsed.data.visibility);
+        return reply.send(ok(result, 'อัปเดตสถานะ public/private ของทีมสำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });

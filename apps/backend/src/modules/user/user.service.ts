@@ -1,7 +1,9 @@
 import type { DB } from '../../config/db.js';
 import type { UserProfileSafe, PrivacySettingsSafe, SocialLinkSafe, PublicProfileSafe, SocialLinkRow } from './user.types.js';
-import { NotFoundError } from '../../shared/errors.js';
+import { BadRequestError, NotFoundError } from '../../shared/errors.js';
 import * as repo from './user.repo.js';
+
+const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
 
 /* ═══════════════════════════════════════════════════
    1.6  Profile
@@ -46,6 +48,10 @@ export async function updateProfile(
         homeProvince?: string | undefined;
     },
 ): Promise<UserProfileSafe> {
+    const team = await repo.getActiveTeamByUserId(db, userId);
+    if (team && LOCKED_TEAM_STATUSES.has(String(team.status || '').toLowerCase())) {
+        throw new BadRequestError('โปรไฟล์ถูกล็อกหลังทีมส่งเอกสารยืนยันตัวตนแล้ว');
+    }
     await repo.updateProfile(db, userId, data);
     return getProfile(db, userId);
 }
