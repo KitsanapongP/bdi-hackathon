@@ -279,6 +279,45 @@ export async function handleReorderSponsorsAdmin(req: FastifyRequest, reply: Fas
     }
 }
 
+export async function handleGetPageByCodeAdmin(
+    req: FastifyRequest<{ Params: { pageCode: string } }>,
+    reply: FastifyReply
+) {
+    try {
+        const page = await contentService.getPageByCodeAdmin(req.server.ctx.db, req.params.pageCode);
+        return reply.send(ok(page));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdatePageByCodeAdmin(
+    req: FastifyRequest<{
+        Params: { pageCode: string };
+        Body: {
+            titleTh?: string;
+            titleEn?: string;
+            contentHtmlTh?: string | null;
+            contentHtmlEn?: string | null;
+            isPublished?: boolean;
+        };
+    }>,
+    reply: FastifyReply
+) {
+    try {
+        const page = await contentService.updatePageByCodeAdmin(req.server.ctx.db, req.params.pageCode, req.body || {});
+        return reply.send(ok(page, 'อัปเดต static page สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
 export async function handleGetAllCarouselsAdmin(req: FastifyRequest, reply: FastifyReply) {
     try {
         const carousels = await contentService.getAllCarouselsAdmin(req.server.ctx.db);

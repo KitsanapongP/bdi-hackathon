@@ -8,6 +8,7 @@ import {
     handleUpdateAllowlist,
     handleGetAdminMe,
     handleGetAllRewardsAdmin,
+    handleGetPageByCodeAdmin,
     handleCreateRewardAdmin,
     handleUpdateRewardAdmin,
     handleDeleteRewardAdmin,
@@ -32,6 +33,7 @@ import {
     handleUpdateContactChannelAdmin,
     handleDeleteContactChannelAdmin,
     handleReorderContactChannelsAdmin,
+    handleUpdatePageByCodeAdmin,
     handleGetScheduleAdminBundle,
     handleCreateScheduleItemAdmin,
     handleUpdateScheduleItemAdmin,
@@ -54,6 +56,8 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.patch('/allowlist/:allowId', handleUpdateAllowlist);
 
     fastify.get('/rewards', handleGetAllRewardsAdmin);
+    fastify.get('/pages/:pageCode', handleGetPageByCodeAdmin);
+    fastify.put('/pages/:pageCode', handleUpdatePageByCodeAdmin);
     fastify.post('/rewards', handleCreateRewardAdmin);
     fastify.patch('/rewards/:id', handleUpdateRewardAdmin);
     fastify.delete('/rewards/:id', handleDeleteRewardAdmin);

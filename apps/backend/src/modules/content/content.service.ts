@@ -11,6 +11,7 @@ import type {
     ContentContactAdmin,
     ContentContactChannelAdmin,
     ContentPage,
+    ContentPageAdmin,
     ContentReward,
     ContentRewardAdmin,
     ContentSponsor,
@@ -1298,6 +1299,73 @@ export async function getPublishedPageByCode(db: DB, pageCode: string): Promise<
         titleEn: page.title_en,
         contentHtmlTh: page.content_html_th,
         contentHtmlEn: page.content_html_en,
+    };
+}
+
+export async function getPageByCodeAdmin(db: DB, pageCode: string): Promise<ContentPageAdmin> {
+    const page = await repo.getPageByCodeAdmin(db, pageCode);
+    if (!page) {
+        throw new NotFoundError('ไม่พบข้อมูลหน้าที่ร้องขอ');
+    }
+
+    return {
+        id: page.page_id,
+        code: page.page_code,
+        titleTh: page.title_th,
+        titleEn: page.title_en,
+        contentHtmlTh: page.content_html_th,
+        contentHtmlEn: page.content_html_en,
+        isPublished: page.is_published === 1,
+        publishedAt: page.published_at,
+    };
+}
+
+export async function updatePageByCodeAdmin(
+    db: DB,
+    pageCode: string,
+    data: {
+        titleTh?: string;
+        titleEn?: string;
+        contentHtmlTh?: string | null;
+        contentHtmlEn?: string | null;
+        isPublished?: boolean;
+    }
+): Promise<ContentPageAdmin> {
+    const existing = await repo.getPageByCodeAdmin(db, pageCode);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูลหน้าที่ร้องขอ');
+    }
+
+    const updatePayload: {
+        titleTh?: string;
+        titleEn?: string;
+        contentHtmlTh?: string | null;
+        contentHtmlEn?: string | null;
+        isPublished?: boolean;
+    } = {};
+
+    if (data.titleTh !== undefined) updatePayload.titleTh = data.titleTh;
+    if (data.titleEn !== undefined) updatePayload.titleEn = data.titleEn;
+    if (data.contentHtmlTh !== undefined) updatePayload.contentHtmlTh = data.contentHtmlTh;
+    if (data.contentHtmlEn !== undefined) updatePayload.contentHtmlEn = data.contentHtmlEn;
+    if (data.isPublished !== undefined) updatePayload.isPublished = data.isPublished;
+
+    await repo.updatePageByCodeAdmin(db, pageCode, updatePayload);
+
+    const updated = await repo.getPageByCodeAdmin(db, pageCode);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบข้อมูลหน้าหลังการอัปเดต');
+    }
+
+    return {
+        id: updated.page_id,
+        code: updated.page_code,
+        titleTh: updated.title_th,
+        titleEn: updated.title_en,
+        contentHtmlTh: updated.content_html_th,
+        contentHtmlEn: updated.content_html_en,
+        isPublished: updated.is_published === 1,
+        publishedAt: updated.published_at,
     };
 }
 

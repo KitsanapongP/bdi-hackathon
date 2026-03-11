@@ -405,6 +405,69 @@ export async function getPublishedPageByCode(db: DB, pageCode: string): Promise<
     return result[0] || null;
 }
 
+export async function getPageByCodeAdmin(db: DB, pageCode: string): Promise<ContentPageRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_pages
+         WHERE UPPER(page_code) = UPPER(?)
+         ORDER BY page_id DESC
+         LIMIT 1`,
+        [pageCode]
+    );
+
+    const result = rows as ContentPageRow[];
+    return result[0] ?? null;
+}
+
+export async function updatePageByCodeAdmin(
+    db: DB,
+    pageCode: string,
+    data: {
+        titleTh?: string;
+        titleEn?: string;
+        contentHtmlTh?: string | null;
+        contentHtmlEn?: string | null;
+        isPublished?: boolean;
+    }
+): Promise<void> {
+    const fields: string[] = [];
+    const values: Array<string | number | null> = [];
+
+    if (data.titleTh !== undefined) {
+        fields.push('title_th = ?');
+        values.push(data.titleTh);
+    }
+    if (data.titleEn !== undefined) {
+        fields.push('title_en = ?');
+        values.push(data.titleEn);
+    }
+    if (data.contentHtmlTh !== undefined) {
+        fields.push('content_html_th = ?');
+        values.push(data.contentHtmlTh);
+    }
+    if (data.contentHtmlEn !== undefined) {
+        fields.push('content_html_en = ?');
+        values.push(data.contentHtmlEn);
+    }
+    if (data.isPublished !== undefined) {
+        fields.push('is_published = ?');
+        values.push(data.isPublished ? 1 : 0);
+        fields.push('published_at = ?');
+        values.push(data.isPublished ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null);
+    }
+
+    if (!fields.length) return;
+
+    values.push(pageCode);
+
+    await db.query(
+        `UPDATE content_pages
+         SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+         WHERE UPPER(page_code) = UPPER(?)`,
+        values
+    );
+}
+
 export async function getEnabledContacts(db: DB): Promise<ContentContactRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT *
