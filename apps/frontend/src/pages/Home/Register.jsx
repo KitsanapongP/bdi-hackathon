@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
+import { DatePicker } from 'antd';
 import {
     Loader2,
     Rocket,
@@ -51,6 +53,12 @@ function RegisterPage() {
     const [regInstitutionNameTh, setRegInstitutionNameTh] = useState('');
     const [regInstitutionNameEn, setRegInstitutionNameEn] = useState('');
     const [regHomeProvince, setRegHomeProvince] = useState('');
+
+    const [registerStep, setRegisterStep] = useState('form');
+    const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
+    const [verificationCode, setVerificationCode] = useState('');
+    const [verificationExpiresAt, setVerificationExpiresAt] = useState('');
+    const [verificationCountdown, setVerificationCountdown] = useState(0);
 
     const [errorMsg, setErrorMsg] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -107,6 +115,38 @@ function RegisterPage() {
             cancelled = true;
         };
     }, [isRegisterMode]);
+
+    useEffect(() => {
+        if (!isRegisterMode || registerStep !== 'verify' || !verificationExpiresAt) {
+            setVerificationCountdown(0);
+            return;
+        }
+
+        const updateCountdown = () => {
+            const remainingMs = new Date(verificationExpiresAt).getTime() - Date.now();
+            const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+            setVerificationCountdown(remainingSec);
+        };
+
+        updateCountdown();
+        const timer = window.setInterval(updateCountdown, 1000);
+        return () => window.clearInterval(timer);
+    }, [isRegisterMode, registerStep, verificationExpiresAt]);
+
+    const resetVerificationState = () => {
+        setRegisterStep('form');
+        setPendingVerificationEmail('');
+        setVerificationCode('');
+        setVerificationExpiresAt('');
+        setVerificationCountdown(0);
+    };
+
+    const formatVerificationCountdown = (seconds) => {
+        const safeSeconds = Math.max(0, seconds);
+        const mins = Math.floor(safeSeconds / 60);
+        const secs = safeSeconds % 60;
+        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    };
 
     const saveUserAndRedirect = (user) => {
         const userInfo = {
@@ -209,6 +249,10 @@ function RegisterPage() {
             setErrorMsg('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
             return;
         }
+        if (!regBirthDate) {
+            setErrorMsg('กรุณาเลือกวันเดือนปีเกิด');
+            return;
+        }
         if (isConsentLoading) {
             setErrorMsg('กำลังโหลดเอกสารข้อตกลง กรุณารอสักครู่');
             return;
@@ -250,6 +294,7 @@ function RegisterPage() {
                     institutionNameTh: regInstitutionNameTh,
                     institutionNameEn: regInstitutionNameEn,
                     homeProvince: regHomeProvince,
+                    acceptedConsentDocIds: [termsDoc.consentDocId, privacyDoc.consentDocId],
                 }),
             });
 
@@ -260,23 +305,86 @@ function RegisterPage() {
                 return;
             }
 
-            await Promise.all(
-                [termsDoc, privacyDoc].map(async (doc) => {
-                    const consentRes = await fetch(apiUrl('/api/consent/accept'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ consentDocId: doc.consentDocId }),
-                    });
+            const nextEmail = data?.data?.email || regEmail.trim();
+            const nextExpiresAt = data?.data?.expiresAt || new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-                    const consentData = await consentRes.json();
-                    if (!consentRes.ok || !consentData.ok) {
-                        throw new Error(consentData.message || 'บันทึกการยินยอมไม่สำเร็จ');
-                    }
-                })
-            );
+            setPendingVerificationEmail(nextEmail);
+            setVerificationCode('');
+            setVerificationExpiresAt(nextExpiresAt);
+            setRegisterStep('verify');
+        } catch (err) {
+            setErrorMsg(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleVerifyRegister = async (e) => {
+        e.preventDefault();
+        setErrorMsg('');
+
+        const normalizedCode = verificationCode.replace(/\D/g, '').slice(0, 6);
+        if (!pendingVerificationEmail) {
+            setErrorMsg('ไม่พบอีเมลสำหรับยืนยัน กรุณาสมัครใหม่อีกครั้ง');
+            resetVerificationState();
+            return;
+        }
+        if (normalizedCode.length !== 6) {
+            setErrorMsg('กรุณากรอกรหัสยืนยัน 6 หลัก');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const res = await fetch(apiUrl('/api/auth/register/verify'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ email: pendingVerificationEmail, code: normalizedCode }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.ok) {
+                setErrorMsg(data.message || 'ไม่สามารถยืนยันรหัสได้');
+                return;
+            }
 
             saveUserAndRedirect(data.data);
+        } catch (err) {
+            setErrorMsg(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleResendVerification = async () => {
+        setErrorMsg('');
+
+        if (!pendingVerificationEmail) {
+            setErrorMsg('ไม่พบอีเมลสำหรับยืนยัน กรุณาสมัครใหม่อีกครั้ง');
+            resetVerificationState();
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const res = await fetch(apiUrl('/api/auth/register/resend'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ email: pendingVerificationEmail }),
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.ok) {
+                setErrorMsg(data.message || 'ไม่สามารถส่งรหัสใหม่ได้');
+                return;
+            }
+
+            const nextExpiresAt = data?.data?.expiresAt || new Date(Date.now() + 5 * 60 * 1000).toISOString();
+            setVerificationExpiresAt(nextExpiresAt);
+            setVerificationCode('');
         } catch (err) {
             setErrorMsg(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
         } finally {
@@ -292,7 +400,9 @@ function RegisterPage() {
                     <div className="gt-badge" style={{ marginBottom: 20 }}>
                         <Rocket size={16} /> Hackathon 2026
                     </div>
-                    <h2 style={{ color: 'var(--gt-text)' }}>{isRegisterMode ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ'}</h2>
+                    <h2 style={{ color: 'var(--gt-text)' }}>
+                        {isRegisterMode ? (registerStep === 'verify' ? 'ยืนยันอีเมล' : 'สมัครสมาชิก') : 'เข้าสู่ระบบ'}
+                    </h2>
 
                     {errorMsg && <div style={{ color: '#ef4444', textAlign: 'center', marginBottom: 16, fontSize: '0.9rem', background: '#fee2e2', padding: 8, borderRadius: 8 }}>{errorMsg}</div>}
 
@@ -301,6 +411,60 @@ function RegisterPage() {
                             <div className="gr-input-group"><label>อีเมล</label><input type="email" name="loginEmail" autoComplete="username" className="gr-input" placeholder="อีเมลของคุณ" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required disabled={isLoading} /></div>
                             <div className="gr-input-group"><label>รหัสผ่าน</label><div className="gr-password-wrap"><input type={showLoginPass ? 'text' : 'password'} name="loginPassword" autoComplete="current-password" className="gr-input" placeholder="รหัสผ่าน" value={loginPass} onChange={(e) => setLoginPass(e.target.value)} required disabled={isLoading} /><button type="button" className="gr-password-toggle" onClick={() => setShowLoginPass(!showLoginPass)} tabIndex={-1}>{showLoginPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
                             <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={isLoading}>{isLoading ? <><Loader2 size={18} className="spin" /> กำลังเข้าสู่ระบบ...</> : 'เข้าสู่ระบบ'}</button>
+                        </form>
+                    ) : registerStep === 'verify' ? (
+                        <form onSubmit={handleVerifyRegister} autoComplete="off" data-lpignore="true" className="gr-verify-form">
+                            <div className="gr-verify-panel">
+                                <p className="gr-verify-text">
+                                    เราได้ส่งรหัสยืนยัน 6 หลักไปที่อีเมล
+                                    <br />
+                                    <strong>{pendingVerificationEmail}</strong>
+                                </p>
+                                <p className="gr-verify-timer">
+                                    หมดอายุใน <strong>{formatVerificationCountdown(verificationCountdown)}</strong>
+                                </p>
+                                <div className="gr-input-group" style={{ marginBottom: 10 }}>
+                                    <label>รหัสยืนยัน (6 หลัก)</label>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        autoComplete="one-time-code"
+                                        className="gr-input gr-verify-code-input"
+                                        placeholder="เช่น 123456"
+                                        maxLength={6}
+                                        value={verificationCode}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                            setVerificationCode(value);
+                                        }}
+                                        required
+                                        disabled={isLoading}
+                                    />
+                                </div>
+                                <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%' }} disabled={isLoading}>
+                                    {isLoading ? <><Loader2 size={18} className="spin" /> กำลังยืนยัน...</> : 'ยืนยันรหัส'}
+                                </button>
+                                <div className="gr-verify-actions">
+                                    <button
+                                        type="button"
+                                        className="gt-btn gt-btn-secondary"
+                                        onClick={handleResendVerification}
+                                        disabled={isLoading}
+                                        style={{ width: '100%' }}
+                                    >
+                                        ส่งรหัสใหม่
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="gt-btn"
+                                        onClick={resetVerificationState}
+                                        disabled={isLoading}
+                                        style={{ width: '100%' }}
+                                    >
+                                        กลับไปแก้ข้อมูล
+                                    </button>
+                                </div>
+                            </div>
                         </form>
                     ) : (
                         <form onSubmit={handleRegister} autoComplete="off" data-lpignore="true">
@@ -313,7 +477,19 @@ function RegisterPage() {
                                         <div className="gr-input-group"><label>ชื่อ-นามสกุล (ภาษาไทย)</label><input type="text" name="registerFullNameTh" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="เช่น สมชาย ใจดี" value={regFullNameTh} onChange={(e) => setRegFullNameTh(e.target.value)} required disabled={isLoading} /></div>
                                         <div className="gr-input-group"><label>ชื่อ-นามสกุล (ภาษาอังกฤษ)</label><input type="text" name="registerFullNameEn" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="e.g. Somchai Jaidee" value={regFullNameEn} onChange={(e) => setRegFullNameEn(e.target.value)} required disabled={isLoading} /></div>
                                         <div className="gr-input-group"><label>เพศ (Gender)</label><select className="gr-input" autoComplete="off" data-lpignore="true" value={regGender} onChange={(e) => setRegGender(e.target.value)} disabled={isLoading}>{GENDER_OPTIONS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}</select></div>
-                                        <div className="gr-input-group"><label>วันเดือนปีเกิด (Date of Birth)</label><input type="date" lang="en-GB" className="gr-input" autoComplete="off" data-lpignore="true" value={regBirthDate} onChange={(e) => setRegBirthDate(e.target.value)} required disabled={isLoading} /></div>
+                                        <div className="gr-input-group">
+                                            <label>วันเดือนปีเกิด (Date of Birth)</label>
+                                            <DatePicker
+                                                className="gr-date-picker"
+                                                format="DD/MM/YYYY"
+                                                placeholder="วัน/เดือน/ปี"
+                                                value={regBirthDate ? dayjs(regBirthDate, 'YYYY-MM-DD') : null}
+                                                onChange={(value) => setRegBirthDate(value ? value.format('YYYY-MM-DD') : '')}
+                                                allowClear={false}
+                                                disabled={isLoading}
+                                                disabledDate={(current) => current && current > dayjs().endOf('day')}
+                                            />
+                                        </div>
                                     </div>
                                 </section>
 
@@ -379,8 +555,8 @@ function RegisterPage() {
 
                     <p style={{ textAlign: 'center', marginTop: 16, fontSize: '0.85rem', color: 'var(--gt-text-muted)' }}>
                         {isRegisterMode
-                            ? <>มีบัญชีแล้ว? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); setIsRegisterMode(false); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>เข้าสู่ระบบ</a></>
-                            : <>ยังไม่มีบัญชี? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); setIsRegisterMode(true); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>สมัครสมาชิก</a></>}
+                            ? <>มีบัญชีแล้ว? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); resetVerificationState(); setIsRegisterMode(false); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>เข้าสู่ระบบ</a></>
+                            : <>ยังไม่มีบัญชี? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); resetVerificationState(); setIsRegisterMode(true); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>สมัครสมาชิก</a></>}
                     </p>
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}><ThemeToggle /></div>
                 </div>

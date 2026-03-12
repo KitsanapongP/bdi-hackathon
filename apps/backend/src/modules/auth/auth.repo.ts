@@ -1,5 +1,5 @@
 import type { DB } from '../../config/db.js';
-import type { UserRow, CredentialRow } from './auth.types.js';
+import type { UserRow, CredentialRow, PendingRegistrationRow, RegisterInput } from './auth.types.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 /** Find a user by email in user_credentials_local (join user_users) */
@@ -103,13 +103,147 @@ export async function createCredential(
 /** Create an identity record */
 export async function createIdentity(
     db: DB,
-    data: { userId: number; email: string; identityType: string; domainRule: string },
+    data: { userId: number; email: string; identityType: string; domainRule: string; isVerified?: boolean },
 ): Promise<void> {
     await db.query(
-        `INSERT INTO user_identities (user_id, identity_type, identifier, domain_rule, is_verified, created_at, updated_at)
-     VALUES (:userId, :identityType, :email, :domainRule, 0, NOW(), NOW())`,
-        { userId: data.userId, identityType: data.identityType, email: data.email, domainRule: data.domainRule },
+        `INSERT INTO user_identities (user_id, identity_type, identifier, domain_rule, is_verified, verified_at, created_at, updated_at)
+     VALUES (:userId, :identityType, :email, :domainRule, :isVerified, :verifiedAt, NOW(), NOW())`,
+        {
+            userId: data.userId,
+            identityType: data.identityType,
+            email: data.email,
+            domainRule: data.domainRule,
+            isVerified: data.isVerified ? 1 : 0,
+            verifiedAt: data.isVerified ? new Date() : null,
+        },
     );
+}
+
+export async function findPendingRegistrationByEmail(db: DB, email: string): Promise<PendingRegistrationRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT * FROM user_registration_verifications WHERE email = :email LIMIT 1`,
+        { email },
+    );
+    return (rows[0] as PendingRegistrationRow | undefined) ?? null;
+}
+
+export async function findActivePendingRegistrationByUserName(db: DB, userName: string): Promise<PendingRegistrationRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM user_registration_verifications
+         WHERE user_name = :userName
+           AND consumed_at IS NULL
+           AND expires_at > NOW()
+         LIMIT 1`,
+        { userName },
+    );
+    return (rows[0] as PendingRegistrationRow | undefined) ?? null;
+}
+
+export async function upsertPendingRegistration(
+    db: DB,
+    data: {
+        email: string;
+        userName: string;
+        verificationCodeHash: string;
+        payloadJson: string;
+        expiresAt: Date;
+    },
+): Promise<void> {
+    await db.query(
+        `INSERT INTO user_registration_verifications (
+            email, user_name, verification_code_hash, payload_json, expires_at,
+            last_sent_at, attempt_count, consumed_at, created_at, updated_at
+        )
+        VALUES (
+            :email, :userName, :verificationCodeHash, :payloadJson, :expiresAt,
+            NOW(), 0, NULL, NOW(), NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+            user_name = VALUES(user_name),
+            verification_code_hash = VALUES(verification_code_hash),
+            payload_json = VALUES(payload_json),
+            expires_at = VALUES(expires_at),
+            last_sent_at = NOW(),
+            attempt_count = 0,
+            consumed_at = NULL,
+            updated_at = NOW()`,
+        data,
+    );
+}
+
+export async function refreshPendingRegistrationCode(
+    db: DB,
+    data: { email: string; verificationCodeHash: string; expiresAt: Date },
+): Promise<void> {
+    await db.query(
+        `UPDATE user_registration_verifications
+         SET verification_code_hash = :verificationCodeHash,
+             expires_at = :expiresAt,
+             last_sent_at = NOW(),
+             attempt_count = 0,
+             consumed_at = NULL,
+             updated_at = NOW()
+         WHERE email = :email`,
+        data,
+    );
+}
+
+export async function incrementPendingRegistrationAttempt(db: DB, registrationId: number): Promise<void> {
+    await db.query(
+        `UPDATE user_registration_verifications
+         SET attempt_count = attempt_count + 1,
+             updated_at = NOW()
+         WHERE registration_id = :registrationId`,
+        { registrationId },
+    );
+}
+
+export async function consumePendingRegistration(db: DB, registrationId: number): Promise<void> {
+    await db.query(
+        `UPDATE user_registration_verifications
+         SET consumed_at = NOW(),
+             verification_code_hash = '',
+             updated_at = NOW()
+         WHERE registration_id = :registrationId`,
+        { registrationId },
+    );
+}
+
+export async function recordUserConsentFromSignup(
+    db: DB,
+    data: {
+        userId: number;
+        consentDocId: number;
+        acceptSource: string;
+        acceptIp: string;
+        userAgent: string;
+    },
+): Promise<void> {
+    await db.query(
+        `INSERT INTO user_consents (user_id, consent_doc_id, accepted_at, accept_source, accept_ip, user_agent, created_at)
+         SELECT :userId, d.consent_doc_id, NOW(), :acceptSource, :acceptIp, :userAgent, NOW()
+         FROM user_consent_documents d
+         WHERE d.consent_doc_id = :consentDocId
+           AND d.is_active = 1
+         ON DUPLICATE KEY UPDATE
+           accepted_at = VALUES(accepted_at),
+           accept_source = VALUES(accept_source),
+           accept_ip = VALUES(accept_ip),
+           user_agent = VALUES(user_agent)`,
+        data,
+    );
+}
+
+export function sanitizeConsentDocIds(ids: RegisterInput['acceptedConsentDocIds']): number[] {
+    if (!Array.isArray(ids)) return [];
+    const uniq = new Set<number>();
+    for (const value of ids) {
+        if (Number.isInteger(value) && value > 0) {
+            uniq.add(value);
+        }
+    }
+    return Array.from(uniq);
 }
 
 /** Find access role for a user from access_allowlist */

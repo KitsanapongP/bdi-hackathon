@@ -462,6 +462,82 @@ body:has(.gr-page) {
     box-sizing: border-box;
 }
 
+.gr-date-picker {
+    width: 100%;
+}
+
+.gr-date-picker.ant-picker {
+    width: 100%;
+    border: 1px solid var(--gt-border);
+    border-radius: 12px;
+    background: var(--gt-surface-alt);
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.gr-date-picker.ant-picker .ant-picker-input>input {
+    padding: 11px 14px;
+    font-size: 0.95rem;
+    color: var(--gt-text);
+}
+
+.gr-date-picker.ant-picker .ant-picker-input>input::placeholder {
+    color: var(--gt-text-muted);
+}
+
+.gr-date-picker.ant-picker .ant-picker-suffix {
+    color: var(--gt-text-muted);
+    margin-right: 10px;
+}
+
+.gr-date-picker.ant-picker-focused,
+.gr-date-picker.ant-picker:hover {
+    border-color: var(--gt-primary);
+    box-shadow: 0 0 0 3px var(--gt-primary-glow, rgba(124, 58, 237, 0.15));
+}
+
+.gr-date-picker.ant-picker-disabled {
+    opacity: 0.7;
+}
+
+.gr-verify-form {
+    margin-top: 4px;
+}
+
+.gr-verify-panel {
+    border: 1px solid var(--gt-border);
+    border-radius: 16px;
+    background: color-mix(in oklab, var(--gt-surface) 90%, transparent);
+    padding: 18px;
+}
+
+.gr-verify-text {
+    margin: 0 0 10px;
+    text-align: center;
+    color: var(--gt-text);
+    line-height: 1.5;
+}
+
+.gr-verify-timer {
+    margin: 0 0 14px;
+    text-align: center;
+    color: var(--gt-text-muted);
+    font-size: 0.9rem;
+}
+
+.gr-verify-code-input {
+    text-align: center;
+    letter-spacing: 0.25em;
+    font-weight: 700;
+}
+
+.gr-verify-actions {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .gr-password-wrap {
     position: relative;
     display: flex;
@@ -1011,6 +1087,19 @@ body:has(.gr-page) {
 
 .dark .gr-form-section {
     background: color-mix(in oklab, var(--gt-surface-alt) 84%, transparent);
+}
+
+.dark .gr-date-picker.ant-picker {
+    background: var(--gt-surface-alt);
+    border-color: var(--gt-border);
+}
+
+.dark .gr-date-picker.ant-picker .ant-picker-input>input {
+    color: var(--gt-text);
+}
+
+.dark .gr-date-picker.ant-picker .ant-picker-suffix {
+    color: var(--gt-text-muted);
 }
 
 .dark .gr-consent-checkbox-row {

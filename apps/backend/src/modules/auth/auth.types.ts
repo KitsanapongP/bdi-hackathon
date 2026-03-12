@@ -1,3 +1,5 @@
+import type { RowDataPacket } from 'mysql2/promise';
+
 /** Types matching DB schema from 001_init.sql.sql */
 
 /** Row from `user_users` table */
@@ -50,6 +52,18 @@ export interface RegisterInput {
     institutionNameTh: string;
     institutionNameEn: string;
     homeProvince: string;
+    acceptedConsentDocIds?: number[] | undefined;
+}
+
+/** Input for POST /api/auth/register/verify */
+export interface RegisterVerifyInput {
+    email: string;
+    code: string;
+}
+
+/** Input for POST /api/auth/register/resend */
+export interface RegisterResendInput {
+    email: string;
 }
 
 /** Input for POST /api/auth/login */
@@ -88,4 +102,19 @@ export interface UserSafe {
     teamId?: number;
     teamCode?: string;
     teamRole?: string;
+}
+
+/** Row from `user_registration_verifications` table */
+export interface PendingRegistrationRow extends RowDataPacket {
+    registration_id: number;
+    email: string;
+    user_name: string;
+    verification_code_hash: string;
+    payload_json: string;
+    expires_at: Date;
+    last_sent_at: Date;
+    attempt_count: number;
+    consumed_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
 }

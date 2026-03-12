@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.0",
+    "antd": "^6.3.2",
     "clsx": "^2.1.1",
+    "dayjs": "^1.11.20",
     "framer-motion": "^12.34.2",
     "jsqr": "^1.4.0",
     "lucide-react": "^0.575.0",

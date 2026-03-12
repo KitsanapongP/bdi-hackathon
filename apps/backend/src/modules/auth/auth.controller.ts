@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { registerSchema, loginSchema } from './auth.schema.js';
+import { registerSchema, loginSchema, registerVerifySchema, registerResendSchema } from './auth.schema.js';
 import * as service from './auth.service.js';
 import type { JwtPayload } from './auth.types.js';
 import { ok } from '../../shared/response.js';
@@ -27,7 +27,29 @@ export async function handleRegister(req: FastifyRequest, reply: FastifyReply) {
     }
 
     try {
-        const user = await service.registerUser(req.server.ctx.db, parsed.data);
+        const data = await service.requestRegistrationVerification(req.server.ctx.db, parsed.data);
+        return reply.send(ok(data, 'ส่งรหัสยืนยันไปยังอีเมลแล้ว'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+/** POST /api/auth/register/verify */
+export async function handleRegisterVerify(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = registerVerifySchema.safeParse(req.body);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const user = await service.verifyRegistrationCode(req.server.ctx.db, parsed.data, {
+            acceptIp: req.ip || '0.0.0.0',
+            userAgent: String(req.headers['user-agent'] || 'unknown'),
+        });
 
         const payload: JwtPayload = {
             userId: user.userId,
@@ -38,7 +60,26 @@ export async function handleRegister(req: FastifyRequest, reply: FastifyReply) {
         const token = req.server.jwt.sign(payload, { expiresIn: '7d' });
 
         setTokenCookie(reply, token);
-        return reply.status(201).send(ok(user, 'สมัครสมาชิกสำเร็จ'));
+        return reply.send(ok(user, 'ยืนยันอีเมลสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+/** POST /api/auth/register/resend */
+export async function handleRegisterResend(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = registerResendSchema.safeParse(req.body);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const data = await service.resendRegistrationVerification(req.server.ctx.db, parsed.data);
+        return reply.send(ok(data, 'ส่งรหัสยืนยันใหม่เรียบร้อย'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });
