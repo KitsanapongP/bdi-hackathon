@@ -1148,78 +1148,107 @@ section.gt-hero {
 
 .gt-process-steps {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 20px;
-    max-width: 1120px;
-    margin: 0 auto;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 18px;
+    width: 100%;
+    max-width: none;
+    margin: 0;
     position: relative;
     z-index: 2;
+    padding-top: 6px;
+}
+
+#process.gt-container {
+    max-width: none;
+    padding-inline: clamp(20px, 3.8vw, 56px);
+}
+
+.gt-process-steps::before {
+    content: '';
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    top: 72px;
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(124, 58, 237, 0.35) 0%, rgba(59, 130, 246, 0.48) 50%, rgba(20, 184, 166, 0.35) 100%);
+    box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.08), 0 8px 18px -12px rgba(59, 130, 246, 0.75);
+    z-index: 0;
 }
 
 .gt-step {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.gt-step-date {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    min-height: 30px;
+    border-radius: 999px;
+    border: 1px solid var(--gt-border);
+    background: var(--gt-surface);
+    color: var(--gt-primary);
+    font-size: 0.81rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.07);
+}
+
+.gt-step-date.is-empty {
+    opacity: 0;
+}
+
+.step-num {
+    width: 56px;
+    height: 56px;
+    background: var(--gt-gradient);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.84rem;
+    letter-spacing: 0.08em;
+    font-weight: 800;
+    border: 3px solid var(--gt-surface);
+    box-shadow: 0 10px 24px -10px var(--gt-primary-glow);
+}
+
+.gt-step-body {
     background:
-        linear-gradient(180deg, rgba(124, 58, 237, 0.08) 0%, rgba(124, 58, 237, 0) 30%),
+        linear-gradient(180deg, rgba(124, 58, 237, 0.09) 0%, rgba(124, 58, 237, 0) 32%),
         var(--gt-surface);
     border: 1px solid var(--gt-border);
     border-radius: 18px;
-    padding: 24px 22px;
-    text-align: left;
-    grid-column: span 2;
-    min-height: 240px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    padding: 20px 18px;
+    width: 100%;
+    min-height: 250px;
+    box-sizing: border-box;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-    z-index: 2;
 }
 
-.gt-process-steps .gt-step:nth-child(4) {
-    grid-column: 2 / span 2;
-}
-
-.gt-process-steps .gt-step:nth-child(5) {
-    grid-column: 4 / span 2;
-}
-
-.gt-step:hover {
+.gt-step:hover .gt-step-body {
     transform: translateY(-3px);
     border-color: var(--gt-primary);
     box-shadow: 0 14px 34px -16px var(--gt-primary-glow);
 }
 
-.step-num {
-    width: fit-content;
-    min-width: 54px;
-    height: 30px;
-    background: var(--gt-primary);
-    color: #fff;
-    border-radius: 999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.82rem;
-    letter-spacing: 0.06em;
-    font-weight: 700;
-    margin: 0 auto 12px;
-    padding: 0 12px;
-    box-shadow: 0 4px 12px var(--gt-primary-glow);
-}
-
 .gt-step h3 {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 700;
     margin: 0 0 12px;
     color: var(--gt-text);
-    line-height: 1.45;
-}
-
-.gt-step p {
-    color: var(--gt-text-muted);
-    font-size: 0.95rem;
-    margin: 0;
-    line-height: 1.6;
+    line-height: 1.4;
 }
 
 .gt-step-list {
@@ -1550,32 +1579,46 @@ section.gt-hero {
 
     .gt-process-steps {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 18px;
+        max-width: none;
     }
 
-    .gt-process-steps .gt-step:nth-child(4),
-    .gt-process-steps .gt-step:nth-child(5) {
-        grid-column: auto;
+    .gt-process-steps::before {
+        left: 28px;
+        right: auto;
+        top: 18px;
+        bottom: 18px;
+        width: 3px;
+        height: auto;
     }
 
     .gt-step {
-        padding: 22px 20px;
+        display: grid;
+        grid-template-columns: 56px 1fr;
+        grid-template-areas:
+            'date date'
+            'node body';
+        align-items: start;
+        gap: 10px 12px;
+    }
+
+    .gt-step-date {
+        grid-area: date;
+        justify-self: start;
+        margin-left: 56px;
+    }
+
+    .step-num {
+        grid-area: node;
+        width: 46px;
+        height: 46px;
+        font-size: 0.78rem;
+    }
+
+    .gt-step-body {
+        grid-area: body;
         min-height: auto;
-    }
-
-    .gt-step h3 {
-        min-height: 0;
-    }
-}
-
-@media (max-width: 1024px) and (min-width: 769px) {
-    .gt-process-steps {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .gt-process-steps .gt-step:nth-child(4),
-    .gt-process-steps .gt-step:nth-child(5) {
-        grid-column: span 1;
+        padding: 18px 16px;
     }
 }
 
