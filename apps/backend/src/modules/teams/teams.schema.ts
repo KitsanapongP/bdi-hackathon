@@ -43,3 +43,7 @@ export const transferLeaderSchema = z.object({
 export const updateTeamVisibilitySchema = z.object({
     visibility: z.enum(['public', 'private']),
 });
+
+export const updateTeamNameSchema = z.object({
+    teamNameTh: z.string().min(2, 'ชื่อทีมต้องมีอย่างน้อย 2 ตัวอักษร').max(255),
+});

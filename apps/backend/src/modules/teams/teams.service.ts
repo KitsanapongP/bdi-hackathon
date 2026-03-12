@@ -515,3 +515,38 @@ export async function updateTeamVisibility(
 
     return { visibility };
 }
+
+export async function updateTeamName(
+    db: DB,
+    teamId: number,
+    leaderUserId: number,
+    teamNameTh: string,
+) {
+    const team = await repo.getTeamById(db, teamId);
+    if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
+    if (team.current_leader_user_id !== leaderUserId) {
+        throw new AppError('เฉพาะหัวหน้าทีมเท่านั้นที่แก้ไขได้', 403);
+    }
+    assertTeamEditable(team.status, 'แก้ไขชื่อทีม');
+
+    const trimmedName = teamNameTh.trim();
+    if (!trimmedName) {
+        throw new AppError('ชื่อทีมต้องไม่ว่าง', 400);
+    }
+    if (trimmedName === team.team_name_th) {
+        return { teamNameTh: team.team_name_th };
+    }
+
+    await repo.updateTeamName(db, teamId, trimmedName);
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: leaderUserId,
+        actionCode: 'TEAM_NAME_UPDATED',
+        actionDetail: {
+            previous_team_name_th: team.team_name_th,
+            next_team_name_th: trimmedName,
+        },
+    });
+
+    return { teamNameTh: trimmedName };
+}

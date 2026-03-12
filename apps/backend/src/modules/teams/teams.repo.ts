@@ -334,6 +334,15 @@ export async function updateTeamVisibility(db: DB, teamId: number, visibility: '
     `, { teamId, visibility });
 }
 
+export async function updateTeamName(db: DB, teamId: number, teamNameTh: string): Promise<void> {
+    await db.query(`
+        UPDATE team_teams
+        SET team_name_th = :teamNameTh,
+            updated_at = NOW()
+        WHERE team_id = :teamId
+    `, { teamId, teamNameTh });
+}
+
 export async function confirmTeamParticipation(
     db: DB,
     teamId: number,

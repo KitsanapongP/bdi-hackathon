@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
     AlertTriangle,
     Award,
@@ -193,6 +193,8 @@ export default function TeamContent({ user }) {
     const [renameState, setRenameState] = useState({ open: false, doc: null, value: '' });
     const [toast, setToast] = useState(null);
     const [toastExiting, setToastExiting] = useState(false);
+    const [editingTeamName, setEditingTeamName] = useState(false);
+    const [newTeamNameInput, setNewTeamNameInput] = useState('');
 
     // โ”€โ”€ Verification state โ”€โ”€
     const [verifyData, setVerifyData] = useState(null);
@@ -1107,6 +1109,26 @@ export default function TeamContent({ user }) {
         }, 'success');
     };
 
+    const handleUpdateTeamName = () => {
+        if (!newTeamNameInput.trim()) {
+            showToast('กรุณากรอกชื่อทีม', 'error');
+            return;
+        }
+        withAction(async () => {
+            const res = await fetch(apiUrl(`/api/teams/${team.id}/name`), {
+                method: 'PUT',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ teamNameTh: newTeamNameInput.trim() }),
+            });
+            const payload = await res.json();
+            if (!payload.ok) throw new Error(payload.message || 'เปลี่ยนชื่อทีมไม่สำเร็จ');
+            showToast('เปลี่ยนชื่อทีมสำเร็จ', 'success');
+            setEditingTeamName(false);
+            setTeam(prev => ({ ...prev, name: newTeamNameInput.trim() }));
+        }, { toastError: true });
+    };
+
     const renderSimpleDetail = (title, icon, body) => (
         <div className="gl-detail-view">
             <div className="gl-detail-top">
@@ -1120,118 +1142,245 @@ export default function TeamContent({ user }) {
     const renderManage = () => renderSimpleDetail(
         'จัดการทีม',
         <Settings size={20} />,
-        <div>
-            {/* 2-column team info grid */}
-            <div className="gl-manage-grid">
-                <div className="gl-team-info-card">
-                    <span className="gl-team-info-label"><Users size={13} /> รหัสทีม</span>
-                    <div className="gl-team-info-value">{team.code}</div>
-                </div>
-                <div className="gl-team-info-card">
-                    <span className="gl-team-info-label"><Users size={13} /> จำนวนสมาชิก</span>
-                    <div className="gl-team-info-value">{team.members.length} / {MAX_MEMBERS} คน</div>
-                </div>
-                <div className="gl-team-info-card">
-                    <span className="gl-team-info-label"><Globe size={13} /> การมองเห็นทีม</span>
-                    <div className="gl-visibility-toggle-row">
-                        <button
-                            className={`gl-visibility-btn ${team.visibility === 'public' ? 'active' : ''}`}
-                            disabled={!isLeader || actionLoading || isTeamLocked}
-                            onClick={() => handleUpdateVisibility('public')}
-                        >
-                            Public
-                        </button>
-                        <button
-                            className={`gl-visibility-btn ${team.visibility === 'private' ? 'active' : ''}`}
-                            disabled={!isLeader || actionLoading || isTeamLocked}
-                            onClick={() => handleUpdateVisibility('private')}
-                        >
-                            Private
-                        </button>
-                    </div>
-                    {isTeamLocked && <p className="vf-hint">ทีมถูกล็อกแล้ว ไม่สามารถเปลี่ยน public/private ได้</p>}
-                </div>
-            </div>
-
-            {isLeader && (
-                <>
-                    <div className="gl-manage-grid">
-                        <div className="gl-team-info-card gl-manage-span-full">
-                            <span className="gl-team-info-label"><Copy size={13} /> เชิญเข้าทีม</span>
-                            <div className="gl-invite-row">
-                                <button className="gl-code-chip" onClick={() => navigator.clipboard.writeText(teamInviteCode).then(() => setCopied(true))}>
-                                    <Copy size={14} /> {teamInviteCode}
-                                </button>
-                                {copied && <span style={{ color: '#34d399', fontSize: '0.85rem', fontWeight: 600 }}>คัดลอกสำเร็จ</span>}
-                                <div className="gl-invite-input-group">
-                                    <input className="gr-input" value={inviteUserNameInput} onChange={(e) => setInviteUserNameInput(e.target.value)} placeholder="ใส่ username เพื่อเชิญ" />
-                                    <button className="gt-btn gt-btn-primary" disabled={actionLoading || isTeamLocked} onClick={handleInviteMember}>เชิญ</button>
-                                </div>
-                            </div>
-                            {isTeamLocked && <p className="vf-hint">ทีมถูกล็อกแล้ว ไม่สามารถเชิญสมาชิกเพิ่มได้</p>}
-                        </div>
-                    </div>
-
-                    <div className="gl-manage-grid">
-                        <div className="gl-team-info-card">
-                            <span className="gl-team-info-label"><Clock size={13} /> คำขอเข้าร่วมทีม</span>
-                            {pendingJoinRequests.length === 0 && <div className="gl-team-info-value" style={{ color: 'var(--gl-text-dim)', fontWeight: 600, fontSize: '0.9rem' }}>ยังไม่มีคำขอใหม่</div>}
-                            {pendingJoinRequests.map((req) => (
-                                <div key={req.join_request_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>ผู้ขอเข้าร่วม: {req.requester_user_name || `user_id: ${req.requester_user_id}`}</span>
-                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
-                                        <button className="gt-btn gt-btn-primary" disabled={actionLoading || isTeamLocked} onClick={() => handleRespondJoinRequest(req.join_request_id, 'approved')}>อนุมัติ</button>
-                                        <button className="gt-btn" disabled={actionLoading || isTeamLocked} onClick={() => handleRespondJoinRequest(req.join_request_id, 'rejected')}>ปฏิเสธ</button>
-                                    </div>
-                                </div>
-                            ))}
-                            {isTeamLocked && pendingJoinRequests.length > 0 && <p className="vf-hint">ทีมถูกล็อกแล้ว ไม่สามารถจัดการคำขอเข้าร่วมทีมได้</p>}
+        <div className="gl-manage-container">
+            {/* ── Section 1: Team Settings ── */}
+            <div className="gl-manage-section">
+                <h4 className="gl-manage-section-title">ข้อมูลและการตั้งค่าทีม</h4>
+                <div className="gl-manage-grid">
+                    {/* 1. Team Name */}
+                    <div className="gl-team-info-card gl-manage-glass-card gl-compact-card gl-team-name-card">
+                        <div className="gl-info-header gl-team-name-header">
+                            <span className="gl-team-info-label" style={{ marginBottom: 0 }}><Edit2 size={16} /> ชื่อทีม</span>
                         </div>
 
-                        <div className="gl-team-info-card">
-                            <span className="gl-team-info-label"><LogOut size={13} /> ออกจากทีม</span>
-                            {isLeader ? (
-                                <div className="gl-team-info-value" style={{ color: 'var(--gl-text-dim)', fontWeight: 600, fontSize: '0.9rem' }}>หากเป็นหัวหน้าทีม ต้องโอนหัวหน้าให้สมาชิกคนอื่นก่อน จึงจะออกจากทีมได้</div>
-                            ) : (
-                                <div className="gl-team-info-value">
-                                    <button className="gl-btn-danger" disabled={actionLoading} onClick={handleLeaveCurrentTeam}>ออกจากทีม</button>
+                        <div className="gl-team-name-body">
+                            {!editingTeamName && (
+                                <div className="gl-team-name-display">
+                                    <div className="gl-bold-value gl-team-name-value">{team.name}</div>
+                                    {isLeader && (
+                                        <button
+                                            className="gl-icon-btn gl-team-name-edit-trigger"
+                                            disabled={actionLoading || isTeamLocked}
+                                            onClick={() => { setEditingTeamName(true); setNewTeamNameInput(team.name); }}
+                                            title="แก้ไขชื่อทีม"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
+                            {editingTeamName && (
+                                <div className="gl-team-name-edit-panel">
+                                    <input
+                                        className="gr-input gl-team-name-input"
+                                        value={newTeamNameInput}
+                                        onChange={e => setNewTeamNameInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && newTeamNameInput.trim() && !actionLoading) {
+                                                handleUpdateTeamName();
+                                            }
+                                            if (e.key === 'Escape' && !actionLoading) {
+                                                setEditingTeamName(false);
+                                                setNewTeamNameInput(team.name);
+                                            }
+                                        }}
+                                        placeholder="ระบุชื่อทีมใหม่"
+                                        autoFocus
+                                    />
+
+                                    <button
+                                        className="gl-team-name-action-btn gl-team-name-save-btn"
+                                        disabled={actionLoading || !newTeamNameInput.trim()}
+                                        onClick={handleUpdateTeamName}
+                                        title="บันทึก"
+                                    >
+                                        <Save size={14} />
+                                        <span>บันทึก</span>
+                                    </button>
+
+                                    <button
+                                        className="gl-team-name-action-btn gl-team-name-cancel-btn"
+                                        disabled={actionLoading}
+                                        onClick={() => {
+                                            setEditingTeamName(false);
+                                            setNewTeamNameInput(team.name);
+                                        }}
+                                        title="ยกเลิก"
+                                    >
+                                        <X size={14} />
+                                        <span>ยกเลิก</span>
+                                    </button>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="gl-team-info-card gl-manage-span-full">
-                        <span className="gl-team-info-label"><UserPlus size={13} /> จัดการสมาชิก</span>
-                        {sortedMembers.map((m) => (
-                            <div key={`manage-${m.id}`} className="gl-manage-member-row">
-                                <div className="gl-manage-member-info">
-                                    <div className="gl-manage-member-avatar" style={{ background: m.color }}>{m.name.charAt(0)}</div>
-                                    <div>
-                                        <span className="gl-manage-member-name">{m.name}</span>
-                                        {m.leader && <span className="gl-manage-leader-tag">หัวหน้า</span>}
-                                    </div>
+                    {/* 2. Team Visibility */}
+                    <div className="gl-team-info-card gl-manage-glass-card gl-compact-card">
+                        <div className="gl-info-header" style={{ marginBottom: 4 }}>
+                            <span className="gl-team-info-label" style={{ marginBottom: 0 }}><Globe size={16} /> การมองเห็นทีม</span>
+                            {team.visibility === 'public' ? (
+                                <span className="gl-badge gl-badge-success">สาธารณะ</span>
+                            ) : (
+                                <span className="gl-badge gl-badge-neutral">ส่วนตัว</span>
+                            )}
+                        </div>
+                        <div className="gl-fancy-toggle-container" style={{ marginTop: 'auto', alignSelf: 'flex-start' }}>
+                            <span className={`gl-toggle-label ${team.visibility === 'private' ? 'active' : ''}`}>Private</span>
+                            <button
+                                className={`gl-fancy-toggle ${team.visibility === 'public' ? 'on' : 'off'}`}
+                                disabled={!isLeader || actionLoading || isTeamLocked}
+                                onClick={() => handleUpdateVisibility(team.visibility === 'public' ? 'private' : 'public')}
+                                title={isTeamLocked ? 'ทีมถูกล็อกแล้ว ไม่สามารถเปลี่ยนสถานะได้' : 'สลับการมองเห็นทีม'}
+                            >
+                                <div className="gl-toggle-thumb">
+                                    {team.visibility === 'public' ? <Globe size={14} /> : <Lock size={14} />}
                                 </div>
-                                {!m.leader && (
-                                    <div className="gl-manage-actions">
-                                        <button className="gl-btn-warning" disabled={actionLoading || isTeamLocked} onClick={() => handleTransferLeader(m.id)}>โอนหัวหน้า</button>
-                                        <button className="gl-btn-danger" disabled={actionLoading || isTeamLocked} onClick={() => handleRemoveMember(m.id)}>เตะออก</button>
+                            </button>
+                            <span className={`gl-toggle-label ${team.visibility === 'public' ? 'active' : ''}`}>Public</span>
+                        </div>
+                        {isTeamLocked && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว</p>}
+                    </div>
+
+                    {/* 3. Member Count */}
+                    <div className="gl-team-info-card gl-manage-glass-card gl-compact-card">
+                        <span className="gl-team-info-label" style={{ marginBottom: 0 }}><Users size={16} /> จำนวนสมาชิก</span>
+                        <div className="gl-bold-value" style={{ marginTop: 'auto' }}>{team.members.length} <span className="gl-sub-value">/ {MAX_MEMBERS} คน</span></div>
+                        <div className="gl-progress-mini">
+                            <div className="gl-progress-mini-fill" style={{ width: `${(team.members.length / MAX_MEMBERS) * 100}%` }}></div>
+                        </div>
+                    </div>
+
+                    {/* 4. Invite Code */}
+                    <div className="gl-team-info-card gl-manage-glass-card gl-compact-card">
+                        <span className="gl-team-info-label" style={{ marginBottom: 0 }}><Copy size={16} /> รหัสเชิญเข้าร่วมทีม</span>
+                        <div className="gl-code-box" style={{ marginTop: 'auto' }}>
+                            <span className="gl-code-text">{teamInviteCode}</span>
+                            <button className="gl-icon-btn" onClick={() => navigator.clipboard.writeText(teamInviteCode).then(() => setCopied(true))} title="คัดลอกรหัส">
+                                {copied ? <CheckCircle size={18} color="#34d399" /> : <Copy size={18} />}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {isLeader && (
+                <>
+                    {/* ── Section 2: Invite & Requests ── */}
+                    <div className="gl-manage-section">
+                        <h4 className="gl-manage-section-title">เชิญชวน & คำขอเข้าร่วม</h4>
+                        <div className="gl-manage-grid">
+                            <div className="gl-team-info-card gl-manage-glass-card">
+                                <span className="gl-team-info-label"><UserPlus size={16} /> เชิญสมาชิกใหม่</span>
+                                <p className="gl-card-desc">เชิญผู้ใช้เข้าร่วมทีมด้วย Username</p>
+                                <div className="gl-invite-input-group mt-3">
+                                    <div className="gl-input-wrapper">
+                                        <Search size={16} className="gl-input-icon" />
+                                        <input
+                                            className="gr-input gl-fancy-input"
+                                            value={inviteUserNameInput}
+                                            onChange={(e) => setInviteUserNameInput(e.target.value)}
+                                            placeholder="กรอก Username เพื่อเชิญ"
+                                        />
                                     </div>
-                                )}
+                                    <button className="gt-btn gt-btn-primary gl-fancy-btn" disabled={actionLoading || isTeamLocked || !inviteUserNameInput.trim()} onClick={handleInviteMember}>
+                                        <Mail size={16} /> ส่งคำเชิญ
+                                    </button>
+                                </div>
+                                {isTeamLocked && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว ไม่สามารถเชิญสมาชิกเพิ่มได้</p>}
                             </div>
-                        ))}
-                        {isTeamLocked && <p className="vf-hint">ทีมถูกล็อกแล้ว ไม่สามารถโอนหัวหน้า/เตะสมาชิกได้</p>}
+
+                            <div className="gl-team-info-card gl-manage-glass-card">
+                                <div className="gl-info-header">
+                                    <span className="gl-team-info-label"><Clock size={16} /> คำขอเข้าร่วมทีม</span>
+                                    {pendingJoinRequests.length > 0 && <span className="gl-badge gl-badge-warning">{pendingJoinRequests.length}</span>}
+                                </div>
+                                <div className="gl-requests-list">
+                                    {pendingJoinRequests.length === 0 ? (
+                                        <div className="gl-empty-sm">
+                                            <CheckCircle size={20} />
+                                            <span>ไม่มีคำขอเข้าร่วมทีมใหม่</span>
+                                        </div>
+                                    ) : (
+                                        pendingJoinRequests.map((req) => (
+                                            <div key={req.join_request_id} className="gl-request-item">
+                                                <div className="gl-req-user">
+                                                    <div className="gl-req-avatar">{req.requester_user_name?.charAt(0) || 'U'}</div>
+                                                    <span className="gl-req-name">{req.requester_user_name || `ผู้ใช้ ${req.requester_user_id}`}</span>
+                                                </div>
+                                                <div className="gl-req-actions">
+                                                    <button className="gl-btn-icon-success" disabled={actionLoading || isTeamLocked} onClick={() => handleRespondJoinRequest(req.join_request_id, 'approved')} title="อนุมัติ">
+                                                        <CheckCircle size={16} /> อนุมัติ
+                                                    </button>
+                                                    <button className="gl-btn-icon-danger" disabled={actionLoading || isTeamLocked} onClick={() => handleRespondJoinRequest(req.join_request_id, 'rejected')} title="ปฏิเสธ">
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                                {isTeamLocked && pendingJoinRequests.length > 0 && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว จัดการคำขอไม่ได้</p>}
+                            </div>
+                        </div>
                     </div>
                 </>
             )}
 
-            {!isLeader && (
-                <div className="gl-team-info-card">
-                    <span className="gl-team-info-label"><LogOut size={13} /> ออกจากทีม</span>
-                    <div className="gl-team-info-value">
-                        <button className="gl-btn-danger" disabled={actionLoading} onClick={handleLeaveCurrentTeam}>ออกจากทีม</button>
+            {/* ── Section 3: Members & Critical Actions ── */}
+            <div className="gl-manage-section">
+                <h4 className="gl-manage-section-title">สมาชิกทีม</h4>
+                <div className="gl-team-info-card gl-manage-glass-card gl-manage-span-full">
+                    <div className="gl-manage-members-list">
+                        {sortedMembers.map((m) => (
+                            <div key={`manage-${m.id}`} className="gl-manage-member-row gl-fancy-row">
+                                <div className="gl-manage-member-info">
+                                    <div className="gl-manage-member-avatar" style={{ background: m.color, position: 'relative' }}>
+                                        {m.leader && <Crown size={14} className="gl-crown-badge-inner" style={{ position: 'absolute', top: -5, right: -5, color: '#fbbf24', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />}
+                                        {m.name.charAt(0)}
+                                    </div>
+                                    <div className="gl-member-text">
+                                        <span className="gl-manage-member-name">{m.name}</span>
+                                        {m.leader ? (
+                                            <span className="gl-manage-role gl-role-leader"><Crown size={12} /> หัวหน้าทีม</span>
+                                        ) : (
+                                            <span className="gl-manage-role gl-role-member">สมาชิก</span>
+                                        )}
+                                    </div>
+                                </div>
+                                {isLeader && !m.leader && (
+                                    <div className="gl-manage-actions">
+                                        <button className="gl-btn-outline gl-btn-transfer" disabled={actionLoading || isTeamLocked} onClick={() => handleTransferLeader(m.id)}>
+                                            <Award size={14} /> โอนหัวหน้า
+                                        </button>
+                                        <button className="gl-btn-outline gl-btn-kick" disabled={actionLoading || isTeamLocked} onClick={() => handleRemoveMember(m.id)}>
+                                            <LogOut size={14} /> เตะออก
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    {isTeamLocked && isLeader && <p className="vf-hint mt-3">ทีมถูกล็อกแล้ว ไม่สามารถโอนหัวหน้า/เตะสมาชิกได้</p>}
+                </div>
+            </div>
+
+            <div className="gl-manage-section">
+                <h4 className="gl-manage-section-title text-danger">การดำเนินการสำคัญ</h4>
+                <div className="gl-team-info-card gl-manage-danger-card gl-manage-span-full">
+                    <div className="gl-danger-content">
+                        <div className="gl-danger-text">
+                            <span className="gl-team-info-label"><LogOut size={16} /> ออกจากทีม</span>
+                            <p className="gl-card-desc">หากคุณออกจากทีมแล้ว จะหมดสิทธิ์ในทีมนี้และต้องขอเข้าร่วมใหม่</p>
+                            {isLeader && <p className="vf-hint text-warning mt-1">หัวหน้าทีมต้องโอนสิทธิ์ให้สมาชิกคนอื่นก่อน ถึงจะออกจากทีมได้</p>}
+                        </div>
+                        <button className="gl-btn-danger gl-btn-lg" disabled={actionLoading || isLeader} onClick={handleLeaveCurrentTeam}>
+                            <LogOut size={16} /> ออกจากทีม
+                        </button>
                     </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 
@@ -1888,53 +2037,55 @@ export default function TeamContent({ user }) {
                 </aside>
 
                 <main className="gl-content-panel">
-                    <div className="gl-team-top-panel">
-                        <div className="gl-top-main">
-                            {/* Left: Team identity */}
-                            <div className="gl-top-identity">
-                                <div className="gl-top-team-icon">
-                                    <Gamepad2 size={22} />
-                                </div>
-                                <div className="gl-top-team-meta">
-                                    <span className="gl-top-team-name">{team.name}</span>
-                                    <span className={`gl-top-status-chip ${team.status}`}>
-                                        <span className="gl-top-status-dot" />
-                                        {statusInfo.label}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Center: Progress */}
-                            <div className="gl-top-progress-section">
-                                <div className="gl-top-progress-label">ความพร้อมในการส่งทีมเข้าคัดเลือก</div>
-                                <div className="gl-top-progress-bar-wrap">
-                                    <div className="gl-top-progress-track">
-                                        <div className="gl-top-progress-fill" style={{ width: `${submitProgress}%` }} />
+                    {selectedCard === null && (
+                        <div className="gl-team-top-panel">
+                            <div className="gl-top-main">
+                                {/* Left: Team identity */}
+                                <div className="gl-top-identity">
+                                    <div className="gl-top-team-icon">
+                                        <Gamepad2 size={22} />
                                     </div>
-                                    <span className="gl-top-progress-pct">{submitProgress}%</span>
+                                    <div className="gl-top-team-meta">
+                                        <span className="gl-top-team-name">{team.name}</span>
+                                        <span className={`gl-top-status-chip ${team.status}`}>
+                                            <span className="gl-top-status-dot" />
+                                            {statusInfo.label}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Center: Progress */}
+                                <div className="gl-top-progress-section">
+                                    <div className="gl-top-progress-label">ความพร้อมในการส่งทีมเข้าคัดเลือก</div>
+                                    <div className="gl-top-progress-bar-wrap">
+                                        <div className="gl-top-progress-track">
+                                            <div className="gl-top-progress-fill" style={{ width: `${submitProgress}%` }} />
+                                        </div>
+                                        <span className="gl-top-progress-pct">{submitProgress}%</span>
+                                    </div>
+                                </div>
+
+                                {/* Right: Action */}
+                                <div className="gl-top-action-section">
+                                    <button className="gl-top-submit-btn" disabled={!isLeader || actionLoading || isTeamLocked || submitMissing.length > 0} onClick={handleSubmitTeam}>
+                                        <ShieldCheck size={18} />
+                                        <span>ยืนยันส่งทีมเข้าคัดเลือก</span>
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Right: Action */}
-                            <div className="gl-top-action-section">
-                                <button className="gl-top-submit-btn" disabled={!isLeader || actionLoading || isTeamLocked || submitMissing.length > 0} onClick={handleSubmitTeam}>
-                                    <ShieldCheck size={18} />
-                                    <span>ยืนยันส่งทีมเข้าคัดเลือก</span>
-                                </button>
-                            </div>
+                            {/* Hints row */}
+                            {(submitMissing.length > 0 || !isLeader || isTeamLocked) && (
+                                <div className="gl-top-hints">
+                                    {!isLeader && <span className="gl-top-hint-item"><Lock size={12} /> เฉพาะหัวหน้าทีม</span>}
+                                    {submitMissing.map((msg, i) => (
+                                        <span key={i} className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {msg}</span>
+                                    ))}
+                                    {isTeamLocked && <span className="gl-top-hint-item"><Lock size={12} /> ทีมอยู่ในสถานะที่แก้ไขไม่ได้</span>}
+                                </div>
+                            )}
                         </div>
-
-                        {/* Hints row */}
-                        {(submitMissing.length > 0 || !isLeader || isTeamLocked) && (
-                            <div className="gl-top-hints">
-                                {!isLeader && <span className="gl-top-hint-item"><Lock size={12} /> เฉพาะหัวหน้าทีม</span>}
-                                {submitMissing.map((msg, i) => (
-                                    <span key={i} className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {msg}</span>
-                                ))}
-                                {isTeamLocked && <span className="gl-top-hint-item"><Lock size={12} /> ทีมอยู่ในสถานะที่แก้ไขไม่ได้</span>}
-                            </div>
-                        )}
-                    </div>
+                    )}
                     {selectedCard === null ? (
                         <div className="gl-card-grid">
                             {CARDS.map((card) => {
@@ -2015,5 +2166,3 @@ export default function TeamContent({ user }) {
         </div>
     );
 }
-
-
