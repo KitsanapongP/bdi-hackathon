@@ -517,6 +517,9 @@ export default function TeamContent({ user }) {
     });
 
     const handleRespondJoinRequest = (requestId, status) => withAction(async () => {
+        if (isTeamEditLocked) {
+            throw new Error('ทีมถูกล็อกแล้ว ไม่สามารถจัดการคำขอเข้าร่วมได้');
+        }
         const res = await fetch(apiUrl(`/api/teams/${team.id}/join-requests/${requestId}`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -531,6 +534,9 @@ export default function TeamContent({ user }) {
 
     const handleInviteMember = () => withAction(async () => {
         if (!team?.id) return;
+        if (isTeamEditLocked) {
+            throw new Error('ทีมถูกล็อกแล้ว ไม่สามารถเชิญสมาชิกเพิ่มได้');
+        }
         const inviteeUserName = inviteUserNameInput.trim();
         if (!inviteeUserName) {
             throw new Error('กรุณากรอก username ที่ต้องการเชิญ');
@@ -548,6 +554,10 @@ export default function TeamContent({ user }) {
     });
 
     const handleRemoveMember = (memberUserId) => {
+        if (isTeamEditLocked) {
+            showToast('ทีมถูกล็อกแล้ว ไม่สามารถเตะสมาชิกออกได้', 'error');
+            return;
+        }
         openConfirm('เตะสมาชิกออกจากทีม', 'คุณแน่ใจหรือไม่ว่าต้องการเตะสมาชิกคนนี้ออกจากทีม?', () => {
             closeConfirm();
             withAction(async () => {
@@ -565,6 +575,10 @@ export default function TeamContent({ user }) {
     };
 
     const handleLeaveCurrentTeam = () => {
+        if (isTeamEditLocked) {
+            showToast('ทีมถูกล็อกแล้ว ไม่สามารถออกจากทีมในตอนนี้ได้', 'error');
+            return;
+        }
         openConfirm('ออกจากทีม', 'คุณแน่ใจหรือไม่ว่าต้องการออกจากทีมนี้?', () => {
             closeConfirm();
             withAction(async () => {
@@ -581,6 +595,10 @@ export default function TeamContent({ user }) {
     };
 
     const handleTransferLeader = (newLeaderUserId) => {
+        if (isTeamEditLocked) {
+            showToast('ทีมถูกล็อกแล้ว ไม่สามารถโอนหัวหน้าทีมได้', 'error');
+            return;
+        }
         const targetMember = sortedMembers.find((m) => m.id === newLeaderUserId);
         openConfirm('โอนหัวหน้าทีม', `คุณแน่ใจหรือไม่ว่าต้องการโอนตำแหน่งหัวหน้าทีมให้ ${targetMember?.name || 'สมาชิกคนนี้'}?`, () => {
             closeConfirm();
@@ -602,6 +620,9 @@ export default function TeamContent({ user }) {
 
     const handleUpdateVisibility = (visibility) => withAction(async () => {
         if (!team?.id) return;
+        if (isTeamEditLocked) {
+            throw new Error('ทีมถูกล็อกแล้ว ไม่สามารถเปลี่ยนการมองเห็นทีมได้');
+        }
         const res = await fetch(apiUrl(`/api/teams/${team.id}/visibility`), {
             method: 'PUT',
             credentials: 'include',
@@ -842,6 +863,9 @@ export default function TeamContent({ user }) {
     const deadlineMs = toDateMs(team?.confirmationDeadlineAt);
     const countdownText = deadlineMs ? formatCountdown(deadlineMs - nowMs) : '-';
     const isTeamLocked = ['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded'].includes(String(team?.status || ''));
+    const isSubmittedByVerify = Boolean(verifyData?.isTeamSubmitted);
+    const isTeamEditLocked = isTeamLocked || isSubmittedByVerify;
+    const isMyVerificationConfirmed = Boolean(verifyData?.members?.find((m) => m.user_id === user?.userId)?.is_member_confirmed);
 
     const verifyMembers = verifyData?.members || [];
     const memberCountForSubmit = verifyMembers.length || team.members.length;
@@ -857,7 +881,7 @@ export default function TeamContent({ user }) {
     ];
     const submitMissing = submitReadinessRules.filter((item) => !item.ok).map((item) => item.label);
     const submitProgress = Math.round((submitReadinessRules.filter((item) => item.ok).length / submitReadinessRules.length) * 100);
-    const canSubmitSelection = isLeader && !isTeamLocked && submitMissing.length === 0;
+    const canSubmitSelection = isLeader && !isTeamEditLocked && submitMissing.length === 0;
 
     const verifyNotify = allMembersConfirmed ? 'success' : 'danger';
     const advisorNotify = hasAdvisor ? 'success' : 'danger';
@@ -871,6 +895,10 @@ export default function TeamContent({ user }) {
 
     const handleUploadDocs = async (files) => {
         if (!team?.id || !files?.length) return;
+        if (isTeamEditLocked || isMyVerificationConfirmed) {
+            showToast('ทีมถูกล็อกแล้ว ไม่สามารถอัปโหลดเอกสารได้', 'error');
+            return;
+        }
         await withAction(async () => {
             const formData = new FormData();
             for (const f of files) formData.append('files', f);
@@ -885,6 +913,10 @@ export default function TeamContent({ user }) {
     };
 
     const handleDeleteDoc = (docId, fileName) => {
+        if (isTeamEditLocked || isMyVerificationConfirmed) {
+            showToast('ทีมถูกล็อกแล้ว ไม่สามารถลบเอกสารได้', 'error');
+            return;
+        }
         openConfirm('ลบเอกสาร', `ต้องการลบไฟล์ "${fileName}" หรือไม่?`, () => {
             closeConfirm();
             withAction(async () => {
@@ -912,6 +944,10 @@ export default function TeamContent({ user }) {
     };
 
     const handleRenameDoc = (doc) => {
+        if (isTeamEditLocked || isMyVerificationConfirmed) {
+            showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขชื่อเอกสารได้', 'error');
+            return;
+        }
         if (!doc?.document_id) return;
         setRenameState({ open: true, doc, value: doc.file_original_name || '' });
     };
@@ -919,6 +955,10 @@ export default function TeamContent({ user }) {
     const closeRenameModal = () => setRenameState({ open: false, doc: null, value: '' });
 
     const confirmRenameDoc = () => {
+        if (isTeamEditLocked || isMyVerificationConfirmed) {
+            showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขชื่อเอกสารได้', 'error');
+            return;
+        }
         if (!team?.id || !renameState.doc?.document_id) return;
         const trimmed = renameState.value.trim();
         const current = renameState.doc.file_original_name || '';
@@ -940,6 +980,10 @@ export default function TeamContent({ user }) {
     };
 
     const handleSaveVerificationProfile = async () => {
+        if (isTeamEditLocked || isMyVerificationConfirmed) {
+            showToast('ทีมถูกล็อกแล้ว ไม่สามารถบันทึกข้อมูลส่วนตัวได้', 'error');
+            return;
+        }
         if (!profileData) return;
         setProfileSaving(true);
         try {
@@ -963,6 +1007,10 @@ export default function TeamContent({ user }) {
     };
 
     const handleConfirmDocs = ({ hasDocs, profileComplete, missingFields, hasUnsavedProfileChanges }) => {
+        if (isTeamEditLocked) {
+            showToast('ทีมส่งเอกสารแล้ว ไม่สามารถยืนยันเอกสารเพิ่มได้', 'error');
+            return;
+        }
         if (hasUnsavedProfileChanges) {
             showToast('กรุณากดบันทึกข้อมูลส่วนตัวก่อนยืนยันเอกสาร', 'error');
             return;
@@ -992,6 +1040,10 @@ export default function TeamContent({ user }) {
     };
 
     const handleUnconfirmDocs = () => {
+        if (isTeamEditLocked) {
+            showToast('ทีมส่งเอกสารแล้ว ไม่สามารถยกเลิกการยืนยันได้', 'error');
+            return;
+        }
         openConfirm('ยกเลิกการยืนยัน', 'ต้องการยกเลิกการยืนยันเอกสารเพื่อแก้ไขหรือไม่?', () => {
             closeConfirm();
             withAction(async () => {
@@ -1068,6 +1120,7 @@ export default function TeamContent({ user }) {
                     throw new Error('ระบบไม่อนุญาตให้ส่งเอกสารทีมในขณะนี้ กรุณารีเฟรชหน้าแล้วลองใหม่อีกครั้ง');
                 }
                 showToast('ยืนยันเข้าร่วมการคัดเลือกสำเร็จ', 'success');
+                setTeam((prev) => (prev ? { ...prev, status: 'submitted' } : prev));
                 fetchVerifyStatus();
             }, { toastError: true, fallbackMessage: 'ยังส่งเอกสารทั้งทีมไม่ได้ กรุณาตรวจสอบข้อมูลทีมและการยืนยันของสมาชิก' });
         }, 'warning');
@@ -1110,6 +1163,10 @@ export default function TeamContent({ user }) {
     };
 
     const handleUpdateTeamName = () => {
+        if (isTeamEditLocked) {
+            showToast('ทีมถูกล็อกแล้ว ไม่สามารถเปลี่ยนชื่อทีมได้', 'error');
+            return;
+        }
         if (!newTeamNameInput.trim()) {
             showToast('กรุณากรอกชื่อทีม', 'error');
             return;
@@ -1160,7 +1217,7 @@ export default function TeamContent({ user }) {
                                     {isLeader && (
                                         <button
                                             className="gl-icon-btn gl-team-name-edit-trigger"
-                                            disabled={actionLoading || isTeamLocked}
+                                            disabled={actionLoading || isTeamEditLocked}
                                             onClick={() => { setEditingTeamName(true); setNewTeamNameInput(team.name); }}
                                             title="แก้ไขชื่อทีม"
                                         >
@@ -1230,9 +1287,9 @@ export default function TeamContent({ user }) {
                             <span className={`gl-toggle-label ${team.visibility === 'private' ? 'active' : ''}`}>Private</span>
                             <button
                                 className={`gl-fancy-toggle ${team.visibility === 'public' ? 'on' : 'off'}`}
-                                disabled={!isLeader || actionLoading || isTeamLocked}
+                                disabled={!isLeader || actionLoading || isTeamEditLocked}
                                 onClick={() => handleUpdateVisibility(team.visibility === 'public' ? 'private' : 'public')}
-                                title={isTeamLocked ? 'ทีมถูกล็อกแล้ว ไม่สามารถเปลี่ยนสถานะได้' : 'สลับการมองเห็นทีม'}
+                                title={isTeamEditLocked ? 'ทีมถูกล็อกแล้ว ไม่สามารถเปลี่ยนสถานะได้' : 'สลับการมองเห็นทีม'}
                             >
                                 <div className="gl-toggle-thumb">
                                     {team.visibility === 'public' ? <Globe size={14} /> : <Lock size={14} />}
@@ -1240,7 +1297,7 @@ export default function TeamContent({ user }) {
                             </button>
                             <span className={`gl-toggle-label ${team.visibility === 'public' ? 'active' : ''}`}>Public</span>
                         </div>
-                        {isTeamLocked && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว</p>}
+                        {isTeamEditLocked && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว</p>}
                     </div>
 
                     {/* 3. Member Count */}
@@ -1284,11 +1341,11 @@ export default function TeamContent({ user }) {
                                             placeholder="กรอก Username เพื่อเชิญ"
                                         />
                                     </div>
-                                    <button className="gt-btn gt-btn-primary gl-fancy-btn" disabled={actionLoading || isTeamLocked || !inviteUserNameInput.trim()} onClick={handleInviteMember}>
+                                    <button className="gt-btn gt-btn-primary gl-fancy-btn" disabled={actionLoading || isTeamEditLocked || !inviteUserNameInput.trim()} onClick={handleInviteMember}>
                                         <Mail size={16} /> ส่งคำเชิญ
                                     </button>
                                 </div>
-                                {isTeamLocked && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว ไม่สามารถเชิญสมาชิกเพิ่มได้</p>}
+                                {isTeamEditLocked && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว ไม่สามารถเชิญสมาชิกเพิ่มได้</p>}
                             </div>
 
                             <div className="gl-team-info-card gl-manage-glass-card">
@@ -1310,10 +1367,10 @@ export default function TeamContent({ user }) {
                                                     <span className="gl-req-name">{req.requester_user_name || `ผู้ใช้ ${req.requester_user_id}`}</span>
                                                 </div>
                                                 <div className="gl-req-actions">
-                                                    <button className="gl-btn-icon-success" disabled={actionLoading || isTeamLocked} onClick={() => handleRespondJoinRequest(req.join_request_id, 'approved')} title="อนุมัติ">
+                                                    <button className="gl-btn-icon-success" disabled={actionLoading || isTeamEditLocked} onClick={() => handleRespondJoinRequest(req.join_request_id, 'approved')} title="อนุมัติ">
                                                         <CheckCircle size={16} /> อนุมัติ
                                                     </button>
-                                                    <button className="gl-btn-icon-danger" disabled={actionLoading || isTeamLocked} onClick={() => handleRespondJoinRequest(req.join_request_id, 'rejected')} title="ปฏิเสธ">
+                                                    <button className="gl-btn-icon-danger" disabled={actionLoading || isTeamEditLocked} onClick={() => handleRespondJoinRequest(req.join_request_id, 'rejected')} title="ปฏิเสธ">
                                                         <X size={16} />
                                                     </button>
                                                 </div>
@@ -1321,7 +1378,7 @@ export default function TeamContent({ user }) {
                                         ))
                                     )}
                                 </div>
-                                {isTeamLocked && pendingJoinRequests.length > 0 && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว จัดการคำขอไม่ได้</p>}
+                                {isTeamEditLocked && pendingJoinRequests.length > 0 && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว จัดการคำขอไม่ได้</p>}
                             </div>
                         </div>
                     </div>
@@ -1351,10 +1408,10 @@ export default function TeamContent({ user }) {
                                 </div>
                                 {isLeader && !m.leader && (
                                     <div className="gl-manage-actions">
-                                        <button className="gl-btn-outline gl-btn-transfer" disabled={actionLoading || isTeamLocked} onClick={() => handleTransferLeader(m.id)}>
+                                        <button className="gl-btn-outline gl-btn-transfer" disabled={actionLoading || isTeamEditLocked} onClick={() => handleTransferLeader(m.id)}>
                                             <Award size={14} /> โอนหัวหน้า
                                         </button>
-                                        <button className="gl-btn-outline gl-btn-kick" disabled={actionLoading || isTeamLocked} onClick={() => handleRemoveMember(m.id)}>
+                                        <button className="gl-btn-outline gl-btn-kick" disabled={actionLoading || isTeamEditLocked} onClick={() => handleRemoveMember(m.id)}>
                                             <LogOut size={14} /> เตะออก
                                         </button>
                                     </div>
@@ -1362,7 +1419,7 @@ export default function TeamContent({ user }) {
                             </div>
                         ))}
                     </div>
-                    {isTeamLocked && isLeader && <p className="vf-hint mt-3">ทีมถูกล็อกแล้ว ไม่สามารถโอนหัวหน้า/เตะสมาชิกได้</p>}
+                    {isTeamEditLocked && isLeader && <p className="vf-hint mt-3">ทีมถูกล็อกแล้ว ไม่สามารถโอนหัวหน้า/เตะสมาชิกได้</p>}
                 </div>
             </div>
 
@@ -1375,7 +1432,7 @@ export default function TeamContent({ user }) {
                             <p className="gl-card-desc">หากคุณออกจากทีมแล้ว จะหมดสิทธิ์ในทีมนี้และต้องขอเข้าร่วมใหม่</p>
                             {isLeader && <p className="vf-hint text-warning mt-1">หัวหน้าทีมต้องโอนสิทธิ์ให้สมาชิกคนอื่นก่อน ถึงจะออกจากทีมได้</p>}
                         </div>
-                        <button className="gl-btn-danger gl-btn-lg" disabled={actionLoading || isLeader} onClick={handleLeaveCurrentTeam}>
+                        <button className="gl-btn-danger gl-btn-lg" disabled={actionLoading || isLeader || isTeamEditLocked} onClick={handleLeaveCurrentTeam}>
                             <LogOut size={16} /> ออกจากทีม
                         </button>
                     </div>
@@ -1409,8 +1466,13 @@ export default function TeamContent({ user }) {
             if (submissionLoading && !submissionData) return renderSimpleDetail('ส่งผลงาน', <Award size={20} />, <div className="gl-empty-state"><Loader2 size={40} /><h3>กำลังโหลด...</h3></div>);
 
             const files = submissionData?.files || [];
+            const isWorksLocked = isTeamEditLocked;
             const handleSaveVideoLink = async () => {
                 if (!team?.id) return;
+                if (isWorksLocked) {
+                    showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขผลงานได้', 'error');
+                    return;
+                }
                 setVideoLinkSaving(true);
                 try {
                     const res = await fetch(apiUrl(`/api/submissions/team/${team.id}/video-link`), {
@@ -1428,6 +1490,10 @@ export default function TeamContent({ user }) {
 
             const handleUploadSubmissionFiles = async (fileList) => {
                 if (!team?.id || !fileList?.length) return;
+                if (isWorksLocked) {
+                    showToast('ทีมถูกล็อกแล้ว ไม่สามารถอัปโหลดไฟล์ผลงานได้', 'error');
+                    return;
+                }
                 await withAction(async () => {
                     const formData = new FormData();
                     for (const f of fileList) formData.append('files', f);
@@ -1442,6 +1508,10 @@ export default function TeamContent({ user }) {
             };
 
             const handleDeleteSubmissionFile = (fileId, fileName) => {
+                if (isWorksLocked) {
+                    showToast('ทีมถูกล็อกแล้ว ไม่สามารถลบไฟล์ผลงานได้', 'error');
+                    return;
+                }
                 openConfirm('ลบไฟล์', `ต้องการลบไฟล์ "${fileName}" หรือไม่?`, () => {
                     closeConfirm();
                     withAction(async () => {
@@ -1462,6 +1532,12 @@ export default function TeamContent({ user }) {
                         <Info size={16} />
                         <span>หัวหน้าทีมเท่านั้นที่สามารถ่ส่งลิงก์วิดีโอและแนบไฟล์ผลงานได้</span>
                     </div>
+                    {isWorksLocked && (
+                        <div className="vf-info-banner vf-submitted">
+                            <Lock size={16} />
+                            <span>ทีมส่งเข้าคัดเลือกแล้ว ไม่สามารถแก้ไขข้อมูลส่งผลงานได้</span>
+                        </div>
+                    )}
 
                     {/* Video Link Section */}
                     <div className="gl-team-info-card">
@@ -1473,10 +1549,10 @@ export default function TeamContent({ user }) {
                                 value={videoLinkInput}
                                 onChange={(e) => setVideoLinkInput(e.target.value)}
                                 placeholder="https://www.youtube.com/watch?v=... หรือ https://drive.google.com/..."
-                                disabled={!isLeader || videoLinkSaving}
+                                disabled={!isLeader || videoLinkSaving || isWorksLocked}
                             />
                             {isLeader && (
-                                <button className="gl-action-btn gl-submit-btn" onClick={handleSaveVideoLink} disabled={videoLinkSaving}>
+                                <button className="gl-action-btn gl-submit-btn" onClick={handleSaveVideoLink} disabled={videoLinkSaving || isWorksLocked}>
                                     {videoLinkSaving ? <Loader2 size={16} /> : <Save size={16} />}
                                     บันทึก
                                 </button>
@@ -1516,7 +1592,7 @@ export default function TeamContent({ user }) {
                                         <Download size={14} /> ดาวน์โหลด
                                     </a>
                                     {isLeader && (
-                                        <button className="vf-doc-delete" disabled={actionLoading} onClick={() => handleDeleteSubmissionFile(f.file_id, f.file_original_name)}>
+                                        <button className="vf-doc-delete" disabled={actionLoading || isWorksLocked} onClick={() => handleDeleteSubmissionFile(f.file_id, f.file_original_name)}>
                                             <Trash2 size={14} />
                                         </button>
                                     )}
@@ -1524,7 +1600,7 @@ export default function TeamContent({ user }) {
                             </div>
                         ))}
 
-                        {isLeader && (
+                        {isLeader && !isWorksLocked && (
                             <label className="vf-upload-btn">
                                 <Upload size={16} /> เลือกไฟล์
                                 <input type="file" accept=".pdf,.docx,.png,.pptx,.jpg,.jpeg" multiple hidden
@@ -1532,6 +1608,7 @@ export default function TeamContent({ user }) {
                                 />
                             </label>
                         )}
+                        {isLeader && isWorksLocked && <p className="vf-hint">ทีมถูกล็อกแล้ว ไม่สามารถอัปโหลดไฟล์เพิ่มได้</p>}
                     </div>
                 </div>
             ));
@@ -1543,7 +1620,7 @@ export default function TeamContent({ user }) {
             const vd = verifyData;
             const myMember = vd?.members?.find(m => m.user_id === user?.userId);
             const myConfirmed = myMember?.is_member_confirmed;
-            const isSubmitted = vd?.isTeamSubmitted;
+            const isSubmitted = Boolean(vd?.isTeamSubmitted || isTeamEditLocked);
             const myDocs = vd?.myDocuments || [];
             const profileComplete = isProfileComplete(profileData);
             const missingFields = getProfileMissingFields(profileData);
@@ -1840,9 +1917,14 @@ export default function TeamContent({ user }) {
             if (submissionLoading && !submissionData) return renderSimpleDetail('อาจารย์ที่ปรึกษา', <GraduationCap size={20} />, <div className="gl-empty-state"><Loader2 size={40} /><h3>กำลังโหลด...</h3></div>);
 
             const advisors = submissionData?.advisors || [];
+            const isAdvisorLocked = isTeamEditLocked;
 
             const handleSaveAdvisor = async () => {
                 if (!team?.id) return;
+                if (isAdvisorLocked) {
+                    showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขข้อมูลอาจารย์ที่ปรึกษาได้', 'error');
+                    return;
+                }
                 const body = {
                     prefix: advisorForm.prefix || undefined,
                     firstNameTh: advisorForm.firstNameTh,
@@ -1878,6 +1960,10 @@ export default function TeamContent({ user }) {
             };
 
             const handleDeleteAdvisor = (advisorId, name) => {
+                if (isAdvisorLocked) {
+                    showToast('ทีมถูกล็อกแล้ว ไม่สามารถลบอาจารย์ที่ปรึกษาได้', 'error');
+                    return;
+                }
                 openConfirm('ลบอาจารย์ที่ปรึกษา', `ต้องการลบ "${name}" หรือไม่?`, () => {
                     closeConfirm();
                     withAction(async () => {
@@ -1893,6 +1979,10 @@ export default function TeamContent({ user }) {
             };
 
             const handleEditAdvisor = (adv) => {
+                if (isAdvisorLocked) {
+                    showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขข้อมูลอาจารย์ที่ปรึกษาได้', 'error');
+                    return;
+                }
                 setAdvisorForm({
                     open: true, editId: adv.advisor_id,
                     prefix: adv.prefix || '', firstNameTh: adv.first_name_th || '', lastNameTh: adv.last_name_th || '',
@@ -1908,6 +1998,12 @@ export default function TeamContent({ user }) {
                         <Info size={16} />
                         <span>1 ทีมสามารถมีอาจารย์ที่ปรึกษาได้หลายท่าน แต่อาจารย์ 1 ท่านเป็นที่ปรึกษาได้แค่ทีมเดียว หัวหน้าทีมเท่านั้นที่สามารถจัดการได้</span>
                     </div>
+                    {isAdvisorLocked && (
+                        <div className="vf-info-banner vf-submitted">
+                            <Lock size={16} />
+                            <span>ทีมส่งเข้าคัดเลือกแล้ว ไม่สามารถแก้ไขข้อมูลอาจารย์ที่ปรึกษาได้</span>
+                        </div>
+                    )}
 
                     {/* Advisor list */}
                     <div className="gl-team-info-card">
@@ -1935,8 +2031,8 @@ export default function TeamContent({ user }) {
                                 </div>
                                 {isLeader && (
                                     <div className="sub-advisor-actions">
-                                        <button className="vf-doc-open" onClick={() => handleEditAdvisor(adv)}><Edit2 size={14} /> แก้ไข</button>
-                                        <button className="vf-doc-delete" disabled={actionLoading} onClick={() => handleDeleteAdvisor(adv.advisor_id, `${adv.first_name_th} ${adv.last_name_th}`)}>
+                                        <button className="vf-doc-open" disabled={isAdvisorLocked} onClick={() => handleEditAdvisor(adv)}><Edit2 size={14} /> แก้ไข</button>
+                                        <button className="vf-doc-delete" disabled={actionLoading || isAdvisorLocked} onClick={() => handleDeleteAdvisor(adv.advisor_id, `${adv.first_name_th} ${adv.last_name_th}`)}>
                                             <Trash2 size={14} />
                                         </button>
                                     </div>
@@ -1952,49 +2048,50 @@ export default function TeamContent({ user }) {
                             <div className="pf-form-grid" style={{ marginTop: 8 }}>
                                 <div className="pf-field">
                                     <span className="pf-label">คำนำหน้า</span>
-                                    <input className="pf-input" value={advisorForm.prefix} onChange={e => setAdvisorForm(f => ({ ...f, prefix: e.target.value }))} placeholder="เช่น ผศ.ดร." />
+                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.prefix} onChange={e => setAdvisorForm(f => ({ ...f, prefix: e.target.value }))} placeholder="เช่น ผศ.ดร." />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">ชื่อ (TH) *</span>
-                                    <input className="pf-input" value={advisorForm.firstNameTh} onChange={e => setAdvisorForm(f => ({ ...f, firstNameTh: e.target.value }))} placeholder="ชื่อภาษาไทย" />
+                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.firstNameTh} onChange={e => setAdvisorForm(f => ({ ...f, firstNameTh: e.target.value }))} placeholder="ชื่อภาษาไทย" />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">นามสกุล (TH) *</span>
-                                    <input className="pf-input" value={advisorForm.lastNameTh} onChange={e => setAdvisorForm(f => ({ ...f, lastNameTh: e.target.value }))} placeholder="นามสกุลภาษาไทย" />
+                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.lastNameTh} onChange={e => setAdvisorForm(f => ({ ...f, lastNameTh: e.target.value }))} placeholder="นามสกุลภาษาไทย" />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">First Name (EN)</span>
-                                    <input className="pf-input" value={advisorForm.firstNameEn} onChange={e => setAdvisorForm(f => ({ ...f, firstNameEn: e.target.value }))} placeholder="First name" />
+                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.firstNameEn} onChange={e => setAdvisorForm(f => ({ ...f, firstNameEn: e.target.value }))} placeholder="First name" />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">Last Name (EN)</span>
-                                    <input className="pf-input" value={advisorForm.lastNameEn} onChange={e => setAdvisorForm(f => ({ ...f, lastNameEn: e.target.value }))} placeholder="Last name" />
+                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.lastNameEn} onChange={e => setAdvisorForm(f => ({ ...f, lastNameEn: e.target.value }))} placeholder="Last name" />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">Email</span>
-                                    <input className="pf-input" type="email" value={advisorForm.email} onChange={e => setAdvisorForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" />
+                                    <input className="pf-input" type="email" disabled={isAdvisorLocked} value={advisorForm.email} onChange={e => setAdvisorForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">เบอร์โทร</span>
-                                    <input className="pf-input" value={advisorForm.phone} onChange={e => setAdvisorForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="08x-xxx-xxxx" maxLength={10} />
+                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.phone} onChange={e => setAdvisorForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="08x-xxx-xxxx" maxLength={10} />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">สถาบัน</span>
-                                    <input className="pf-input" value={advisorForm.institutionNameTh} onChange={e => setAdvisorForm(f => ({ ...f, institutionNameTh: e.target.value }))} placeholder="เช่น มหาวิทยาลัยขอนแก่น" />
+                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.institutionNameTh} onChange={e => setAdvisorForm(f => ({ ...f, institutionNameTh: e.target.value }))} placeholder="เช่น มหาวิทยาลัยขอนแก่น" />
                                 </div>
                                 <div className="pf-field full">
                                     <span className="pf-label">ตำแหน่งทางวิชาการ</span>
-                                    <input className="pf-input" value={advisorForm.position} onChange={e => setAdvisorForm(f => ({ ...f, position: e.target.value }))} placeholder="เช่น ผู้ช่วยศาสตราจารย์" />
+                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.position} onChange={e => setAdvisorForm(f => ({ ...f, position: e.target.value }))} placeholder="เช่น ผู้ช่วยศาสตราจารย์" />
                                 </div>
                             </div>
                             <div className="pf-actions" style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                                <button className="gl-action-btn gl-submit-btn" onClick={handleSaveAdvisor} disabled={actionLoading}>
+                                <button className="gl-action-btn gl-submit-btn" onClick={handleSaveAdvisor} disabled={actionLoading || isAdvisorLocked}>
                                     <Save size={16} /> {advisorForm.editId ? 'บันทึก' : 'เพิ่ม'}
                                 </button>
                                 {advisorForm.editId && (
                                     <button className="gt-btn" onClick={resetAdvisorForm}>ยกเลิก</button>
                                 )}
                             </div>
+                            {isAdvisorLocked && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว ไม่สามารถเพิ่มหรือแก้ไขอาจารย์ที่ปรึกษาได้</p>}
                         </div>
                     )}
                 </div>
@@ -2067,7 +2164,7 @@ export default function TeamContent({ user }) {
 
                                 {/* Right: Action */}
                                 <div className="gl-top-action-section">
-                                    <button className="gl-top-submit-btn" disabled={!isLeader || actionLoading || isTeamLocked || submitMissing.length > 0} onClick={handleSubmitTeam}>
+                                    <button className="gl-top-submit-btn" disabled={!isLeader || actionLoading || isTeamEditLocked || submitMissing.length > 0} onClick={handleSubmitTeam}>
                                         <ShieldCheck size={18} />
                                         <span>ยืนยันส่งทีมเข้าคัดเลือก</span>
                                     </button>
@@ -2075,13 +2172,13 @@ export default function TeamContent({ user }) {
                             </div>
 
                             {/* Hints row */}
-                            {(submitMissing.length > 0 || !isLeader || isTeamLocked) && (
+                            {(submitMissing.length > 0 || !isLeader || isTeamEditLocked) && (
                                 <div className="gl-top-hints">
                                     {!isLeader && <span className="gl-top-hint-item"><Lock size={12} /> เฉพาะหัวหน้าทีม</span>}
                                     {submitMissing.map((msg, i) => (
                                         <span key={i} className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {msg}</span>
                                     ))}
-                                    {isTeamLocked && <span className="gl-top-hint-item"><Lock size={12} /> ทีมอยู่ในสถานะที่แก้ไขไม่ได้</span>}
+                                    {isTeamEditLocked && <span className="gl-top-hint-item"><Lock size={12} /> ทีมอยู่ในสถานะที่แก้ไขไม่ได้</span>}
                                 </div>
                             )}
                         </div>
@@ -2143,7 +2240,7 @@ export default function TeamContent({ user }) {
                 variant="info"
                 confirmLabel="บันทึก"
                 cancelLabel="ยกเลิก"
-                confirmDisabled={!renameState.value.trim() || renameState.value.trim() === (renameState.doc?.file_original_name || '') || actionLoading}
+                confirmDisabled={isTeamEditLocked || isMyVerificationConfirmed || !renameState.value.trim() || renameState.value.trim() === (renameState.doc?.file_original_name || '') || actionLoading}
                 onConfirm={confirmRenameDoc}
                 onCancel={closeRenameModal}
             >
