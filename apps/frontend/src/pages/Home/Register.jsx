@@ -481,11 +481,12 @@ function RegisterPage() {
                                             <label>วันเดือนปีเกิด (Date of Birth)</label>
                                             <DatePicker
                                                 className="gr-date-picker"
-                                                format="DD/MM/YYYY"
-                                                placeholder="วัน/เดือน/ปี"
+                                                format={{ format: 'DD/MM/YYYY', type: 'mask' }}
+                                                placeholder="DD/MM/YYYY"
                                                 value={regBirthDate ? dayjs(regBirthDate, 'YYYY-MM-DD') : null}
                                                 onChange={(value) => setRegBirthDate(value ? value.format('YYYY-MM-DD') : '')}
                                                 allowClear={false}
+                                                inputReadOnly
                                                 disabled={isLoading}
                                                 disabledDate={(current) => current && current > dayjs().endOf('day')}
                                             />
