@@ -98,6 +98,15 @@
     grid-template-columns: 1fr;
 }
 
+.pf-profile-form {
+    border: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 .pf-field {
     display: flex;
     flex-direction: column;

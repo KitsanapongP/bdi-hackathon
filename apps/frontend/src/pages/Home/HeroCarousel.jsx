@@ -7,7 +7,12 @@ function getRelativeOffset(index, activeIndex, total) {
   return diff
 }
 
-function getCardTransform(offset) {
+function getCardTransform(offset, isMobileViewport = false) {
+  if (isMobileViewport) {
+    if (offset === 0) return { shift: '0%', scale: 1, rotate: 0, opacity: 1 }
+    return { shift: '0%', scale: 0.94, rotate: 0, opacity: 0 }
+  }
+
   if (offset === -2) return { shift: '-94%', scale: 0.68, rotate: 20, opacity: 0.42 }
   if (offset === -1) return { shift: '-58%', scale: 0.9, rotate: 10, opacity: 0.74 }
   if (offset === 0) return { shift: '0%', scale: 1.24, rotate: 0, opacity: 1 }
@@ -20,6 +25,27 @@ function HeroCarousel({ slides = [] }) {
   const normalizedSlides = Array.isArray(slides) ? slides.filter((item) => item?.imageUrl) : []
   const [activeIndex, setActiveIndex] = useState(0)
   const [paused, setPaused] = useState(false)
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(max-width: 768px)').matches
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+
+    const mediaQuery = window.matchMedia('(max-width: 768px)')
+    const handleChange = (event) => setIsMobileViewport(event.matches)
+
+    setIsMobileViewport(mediaQuery.matches)
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange)
+      return () => mediaQuery.removeEventListener('change', handleChange)
+    }
+
+    mediaQuery.addListener(handleChange)
+    return () => mediaQuery.removeListener(handleChange)
+  }, [])
 
   useEffect(() => {
     if (!normalizedSlides.length) return
@@ -61,7 +87,7 @@ function HeroCarousel({ slides = [] }) {
     >
       <div className="gt-hero-carousel-stage">
         {visibleSlides.map(({ slide, index, offset }) => {
-          const visual = getCardTransform(offset)
+          const visual = getCardTransform(offset, isMobileViewport)
           const isActive = offset === 0
           const style = {
             transform: `translateX(-50%) translateX(${visual.shift}) scale(${visual.scale}) rotateY(${visual.rotate}deg)`,

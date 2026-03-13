@@ -492,7 +492,7 @@ function ProfileTab({ apiFetch, showToast, user }) {
                         <span>โปรไฟล์ถูกล็อกเพราะทีมส่งเอกสารยืนยันตัวตนแล้ว หากต้องการแก้ไขให้ติดต่อผู้จัดงาน</span>
                     </div>
                 )}
-                <fieldset disabled={profileLocked} style={{ border: 'none', padding: 0, margin: 0 }}>
+                <fieldset disabled={profileLocked} className="pf-profile-form">
                 {/* Account info (readonly) */}
                 <div className="gl-info-card">
                     <h4><User size={16} /> ข้อมูลบัญชี</h4>

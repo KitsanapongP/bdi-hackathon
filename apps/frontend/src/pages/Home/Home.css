@@ -957,11 +957,27 @@ section.gt-hero {
     display: flex;
     align-items: flex-start;
     gap: 10px;
+    width: 100%;
+    text-align: left;
     color: var(--gt-primary);
     background: var(--gt-bg);
     border: 1px solid var(--gt-border);
     border-radius: 12px;
     padding: 12px;
+    font: inherit;
+}
+
+.gt-schedule-day-header-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.gt-schedule-day-chevron {
+    display: none;
+    margin-left: auto;
+    color: var(--gt-text-muted);
+    transition: transform 0.25s ease;
 }
 
 .gt-schedule-day-header h3 {
@@ -1090,10 +1106,32 @@ section.gt-hero {
 .gt-participation-graph-users,
 .gt-participation-graph-teams {
     grid-column: span 6;
-    border: none;
     background: transparent;
-    box-shadow: none;
-    padding: 0;
+    border: 1px solid var(--gt-border);
+    border-radius: 14px;
+    box-shadow: 0 12px 28px -20px rgba(15, 23, 42, 0.42);
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.gt-participation-graph-users h3,
+.gt-participation-graph-teams h3 {
+    max-width: 72%;
+}
+
+.gt-participation-graph-users .gt-participation-stat-wrap,
+.gt-participation-graph-teams .gt-participation-stat-wrap {
+    margin-top: 0;
+    flex-shrink: 0;
+}
+
+.gt-participation-graph-users .gt-participation-stat-loading,
+.gt-participation-graph-teams .gt-participation-stat-loading {
+    margin-top: 0;
+    width: min(220px, 46%);
 }
 
 .gt-participation-graph-trend {
@@ -1129,7 +1167,7 @@ section.gt-hero {
 }
 
 .gt-participation-stat-number {
-    font-size: clamp(2.8rem, 7vw, 4.8rem);
+    font-size: clamp(2.4rem, 6vw, 4rem);
     font-weight: 900;
     line-height: 0.95;
     letter-spacing: -0.03em;
@@ -1721,17 +1759,36 @@ section.gt-hero {
     }
 
     .gt-hero-carousel {
-        margin-bottom: 22px;
-        padding-inline: 8px;
+        margin-bottom: 20px;
+        padding-inline: 4px;
     }
 
     .gt-hero-carousel-stage {
-        height: 340px;
+        width: 100%;
+        height: clamp(215px, 58vw, 300px);
+        overflow: hidden;
+        border-radius: 20px;
+    }
+
+    .gt-hero-carousel-stage::before {
+        display: none;
     }
 
     .gt-hero-carousel-card {
-        width: min(94vw, 700px);
-        height: 250px;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        aspect-ratio: auto;
+        border-radius: 20px;
+    }
+
+    .gt-hero-carousel-card::before {
+        display: none;
+    }
+
+    .gt-hero-carousel-card::after {
+        border-radius: 20px;
     }
 
     .gt-hero-carousel-card[data-offset='-2'],
@@ -1753,6 +1810,16 @@ section.gt-hero {
 
     .gt-hero-carousel-content p {
         font-size: 0.78rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .gt-hero-carousel-image {
+        object-fit: contain;
+        object-position: center center;
+        background: #0f172a;
     }
 
     .gt-hero-actions {
@@ -1789,12 +1856,28 @@ section.gt-hero {
     }
 
     .gt-schedule-day-content {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
     }
 
     .gt-schedule-day-header {
-        order: -1;
         align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+    }
+
+    .gt-schedule-day-header-main {
+        align-items: center;
+        min-width: 0;
+    }
+
+    .gt-schedule-day-chevron {
+        display: inline-flex;
+    }
+
+    .gt-schedule-day-header[aria-expanded='true'] .gt-schedule-day-chevron {
+        transform: rotate(180deg);
     }
 
     .gt-hero-sub {
@@ -1856,6 +1939,7 @@ section.gt-hero {
 
     .gt-participation-wrap {
         grid-template-columns: 1fr;
+        gap: 12px;
     }
 
     .gt-participation-graph-users,
@@ -1864,8 +1948,62 @@ section.gt-hero {
         grid-column: 1 / -1;
     }
 
+    .gt-participation-graph-users,
+    .gt-participation-graph-teams {
+        border: 1px solid var(--gt-border);
+        border-radius: 14px;
+        box-shadow: 0 10px 24px -18px rgba(15, 23, 42, 0.4);
+        padding: 12px 14px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .gt-participation-graph-users h3,
+    .gt-participation-graph-teams h3 {
+        font-size: 0.95rem;
+        line-height: 1.35;
+        max-width: 68%;
+    }
+
+    .gt-participation-graph-users .gt-participation-stat-wrap,
+    .gt-participation-graph-teams .gt-participation-stat-wrap {
+        margin-top: 0;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
     .gt-participation-stat-number {
-        font-size: clamp(2.6rem, 14vw, 4.4rem);
+        font-size: clamp(1.85rem, 10vw, 2.7rem);
+        line-height: 0.92;
+    }
+
+    .gt-participation-stat-unit {
+        font-size: 0.92rem;
+    }
+
+    .gt-participation-graph-trend {
+        border-radius: 16px;
+        padding: 14px;
+    }
+
+    .gt-participation-trend-head {
+        gap: 8px;
+    }
+
+    .gt-participation-trend-head h3 {
+        font-size: 0.96rem;
+        line-height: 1.4;
+    }
+
+    .gt-participation-legend {
+        gap: 10px;
+        margin-bottom: 6px;
+    }
+
+    .gt-participation-legend span {
+        font-size: 0.74rem;
     }
 
     .gt-participation-chart {
@@ -1895,6 +2033,18 @@ section.gt-hero {
         padding: 28px 24px;
     }
 
+    .gt-prize-card[data-rank='1'] {
+        order: 1;
+    }
+
+    .gt-prize-card[data-rank='2'] {
+        order: 2;
+    }
+
+    .gt-prize-card[data-rank='3'] {
+        order: 3;
+    }
+
     .gt-process-steps {
         grid-template-columns: 1fr;
         gap: 18px;
@@ -1902,12 +2052,7 @@ section.gt-hero {
     }
 
     .gt-process-steps::before {
-        left: 28px;
-        right: auto;
-        top: 18px;
-        bottom: 18px;
-        width: 3px;
-        height: auto;
+        display: none;
     }
 
     .gt-step {
@@ -1918,6 +2063,33 @@ section.gt-hero {
             'node body';
         align-items: start;
         gap: 10px 12px;
+        position: relative;
+    }
+
+    .gt-step::before,
+    .gt-step::after {
+        content: '';
+        position: absolute;
+        left: 28px;
+        width: 3px;
+        background: linear-gradient(180deg, rgba(124, 58, 237, 0.35) 0%, rgba(59, 130, 246, 0.48) 50%, rgba(20, 184, 166, 0.35) 100%);
+        border-radius: 999px;
+        z-index: 0;
+    }
+
+    .gt-step::before {
+        top: -18px;
+        bottom: calc(100% - 63px);
+    }
+
+    .gt-step::after {
+        top: 63px;
+        bottom: -18px;
+    }
+
+    .gt-step:first-child::before,
+    .gt-step:last-child::after {
+        display: none;
     }
 
     .gt-step-date {
@@ -1931,6 +2103,9 @@ section.gt-hero {
         width: 46px;
         height: 46px;
         font-size: 0.78rem;
+        justify-self: center;
+        position: relative;
+        z-index: 2;
     }
 
     .gt-step-body {

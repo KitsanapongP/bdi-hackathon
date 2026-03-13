@@ -10,6 +10,7 @@ import {
     Calendar,
     Menu,
     X,
+    ChevronDown,
     ArrowRight,
     LogIn,
     LogOut,
@@ -279,6 +280,11 @@ function HomePage() {
     const [participationLoading, setParticipationLoading] = useState(true);
     const [participationError, setParticipationError] = useState(null);
     const [participationMode, setParticipationMode] = useState('weekly');
+    const [isScheduleMobile, setIsScheduleMobile] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return window.matchMedia('(max-width: 768px)').matches;
+    });
+    const [openScheduleDay, setOpenScheduleDay] = useState(-1);
 
     useEffect(() => {
         // Initialize from localStorage first for immediate render
@@ -488,6 +494,30 @@ function HomePage() {
             window.scrollTo(0, 0);
         }
     }, [location.state, user]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+
+        const mediaQuery = window.matchMedia('(max-width: 768px)');
+        const handleChange = (event) => setIsScheduleMobile(event.matches);
+
+        setIsScheduleMobile(mediaQuery.matches);
+
+        if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener('change', handleChange);
+            return () => mediaQuery.removeEventListener('change', handleChange);
+        }
+
+        mediaQuery.addListener(handleChange);
+        return () => mediaQuery.removeListener(handleChange);
+    }, []);
+
+    useEffect(() => {
+        const dayCount = schedulesData?.days?.length || 0;
+        if (!isScheduleMobile || dayCount === 0) return;
+        if (openScheduleDay < dayCount) return;
+        setOpenScheduleDay(0);
+    }, [isScheduleMobile, schedulesData, openScheduleDay]);
 
     const formatPrizeAmount = (amount, currency) => {
         if (typeof amount !== 'number' || Number.isNaN(amount)) return null;
@@ -910,7 +940,7 @@ function HomePage() {
                                     const iconSize = isChampion ? 48 : 32;
 
                                     return (
-                                        <div key={reward.id} className={`gt-prize-card ${cardClass}`}>
+                                        <div key={reward.id} className={`gt-prize-card ${cardClass}`} data-rank={String(reward.rank || '')}>
                                             <div className="prize-icon"><Trophy size={iconSize} /></div>
                                             <h3>{reward.nameTh}</h3>
                                             {amountLabel && <div className="prize-amount">{amountLabel}</div>}
@@ -1001,34 +1031,53 @@ function HomePage() {
                                 </div>
                             ) : schedulesData && schedulesData.days && schedulesData.days.length > 0 ? (
                                 schedulesData.days.map((day, dIdx) => (
-                                    <div key={dIdx} className="gt-schedule-day-group gt-reveal active" style={{ transitionDelay: `${dIdx * 80}ms` }}>
+                                    <div
+                                        key={dIdx}
+                                        className={`gt-schedule-day-group gt-reveal active ${(!isScheduleMobile || openScheduleDay === dIdx) ? 'is-open' : 'is-collapsed'}`}
+                                        style={{ transitionDelay: `${dIdx * 80}ms` }}
+                                    >
                                         <div className="gt-schedule-day-content">
-                                            <div className="gt-schedule-day-items">
-                                                {day.items.map((item, i) => (
-                                                    <div key={item.item_id} className="gt-schedule-card" style={{ transitionDelay: `${(dIdx + i) * 60}ms` }}>
-                                                        <div className="gt-time">
-                                                            {formatScheduleTime(item.start_time, item.end_time)}
+                                            <button
+                                                type="button"
+                                                className="gt-schedule-day-header"
+                                                aria-expanded={!isScheduleMobile || openScheduleDay === dIdx}
+                                                aria-controls={`gt-schedule-day-items-${dIdx}`}
+                                                onClick={() => {
+                                                    if (!isScheduleMobile) return;
+                                                    setOpenScheduleDay((prev) => (prev === dIdx ? -1 : dIdx));
+                                                }}
+                                            >
+                                                <span className="gt-schedule-day-header-main">
+                                                    <Calendar size={18} />
+                                                    <span>
+                                                        <h3>{day.day_name_th || 'วันกิจกรรม'}</h3>
+                                                        <span className="gt-schedule-day-date">{formatScheduleDateLabel(day.day_date)}</span>
+                                                    </span>
+                                                </span>
+                                                <ChevronDown className="gt-schedule-day-chevron" size={18} />
+                                            </button>
+
+                                            {(!isScheduleMobile || openScheduleDay === dIdx) && (
+                                                <div id={`gt-schedule-day-items-${dIdx}`} className="gt-schedule-day-items">
+                                                    {day.items.map((item, i) => (
+                                                        <div key={item.item_id} className="gt-schedule-card" style={{ transitionDelay: `${(dIdx + i) * 60}ms` }}>
+                                                            <div className="gt-time">
+                                                                {formatScheduleTime(item.start_time, item.end_time)}
+                                                            </div>
+                                                            <div>
+                                                                <h3>{item.title_th}</h3>
+                                                                {item.description_th && <p>{item.description_th}</p>}
+                                                                {(item.location_th || item.speaker_th) && (
+                                                                    <div className="gt-schedule-meta" style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--gt-text-muted)', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                                                                        {item.location_th && <span><Target size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {item.location_th}</span>}
+                                                                        {item.speaker_th && <span><Users size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {item.speaker_th}</span>}
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <h3>{item.title_th}</h3>
-                                                            {item.description_th && <p>{item.description_th}</p>}
-                                                            {(item.location_th || item.speaker_th) && (
-                                                                <div className="gt-schedule-meta" style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--gt-text-muted)', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                                                                    {item.location_th && <span><Target size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {item.location_th}</span>}
-                                                                    {item.speaker_th && <span><Users size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {item.speaker_th}</span>}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div className="gt-schedule-day-header">
-                                                <Calendar size={18} />
-                                                <div>
-                                                    <h3>{day.day_name_th || 'วันกิจกรรม'}</h3>
-                                                    <div className="gt-schedule-day-date">{formatScheduleDateLabel(day.day_date)}</div>
+                                                    ))}
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))
