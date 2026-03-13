@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
+    Activity,
     Sparkles,
     Users,
     Trophy,
@@ -106,6 +107,150 @@ const competitionSteps = [
     },
 ];
 
+function formatCompactNumber(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return '-';
+    return numeric.toLocaleString('th-TH');
+}
+
+function formatTrendPeriodLabel(periodStart, mode) {
+    if (!periodStart) return '-';
+
+    const parsed = new Date(`${periodStart}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return String(periodStart);
+
+    if (mode === 'monthly') {
+        return parsed.toLocaleDateString('th-TH', {
+            month: 'short',
+            year: '2-digit',
+        });
+    }
+
+    return parsed.toLocaleDateString('th-TH', {
+        day: 'numeric',
+        month: 'short',
+    });
+}
+
+function buildLineGeometry(values, width, height, paddingX, paddingY, maxValue) {
+    if (!values.length) {
+        return { points: [], linePath: '', areaPath: '' };
+    }
+
+    const usableWidth = Math.max(1, width - (paddingX * 2));
+    const usableHeight = Math.max(1, height - (paddingY * 2));
+    const denominator = values.length > 1 ? values.length - 1 : 1;
+    const safeMax = Math.max(1, maxValue);
+
+    const points = values.map((value, index) => {
+        const ratio = Math.max(0, Number(value)) / safeMax;
+        const x = paddingX + (usableWidth * index) / denominator;
+        const y = paddingY + usableHeight - (ratio * usableHeight);
+        return { x, y };
+    });
+
+    const linePath = points
+        .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+        .join(' ');
+
+    const first = points[0];
+    const last = points[points.length - 1];
+    const baseline = height - paddingY;
+    const areaPath = `${linePath} L ${last.x.toFixed(2)} ${baseline.toFixed(2)} L ${first.x.toFixed(2)} ${baseline.toFixed(2)} Z`;
+
+    return { points, linePath, areaPath };
+}
+
+function ParticipationTrendChart({ rows, mode }) {
+    if (!rows.length) {
+        return <div className="gt-participation-chart-empty">ยังไม่มีข้อมูลแนวโน้ม</div>;
+    }
+
+    const width = 960;
+    const height = 174;
+    const paddingX = 20;
+    const paddingY = 14;
+    const participantValues = rows.map((row) => Number(row.interestedParticipants) || 0);
+    const teamValues = rows.map((row) => Number(row.totalTeams) || 0);
+    const maxValue = Math.max(...participantValues, ...teamValues, 1);
+
+    const participantLine = buildLineGeometry(participantValues, width, height, paddingX, paddingY, maxValue);
+    const teamLine = buildLineGeometry(teamValues, width, height, paddingX, paddingY, maxValue);
+
+    const firstLabel = formatTrendPeriodLabel(rows[0]?.periodStart, mode);
+    const lastLabel = formatTrendPeriodLabel(rows[rows.length - 1]?.periodStart, mode);
+
+    return (
+        <div className="gt-participation-chart-shell">
+            <svg className="gt-participation-chart" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" role="img" aria-label="แนวโน้มผู้สมัครและทีม">
+                <defs>
+                    <linearGradient id="gt-participation-users-fill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="rgba(124, 58, 237, 0.34)" />
+                        <stop offset="100%" stopColor="rgba(124, 58, 237, 0.02)" />
+                    </linearGradient>
+                    <linearGradient id="gt-participation-teams-fill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="rgba(59, 130, 246, 0.26)" />
+                        <stop offset="100%" stopColor="rgba(59, 130, 246, 0.02)" />
+                    </linearGradient>
+                </defs>
+
+                <path d={participantLine.areaPath} fill="url(#gt-participation-users-fill)" />
+                <path d={teamLine.areaPath} fill="url(#gt-participation-teams-fill)" />
+
+                <path d={participantLine.linePath} fill="none" stroke="#7c3aed" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                <path d={teamLine.linePath} fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+
+                {participantLine.points.map((point, index) => (
+                    <circle key={`participants-${index}`} cx={point.x} cy={point.y} r="2.7" fill="#7c3aed" />
+                ))}
+                {teamLine.points.map((point, index) => (
+                    <circle key={`teams-${index}`} cx={point.x} cy={point.y} r="2.5" fill="#3b82f6" />
+                ))}
+            </svg>
+            <div className="gt-participation-axis">
+                <span>{firstLabel}</span>
+                <span>{lastLabel}</span>
+            </div>
+        </div>
+    );
+}
+
+function AnimatedCounter({ value, suffix }) {
+    const [displayValue, setDisplayValue] = useState(0);
+
+    useEffect(() => {
+        const target = Math.max(0, Number(value) || 0);
+        const startTime = performance.now();
+        const durationMs = 900;
+        let rafId = null;
+
+        const tick = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / durationMs, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const nextValue = Math.round(target * eased);
+            setDisplayValue(nextValue);
+
+            if (progress < 1) {
+                rafId = requestAnimationFrame(tick);
+            }
+        };
+
+        rafId = requestAnimationFrame(tick);
+
+        return () => {
+            if (rafId) cancelAnimationFrame(rafId);
+        };
+    }, [value]);
+
+    return (
+        <div className="gt-participation-stat-wrap">
+            <span className="gt-participation-stat-number">{formatCompactNumber(displayValue)}</span>
+            <span className="gt-participation-stat-unit">{suffix}</span>
+        </div>
+    );
+}
+
 
 
 /* ═══════════════════════ Component ═══════════════════════ */
@@ -130,6 +275,10 @@ function HomePage() {
     const [coOrganizerSponsors, setCoOrganizerSponsors] = useState(() => getCachedCoOrganizerSponsors() || []);
     const [sponsors, setSponsors] = useState([]);
     const [sponsorsLoading, setSponsorsLoading] = useState(true);
+    const [participationOverview, setParticipationOverview] = useState(null);
+    const [participationLoading, setParticipationLoading] = useState(true);
+    const [participationError, setParticipationError] = useState(null);
+    const [participationMode, setParticipationMode] = useState('weekly');
 
     useEffect(() => {
         // Initialize from localStorage first for immediate render
@@ -286,10 +435,40 @@ function HomePage() {
                 setSponsorsLoading(false);
             }
         };
+
+        const fetchParticipationOverview = async () => {
+            try {
+                setParticipationLoading(true);
+                setParticipationError(null);
+
+                const response = await fetch(apiUrl('/api/content/participation-overview'), {
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch participation overview: ${response.status}`);
+                }
+
+                const payload = await response.json();
+                if (!payload?.ok || !payload?.data) {
+                    throw new Error(payload?.message || 'Failed to fetch participation overview');
+                }
+
+                setParticipationOverview(payload.data);
+                setParticipationLoading(false);
+            } catch (err) {
+                console.error('Failed to fetch participation overview', err);
+                setParticipationOverview(null);
+                setParticipationError('เกิดข้อผิดพลาดในการโหลดสถิติการเข้าร่วม');
+                setParticipationLoading(false);
+            }
+        };
+
         fetchSchedules();
         fetchRewards();
         fetchCarousels();
         fetchSponsors();
+        fetchParticipationOverview();
     }, [location]);
 
     useEffect(() => {
@@ -327,6 +506,28 @@ function HomePage() {
 
         return [otherRewards[0], championReward, otherRewards[1]];
     })();
+
+    const participationTrendRows = useMemo(() => {
+        const rows = participationOverview?.trend?.[participationMode];
+        if (!Array.isArray(rows)) return [];
+        return rows;
+    }, [participationMode, participationOverview]);
+
+    const participationUpdatedAtLabel = useMemo(() => {
+        const raw = participationOverview?.generatedAt;
+        if (!raw) return '';
+        const parsed = new Date(raw);
+        if (Number.isNaN(parsed.getTime())) return '';
+
+        return parsed.toLocaleString('th-TH', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    }, [participationOverview]);
+
+    const trendModeLabel = participationMode === 'weekly' ? 'รายสัปดาห์' : 'รายเดือน';
 
     const formatScheduleDateLabel = (dayDate) => {
         if (!dayDate) return '-';
@@ -606,6 +807,86 @@ function HomePage() {
                             <button className="gt-btn gt-btn-secondary" onClick={() => scrollTo('schedule')}>
                                 {config.locale.ctaSecondary}
                             </button>
+                        </div>
+                    </section>
+
+                    {/* Participation Overview */}
+                    <section id="participation" className="gt-section gt-container gt-participation-section">
+                        <div className="gt-participation-wrap gt-reveal">
+                            {participationError ? (
+                                <p className="gt-participation-status">{participationError}</p>
+                            ) : (
+                                <>
+                                    <article className="gt-participation-graph gt-participation-graph-users">
+                                        <h3>
+                                            <Users size={17} />
+                                            จำนวนคนที่สนใจเข้าร่วม
+                                        </h3>
+                                        {participationLoading ? (
+                                            <div className="gt-participation-stat-loading" />
+                                        ) : (
+                                            <AnimatedCounter
+                                                value={participationOverview?.totals?.interestedParticipants ?? 0}
+                                                suffix="คน"
+                                            />
+                                        )}
+                                    </article>
+
+                                    <article className="gt-participation-graph gt-participation-graph-teams">
+                                        <h3>
+                                            <Target size={17} />
+                                            จำนวนทีมทั้งหมด
+                                        </h3>
+                                        {participationLoading ? (
+                                            <div className="gt-participation-stat-loading" />
+                                        ) : (
+                                            <AnimatedCounter
+                                                value={participationOverview?.totals?.totalTeams ?? 0}
+                                                suffix="ทีม"
+                                            />
+                                        )}
+                                    </article>
+
+                                    <article className="gt-participation-graph gt-participation-graph-trend">
+                                        <div className="gt-participation-trend-head">
+                                            <h3>
+                                                <Activity size={17} />
+                                                จำนวนคนที่สมัคร และจำนวนทีมที่ถูกสร้างขึ้นมา ({trendModeLabel})
+                                            </h3>
+                                            <div className="gt-participation-mode" role="tablist" aria-label="โหมดการแสดงผลแนวโน้ม">
+                                                {[
+                                                    { value: 'weekly', label: 'รายสัปดาห์' },
+                                                    { value: 'monthly', label: 'รายเดือน' },
+                                                ].map((option) => (
+                                                    <button
+                                                        key={option.value}
+                                                        type="button"
+                                                        className={participationMode === option.value ? 'active' : ''}
+                                                        onClick={() => setParticipationMode(option.value)}
+                                                    >
+                                                        {option.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="gt-participation-legend">
+                                            <span><i className="users-dot" /> ผู้สนใจเข้าร่วม</span>
+                                            <span><i className="teams-dot" /> ทีมที่สร้างแล้ว</span>
+                                        </div>
+
+                                        {participationLoading ? (
+                                            <div className="gt-participation-chart-empty">กำลังโหลดสถิติ...</div>
+                                        ) : (
+                                            <ParticipationTrendChart rows={participationTrendRows} mode={participationMode} />
+                                        )}
+                                    </article>
+                                </>
+                            )}
+
+                            {!participationLoading && !participationError && participationUpdatedAtLabel ? (
+                                <p className="gt-participation-updated">อัปเดตล่าสุด {participationUpdatedAtLabel}</p>
+                            ) : null}
                         </div>
                     </section>
 

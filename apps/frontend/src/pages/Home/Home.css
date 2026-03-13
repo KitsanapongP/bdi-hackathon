@@ -1050,6 +1050,263 @@ section.gt-hero {
 }
 
 /* --- 9.5 Prizes & Process --- */
+.gt-participation-section {
+    padding-top: 24px;
+    padding-bottom: 24px;
+}
+
+.gt-participation-wrap {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.gt-participation-graph {
+    border: 1px solid var(--gt-border);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--gt-surface) 90%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 14px 34px -24px rgba(15, 23, 42, 0.55);
+    padding: 12px;
+}
+
+.gt-participation-graph-users {
+    background:
+        radial-gradient(120% 120% at 100% 0%, rgba(124, 58, 237, 0.16) 0%, transparent 55%),
+        color-mix(in srgb, var(--gt-surface) 92%, transparent);
+}
+
+.gt-participation-graph-teams {
+    background:
+        radial-gradient(120% 120% at 100% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 55%),
+        color-mix(in srgb, var(--gt-surface) 92%, transparent);
+}
+
+.dark .gt-participation-graph {
+    box-shadow: 0 14px 34px -24px rgba(2, 6, 23, 0.9);
+}
+
+.gt-participation-graph-users,
+.gt-participation-graph-teams {
+    grid-column: span 6;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
+.gt-participation-graph-trend {
+    grid-column: 1 / -1;
+}
+
+.gt-participation-graph h3 {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--gt-text);
+    font-size: 0.95rem;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.gt-participation-graph-users h3,
+.gt-participation-graph-teams h3 {
+    font-size: 1.05rem;
+}
+
+.gt-participation-graph h3 svg {
+    color: var(--gt-primary);
+}
+
+.gt-participation-stat-wrap {
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 4px 0;
+}
+
+.gt-participation-stat-number {
+    font-size: clamp(2.8rem, 7vw, 4.8rem);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gt-stat-pop 0.6s ease;
+}
+
+.gt-participation-stat-unit {
+    color: var(--gt-text-muted);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.gt-participation-metric-note {
+    margin: 4px 0 0;
+    color: var(--gt-text-muted);
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
+.gt-participation-stat-loading {
+    margin-top: 10px;
+    width: 78%;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(90deg, rgba(148, 163, 184, 0.18) 0%, rgba(148, 163, 184, 0.3) 50%, rgba(148, 163, 184, 0.18) 100%);
+    background-size: 180% 100%;
+    animation: gt-shimmer 1.4s ease infinite;
+}
+
+.gt-participation-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border-radius: 999px;
+    border: 1px solid var(--gt-border);
+    background: var(--gt-surface-alt);
+}
+
+.gt-participation-mode button {
+    border: none;
+    background: transparent;
+    color: var(--gt-text-muted);
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.gt-participation-mode button:hover {
+    color: var(--gt-text);
+}
+
+.gt-participation-mode button.active {
+    background: rgba(124, 58, 237, 0.14);
+    color: var(--gt-primary);
+}
+
+.gt-participation-grid {
+    display: contents;
+}
+
+.gt-participation-trend-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.gt-participation-graph-trend .gt-participation-legend {
+    margin-top: 7px;
+}
+
+.gt-participation-legend {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 8px;
+}
+
+.gt-participation-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--gt-text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.gt-participation-legend i {
+    width: 8px;
+    height: 8px;
+    border-radius: 99px;
+    display: inline-block;
+}
+
+.gt-participation-legend i.users-dot {
+    background: #7c3aed;
+}
+
+.gt-participation-legend i.teams-dot {
+    background: #3b82f6;
+}
+
+.gt-participation-chart-shell {
+    width: 100%;
+}
+
+.gt-participation-chart {
+    display: block;
+    width: 100%;
+    height: 150px;
+}
+
+.gt-participation-axis {
+    margin-top: 4px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--gt-text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.gt-participation-chart-empty,
+.gt-participation-status {
+    min-height: 90px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gt-text-muted);
+    font-size: 0.9rem;
+}
+
+.gt-participation-status {
+    grid-column: 1 / -1;
+    color: #ef4444;
+}
+
+.gt-participation-updated {
+    grid-column: 1 / -1;
+    margin: 8px 2px 0;
+    text-align: right;
+    color: var(--gt-text-muted);
+    font-size: 0.74rem;
+}
+
+@keyframes gt-shimmer {
+    from {
+        background-position: 100% 0;
+    }
+
+    to {
+        background-position: -100% 0;
+    }
+}
+
+@keyframes gt-stat-pop {
+    from {
+        transform: translateY(4px) scale(0.96);
+        opacity: 0.6;
+    }
+
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
 .gt-prizes {
     display: grid;
     grid-template-columns: 1fr 1.2fr 1fr;
@@ -1401,6 +1658,21 @@ section.gt-hero {
     width: 100%;
 }
 
+@media (max-width: 1040px) {
+    .gt-participation-wrap {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gt-participation-graph-users,
+    .gt-participation-graph-teams {
+        grid-column: span 1;
+    }
+
+    .gt-participation-graph-trend {
+        grid-column: 1 / -1;
+    }
+}
+
 @media (max-width: 768px) {
 
     .gt-pill-nav {
@@ -1547,6 +1819,10 @@ section.gt-hero {
         padding-block: 60px;
     }
 
+    .gt-participation-section {
+        padding-block: 24px;
+    }
+
     .gt-sponsors-wrapper {
         padding: 30px 0;
     }
@@ -1557,6 +1833,48 @@ section.gt-hero {
 
     .gt-marquee {
         gap: 60px;
+    }
+
+    .gt-participation-graph {
+        padding: 14px;
+    }
+
+    .gt-participation-trend-head {
+        align-items: flex-start;
+    }
+
+    .gt-participation-mode {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gt-participation-mode button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .gt-participation-wrap {
+        grid-template-columns: 1fr;
+    }
+
+    .gt-participation-graph-users,
+    .gt-participation-graph-teams,
+    .gt-participation-graph-trend {
+        grid-column: 1 / -1;
+    }
+
+    .gt-participation-stat-number {
+        font-size: clamp(2.6rem, 14vw, 4.4rem);
+    }
+
+    .gt-participation-chart {
+        height: 132px;
+    }
+
+    .gt-participation-updated {
+        text-align: left;
+        margin-left: 0;
     }
 
     /* New sections responsive */

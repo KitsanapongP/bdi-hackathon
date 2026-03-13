@@ -259,3 +259,26 @@ export type ContentContactAdmin = {
     publishedAt: string | null;
     channels: ContentContactChannelAdmin[];
 };
+
+export type ContentParticipationPeriodCountRow = {
+    period_start: string;
+    total: number;
+};
+
+export type ContentParticipationTrendPoint = {
+    periodStart: string;
+    interestedParticipants: number;
+    totalTeams: number;
+};
+
+export type ContentParticipationOverview = {
+    totals: {
+        interestedParticipants: number;
+        totalTeams: number;
+    };
+    trend: {
+        weekly: ContentParticipationTrendPoint[];
+        monthly: ContentParticipationTrendPoint[];
+    };
+    generatedAt: string;
+};

@@ -5,9 +5,20 @@ import type {
     ContentContactChannelRow,
     ContentContactRow,
     ContentPageRow,
+    ContentParticipationPeriodCountRow,
     ContentRewardRow,
     ContentSponsorRow,
 } from './content.types.js';
+
+type ParticipationTrendGranularity = 'weekly' | 'monthly';
+
+function getPeriodStartExpression(columnName: string, granularity: ParticipationTrendGranularity): string {
+    if (granularity === 'weekly') {
+        return `DATE_FORMAT(DATE_SUB(DATE(${columnName}), INTERVAL WEEKDAY(${columnName}) DAY), '%Y-%m-%d')`;
+    }
+
+    return `DATE_FORMAT(${columnName}, '%Y-%m-01')`;
+}
 
 export async function getEnabledRewards(db: DB): Promise<ContentRewardRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(
@@ -233,6 +244,70 @@ export async function updateSponsorsOrder(db: DB, updates: { id: number; sortOrd
     for (const update of updates) {
         await db.query(`UPDATE content_sponsors SET sort_order = ? WHERE sponsor_id = ?`, [update.sortOrder, update.id]);
     }
+}
+
+export async function getInterestedParticipantCount(db: DB): Promise<number> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT COUNT(*) AS total
+         FROM user_users u
+         LEFT JOIN access_allowlist a
+           ON a.user_id = u.user_id
+          AND a.is_active = 1
+         WHERE u.is_active = 1
+           AND u.deleted_at IS NULL
+           AND a.user_id IS NULL`
+    );
+
+    return Number(rows[0]?.total ?? 0);
+}
+
+export async function getTotalActiveTeamCount(db: DB): Promise<number> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT COUNT(*) AS total
+         FROM team_teams t
+         WHERE t.deleted_at IS NULL
+           AND t.status <> 'disbanded'`
+    );
+
+    return Number(rows[0]?.total ?? 0);
+}
+
+export async function getInterestedParticipantTrend(
+    db: DB,
+    granularity: ParticipationTrendGranularity,
+): Promise<ContentParticipationPeriodCountRow[]> {
+    const periodExpression = getPeriodStartExpression('u.created_at', granularity);
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT ${periodExpression} AS period_start, COUNT(*) AS total
+         FROM user_users u
+         LEFT JOIN access_allowlist a
+           ON a.user_id = u.user_id
+          AND a.is_active = 1
+         WHERE u.is_active = 1
+           AND u.deleted_at IS NULL
+           AND a.user_id IS NULL
+         GROUP BY period_start
+         ORDER BY period_start ASC`
+    );
+
+    return rows as ContentParticipationPeriodCountRow[];
+}
+
+export async function getTotalActiveTeamTrend(
+    db: DB,
+    granularity: ParticipationTrendGranularity,
+): Promise<ContentParticipationPeriodCountRow[]> {
+    const periodExpression = getPeriodStartExpression('t.created_at', granularity);
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT ${periodExpression} AS period_start, COUNT(*) AS total
+         FROM team_teams t
+         WHERE t.deleted_at IS NULL
+           AND t.status <> 'disbanded'
+         GROUP BY period_start
+         ORDER BY period_start ASC`
+    );
+
+    return rows as ContentParticipationPeriodCountRow[];
 }
 
 export async function getEnabledCarouselSlides(db: DB): Promise<ContentCarouselSlideRow[]> {

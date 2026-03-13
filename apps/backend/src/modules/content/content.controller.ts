@@ -31,6 +31,11 @@ export async function handleGetContacts(req: FastifyRequest, reply: FastifyReply
     return reply.send(ok(contacts));
 }
 
+export async function handleGetParticipationOverview(req: FastifyRequest, reply: FastifyReply) {
+    const overview = await service.getParticipationOverview(req.server.ctx.db);
+    return reply.send(ok(overview));
+}
+
 export async function handleGetAllRewardsAdmin(req: FastifyRequest, reply: FastifyReply) {
     const rewards = await service.getAllRewardsAdmin(req.server.ctx.db);
     return reply.send(ok(rewards));

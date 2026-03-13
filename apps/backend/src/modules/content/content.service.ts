@@ -12,12 +12,72 @@ import type {
     ContentContactChannelAdmin,
     ContentPage,
     ContentPageAdmin,
+    ContentParticipationOverview,
+    ContentParticipationPeriodCountRow,
+    ContentParticipationTrendPoint,
     ContentReward,
     ContentRewardAdmin,
     ContentSponsor,
     ContentSponsorAdmin,
 } from './content.types.js';
 import { BadRequestError, NotFoundError } from '../../shared/errors.js';
+
+const PARTICIPATION_OVERVIEW_CACHE_TTL_MS = 5 * 60 * 1000;
+
+let participationOverviewCache:
+    | {
+        payload: ContentParticipationOverview;
+        expiresAt: number;
+    }
+    | null = null;
+
+function toNumber(value: unknown): number {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) return 0;
+    return Math.trunc(numeric);
+}
+
+function mergeParticipationTrend(
+    interestedRows: ContentParticipationPeriodCountRow[],
+    teamRows: ContentParticipationPeriodCountRow[],
+): ContentParticipationTrendPoint[] {
+    const bucket = new Map<string, ContentParticipationTrendPoint>();
+
+    for (const row of interestedRows) {
+        const periodStart = String(row.period_start || '');
+        if (!periodStart) continue;
+
+        bucket.set(periodStart, {
+            periodStart,
+            interestedParticipants: toNumber(row.total),
+            totalTeams: bucket.get(periodStart)?.totalTeams ?? 0,
+        });
+    }
+
+    for (const row of teamRows) {
+        const periodStart = String(row.period_start || '');
+        if (!periodStart) continue;
+
+        const existing = bucket.get(periodStart);
+        if (existing) {
+            existing.totalTeams = toNumber(row.total);
+            continue;
+        }
+
+        bucket.set(periodStart, {
+            periodStart,
+            interestedParticipants: 0,
+            totalTeams: toNumber(row.total),
+        });
+    }
+
+    return Array.from(bucket.values()).sort((left, right) => left.periodStart.localeCompare(right.periodStart));
+}
+
+function keepRecentPeriods(points: ContentParticipationTrendPoint[], limit: number): ContentParticipationTrendPoint[] {
+    if (points.length <= limit) return points;
+    return points.slice(points.length - limit);
+}
 
 function toRewardAdminResponse(row: any): ContentRewardAdmin {
     return {
@@ -589,6 +649,48 @@ export async function getRewards(db: DB): Promise<ContentReward[]> {
         descriptionEn: reward.description_en,
         sortOrder: reward.sort_order,
     }));
+}
+
+export async function getParticipationOverview(db: DB): Promise<ContentParticipationOverview> {
+    const now = Date.now();
+    if (participationOverviewCache && participationOverviewCache.expiresAt > now) {
+        return participationOverviewCache.payload;
+    }
+
+    const [
+        interestedParticipants,
+        totalTeams,
+        interestedWeekly,
+        teamsWeekly,
+        interestedMonthly,
+        teamsMonthly,
+    ] = await Promise.all([
+        repo.getInterestedParticipantCount(db),
+        repo.getTotalActiveTeamCount(db),
+        repo.getInterestedParticipantTrend(db, 'weekly'),
+        repo.getTotalActiveTeamTrend(db, 'weekly'),
+        repo.getInterestedParticipantTrend(db, 'monthly'),
+        repo.getTotalActiveTeamTrend(db, 'monthly'),
+    ]);
+
+    const payload: ContentParticipationOverview = {
+        totals: {
+            interestedParticipants,
+            totalTeams,
+        },
+        trend: {
+            weekly: keepRecentPeriods(mergeParticipationTrend(interestedWeekly, teamsWeekly), 24),
+            monthly: keepRecentPeriods(mergeParticipationTrend(interestedMonthly, teamsMonthly), 18),
+        },
+        generatedAt: new Date().toISOString(),
+    };
+
+    participationOverviewCache = {
+        payload,
+        expiresAt: now + PARTICIPATION_OVERVIEW_CACHE_TTL_MS,
+    };
+
+    return payload;
 }
 
 export async function getAllRewardsAdmin(db: DB): Promise<ContentRewardAdmin[]> {
