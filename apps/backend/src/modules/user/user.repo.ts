@@ -33,7 +33,7 @@ export async function updateProfile(
         phone?: string | undefined;
         institutionNameTh?: string | undefined;
         institutionNameEn?: string | undefined;
-        gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | undefined;
+        gender?: 'male' | 'female' | 'other' | undefined;
         birthDate?: string | undefined;
         educationLevel?: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | undefined;
         homeProvince?: string | undefined;

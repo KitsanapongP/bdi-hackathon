@@ -27,8 +27,7 @@ const EDUCATION_OPTIONS = [
 const GENDER_OPTIONS = [
     { value: 'male', label: 'ชาย' },
     { value: 'female', label: 'หญิง' },
-    { value: 'other', label: 'อื่น ๆ' },
-    { value: 'prefer_not_to_say', label: 'ไม่ระบุ' },
+    { value: 'other', label: 'ไม่ระบุ / อื่น ๆ' },
 ];
 
 const TERMS_DOC_CODES = ['TERMS'];

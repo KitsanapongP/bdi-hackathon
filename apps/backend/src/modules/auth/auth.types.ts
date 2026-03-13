@@ -14,7 +14,7 @@ export interface UserRow {
     last_name_th: string | null;
     first_name_en: string | null;
     last_name_en: string | null;
-    gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+    gender: 'male' | 'female' | 'other' | null;
     birth_date: string | null;
     education_level: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | null;
     home_province: string | null;
@@ -46,7 +46,7 @@ export interface RegisterInput {
     lastNameTh: string;
     firstNameEn: string;
     lastNameEn: string;
-    gender: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+    gender: 'male' | 'female' | 'other';
     birthDate: string;
     educationLevel: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate';
     institutionNameTh: string;
@@ -90,7 +90,7 @@ export interface UserSafe {
     lastNameTh: string | null;
     firstNameEn: string | null;
     lastNameEn: string | null;
-    gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+    gender: 'male' | 'female' | 'other' | null;
     birthDate: string | null;
     educationLevel: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | null;
     institutionNameTh: string | null;

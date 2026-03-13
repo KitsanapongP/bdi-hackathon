@@ -60,7 +60,7 @@ export async function createUser(
         lastNameTh: string;
         firstNameEn: string;
         lastNameEn: string;
-        gender: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+        gender: 'male' | 'female' | 'other';
         birthDate: string;
         educationLevel: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate';
         institutionNameTh: string;

@@ -553,11 +553,10 @@ function ProfileTab({ apiFetch, showToast, user }) {
                         </div>
                         <div className="pf-field">
                             <span className="pf-label">เพศ</span>
-                            <select className="pf-input" value={data.gender || 'prefer_not_to_say'} onChange={(e) => set('gender', e.target.value)}>
+                            <select className="pf-input" value={data.gender || 'other'} onChange={(e) => set('gender', e.target.value)}>
                                 <option value="male">ชาย</option>
                                 <option value="female">หญิง</option>
-                                <option value="other">อื่น ๆ</option>
-                                <option value="prefer_not_to_say">ไม่ระบุ</option>
+                                <option value="other">ไม่ระบุ / อื่น ๆ</option>
                             </select>
                         </div>
                         <div className="pf-field">

@@ -31,7 +31,7 @@ function toUserSafe(row: {
     last_name_th?: string | null;
     first_name_en?: string | null;
     last_name_en?: string | null;
-    gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+    gender?: 'male' | 'female' | 'other' | null;
     birth_date?: string | null;
     education_level?: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | null;
     institution_name_th?: string | null;
@@ -177,7 +177,7 @@ async function sendRegistrationVerificationEmail(email: string, code: string): P
     }
 
     const fromEmail = process.env['SMTP_FROM']?.trim() || process.env['SMTP_USER']?.trim() || 'noreply@hackathon.local';
-    const subject = 'รหัสยืนยันการสมัครสมาชิก (ใช้ได้ 5 นาที)';
+    const subject = 'รหัสยืนยันการสมัครสมาชิก';
     const html = `
         <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #0f172a;">
             <h2 style="margin: 0 0 12px;">ยืนยันการสมัครสมาชิก</h2>
@@ -218,7 +218,7 @@ async function buildUserResponse(db: DB, input: {
     lastNameTh: string;
     firstNameEn: string;
     lastNameEn: string;
-    gender: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+    gender: 'male' | 'female' | 'other';
     birthDate: string;
     educationLevel: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate';
     institutionNameTh: string;

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Mar 07, 2026 at 09:32 PM
+-- Generation Time: Mar 13, 2026 at 05:22 PM
 -- Server version: 10.11.11-MariaDB-0+deb12u1-log
 -- PHP Version: 8.4.17
 
@@ -45,6 +45,69 @@ INSERT INTO `access_allowlist` (`allow_id`, `user_id`, `access_role`, `is_active
 (190001, 1001, 'admin', 1, 'System admin', '2026-02-20 17:50:25', NULL),
 (190002, 1009, 'judge', 1, 'Judge 1', '2026-02-20 17:50:25', 1001),
 (190003, 1010, 'judge', 1, 'Judge 2', '2026-02-20 17:50:25', 1001);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `admin_notification_settings`
+--
+
+CREATE TABLE `admin_notification_settings` (
+  `event_code` varchar(100) NOT NULL COMMENT 'Event code',
+  `is_in_app_enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Enable in-app inbox delivery',
+  `is_email_enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Enable email delivery',
+  `custom_subject` varchar(255) DEFAULT NULL COMMENT 'Optional per-event email subject override',
+  `custom_message` text DEFAULT NULL COMMENT 'Optional per-event email body override',
+  `updated_by_user_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'Admin who updated this setting',
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Updated timestamp'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Admin channel toggles by event';
+
+--
+-- Dumping data for table `admin_notification_settings`
+--
+
+INSERT INTO `admin_notification_settings` (`event_code`, `is_in_app_enabled`, `is_email_enabled`, `custom_subject`, `custom_message`, `updated_by_user_id`, `updated_at`) VALUES
+('IDENTITY_SUBMITTED', 0, 1, 'ทีมส่งเอกสารยืนยันตัวตนแล้ว', 'ทีม {{team_name}} ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว', 1001, '2026-03-10 22:05:12'),
+('SELECTION_FAILED', 0, 1, 'ประกาศผลคัดเลือก: ไม่ผ่าน', 'ทีม {{team_name}} ไม่ผ่านการคัดเลือกในรอบนี้', 1001, '2026-03-10 17:50:20'),
+('SELECTION_PASSED', 0, 1, 'ประกาศผลคัดเลือก: ผ่าน', 'ทีม {{team_name}} ผ่านการคัดเลือก กรุณายืนยันเข้าร่วมภายในกำหนดเวลา', 1001, '2026-03-10 17:50:20'),
+('TEAM_CONFIRMED', 0, 1, 'ทีมยืนยันเข้าร่วมโครงการแล้ว', 'ทีม {{team_name}} ยืนยันเข้าร่วมโครงการเรียบร้อยแล้ว โดย {{actor_name}}', 1001, '2026-03-10 17:50:20');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `content_carousel_slides`
+--
+
+CREATE TABLE `content_carousel_slides` (
+  `slide_id` bigint(20) UNSIGNED NOT NULL COMMENT 'Primary key of carousel slide record',
+  `title_th` varchar(255) DEFAULT NULL COMMENT 'Slide title in Thai for homepage caption',
+  `title_en` varchar(255) DEFAULT NULL COMMENT 'Slide title in English for homepage caption',
+  `description_th` text DEFAULT NULL COMMENT 'Slide description in Thai for homepage caption',
+  `description_en` text DEFAULT NULL COMMENT 'Slide description in English for homepage caption',
+  `image_storage_key` varchar(500) NOT NULL COMMENT 'Image path or storage key used to render slide image',
+  `image_alt_th` varchar(255) DEFAULT NULL COMMENT 'Thai alt text for image accessibility',
+  `image_alt_en` varchar(255) DEFAULT NULL COMMENT 'English alt text for image accessibility',
+  `target_url` varchar(500) DEFAULT NULL COMMENT 'Optional URL opened when user clicks this slide',
+  `open_in_new_tab` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Whether target_url should open in a new browser tab',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT 'Display order in carousel (lower comes first)',
+  `is_enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Whether this slide is active on homepage',
+  `start_at` datetime DEFAULT NULL COMMENT 'Optional publish start datetime (NULL means no start limit)',
+  `end_at` datetime DEFAULT NULL COMMENT 'Optional publish end datetime (NULL means no end limit)',
+  `created_by_user_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'Admin user who created this slide',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp() COMMENT 'Created timestamp',
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Updated timestamp'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Homepage carousel slides managed from admin';
+
+--
+-- Dumping data for table `content_carousel_slides`
+--
+
+INSERT INTO `content_carousel_slides` (`slide_id`, `title_th`, `title_en`, `description_th`, `description_en`, `image_storage_key`, `image_alt_th`, `image_alt_en`, `target_url`, `open_in_new_tab`, `sort_order`, `is_enabled`, `start_at`, `end_at`, `created_by_user_id`, `created_at`, `updated_at`) VALUES
+(1, 'สไลด์1', 'slide1', 'คำอธิบายใต้ภาพ ว่าภาพเกี่ยวกับอะไร', 'description to describe what the slide image is about', '/static/content/carousels/pexels-sebastian-189349.jpg', NULL, NULL, 'https://www.pexels.com/search/4k%20wallpaper/', 1, 1, 1, NULL, NULL, 1001, '2026-03-11 00:57:55', '2026-03-11 01:26:33'),
+(2, 'สไลด์2', 'slide2', 'คำอธิบายทดสอบ คำอธิบายทดสอบ คำอธิบายทดสอบ คำอธิบายทดสอบ คำอธิบายทดสอบ คำอธิบายทดสอบ คำอธิบายทดสอบ', NULL, '/static/content/carousels/pexels-luisdelrio-15286.jpg', 'image alt', NULL, 'https://www.pexels.com/search/4k%20wallpaper/', 1, 2, 1, NULL, NULL, 1001, '2026-03-11 01:00:10', '2026-03-11 01:00:23'),
+(3, 'สไลด์3', NULL, 'ทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาวทดสอบข้อความยาว', NULL, '/static/content/carousels/pexels-pixabay-326055.jpg', NULL, NULL, 'https://www.pexels.com/search/4k%20wallpaper/', 1, 3, 1, NULL, NULL, 1001, '2026-03-11 01:01:05', '2026-03-11 01:01:05'),
+(4, 'สไลด์4', NULL, '-', NULL, '/static/content/carousels/pexels-pixabay-358532.jpg', NULL, NULL, 'https://www.pexels.com/search/4k%20wallpaper/', 0, 4, 1, NULL, NULL, 1001, '2026-03-11 01:01:43', '2026-03-11 01:01:43'),
+(5, 'สไลด์5', NULL, NULL, NULL, '/static/content/carousels/pexels-jplenio-1146708.jpg', NULL, NULL, NULL, 1, 5, 1, NULL, NULL, 1001, '2026-03-11 01:03:01', '2026-03-11 01:03:01');
 
 -- --------------------------------------------------------
 
@@ -142,7 +205,7 @@ CREATE TABLE `content_pages` (
 --
 
 INSERT INTO `content_pages` (`page_id`, `page_code`, `title_th`, `title_en`, `content_html_th`, `content_html_en`, `is_published`, `published_at`, `created_by_user_id`, `created_at`, `updated_at`) VALUES
-(1, 'ABOUT', 'เกี่ยวกับกิจกรรม', 'About', '<p>ด้วยความก้าวหน้าของเทคโนโลยีดิจิทัลในปัจจุบัน การประยุกต์ใช้ข้อมูลขนาดใหญ่ (Big Data) และปัญญาประดิษฐ์ (Artificial Intelligence: AI) ได้กลายเป็นกลไกสำคัญในการวิเคราะห์ วางแผน และสนับสนุนการตัดสินใจในหลายมิติของสังคม โดยเฉพาะอย่างยิ่งในด้านการส่งเสริมสุขภาพและการยกระดับคุณภาพชีวิตของประชาชน ซึ่งครอบคลุมตั้งแต่พฤติกรรมการดำรงชีวิต สิ่งแวดล้อม ชุมชน ระบบบริการสาธารณะ ตลอดจนการบริหารจัดการเชิงนโยบาย ข้อมูลที่เกี่ยวข้องกับ Intelligent living และการส่งเสริมสุขภาพมีลักษณะเป็นข้อมูลขนาดใหญ่ที่หลากหลาย แหล่งที่มาและรูปแบบแตกต่างกัน เช่น ข้อมูลพฤติกรรมการใช้ชีวิต ข้อมูลจากอุปกรณ์ดิจิทัลและอุปกรณ์สวมใส่ ข้อมูลสิ่งแวดล้อม ข้อมูลเชิงพื้นที่ และข้อมูลจากการมีส่วนร่วมของประชาชน ซึ่งล้วนเป็นข้อมูลที่มีความซับซ้อน และจำเป็นต้องอาศัยองค์ความรู้ด้านการวิเคราะห์ข้อมูลขั้นสูง การออกแบบระบบ และการพัฒนาแบบจำลองปัญญาประดิษฐ์ เพื่อให้สามารถนำข้อมูลดังกล่าวมาใช้ประโยชน์ได้อย่างมีประสิทธิภาพ ถูกต้อง และคำนึงถึงจริยธรรมและความเป็นส่วนตัวของข้อมูล</p><p><strong>สถาบันข้อมูลขนาดใหญ่ (BDI)</strong> และ <strong>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</strong> ในฐานะหน่วยงานหลักด้านการผลิตและพัฒนากำลังคนทางเทคโนโลยีดิจิทัล จึงเห็นความสำคัญในการส่งเสริมการเรียนรู้และการสร้างนวัตกรรมด้านปัญญาประดิษฐ์และการวิเคราะห์ข้อมูลขนาดใหญ่ ผ่านกระบวนการเรียนรู้เชิงปฏิบัติการและการบูรณาการข้ามศาสตร์ ร่วมกับคณะแพทยศาสตร์ คณะพยาบาลศาสตร์ คณะสาธารณสุขศาสตร์ วิทยาลัยปกครองท้องถิ่น และมหาวิทยาลัยเครือข่ายในภาคตะวันออกเฉียงเหนือ และภาคเอกชน จัดโครงการในรูปแบบกิจกรรม Hackathon ด้าน AI และ Big Data ภายใต้กรอบแนวคิด Intelligent living จะเป็นเวทีสำคัญในการเปิดโอกาสให้นักเรียนระดับมัธยมศึกษาตอนปลาย นักศึกษาระดับปริญญาตรี อาจารย์ และผู้เชี่ยวชาญ ได้ร่วมกันพัฒนาแนวคิดและผลงานต้นแบบที่สามารถนำไปประยุกต์ใช้ในการส่งเสริมสุขภาพและคุณภาพชีวิตในหลากหลายมิติ อันจะนำไปสู่การพัฒนากำลังคนด้านเทคโนโลยีดิจิทัล การสร้างเครือข่ายความร่วมมือทางวิชาการ และการยกระดับขีดความสามารถในการใช้ AI และ Big Data ของประเทศอย่างยั่งยืน ภายใช้ชื่อการแข่งขัน "Intelligent Living Hackathon 2026" ชิงถ้วยพระราชทาน สมเด็จพระกนิษฐาธิราชเจ้า กรมสมเด็จพระเทพรัตนราชสุดาฯ ระหว่างวันที่ 3-5 กรกฎาคม 2569</p>', '<p>Khon Kaen Intelligent Living Hackathon 2026 promotes innovation for healthier and sustainable living.</p>', 1, '2026-02-27 00:36:42', NULL, '2026-02-27 00:36:42', '2026-03-02 17:24:25'),
+(1, 'ABOUT', 'เกี่ยวกับกิจกรรม', 'About', '<p>ด้วยความก้าวหน้าของเทคโนโลยีดิจิทัลในปัจจุบัน การประยุกต์ใช้ข้อมูลขนาดใหญ่ (Big Data) และปัญญาประดิษฐ์ (Artificial Intelligence: AI) ได้กลายเป็นกลไกสำคัญในการวิเคราะห์ วางแผน และสนับสนุนการตัดสินใจในหลายมิติของสังคม โดยเฉพาะอย่างยิ่งในด้านการส่งเสริมสุขภาพและการยกระดับคุณภาพชีวิตของประชาชน ซึ่งครอบคลุมตั้งแต่พฤติกรรมการดำรงชีวิต สิ่งแวดล้อม ชุมชน ระบบบริการสาธารณะ ตลอดจนการบริหารจัดการเชิงนโยบาย ข้อมูลที่เกี่ยวข้องกับ Intelligent living และการส่งเสริมสุขภาพมีลักษณะเป็นข้อมูลขนาดใหญ่ที่หลากหลาย แหล่งที่มาและรูปแบบแตกต่างกัน เช่น ข้อมูลพฤติกรรมการใช้ชีวิต ข้อมูลจากอุปกรณ์ดิจิทัลและอุปกรณ์สวมใส่ ข้อมูลสิ่งแวดล้อม ข้อมูลเชิงพื้นที่ และข้อมูลจากการมีส่วนร่วมของประชาชน ซึ่งล้วนเป็นข้อมูลที่มีความซับซ้อน และจำเป็นต้องอาศัยองค์ความรู้ด้านการวิเคราะห์ข้อมูลขั้นสูง การออกแบบระบบ และการพัฒนาแบบจำลองปัญญาประดิษฐ์ เพื่อให้สามารถนำข้อมูลดังกล่าวมาใช้ประโยชน์ได้อย่างมีประสิทธิภาพ ถูกต้อง และคำนึงถึงจริยธรรมและความเป็นส่วนตัวของข้อมูล</p><p><strong>สถาบันข้อมูลขนาดใหญ่ (BDI)</strong> และ <strong>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</strong> ในฐานะหน่วยงานหลักด้านการผลิตและพัฒนากำลังคนทางเทคโนโลยีดิจิทัล จึงเห็นความสำคัญในการส่งเสริมการเรียนรู้และการสร้างนวัตกรรมด้านปัญญาประดิษฐ์และการวิเคราะห์ข้อมูลขนาดใหญ่ ผ่านกระบวนการเรียนรู้เชิงปฏิบัติการและการบูรณาการข้ามศาสตร์ ร่วมกับคณะแพทยศาสตร์ คณะพยาบาลศาสตร์ คณะสาธารณสุขศาสตร์ วิทยาลัยปกครองท้องถิ่น และมหาวิทยาลัยเครือข่ายในภาคตะวันออกเฉียงเหนือ และภาคเอกชน จัดโครงการในรูปแบบกิจกรรม Hackathon ด้าน AI และ Big Data ภายใต้กรอบแนวคิด Intelligent living จะเป็นเวทีสำคัญในการเปิดโอกาสให้นักเรียนระดับมัธยมศึกษาตอนปลาย นักศึกษาระดับปริญญาตรี อาจารย์ และผู้เชี่ยวชาญ ได้ร่วมกันพัฒนาแนวคิดและผลงานต้นแบบที่สามารถนำไปประยุกต์ใช้ในการส่งเสริมสุขภาพและคุณภาพชีวิตในหลากหลายมิติ อันจะนำไปสู่การพัฒนากำลังคนด้านเทคโนโลยีดิจิทัล การสร้างเครือข่ายความร่วมมือทางวิชาการ และการยกระดับขีดความสามารถในการใช้ AI และ Big Data ของประเทศอย่างยั่งยืน ในชื่อโครงการ <strong> Intelligent Living Hackathon 2026</strong> ชิงถ้วยพระราชทาน สมเด็จพระกนิษฐาธิราชเจ้า กรมสมเด็จพระเทพรัตนราชสุดาฯ ระหว่างวันที่ 3-5 กรกฎาคม 2569</p>', '<p>Khon Kaen Intelligent Living Hackathon 2026 promotes innovation for healthier and sustainable living.</p>', 1, '2026-02-27 00:36:42', NULL, '2026-02-27 00:36:42', '2026-03-12 18:32:47'),
 (2, 'CONTACT', 'ติดต่อ', 'Contact', '<p>ช่องทางติดต่อ (แก้ไขได้จากฐานข้อมูล)</p>', '<p>Contact info (editable from database)</p>', 1, '2026-02-27 00:36:42', NULL, '2026-02-27 00:36:42', '2026-02-27 00:36:42');
 
 -- --------------------------------------------------------
@@ -173,7 +236,7 @@ CREATE TABLE `content_rewards` (
 --
 
 INSERT INTO `content_rewards` (`reward_id`, `reward_rank`, `reward_name_th`, `reward_name_en`, `prize_amount`, `prize_currency`, `prize_text_th`, `prize_text_en`, `description_th`, `description_en`, `sort_order`, `is_enabled`, `created_at`, `updated_at`) VALUES
-(1, '1', 'รางวัลชนะเลิศ', 'Champion', 50000.00, 'บาท', 'พร้อมถ้วยพระราชทาน', 'with trophy', NULL, NULL, 2, 1, '2026-02-27 00:56:50', '2026-03-06 19:08:55'),
+(1, '1', 'รางวัลชนะเลิศ', 'Champion', 50000.00, 'บาท', 'พร้อมถ้วยรางวัลพระราชทาน', 'with trophy', NULL, NULL, 2, 1, '2026-02-27 00:56:50', '2026-03-11 19:35:04'),
 (2, '2', 'รางวัลรองชนะเลิศอันดับ 1', '1st Runner-up', 30000.00, 'บาท', NULL, NULL, NULL, NULL, 1, 1, '2026-02-27 00:56:50', '2026-02-28 17:53:52'),
 (3, '3', 'รางวัลรองชนะเลิศอันดับ 2', '2nd Runner-up', 20000.00, 'บาท', NULL, NULL, NULL, NULL, 3, 1, '2026-02-27 00:56:50', '2026-02-28 17:52:58');
 
@@ -583,6 +646,84 @@ CREATE TABLE `event_winners` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `notification_logs`
+--
+
+CREATE TABLE `notification_logs` (
+  `notification_log_id` bigint(20) UNSIGNED NOT NULL COMMENT 'Primary key',
+  `event_code` varchar(100) NOT NULL COMMENT 'Event code, e.g. IDENTITY_SUBMITTED',
+  `channel` enum('in_app','email') NOT NULL COMMENT 'Delivery channel',
+  `team_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'Team context if any',
+  `recipient_user_id` bigint(20) UNSIGNED NOT NULL COMMENT 'Recipient user',
+  `actor_user_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'User who triggered event',
+  `template_code` varchar(100) DEFAULT NULL COMMENT 'Template code from notify_email_templates',
+  `subject_text` varchar(255) DEFAULT NULL COMMENT 'Resolved subject used for delivery',
+  `message_text` text DEFAULT NULL COMMENT 'Resolved body message used for delivery',
+  `status` enum('sent','failed','skipped','read') NOT NULL DEFAULT 'sent' COMMENT 'Delivery state',
+  `provider_message_id` varchar(255) DEFAULT NULL COMMENT 'Provider message id for email delivery',
+  `error_message` text DEFAULT NULL COMMENT 'Error detail when failed',
+  `sent_at` datetime DEFAULT NULL COMMENT 'When delivered/sent',
+  `read_at` datetime DEFAULT NULL COMMENT 'When recipient viewed it',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp() COMMENT 'Created timestamp'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Inbox + email delivery history';
+
+--
+-- Dumping data for table `notification_logs`
+--
+
+INSERT INTO `notification_logs` (`notification_log_id`, `event_code`, `channel`, `team_id`, `recipient_user_id`, `actor_user_id`, `template_code`, `subject_text`, `message_text`, `status`, `provider_message_id`, `error_message`, `sent_at`, `read_at`, `created_at`) VALUES
+(1, 'IDENTITY_SUBMITTED', 'in_app', 2013, 1001, 1025, 'IDENTITY_SUBMITTED', '[TMDD23] ทีมส่งเอกสารยืนยันตัวตนแล้ว', 'ทีม AnotherOne ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว โดย กฤษณะพงศ์ พรพันธุ์', 'sent', NULL, NULL, '2026-03-07 22:24:28', NULL, '2026-03-07 22:24:27'),
+(2, 'IDENTITY_SUBMITTED', 'in_app', 2013, 1025, 1025, 'IDENTITY_SUBMITTED', '[TMDD23] ทีมส่งเอกสารยืนยันตัวตนแล้ว', 'ทีม AnotherOne ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว โดย กฤษณะพงศ์ พรพันธุ์', 'sent', NULL, NULL, '2026-03-07 22:24:28', NULL, '2026-03-07 22:24:27'),
+(3, 'IDENTITY_SUBMITTED', 'in_app', 2013, 1026, 1025, 'IDENTITY_SUBMITTED', '[TMDD23] ทีมส่งเอกสารยืนยันตัวตนแล้ว', 'ทีม AnotherOne ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว โดย กฤษณะพงศ์ พรพันธุ์', 'sent', NULL, NULL, '2026-03-07 22:24:28', NULL, '2026-03-07 22:24:27'),
+(4, 'IDENTITY_SUBMITTED', 'email', 2013, 1001, 1025, 'IDENTITY_SUBMITTED', '[TMDD23] ทีมส่งเอกสารยืนยันตัวตนแล้ว', 'ทีม AnotherOne ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว โดย กฤษณะพงศ์ พรพันธุ์', 'skipped', NULL, 'SMTP is not configured', NULL, NULL, '2026-03-07 22:24:27'),
+(5, 'IDENTITY_SUBMITTED', 'email', 2013, 1025, 1025, 'IDENTITY_SUBMITTED', '[TMDD23] ทีมส่งเอกสารยืนยันตัวตนแล้ว', 'ทีม AnotherOne ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว โดย กฤษณะพงศ์ พรพันธุ์', 'skipped', NULL, 'SMTP is not configured', NULL, NULL, '2026-03-07 22:24:27'),
+(6, 'IDENTITY_SUBMITTED', 'email', 2013, 1026, 1025, 'IDENTITY_SUBMITTED', '[TMDD23] ทีมส่งเอกสารยืนยันตัวตนแล้ว', 'ทีม AnotherOne ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว โดย กฤษณะพงศ์ พรพันธุ์', 'skipped', NULL, 'SMTP is not configured', NULL, NULL, '2026-03-07 22:24:27'),
+(7, 'IDENTITY_SUBMITTED', 'email', 2014, 1025, 1025, 'IDENTITY_SUBMITTED', 'TestAnother [TMB24A] | ทีมส่งเอกสารยืนยันตัวตนแล้ว', 'ทีม TestAnother ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว โดย กฤษณะพงศ์ พรพันธุ์', 'sent', '<1d023bc8-3660-9660-a9e4-9bec9a0dc554@gmail.com>', NULL, '2026-03-07 22:39:48', NULL, '2026-03-07 22:39:47'),
+(8, 'IDENTITY_SUBMITTED', 'email', 2014, 1001, 1025, 'IDENTITY_SUBMITTED', 'TestAnother [TMB24A] | ทีมส่งเอกสารยืนยันตัวตนแล้ว', 'ทีม TestAnother ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว โดย กฤษณะพงศ์ พรพันธุ์', 'sent', '<f1dbaa3e-ca23-a5d9-f1d5-e4b73df5251d@gmail.com>', NULL, '2026-03-07 22:39:48', NULL, '2026-03-07 22:39:48'),
+(9, 'IDENTITY_SUBMITTED', 'email', 2014, 1026, 1025, 'IDENTITY_SUBMITTED', 'TestAnother [TMB24A] | ทีมส่งเอกสารยืนยันตัวตนแล้ว', 'ทีม TestAnother ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว โดย กฤษณะพงศ์ พรพันธุ์', 'sent', '<dca00454-5920-c1a3-6b61-bc581cd83ce4@gmail.com>', NULL, '2026-03-07 22:39:48', NULL, '2026-03-07 22:39:48'),
+(10, 'SELECTION_PASSED', 'email', 2014, 1026, 1001, 'SELECTION_PASSED', 'TestAnother [TMB24A] | ประกาศผลคัดเลือก: ผ่าน', 'ทีม TestAnother ผ่านการคัดเลือก กรุณายืนยันเข้าร่วมภายในกำหนดเวลา', 'sent', '<5c77302b-cade-7c53-5aa2-a60f748408c6@gmail.com>', NULL, '2026-03-07 22:53:13', NULL, '2026-03-07 22:53:12'),
+(11, 'SELECTION_PASSED', 'email', 2014, 1025, 1001, 'SELECTION_PASSED', 'TestAnother [TMB24A] | ประกาศผลคัดเลือก: ผ่าน', 'ทีม TestAnother ผ่านการคัดเลือก กรุณายืนยันเข้าร่วมภายในกำหนดเวลา', 'sent', '<373d5e44-e3d2-310c-d5da-223c4aeac606@gmail.com>', NULL, '2026-03-07 22:53:13', NULL, '2026-03-07 22:53:13'),
+(12, 'TEAM_CONFIRMED', 'email', 2014, 1025, 1025, 'TEAM_CONFIRMED', 'TestAnother [TMB24A] | ทีมยืนยันเข้าร่วมโครงการแล้ว', 'ทีม TestAnother ยืนยันเข้าร่วมโครงการเรียบร้อยแล้ว โดย กฤษณะพงศ์ พรพันธุ์', 'sent', '<d8bd17da-7b67-c328-61a8-0ea9143330d2@gmail.com>', NULL, '2026-03-07 23:40:50', NULL, '2026-03-07 23:40:50'),
+(13, 'TEAM_CONFIRMED', 'email', 2014, 1001, 1025, 'TEAM_CONFIRMED', 'TestAnother [TMB24A] | ทีมยืนยันเข้าร่วมโครงการแล้ว', 'ทีม TestAnother ยืนยันเข้าร่วมโครงการเรียบร้อยแล้ว โดย กฤษณะพงศ์ พรพันธุ์', 'sent', '<cb21ab69-f86e-21fa-09e3-d61cb8679f21@gmail.com>', NULL, '2026-03-07 23:40:51', NULL, '2026-03-07 23:40:51'),
+(14, 'TEAM_CONFIRMED', 'email', 2014, 1026, 1025, 'TEAM_CONFIRMED', 'TestAnother [TMB24A] | ทีมยืนยันเข้าร่วมโครงการแล้ว', 'ทีม TestAnother ยืนยันเข้าร่วมโครงการเรียบร้อยแล้ว โดย กฤษณะพงศ์ พรพันธุ์', 'sent', '<d21bc892-d576-8d45-e307-1e24d788c5dd@gmail.com>', NULL, '2026-03-07 23:40:52', NULL, '2026-03-07 23:40:51'),
+(15, 'SELECTION_PASSED', 'email', 2001, 1003, 1001, 'SELECTION_PASSED', 'ทีมพัซเซิล [TM2001] | ประกาศผลคัดเลือก: ผ่าน', 'ทีม ทีมพัซเซิล ผ่านการคัดเลือก กรุณายืนยันเข้าร่วมภายในกำหนดเวลา', 'skipped', NULL, 'SMTP is not configured: SMTP_HOST is empty', NULL, NULL, '2026-03-10 15:28:27'),
+(16, 'SELECTION_PASSED', 'email', 2001, 1004, 1001, 'SELECTION_PASSED', 'ทีมพัซเซิล [TM2001] | ประกาศผลคัดเลือก: ผ่าน', 'ทีม ทีมพัซเซิล ผ่านการคัดเลือก กรุณายืนยันเข้าร่วมภายในกำหนดเวลา', 'skipped', NULL, 'SMTP is not configured: SMTP_HOST is empty', NULL, NULL, '2026-03-10 15:28:27'),
+(17, 'SELECTION_PASSED', 'email', 2001, 1002, 1001, 'SELECTION_PASSED', 'ทีมพัซเซิล [TM2001] | ประกาศผลคัดเลือก: ผ่าน', 'ทีม ทีมพัซเซิล ผ่านการคัดเลือก กรุณายืนยันเข้าร่วมภายในกำหนดเวลา', 'skipped', NULL, 'SMTP is not configured: SMTP_HOST is empty', NULL, NULL, '2026-03-10 15:28:27'),
+(18, 'SELECTION_PASSED', 'email', 2001, 1024, 1001, 'SELECTION_PASSED', 'ทีมพัซเซิล [TM2001] | ประกาศผลคัดเลือก: ผ่าน', 'ทีม ทีมพัซเซิล ผ่านการคัดเลือก กรุณายืนยันเข้าร่วมภายในกำหนดเวลา', 'skipped', NULL, 'SMTP is not configured: SMTP_HOST is empty', NULL, NULL, '2026-03-10 15:28:27'),
+(19, 'SELECTION_FAILED', 'email', 2002, 1006, 1001, 'SELECTION_FAILED', 'ทีมเอไอ [TM2002] | ประกาศผลคัดเลือก: ไม่ผ่าน', 'ทีม ทีมเอไอ ไม่ผ่านการคัดเลือกในรอบนี้', 'skipped', NULL, 'SMTP is not configured: SMTP_HOST is empty', NULL, NULL, '2026-03-10 15:29:27'),
+(20, 'SELECTION_FAILED', 'email', 2002, 1005, 1001, 'SELECTION_FAILED', 'ทีมเอไอ [TM2002] | ประกาศผลคัดเลือก: ไม่ผ่าน', 'ทีม ทีมเอไอ ไม่ผ่านการคัดเลือกในรอบนี้', 'skipped', NULL, 'SMTP is not configured: SMTP_HOST is empty', NULL, NULL, '2026-03-10 15:29:27'),
+(21, 'ADMIN_CUSTOM_EMAIL', 'email', 2014, 1026, 1001, NULL, 'TestAnother [TMB24A] | Test', 'แก้ไขข้อมูล', 'skipped', NULL, 'SMTP is not configured: nodemailer is not installed', NULL, NULL, '2026-03-10 17:52:07'),
+(22, 'ADMIN_CUSTOM_EMAIL', 'email', 2014, 1025, 1001, NULL, 'TestAnother [TMB24A] | Test', 'แก้ไขข้อมูล', 'skipped', NULL, 'SMTP is not configured: nodemailer is not installed', NULL, NULL, '2026-03-10 17:52:07'),
+(23, 'ADMIN_CUSTOM_EMAIL', 'email', 2014, 1026, 1001, NULL, 'TestAnother [TMB24A] | Test', 'แก้ไขข้อมูล', 'skipped', NULL, 'SMTP is not configured: nodemailer is not installed', NULL, NULL, '2026-03-10 17:53:05'),
+(24, 'ADMIN_CUSTOM_EMAIL', 'email', 2014, 1025, 1001, NULL, 'TestAnother [TMB24A] | Test', 'แก้ไขข้อมูล', 'skipped', NULL, 'SMTP is not configured: nodemailer is not installed', NULL, NULL, '2026-03-10 17:53:05'),
+(25, 'ADMIN_CUSTOM_EMAIL', 'email', 2014, 1026, 1001, NULL, 'TestAnother [TMB24A] | Test', 'TestTest', 'sent', '<0a955357-1ed1-3de6-80ec-e645fa65b661@gmail.com>', NULL, '2026-03-10 18:12:30', NULL, '2026-03-10 18:12:31'),
+(26, 'ADMIN_CUSTOM_EMAIL', 'email', 2014, 1025, 1001, NULL, 'TestAnother [TMB24A] | Test', 'TestTest', 'sent', '<6b3f8c1d-913e-ba32-d33f-cdc856dfcee1@gmail.com>', NULL, '2026-03-10 18:12:31', NULL, '2026-03-10 18:12:32');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notify_admin_recipients`
+--
+
+CREATE TABLE `notify_admin_recipients` (
+  `notify_admin_recipient_id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `is_enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Whether this admin should receive notify emails',
+  `updated_by_user_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+--
+-- Dumping data for table `notify_admin_recipients`
+--
+
+INSERT INTO `notify_admin_recipients` (`notify_admin_recipient_id`, `user_id`, `is_enabled`, `updated_by_user_id`, `created_at`, `updated_at`) VALUES
+(1, 1001, 1, NULL, '2026-03-10 21:14:49', '2026-03-10 21:14:49');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `notify_announcements`
 --
 
@@ -718,6 +859,41 @@ CREATE TABLE `notify_email_templates` (
 
 INSERT INTO `notify_email_templates` (`template_id`, `template_code`, `template_name_th`, `template_name_en`, `subject_th`, `subject_en`, `html_th`, `html_en`, `variables_hint`, `is_enabled`, `created_by_user_id`, `created_at`, `updated_at`) VALUES
 (1, 'GENERIC', 'เทมเพลตทั่วไป', 'Generic Template', 'แจ้งเตือนจากกิจกรรม', 'Notification from the event', '<div style=\"font-family:Arial\"><h2>{{title}}</h2><div>{{content}}</div></div>', '<div style=\"font-family:Arial\"><h2>{{title}}</h2><div>{{content}}</div></div>', 'Variables: {{title}}, {{content}}', 1, NULL, '2026-02-27 00:36:42', '2026-02-27 00:36:42');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `privileges`
+--
+
+CREATE TABLE `privileges` (
+  `privilege_id` bigint(20) UNSIGNED NOT NULL COMMENT 'Primary key of privilege template',
+  `privilege_code` varchar(100) NOT NULL COMMENT 'Unique privilege code used by admin and APIs',
+  `privilege_name_th` varchar(255) NOT NULL COMMENT 'Privilege display name in Thai',
+  `privilege_name_en` varchar(255) DEFAULT NULL COMMENT 'Privilege display name in English',
+  `description_th` text DEFAULT NULL COMMENT 'Privilege description in Thai',
+  `description_en` text DEFAULT NULL COMMENT 'Privilege description in English',
+  `privilege_type` enum('auto_admin','souvenir_qr') NOT NULL COMMENT 'Claim behavior type',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Whether this privilege template is currently active',
+  `is_published` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Whether this template has been published for assignment',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT 'Display order in UI (ascending)',
+  `created_by_user_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'Admin user who created this template',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp() COMMENT 'Created timestamp',
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Updated timestamp',
+  `deleted_at` datetime DEFAULT NULL COMMENT 'Soft delete timestamp'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Privilege templates configurable by admin';
+
+--
+-- Dumping data for table `privileges`
+--
+
+INSERT INTO `privileges` (`privilege_id`, `privilege_code`, `privilege_name_th`, `privilege_name_en`, `description_th`, `description_en`, `privilege_type`, `is_active`, `is_published`, `sort_order`, `created_by_user_id`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'ZZ_TEST_PRIV_AUTO_ADMIN', '[TEST] สิทธิ์ Auto Admin', '[TEST] Auto Admin Privilege', 'ข้อมูลทดสอบระบบสแกนสิทธิ์ (ลบได้ด้วย cleanup script)', 'Test privilege for QR/claim flow (safe to delete)', 'auto_admin', 1, 1, 9000, 1001, '2026-03-11 05:11:12', '2026-03-11 05:53:34', NULL),
+(2, 'ZZ_TEST_PRIV_SOUVENIR_QR', '[TEST] สิทธิ์ Souvenir QR', '[TEST] Souvenir QR Privilege', 'ข้อมูลทดสอบระบบสแกนสิทธิ์ (ลบได้ด้วย cleanup script)', 'Test privilege for QR/claim flow (safe to delete)', 'souvenir_qr', 1, 1, 9001, 1001, '2026-03-11 05:11:12', '2026-03-11 05:54:04', NULL),
+(3, 'TEST_PRI', 'test add privilege', NULL, NULL, NULL, 'souvenir_qr', 1, 1, 0, 1001, '2026-03-11 05:54:35', '2026-03-11 06:56:44', NULL),
+(4, 'TEST_PRI2', 'test2', NULL, NULL, NULL, 'souvenir_qr', 1, 1, 0, 1001, '2026-03-11 05:55:20', '2026-03-11 06:56:43', NULL),
+(5, 'TEST3', 'test3', NULL, NULL, NULL, 'souvenir_qr', 1, 1, 0, 1001, '2026-03-11 06:00:26', '2026-03-11 06:56:42', NULL),
+(6, 'TEST4', 'test4', NULL, NULL, NULL, 'souvenir_qr', 1, 0, 0, 1001, '2026-03-11 07:13:20', '2026-03-11 07:13:20', NULL);
 
 -- --------------------------------------------------------
 
@@ -920,6 +1096,7 @@ CREATE TABLE `sys_configs` (
 --
 
 INSERT INTO `sys_configs` (`config_key`, `config_value`, `description_th`, `description_en`, `updated_at`) VALUES
+('GLOBAL_SELECTION_CONFIRM_DEADLINE_AT', '2026-03-31 23:19:00', NULL, NULL, '2026-03-07 23:19:56'),
 ('TEAM_CODE_PREFIX', 'TM', 'คำนำหน้าโค้ดทีม', 'Team code prefix', '2026-02-20 17:50:25'),
 ('TEAM_MEMBER_MAX', '5', 'จำนวนสมาชิกสูงสุดต่อทีม', 'Maximum members per team', '2026-02-20 17:50:25'),
 ('TEAM_MEMBER_MIN', '3', 'จำนวนสมาชิกขั้นต่ำต่อทีม', 'Minimum members per team', '2026-02-20 17:50:25');
@@ -952,7 +1129,9 @@ CREATE TABLE `team_advisors` (
 --
 
 INSERT INTO `team_advisors` (`advisor_id`, `team_id`, `prefix`, `first_name_th`, `last_name_th`, `first_name_en`, `last_name_en`, `email`, `phone`, `institution_name_th`, `position`, `added_by_user_id`, `created_at`, `updated_at`) VALUES
-(1, 2011, 'ผศ.ดร', 'ชานนท์', 'เดชสุภา', 'Chanon', 'Dechsupa', 'drnadech@gmail.com', '0123456789', 'มหาวิทยาลัยขอนแก่น', 'ผู้ช่วย', 1022, '2026-03-05 19:35:21', '2026-03-05 19:35:21');
+(1, 2011, 'ผศ.ดร', 'ชานนท์', 'เดชสุภา', 'Chanon', 'Dechsupa', 'drnadech@gmail.com', '0123456789', 'มหาวิทยาลัยขอนแก่น', 'ผู้ช่วย', 1022, '2026-03-05 19:35:21', '2026-03-05 19:35:21'),
+(4, 2013, 'asd', 'ฟหก', 'หกก', 'aaa', 'sss', 'cad@gmail.com', '0987654321', 'kku', 'aa', 1025, '2026-03-07 22:23:41', '2026-03-07 22:23:41'),
+(5, 2014, 'asd', 'asdd', 'asd', 'asd', 'asd', 'asd@gmail.com', '1111111111', 'kku', 'prof', 1025, '2026-03-07 22:39:39', '2026-03-07 22:39:39');
 
 -- --------------------------------------------------------
 
@@ -1002,7 +1181,37 @@ INSERT INTO `team_audit_logs` (`team_audit_id`, `team_id`, `actor_user_id`, `act
 (93026, 2012, 1022, 'TEAM_CREATED', '{\"visibility\":\"public\",\"team_code\":\"TM1DA1\"}', '2026-03-05 19:36:40'),
 (93027, 2012, 1022, 'INVITE_SENT', '{\"invitation_id\":92015,\"invited_user_id\":1023}', '2026-03-05 19:36:52'),
 (93028, 2012, 1023, 'MEMBER_JOINED', '{\"invitation_id\":92015,\"user_id\":1023}', '2026-03-05 19:37:00'),
-(93029, 2012, 1023, 'INVITE_ACCEPTED', '{\"invitation_id\":92015,\"invited_user_id\":1023}', '2026-03-05 19:37:01');
+(93029, 2012, 1023, 'INVITE_ACCEPTED', '{\"invitation_id\":92015,\"invited_user_id\":1023}', '2026-03-05 19:37:01'),
+(93030, 2013, 1025, 'TEAM_CREATED', '{\"visibility\":\"private\",\"team_code\":\"TMDD23\"}', '2026-03-07 22:18:59'),
+(93031, 2013, 1026, 'JOIN_REQUEST_SUBMITTED', '{\"join_request_id\":91009,\"source\":\"invite_code\",\"invite_code\":\"4262AE\"}', '2026-03-07 22:21:59'),
+(93032, 2013, 1025, 'MEMBER_JOINED', '{\"requester_user_id\":1026,\"join_request_id\":91009}', '2026-03-07 22:22:08'),
+(93033, 2013, 1025, 'JOIN_REQUEST_APPROVED', '{\"join_request_id\":91009,\"requester_user_id\":1026,\"reason\":null}', '2026-03-07 22:22:08'),
+(93034, 2014, 1025, 'TEAM_CREATED', '{\"visibility\":\"public\",\"team_code\":\"TMB24A\"}', '2026-03-07 22:38:19'),
+(93035, 2014, 1026, 'JOIN_REQUEST_SUBMITTED', '{\"join_request_id\":91010,\"source\":\"public_listing\",\"invite_code\":null}', '2026-03-07 22:38:27'),
+(93036, 2014, 1025, 'MEMBER_JOINED', '{\"requester_user_id\":1026,\"join_request_id\":91010}', '2026-03-07 22:38:30'),
+(93037, 2014, 1025, 'JOIN_REQUEST_APPROVED', '{\"join_request_id\":91010,\"requester_user_id\":1026,\"reason\":null}', '2026-03-07 22:38:30'),
+(93038, 2014, 1001, 'TEAM_SELECTION_PASSED', '{\"previous_status\":\"submitted\",\"next_status\":\"passed\",\"confirmation_deadline_at\":null}', '2026-03-07 22:53:09'),
+(93039, 2014, 1025, 'TEAM_CONFIRMED_PARTICIPATION', '{\"status\":\"passed\",\"confirmation_deadline_at\":\"2026-03-31T16:19:00.000Z\"}', '2026-03-07 23:40:47'),
+(93040, 2001, 1001, 'TEAM_SELECTION_PASSED', '{\"previous_status\":\"submitted\",\"next_status\":\"passed\",\"confirmation_deadline_at\":\"2026-03-31 23:19:00\"}', '2026-03-10 15:28:27'),
+(93041, 2002, 1001, 'TEAM_SELECTION_FAILED', '{\"previous_status\":\"submitted\",\"next_status\":\"failed\",\"confirmation_deadline_at\":null}', '2026-03-10 15:29:27'),
+(93042, 2014, 1001, 'ADMIN_CUSTOM_EMAIL_SENT', '{\"subject\":\"TestAnother [TMB24A] | Test\",\"totalRecipients\":2,\"sent\":0,\"failed\":0,\"skipped\":2}', '2026-03-10 17:52:07'),
+(93043, 2014, 1001, 'ADMIN_CUSTOM_EMAIL_SENT', '{\"subject\":\"TestAnother [TMB24A] | Test\",\"totalRecipients\":2,\"sent\":0,\"failed\":0,\"skipped\":2}', '2026-03-10 17:53:05'),
+(93044, 2014, 1001, 'ADMIN_CUSTOM_EMAIL_SENT', '{\"subject\":\"TestAnother [TMB24A] | Test\",\"totalRecipients\":2,\"sent\":2,\"failed\":0,\"skipped\":0}', '2026-03-10 18:12:32'),
+(93045, 2014, 1025, 'INVITE_SENT', '{\"invitation_id\":92016,\"invited_user_id\":1017}', '2026-03-11 17:30:08'),
+(93046, 2014, 1017, 'JOIN_REQUEST_SUBMITTED', '{\"join_request_id\":91011,\"source\":\"public_listing\",\"invite_code\":null}', '2026-03-11 17:31:10'),
+(93047, 2015, 1017, 'TEAM_CREATED', '{\"visibility\":\"private\",\"team_code\":\"TM51D9\"}', '2026-03-11 17:43:58'),
+(93048, 2015, 1017, 'TEAM_VISIBILITY_UPDATED', '{\"previous_visibility\":\"private\",\"next_visibility\":\"public\"}', '2026-03-12 19:31:58'),
+(93049, 2015, 1017, 'TEAM_VISIBILITY_UPDATED', '{\"previous_visibility\":\"public\",\"next_visibility\":\"private\"}', '2026-03-12 19:32:00'),
+(93050, 2015, 1017, 'TEAM_VISIBILITY_UPDATED', '{\"previous_visibility\":\"private\",\"next_visibility\":\"public\"}', '2026-03-12 20:51:24'),
+(93051, 2015, 1017, 'TEAM_VISIBILITY_UPDATED', '{\"previous_visibility\":\"public\",\"next_visibility\":\"private\"}', '2026-03-12 20:51:25'),
+(93052, 2015, 1017, 'TEAM_VISIBILITY_UPDATED', '{\"previous_visibility\":\"private\",\"next_visibility\":\"public\"}', '2026-03-12 20:51:28'),
+(93053, 2015, 1017, 'TEAM_VISIBILITY_UPDATED', '{\"previous_visibility\":\"public\",\"next_visibility\":\"private\"}', '2026-03-12 20:51:30'),
+(93054, 2015, 1017, 'TEAM_VISIBILITY_UPDATED', '{\"previous_visibility\":\"private\",\"next_visibility\":\"public\"}', '2026-03-12 20:51:32'),
+(93055, 2015, 1017, 'TEAM_VISIBILITY_UPDATED', '{\"previous_visibility\":\"public\",\"next_visibility\":\"private\"}', '2026-03-12 20:51:33'),
+(93056, 2015, 1017, 'TEAM_NAME_UPDATED', '{\"previous_team_name_th\":\"Testaaa\",\"next_team_name_th\":\"Testabc\"}', '2026-03-12 20:51:56'),
+(93057, 2015, 1017, 'TEAM_VISIBILITY_UPDATED', '{\"previous_visibility\":\"private\",\"next_visibility\":\"public\"}', '2026-03-12 21:20:33'),
+(93058, 2015, 1017, 'TEAM_VISIBILITY_UPDATED', '{\"previous_visibility\":\"public\",\"next_visibility\":\"private\"}', '2026-03-12 21:20:33'),
+(93059, 2015, 1017, 'TEAM_NAME_UPDATED', '{\"previous_team_name_th\":\"Testabc\",\"next_team_name_th\":\"Testabcdefg\"}', '2026-03-12 21:40:38');
 
 -- --------------------------------------------------------
 
@@ -1040,7 +1249,8 @@ INSERT INTO `team_invitations` (`invitation_id`, `team_id`, `invited_user_id`, `
 (92012, 2001, 1018, 1002, 'pending', NULL, NULL, NULL, '2026-02-28 20:10:25', '2026-02-28 20:10:25'),
 (92013, 2001, 1024, 1002, 'accepted', NULL, NULL, '2026-03-03 13:28:07', '2026-03-03 13:27:56', '2026-03-03 13:28:07'),
 (92014, 2011, 1022, 1017, 'accepted', NULL, NULL, '2026-03-04 19:56:04', '2026-03-04 19:55:53', '2026-03-04 19:56:04'),
-(92015, 2012, 1023, 1022, 'accepted', NULL, NULL, '2026-03-05 19:37:00', '2026-03-05 19:36:52', '2026-03-05 19:37:00');
+(92015, 2012, 1023, 1022, 'accepted', NULL, NULL, '2026-03-05 19:37:00', '2026-03-05 19:36:52', '2026-03-05 19:37:00'),
+(92016, 2014, 1017, 1025, 'pending', NULL, NULL, NULL, '2026-03-11 17:30:08', '2026-03-11 17:30:08');
 
 -- --------------------------------------------------------
 
@@ -1074,7 +1284,10 @@ INSERT INTO `team_join_requests` (`join_request_id`, `team_id`, `requester_user_
 (91005, 2001, 1017, 'invite_code', 'A1B2C3', 'cancelled', NULL, NULL, 'Auto-cancelled: user already joined another team', '2026-02-28 20:09:19', '2026-03-02 16:10:11'),
 (91006, 2001, 1024, 'public_listing', NULL, 'cancelled', NULL, NULL, 'Auto-cancelled: user already joined another team', '2026-03-02 20:26:01', '2026-03-03 13:28:07'),
 (91007, 2009, 1022, 'invite_code', 'EE1570', 'approved', 1017, '2026-03-04 06:18:54', NULL, '2026-03-04 05:43:05', '2026-03-04 06:18:54'),
-(91008, 2010, 1022, 'invite_code', 'F6A909', 'approved', 1017, '2026-03-04 19:21:56', NULL, '2026-03-04 19:21:47', '2026-03-04 19:21:56');
+(91008, 2010, 1022, 'invite_code', 'F6A909', 'approved', 1017, '2026-03-04 19:21:56', NULL, '2026-03-04 19:21:47', '2026-03-04 19:21:56'),
+(91009, 2013, 1026, 'invite_code', '4262AE', 'approved', 1025, '2026-03-07 22:22:08', NULL, '2026-03-07 22:21:59', '2026-03-07 22:22:08'),
+(91010, 2014, 1026, 'public_listing', NULL, 'approved', 1025, '2026-03-07 22:38:30', NULL, '2026-03-07 22:38:27', '2026-03-07 22:38:30'),
+(91011, 2014, 1017, 'public_listing', NULL, 'pending', NULL, NULL, NULL, '2026-03-11 17:31:10', '2026-03-11 17:31:10');
 
 -- --------------------------------------------------------
 
@@ -1124,7 +1337,12 @@ INSERT INTO `team_members` (`team_member_id`, `team_id`, `user_id`, `role`, `mem
 (80035, 2011, 1017, 'member', 'removed', '2026-03-04 19:55:32', '2026-03-05 19:36:15'),
 (80036, 2011, 1022, 'leader', 'removed', '2026-03-04 19:56:04', '2026-03-05 19:36:15'),
 (80037, 2012, 1022, 'leader', 'active', '2026-03-05 19:36:40', NULL),
-(80038, 2012, 1023, 'member', 'active', '2026-03-05 19:37:00', NULL);
+(80038, 2012, 1023, 'member', 'active', '2026-03-05 19:37:00', NULL),
+(80039, 2013, 1025, 'leader', 'removed', '2026-03-07 22:18:59', '2026-03-07 22:37:42'),
+(80040, 2013, 1026, 'member', 'removed', '2026-03-07 22:22:08', '2026-03-07 22:37:42'),
+(80041, 2014, 1025, 'leader', 'active', '2026-03-07 22:38:19', NULL),
+(80042, 2014, 1026, 'member', 'active', '2026-03-07 22:38:30', NULL),
+(80043, 2015, 1017, 'leader', 'active', '2026-03-11 17:43:58', NULL);
 
 -- --------------------------------------------------------
 
@@ -1150,7 +1368,9 @@ CREATE TABLE `team_submission_files` (
 
 INSERT INTO `team_submission_files` (`file_id`, `team_id`, `file_storage_key`, `file_original_name`, `file_mime_type`, `file_size_bytes`, `uploaded_by_user_id`, `uploaded_at`, `deleted_at`) VALUES
 (1, 2012, 'uploads/verification/Test4/submission_files/d112cbf0-a4d2-4a42-ab6d-84c68961d125.pdf', 'sample.pdf', 'application/pdf', 18810, 1022, '2026-03-05 19:41:45', '2026-03-06 15:38:35'),
-(2, 2012, 'uploads/verification/Test4/submission_files/99611fdc-5ca1-4bf8-9ea8-a0cc6cd94702.jpg', '3984907.jpg', 'image/jpeg', 333553, 1022, '2026-03-05 19:42:05', '2026-03-06 15:38:33');
+(2, 2012, 'uploads/verification/Test4/submission_files/99611fdc-5ca1-4bf8-9ea8-a0cc6cd94702.jpg', '3984907.jpg', 'image/jpeg', 333553, 1022, '2026-03-05 19:42:05', '2026-03-06 15:38:33'),
+(3, 2013, 'uploads/verification/AnotherOne/submission_files/e4c3bf2a-5bf3-40fb-8c2d-0f38a7500d71.jpg', '3984907.jpg', 'image/jpeg', 333553, 1025, '2026-03-07 22:24:16', NULL),
+(4, 2014, 'uploads/verification/TestAnother/submission_files/13751418-817b-45e9-9837-fc93a127f470.jpg', '3984907.jpg', 'image/jpeg', 333553, 1025, '2026-03-07 22:39:18', NULL);
 
 -- --------------------------------------------------------
 
@@ -1165,10 +1385,10 @@ CREATE TABLE `team_teams` (
   `team_name_en` varchar(255) NOT NULL COMMENT 'Team name (English) for display',
   `visibility` enum('public','private') NOT NULL DEFAULT 'private' COMMENT 'Team visibility: public means discoverable; private means invite-only',
   `current_leader_user_id` bigint(20) UNSIGNED NOT NULL COMMENT 'FK to user_users for current team leader',
-  `status` enum('draft','forming','ready','submitted','approved','returned','rejected','archived','disbanded') NOT NULL DEFAULT 'forming' COMMENT 'Team lifecycle status',
-  `approved_at` datetime DEFAULT NULL COMMENT 'When team was approved/passed review (finalist selection time)',
-  `rejected_at` datetime DEFAULT NULL COMMENT 'When team was rejected by admin',
-  `selected_at` datetime DEFAULT NULL COMMENT 'When team was selected into event slots (can equal approved_at)',
+  `status` enum('forming','submitted','disbanded','passed','failed','confirmed','not_joined') NOT NULL DEFAULT 'forming' COMMENT 'Team lifecycle status (selection-ready; includes not_joined when team misses confirmation deadline)',
+  `confirmation_deadline_at` datetime DEFAULT NULL COMMENT 'Deadline for leader to confirm participation',
+  `confirmed_at` datetime DEFAULT NULL COMMENT 'When team leader confirmed participation',
+  `confirmed_by_user_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'Leader user id who confirmed participation',
   `created_at` datetime NOT NULL DEFAULT current_timestamp() COMMENT 'Created timestamp',
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Updated timestamp',
   `deleted_at` datetime DEFAULT NULL COMMENT 'Soft delete timestamp',
@@ -1182,10 +1402,10 @@ CREATE TABLE `team_teams` (
 -- Dumping data for table `team_teams`
 --
 
-INSERT INTO `team_teams` (`team_id`, `team_code`, `team_name_th`, `team_name_en`, `visibility`, `current_leader_user_id`, `status`, `approved_at`, `rejected_at`, `selected_at`, `created_at`, `updated_at`, `deleted_at`, `disbanded_at`, `disbanded_by_user_id`, `disband_reason`, `video_link`) VALUES
-(2001, 'TM2001', 'ทีมพัซเซิล', 'Puzzle Team', 'public', 1002, 'submitted', NULL, NULL, NULL, '2026-02-20 17:50:25', '2026-03-05 17:30:14', NULL, NULL, NULL, NULL, NULL),
-(2002, 'TM2002', 'ทีมเอไอ', 'AI Team', 'private', 1005, 'submitted', NULL, NULL, NULL, '2026-02-20 17:50:25', '2026-02-20 17:50:25', NULL, NULL, NULL, NULL, NULL),
-(2003, 'TM2003', 'ทีมฟินอล', 'Finalist Team', 'private', 1007, 'approved', '2026-02-20 17:50:25', NULL, '2026-02-20 17:50:25', '2026-02-20 17:50:25', '2026-02-20 17:50:25', NULL, NULL, NULL, NULL, NULL),
+INSERT INTO `team_teams` (`team_id`, `team_code`, `team_name_th`, `team_name_en`, `visibility`, `current_leader_user_id`, `status`, `confirmation_deadline_at`, `confirmed_at`, `confirmed_by_user_id`, `created_at`, `updated_at`, `deleted_at`, `disbanded_at`, `disbanded_by_user_id`, `disband_reason`, `video_link`) VALUES
+(2001, 'TM2001', 'ทีมพัซเซิล', 'Puzzle Team', 'public', 1002, 'confirmed', '2026-03-31 23:19:00', NULL, NULL, '2026-02-20 17:50:25', '2026-03-11 04:26:12', NULL, NULL, NULL, NULL, NULL),
+(2002, 'TM2002', 'ทีมเอไอ', 'AI Team', 'private', 1005, 'failed', NULL, NULL, NULL, '2026-02-20 17:50:25', '2026-03-10 15:29:27', NULL, NULL, NULL, NULL, NULL),
+(2003, 'TM2003', 'ทีมฟินอล', 'Finalist Team', 'private', 1007, 'forming', NULL, NULL, NULL, '2026-02-20 17:50:25', '2026-03-07 22:10:33', NULL, NULL, NULL, NULL, NULL),
 (2004, 'TM2004', 'ทีมแมวเหมียว', 'Meow Team', 'public', 1013, 'forming', NULL, NULL, NULL, '2026-02-20 17:50:25', '2026-02-20 17:50:25', NULL, NULL, NULL, NULL, NULL),
 (2005, 'TM2005', 'ทีมสายฟ้า', 'Lightning', 'public', 1014, 'forming', NULL, NULL, NULL, '2026-02-20 17:50:25', '2026-02-20 17:50:25', NULL, NULL, NULL, NULL, NULL),
 (2006, 'TM2006', 'ทีมนกฮูก', 'Owl Squad', 'public', 1015, 'forming', NULL, NULL, NULL, '2026-02-20 17:50:25', '2026-02-20 17:50:25', NULL, NULL, NULL, NULL, NULL),
@@ -1194,7 +1414,10 @@ INSERT INTO `team_teams` (`team_id`, `team_code`, `team_name_th`, `team_name_en`
 (2009, 'TMCA34', 'Test', 'Test', 'public', 1017, 'disbanded', NULL, NULL, NULL, '2026-03-04 05:04:38', '2026-03-04 19:12:13', NULL, '2026-03-04 19:12:13', 1017, 'ต้องการสร้างทีมใหม่', NULL),
 (2010, 'TMC60A', 'Test2', 'Test2', 'public', 1017, 'disbanded', NULL, NULL, NULL, '2026-03-04 19:18:50', '2026-03-04 19:23:30', NULL, '2026-03-04 19:23:30', 1017, 'Test Test', NULL),
 (2011, 'TM4783', 'Test3', 'Test3', 'public', 1022, 'disbanded', NULL, NULL, NULL, '2026-03-04 19:55:32', '2026-03-05 19:36:15', NULL, '2026-03-05 19:36:15', 1022, 'ยุบ', NULL),
-(2012, 'TM1DA1', 'Test4', 'Test4', 'public', 1022, 'forming', NULL, NULL, NULL, '2026-03-05 19:36:40', '2026-03-05 20:11:50', NULL, NULL, NULL, NULL, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+(2012, 'TM1DA1', 'Test4', 'Test4', 'public', 1022, 'forming', NULL, NULL, NULL, '2026-03-05 19:36:40', '2026-03-05 20:11:50', NULL, NULL, NULL, NULL, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
+(2013, 'TMDD23', 'AnotherOne', 'AnotherOne', 'private', 1025, 'disbanded', NULL, NULL, NULL, '2026-03-07 22:18:59', '2026-03-07 22:37:42', NULL, '2026-03-07 22:37:42', 1025, 'aaa', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
+(2014, 'TMB24A', 'TestAnother', 'TestAnother', 'public', 1025, 'passed', '2026-03-31 23:19:00', '2026-03-07 23:40:47', 1025, '2026-03-07 22:38:19', '2026-03-07 23:40:47', NULL, NULL, NULL, NULL, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
+(2015, 'TM51D9', 'Testabcdefg', 'Testaaa', 'private', 1017, 'forming', NULL, NULL, NULL, '2026-03-11 17:43:58', '2026-03-12 21:40:38', NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1225,7 +1448,10 @@ INSERT INTO `team_team_codes` (`team_code_id`, `team_id`, `invite_code`, `is_act
 (90006, 2009, 'EE1570', 1, NULL, '2026-03-04 05:04:38', 1017),
 (90007, 2010, 'F6A909', 1, NULL, '2026-03-04 19:18:50', 1017),
 (90008, 2011, '019C70', 1, NULL, '2026-03-04 19:55:32', 1017),
-(90009, 2012, '567178', 1, NULL, '2026-03-05 19:36:40', 1022);
+(90009, 2012, '567178', 1, NULL, '2026-03-05 19:36:40', 1022),
+(90010, 2013, '4262AE', 1, NULL, '2026-03-07 22:18:59', 1025),
+(90011, 2014, '2AE276', 1, NULL, '2026-03-07 22:38:19', 1025),
+(90012, 2015, '5B12D5', 1, NULL, '2026-03-11 17:43:58', 1017);
 
 -- --------------------------------------------------------
 
@@ -1260,7 +1486,11 @@ INSERT INTO `user_consents` (`user_consent_id`, `user_id`, `consent_doc_id`, `ac
 (70009, 1009, 20001, '2026-02-20 17:50:25', 'web_form', '127.0.0.1', 'MockAgent/1.0', '2026-02-20 17:50:25'),
 (70010, 1010, 20001, '2026-02-20 17:50:25', 'web_form', '127.0.0.1', 'MockAgent/1.0', '2026-02-20 17:50:25'),
 (70011, 1011, 20001, '2026-02-20 17:50:25', 'web_form', '127.0.0.1', 'MockAgent/1.0', '2026-02-20 17:50:25'),
-(70012, 1012, 20001, '2026-02-20 17:50:25', 'web_form', '127.0.0.1', 'MockAgent/1.0', '2026-02-20 17:50:25');
+(70012, 1012, 20001, '2026-02-20 17:50:25', 'web_form', '127.0.0.1', 'MockAgent/1.0', '2026-02-20 17:50:25'),
+(70013, 1025, 20001, '2026-03-07 22:15:06', 'web_form', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36', '2026-03-07 22:15:06'),
+(70014, 1025, 20002, '2026-03-07 22:15:06', 'web_form', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36', '2026-03-07 22:15:06'),
+(70015, 1026, 20002, '2026-03-07 22:18:31', 'web_form', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36', '2026-03-07 22:18:31'),
+(70016, 1026, 20001, '2026-03-07 22:18:31', 'web_form', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36', '2026-03-07 22:18:31');
 
 -- --------------------------------------------------------
 
@@ -1330,7 +1560,9 @@ INSERT INTO `user_credentials_local` (`cred_id`, `user_id`, `login_email`, `pass
 (40016, 1021, 'leader1@test.com', '$2b$10$eyO71Remg3pYNWwxkLYQluuAP9dm4E.K8OMWM/xOpegBMP0vtzRLm', NULL, 1, '2026-02-28 16:27:03', '2026-02-28 16:27:03'),
 (40017, 1022, 'david2@gmail.com', '$2b$10$RT93B8jMUGa76/x.R603g.zJm/gvs2RZYyMDrGkeXUxsj/AnCB4lK', NULL, 1, '2026-02-28 20:19:32', '2026-02-28 20:19:32'),
 (40018, 1023, 'david3@gmail.com', '$2b$10$vudHO1JcSv.DO4iDZC.MyOx1nVKJOjbtHtoGEPlkexLCPrpH8.iOK', NULL, 1, '2026-02-28 20:21:02', '2026-02-28 20:21:02'),
-(40019, 1024, 'somchai.jaidee@kku.ac.th', '$2b$10$pEZz38RzemHHz4hDOoBKCufLW8N6fWG2r7vFrJFz86AO3QyUsZ7o6', NULL, 1, '2026-03-02 18:32:24', '2026-03-02 18:32:24');
+(40019, 1024, 'somchai.jaidee@kku.ac.th', '$2b$10$pEZz38RzemHHz4hDOoBKCufLW8N6fWG2r7vFrJFz86AO3QyUsZ7o6', NULL, 1, '2026-03-02 18:32:24', '2026-03-02 18:32:24'),
+(40020, 1025, 'aum.kitsanapong@gmail.com', '$2b$10$ELDaxb60pLLzDen5pLfLXO4iCK4CMhE3kCdr9GtY5h4eOlVJOe9kS', NULL, 1, '2026-03-07 22:15:06', '2026-03-07 22:15:06'),
+(40021, 1026, 'kitsanapong.p@kkumail.com', '$2b$10$C6uBDWkr5C1ayCMV7wPHVeI6AUw7VGCQvo/jZYGcwuRJnPQWRy7HG', NULL, 1, '2026-03-07 22:18:30', '2026-03-07 22:18:30');
 
 -- --------------------------------------------------------
 
@@ -1372,7 +1604,9 @@ INSERT INTO `user_identities` (`identity_id`, `user_id`, `identity_type`, `ident
 (50015, 1021, 'local', 'leader1@test.com', 'any', 0, NULL, '2026-02-28 16:27:03', '2026-02-28 16:27:03'),
 (50016, 1022, 'local', 'david2@gmail.com', 'any', 0, NULL, '2026-02-28 20:19:32', '2026-02-28 20:19:32'),
 (50017, 1023, 'local', 'david3@gmail.com', 'any', 0, NULL, '2026-02-28 20:21:02', '2026-02-28 20:21:02'),
-(50018, 1024, 'email', 'somchai.jaidee@kku.ac.th', 'ac_th_only', 0, NULL, '2026-03-02 18:32:24', '2026-03-02 18:32:24');
+(50018, 1024, 'email', 'somchai.jaidee@kku.ac.th', 'ac_th_only', 0, NULL, '2026-03-02 18:32:24', '2026-03-02 18:32:24'),
+(50019, 1025, 'local', 'aum.kitsanapong@gmail.com', 'any', 0, NULL, '2026-03-07 22:15:06', '2026-03-07 22:15:06'),
+(50020, 1026, 'local', 'kitsanapong.p@kkumail.com', 'any', 0, NULL, '2026-03-07 22:18:30', '2026-03-07 22:18:30');
 
 -- --------------------------------------------------------
 
@@ -1411,6 +1645,347 @@ INSERT INTO `user_privacy_settings` (`user_id`, `show_email`, `show_phone`, `sho
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `user_privilege_claims`
+--
+
+CREATE TABLE `user_privilege_claims` (
+  `privilege_claim_id` bigint(20) UNSIGNED NOT NULL COMMENT 'Primary key of user privilege claim',
+  `privilege_id` bigint(20) UNSIGNED NOT NULL COMMENT 'FK to privileges',
+  `user_id` bigint(20) UNSIGNED NOT NULL COMMENT 'FK to user_users (claim owner)',
+  `team_id` bigint(20) UNSIGNED NOT NULL COMMENT 'FK to team_teams at assignment time',
+  `qr_token` varchar(128) NOT NULL COMMENT 'Unique token encoded into QR/barcode for claim check',
+  `token_version` int(11) UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Token version for future rotation support',
+  `claim_status` enum('pending','claimed') NOT NULL DEFAULT 'pending' COMMENT 'Current claim status',
+  `claim_method` enum('qr_scan','admin_manual','team_bulk') DEFAULT NULL COMMENT 'How this claim was set to claimed',
+  `claimed_at` datetime DEFAULT NULL COMMENT 'When this claim was marked claimed',
+  `claimed_by_user_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'Admin who marked this claim as claimed',
+  `claim_note` varchar(500) DEFAULT NULL COMMENT 'Optional note for manual/bulk adjustment',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp() COMMENT 'Created timestamp',
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Updated timestamp'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Per-user privilege claim records with unique QR tokens';
+
+--
+-- Dumping data for table `user_privilege_claims`
+--
+
+INSERT INTO `user_privilege_claims` (`privilege_claim_id`, `privilege_id`, `user_id`, `team_id`, `qr_token`, `token_version`, `claim_status`, `claim_method`, `claimed_at`, `claimed_by_user_id`, `claim_note`, `created_at`, `updated_at`) VALUES
+(1, 1, 1002, 2001, 'TST_1_1002_0c5307861cce11f1a6e0f8bc1235f7b0', 1, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 05:11:12', '2026-03-11 18:36:12'),
+(2, 1, 1003, 2001, 'TST_1_1003_0c530a021cce11f1a6e0f8bc1235f7b0', 1, 'pending', NULL, NULL, NULL, 'seed test data', '2026-03-11 05:11:12', '2026-03-11 18:36:12'),
+(3, 1, 1004, 2001, 'TST_1_1004_0c530b361cce11f1a6e0f8bc1235f7b0', 1, 'pending', NULL, NULL, NULL, 'seed test data', '2026-03-11 05:11:12', '2026-03-11 18:36:12'),
+(4, 1, 1024, 2001, 'TST_1_1024_0c530c6a1cce11f1a6e0f8bc1235f7b0', 1, 'pending', NULL, NULL, NULL, 'seed test data', '2026-03-11 05:11:12', '2026-03-11 18:36:12'),
+(5, 2, 1002, 2001, 'TST_2_1002_0c530d941cce11f1a6e0f8bc1235f7b0', 1, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 05:11:12', '2026-03-11 18:36:12'),
+(6, 2, 1003, 2001, 'TST_2_1003_0c530e6e1cce11f1a6e0f8bc1235f7b0', 1, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 05:11:12', '2026-03-11 18:36:12'),
+(7, 2, 1004, 2001, 'GT24E9496F9764F78F', 8, 'pending', NULL, NULL, NULL, 'seed test data', '2026-03-11 05:11:12', '2026-03-11 18:36:12'),
+(8, 2, 1024, 2001, 'TST_2_1024_0c530ffe1cce11f1a6e0f8bc1235f7b0', 1, 'pending', NULL, NULL, NULL, 'seed test data', '2026-03-11 05:11:12', '2026-03-11 18:36:12'),
+(148, 3, 1003, 2001, 'GTEBDFE522D20E539C', 1, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 05:54:35', '2026-03-11 18:36:12'),
+(149, 3, 1004, 2001, 'GTD5C95465514D4DE5', 1, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 05:54:35', '2026-03-11 18:36:12'),
+(150, 3, 1024, 2001, 'GT688F89A11CEF4E8F', 1, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 05:54:35', '2026-03-11 18:36:12'),
+(151, 3, 1002, 2001, 'GT0D7F9347239FA300', 1, 'claimed', 'qr_scan', NULL, 1001, NULL, '2026-03-11 05:54:35', '2026-03-11 18:36:12'),
+(200, 4, 1003, 2001, 'GT6CBCC5B915C93555', 1, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 05:55:20', '2026-03-11 18:36:12'),
+(201, 4, 1004, 2001, 'GT8B9E1931338B878D', 1, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 05:55:20', '2026-03-11 18:36:12'),
+(202, 4, 1024, 2001, 'GTA60CFCF2B9B5127D', 1, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 05:55:20', '2026-03-11 18:36:12'),
+(203, 4, 1002, 2001, 'GTB1ABB593BD4C929E', 3, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 05:55:20', '2026-03-11 18:36:12'),
+(456, 5, 1003, 2001, 'GT647966E8363ABB13', 1, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 06:56:43', '2026-03-11 18:36:12'),
+(457, 5, 1004, 2001, 'GTEA6EF3374F34080D', 1, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 06:56:43', '2026-03-11 18:36:12'),
+(458, 5, 1024, 2001, 'GT75A0B1B77198F587', 1, 'pending', NULL, NULL, NULL, NULL, '2026-03-11 06:56:43', '2026-03-11 18:36:12'),
+(459, 5, 1002, 2001, 'GT3DB9F2861ED83971', 1, 'claimed', 'qr_scan', NULL, 1001, NULL, '2026-03-11 06:56:43', '2026-03-11 18:36:12');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_privilege_claim_logs`
+--
+
+CREATE TABLE `user_privilege_claim_logs` (
+  `claim_log_id` bigint(20) UNSIGNED NOT NULL COMMENT 'Primary key of claim log',
+  `privilege_claim_id` bigint(20) UNSIGNED NOT NULL COMMENT 'FK to user_privilege_claims',
+  `action_code` varchar(100) NOT NULL COMMENT 'Action code, e.g. CLAIM_REDEEMED_QR',
+  `action_detail` text DEFAULT NULL COMMENT 'Additional detail as JSON/text',
+  `actor_user_id` bigint(20) UNSIGNED DEFAULT NULL COMMENT 'Admin/system actor who performed action',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp() COMMENT 'Created timestamp'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Audit log for privilege claim actions';
+
+--
+-- Dumping data for table `user_privilege_claim_logs`
+--
+
+INSERT INTO `user_privilege_claim_logs` (`claim_log_id`, `privilege_claim_id`, `action_code`, `action_detail`, `actor_user_id`, `created_at`) VALUES
+(1, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:11:41'),
+(2, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:11:41'),
+(3, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:11:41'),
+(4, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:11:41'),
+(5, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:11:41'),
+(6, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:11:41'),
+(7, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:11:41'),
+(8, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:11:41'),
+(9, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:13:27'),
+(10, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:13:27'),
+(11, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:13:27'),
+(12, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:13:27'),
+(13, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:13:27'),
+(14, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:13:27'),
+(15, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:13:27'),
+(16, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:13:27'),
+(17, 6, 'CLAIM_REDEEMED_QR', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"qr_scan\",\"claimNote\":null}', 1001, '2026-03-11 05:14:38'),
+(18, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:15:39'),
+(19, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:15:39'),
+(20, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:15:39'),
+(21, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:15:39'),
+(22, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:15:39'),
+(23, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:15:39'),
+(24, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:15:39'),
+(25, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:15:40'),
+(26, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:27:28'),
+(27, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:27:28'),
+(28, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:27:28'),
+(29, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:27:28'),
+(30, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:27:28'),
+(31, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:27:28'),
+(32, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:27:28'),
+(33, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:27:28'),
+(34, 7, 'CLAIM_TOKEN_REFRESHED', '{\"fromVersion\":1,\"toVersion\":2}', 1004, '2026-03-11 05:27:29'),
+(35, 7, 'CLAIM_TOKEN_REFRESHED', '{\"fromVersion\":2,\"toVersion\":3}', 1004, '2026-03-11 05:27:30'),
+(36, 7, 'CLAIM_TOKEN_REFRESHED', '{\"fromVersion\":3,\"toVersion\":4}', 1004, '2026-03-11 05:27:31'),
+(37, 7, 'CLAIM_TOKEN_REFRESHED', '{\"fromVersion\":4,\"toVersion\":5}', 1004, '2026-03-11 05:27:32'),
+(38, 7, 'CLAIM_TOKEN_REFRESHED', '{\"fromVersion\":5,\"toVersion\":6}', 1004, '2026-03-11 05:27:33'),
+(39, 7, 'CLAIM_TOKEN_REFRESHED', '{\"fromVersion\":6,\"toVersion\":7}', 1004, '2026-03-11 05:27:33'),
+(40, 7, 'CLAIM_TOKEN_REFRESHED', '{\"fromVersion\":7,\"toVersion\":8}', 1004, '2026-03-11 05:27:34'),
+(41, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:53:31'),
+(42, 148, 'CLAIM_ASSIGNED', '{\"source\":\"template_publish\",\"privilegeId\":3}', NULL, '2026-03-11 05:54:35'),
+(43, 149, 'CLAIM_ASSIGNED', '{\"source\":\"template_publish\",\"privilegeId\":3}', NULL, '2026-03-11 05:54:35'),
+(44, 150, 'CLAIM_ASSIGNED', '{\"source\":\"template_publish\",\"privilegeId\":3}', NULL, '2026-03-11 05:54:35'),
+(45, 151, 'CLAIM_ASSIGNED', '{\"source\":\"template_publish\",\"privilegeId\":3}', NULL, '2026-03-11 05:54:35'),
+(46, 148, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 05:54:41'),
+(47, 149, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 05:54:41'),
+(48, 150, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 05:54:41'),
+(49, 151, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 05:54:41'),
+(50, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:54:41'),
+(51, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:54:41'),
+(52, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:54:41'),
+(53, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:54:41'),
+(54, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:54:41'),
+(55, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:54:41'),
+(56, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:54:41'),
+(57, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:54:41'),
+(58, 148, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 05:54:45'),
+(59, 149, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 05:54:45'),
+(60, 150, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 05:54:45'),
+(61, 151, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 05:54:45'),
+(62, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:54:45'),
+(63, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:54:45'),
+(64, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:54:45'),
+(65, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:54:45'),
+(66, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:54:45'),
+(67, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:54:45'),
+(68, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:54:45'),
+(69, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:54:45'),
+(70, 200, 'CLAIM_ASSIGNED', '{\"source\":\"template_publish\",\"privilegeId\":4}', NULL, '2026-03-11 05:55:20'),
+(71, 201, 'CLAIM_ASSIGNED', '{\"source\":\"template_publish\",\"privilegeId\":4}', NULL, '2026-03-11 05:55:20'),
+(72, 202, 'CLAIM_ASSIGNED', '{\"source\":\"template_publish\",\"privilegeId\":4}', NULL, '2026-03-11 05:55:20'),
+(73, 203, 'CLAIM_ASSIGNED', '{\"source\":\"template_publish\",\"privilegeId\":4}', NULL, '2026-03-11 05:55:20'),
+(74, 150, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 05:55:28'),
+(75, 151, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 05:55:28'),
+(76, 200, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 05:55:28'),
+(77, 201, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 05:55:28'),
+(78, 202, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 05:55:28'),
+(79, 203, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 05:55:28'),
+(80, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:55:28'),
+(81, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:55:28'),
+(82, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:55:28'),
+(83, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:55:28'),
+(84, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:55:28'),
+(85, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:55:28'),
+(86, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:55:28'),
+(87, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:55:28'),
+(88, 200, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 05:56:14'),
+(89, 201, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 05:56:14'),
+(90, 202, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 05:56:14'),
+(91, 203, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 05:56:14'),
+(92, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:56:14'),
+(93, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:56:14'),
+(94, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:56:14'),
+(95, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 05:56:14'),
+(96, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:56:14'),
+(97, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:56:14'),
+(98, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:56:14'),
+(99, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 05:56:14'),
+(100, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:00:40'),
+(101, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:00:40'),
+(102, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:00:40'),
+(103, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:00:40'),
+(104, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:00:40'),
+(105, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:00:40'),
+(106, 148, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:05:07'),
+(107, 149, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:05:07'),
+(108, 150, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:05:07'),
+(109, 151, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:05:07'),
+(110, 200, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:05:07'),
+(111, 201, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:05:07'),
+(112, 202, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:05:07'),
+(113, 203, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:05:07'),
+(114, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:05:07'),
+(115, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:05:07'),
+(116, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:05:07'),
+(117, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:05:07'),
+(118, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:05:07'),
+(119, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:05:07'),
+(120, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:05:07'),
+(121, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:05:07'),
+(122, 148, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:05:16'),
+(123, 149, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:05:16'),
+(124, 150, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:05:16'),
+(125, 151, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:05:16'),
+(126, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:05:16'),
+(127, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:05:16'),
+(128, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:05:16'),
+(129, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:05:16'),
+(130, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:05:16'),
+(131, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:05:16'),
+(132, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:05:16'),
+(133, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:05:16'),
+(134, 151, 'CLAIM_UPDATED_ADMIN', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"admin_manual\",\"claimNote\":null}', 1001, '2026-03-11 06:28:59'),
+(135, 151, 'CLAIM_UPDATED_ADMIN', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"admin_manual\",\"claimNote\":null}', 1001, '2026-03-11 06:29:01'),
+(136, 151, 'CLAIM_RESET_ADMIN', '{\"claimStatus\":\"pending\",\"claimMethod\":null,\"claimNote\":null}', 1001, '2026-03-11 06:29:02'),
+(137, 148, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:30:59'),
+(138, 149, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:30:59'),
+(139, 150, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:30:59'),
+(140, 151, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:30:59'),
+(141, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:30:59'),
+(142, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:30:59'),
+(143, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:30:59'),
+(144, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:30:59'),
+(145, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:30:59'),
+(146, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:30:59'),
+(147, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:30:59'),
+(148, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:30:59'),
+(149, 151, 'CLAIM_REDEEMED_QR', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"qr_scan\",\"claimNote\":null}', 1001, '2026-03-11 06:31:11'),
+(150, 1, 'CLAIM_RESET_ADMIN', '{\"claimStatus\":\"pending\",\"claimMethod\":null,\"claimNote\":null}', 1001, '2026-03-11 06:31:17'),
+(151, 151, 'CLAIM_RESET_ADMIN', '{\"claimStatus\":\"pending\",\"claimMethod\":null,\"claimNote\":null}', 1001, '2026-03-11 06:31:19'),
+(152, 6, 'CLAIM_RESET_ADMIN', '{\"claimStatus\":\"pending\",\"claimMethod\":null,\"claimNote\":null}', 1001, '2026-03-11 06:31:20'),
+(153, 5, 'CLAIM_RESET_ADMIN', '{\"claimStatus\":\"pending\",\"claimMethod\":null,\"claimNote\":null}', 1001, '2026-03-11 06:31:22'),
+(154, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:40:56'),
+(155, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:40:56'),
+(156, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:40:56'),
+(157, 151, 'CLAIM_UPDATED_ADMIN', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"admin_manual\",\"claimNote\":null}', 1001, '2026-03-11 06:50:16'),
+(158, 151, 'CLAIM_RESET_ADMIN', '{\"claimStatus\":\"pending\",\"claimMethod\":null,\"claimNote\":null}', 1001, '2026-03-11 06:50:17'),
+(159, 148, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:56:20'),
+(160, 149, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:56:20'),
+(161, 150, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:56:20'),
+(162, 151, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:56:20'),
+(163, 200, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:56:20'),
+(164, 201, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:56:20'),
+(165, 202, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:56:20'),
+(166, 203, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:56:20'),
+(167, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:56:20'),
+(168, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:56:20'),
+(169, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:56:20'),
+(170, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:56:20'),
+(171, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:56:20'),
+(172, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:56:21'),
+(173, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:56:35'),
+(174, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:56:35'),
+(175, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:56:35'),
+(176, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:56:35'),
+(177, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:56:35'),
+(178, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:56:35'),
+(179, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:56:35'),
+(180, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:56:35'),
+(181, 456, 'CLAIM_ASSIGNED', '{\"source\":\"template_publish\",\"privilegeId\":5}', NULL, '2026-03-11 06:56:43'),
+(182, 457, 'CLAIM_ASSIGNED', '{\"source\":\"template_publish\",\"privilegeId\":5}', NULL, '2026-03-11 06:56:43'),
+(183, 458, 'CLAIM_ASSIGNED', '{\"source\":\"template_publish\",\"privilegeId\":5}', NULL, '2026-03-11 06:56:43'),
+(184, 459, 'CLAIM_ASSIGNED', '{\"source\":\"template_publish\",\"privilegeId\":5}', NULL, '2026-03-11 06:56:43'),
+(185, 458, 'CLAIM_UPDATED_ADMIN', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"admin_manual\",\"claimNote\":null}', 1001, '2026-03-11 06:57:03'),
+(186, 458, 'CLAIM_UPDATED_ADMIN', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"admin_manual\",\"claimNote\":null}', 1001, '2026-03-11 06:57:04'),
+(187, 151, 'CLAIM_UPDATED_ADMIN', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"admin_manual\",\"claimNote\":null}', 1001, '2026-03-11 06:57:07'),
+(188, 151, 'CLAIM_UPDATED_ADMIN', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"admin_manual\",\"claimNote\":null}', 1001, '2026-03-11 06:57:08'),
+(189, 151, 'CLAIM_RESET_ADMIN', '{\"claimStatus\":\"pending\",\"claimMethod\":null,\"claimNote\":null}', 1001, '2026-03-11 06:57:09'),
+(190, 148, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:57:13'),
+(191, 149, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:57:13'),
+(192, 150, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:57:13'),
+(193, 151, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:57:13'),
+(194, 200, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:57:13'),
+(195, 201, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:57:13'),
+(196, 202, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:57:13'),
+(197, 203, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:57:13'),
+(198, 456, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 06:57:13'),
+(199, 457, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 06:57:13'),
+(200, 458, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 06:57:13'),
+(201, 459, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 06:57:13'),
+(202, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:57:13'),
+(203, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:57:13'),
+(204, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:57:13'),
+(205, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:57:13'),
+(206, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:57:13'),
+(207, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:57:13'),
+(208, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:57:13'),
+(209, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:57:13'),
+(210, 458, 'CLAIM_RESET_ADMIN', '{\"claimStatus\":\"pending\",\"claimMethod\":null,\"claimNote\":null}', 1001, '2026-03-11 06:57:18'),
+(211, 459, 'CLAIM_UPDATED_ADMIN', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"admin_manual\",\"claimNote\":null}', 1001, '2026-03-11 06:57:20'),
+(212, 148, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:57:22'),
+(213, 149, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:57:22'),
+(214, 150, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:57:22'),
+(215, 151, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 06:57:22'),
+(216, 200, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:57:22'),
+(217, 201, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:57:22'),
+(218, 202, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:57:22'),
+(219, 203, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 06:57:22'),
+(220, 456, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 06:57:22'),
+(221, 457, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 06:57:22'),
+(222, 458, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 06:57:22'),
+(223, 459, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 06:57:22'),
+(224, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:57:22'),
+(225, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:57:22'),
+(226, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:57:22'),
+(227, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 06:57:22'),
+(228, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:57:22'),
+(229, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:57:22'),
+(230, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 06:57:23'),
+(231, 459, 'CLAIM_UPDATED_ADMIN', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"admin_manual\",\"claimNote\":null}', 1001, '2026-03-11 06:57:24'),
+(232, 459, 'CLAIM_RESET_ADMIN', '{\"claimStatus\":\"pending\",\"claimMethod\":null,\"claimNote\":null}', 1001, '2026-03-11 06:57:25'),
+(233, 148, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 17:07:28'),
+(234, 149, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 17:07:28'),
+(235, 150, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 17:07:28'),
+(236, 151, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 17:07:28'),
+(237, 151, 'CLAIM_REDEEMED_QR', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"qr_scan\",\"claimNote\":null}', 1001, '2026-03-11 17:08:00'),
+(238, 148, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 17:08:08'),
+(239, 149, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 17:08:08'),
+(240, 150, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 17:08:08'),
+(241, 151, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 17:08:08'),
+(242, 200, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 17:08:08'),
+(243, 201, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 17:08:08'),
+(244, 202, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 17:08:08'),
+(245, 203, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 17:08:08'),
+(246, 456, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 17:08:08'),
+(247, 457, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 17:08:08'),
+(248, 458, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 17:08:08'),
+(249, 459, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 17:08:09'),
+(250, 203, 'CLAIM_TOKEN_REFRESHED', '{\"fromVersion\":1,\"toVersion\":2}', 1002, '2026-03-11 17:17:35'),
+(251, 203, 'CLAIM_TOKEN_REFRESHED', '{\"fromVersion\":2,\"toVersion\":3}', 1002, '2026-03-11 17:18:40'),
+(252, 459, 'CLAIM_REDEEMED_QR', '{\"claimStatus\":\"claimed\",\"claimMethod\":\"qr_scan\",\"claimNote\":null}', 1001, '2026-03-11 17:19:47'),
+(253, 148, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 18:36:12'),
+(254, 149, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 18:36:12'),
+(255, 150, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 18:36:12'),
+(256, 151, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":3}', NULL, '2026-03-11 18:36:12'),
+(257, 200, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 18:36:12'),
+(258, 201, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 18:36:12'),
+(259, 202, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 18:36:12'),
+(260, 203, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":4}', NULL, '2026-03-11 18:36:12'),
+(261, 456, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 18:36:12'),
+(262, 457, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 18:36:12'),
+(263, 458, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 18:36:12'),
+(264, 459, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":5}', NULL, '2026-03-11 18:36:12'),
+(265, 2, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 18:36:12'),
+(266, 3, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 18:36:12'),
+(267, 4, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 18:36:12'),
+(268, 1, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":1}', NULL, '2026-03-11 18:36:12'),
+(269, 6, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 18:36:12'),
+(270, 7, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 18:36:12'),
+(271, 8, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 18:36:12'),
+(272, 5, 'CLAIM_ASSIGNED', '{\"source\":\"team_confirmed\",\"privilegeId\":2}', NULL, '2026-03-11 18:36:12');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `user_public_profiles`
 --
 
@@ -1433,6 +2008,26 @@ INSERT INTO `user_public_profiles` (`user_id`, `bio_th`, `bio_en`, `looking_for_
 (1004, 'ถนัด backend Go', 'Go backend dev', 0, 'มีทีมแล้ว', '2026-02-20 17:50:25'),
 (1005, 'สาย AI/ML', 'AI/ML', 1, 'รับทีมที่สนใจ AI', '2026-02-20 17:50:25'),
 (1007, 'หัวหน้าทีม finalist', 'Finalist leader', 0, '', '2026-02-20 17:50:25');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_registration_verifications`
+--
+
+CREATE TABLE `user_registration_verifications` (
+  `registration_id` bigint(20) UNSIGNED NOT NULL COMMENT 'Primary key of pending registration',
+  `email` varchar(255) NOT NULL COMMENT 'Email used for registration and verification',
+  `user_name` varchar(50) NOT NULL COMMENT 'Requested username (for duplicate checks)',
+  `verification_code_hash` varchar(128) NOT NULL COMMENT 'SHA-256 hash of one-time verification code',
+  `payload_json` longtext NOT NULL COMMENT 'Serialized registration payload including password hash',
+  `expires_at` datetime NOT NULL COMMENT 'Verification code expiration time',
+  `last_sent_at` datetime NOT NULL DEFAULT current_timestamp() COMMENT 'When the latest verification email was sent',
+  `attempt_count` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Number of failed verification attempts',
+  `consumed_at` datetime DEFAULT NULL COMMENT 'When this pending registration was completed',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp() COMMENT 'Created timestamp',
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Updated timestamp'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Pending registrations waiting for email verification';
 
 -- --------------------------------------------------------
 
@@ -1563,7 +2158,9 @@ INSERT INTO `user_users` (`user_id`, `user_name`, `email`, `phone`, `institution
 (1021, 'leader1', 'leader1@test.com', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, '2026-02-28 16:27:03', '2026-02-28 16:27:03', NULL),
 (1022, 'david2', 'david2@gmail.com', '0123456789', 'ฟหก', 'asd', 'ฟหก', 'ฟหก', 'asd', 'asd', 'female', '2026-03-01', 'bachelor', 'ขอนแก่น', 1, '2026-02-28 20:19:32', '2026-03-04 19:56:14', NULL),
 (1023, 'david3', 'david3@gmail.com', '0912345678', 'asd', 'asd', 'as', 'asd', 'asd', 'asd', 'female', '2024-05-07', 'high_school', 'aaa', 1, '2026-02-28 20:21:02', '2026-03-05 19:37:31', NULL),
-(1024, 'Somchai', 'somchai.jaidee@kku.ac.th', '0123456789', 'มหาวิทยาลัยขอนแก่น', 'Khonkaen University', 'สมชาย', 'ใจดี', 'Somchai', 'Jaidee', 'male', '2022-06-19', 'bachelor', 'ขอนแก่น', 1, '2026-03-02 18:32:24', '2026-03-04 02:40:50', NULL);
+(1024, 'Somchai', 'somchai.jaidee@kku.ac.th', '0123456789', 'มหาวิทยาลัยขอนแก่น', 'Khonkaen University', 'สมชาย', 'ใจดี', 'Somchai', 'Jaidee', 'male', '2022-06-19', 'bachelor', 'ขอนแก่น', 1, '2026-03-02 18:32:24', '2026-03-04 02:40:50', NULL),
+(1025, 'Aum', 'aum.kitsanapong@gmail.com', '0942962772', 'มหาวิทยาลัยขอนแก่น', 'Khon Kaen University', 'กฤษณะพงศ์', 'พรพันธุ์', 'Kitsanapong', 'Pornpun', 'male', '2003-06-19', 'bachelor', 'อุบลราชธานี', 1, '2026-03-07 22:15:06', '2026-03-07 22:15:06', NULL),
+(1026, 'KKLZ', 'kitsanapong.p@kkumail.com', '0123456789', 'มข.', 'KKU', 'ฟหวสฟหาก', 'กกก', 'klasdg', 'sss', 'female', '2023-06-12', 'bachelor', 'ขอนแก่น', 1, '2026-03-07 22:18:30', '2026-03-07 22:38:51', NULL);
 
 -- --------------------------------------------------------
 
@@ -1665,7 +2262,20 @@ INSERT INTO `verify_audit_logs` (`verify_audit_id`, `verify_round_id`, `team_id`
 (98076, 6007, 2012, 1022, NULL, 'MEMBER_CONFIRMED', NULL, '2026-03-06 15:40:45'),
 (98077, 6007, 2012, 1022, NULL, 'MEMBER_UNCONFIRMED', NULL, '2026-03-07 16:57:42'),
 (98078, 6007, 2012, 1022, NULL, 'DOC_UPLOADED', '{\"documentId\":96028,\"fileName\":\"sample.pdf\"}', '2026-03-07 16:59:27'),
-(98079, 6007, 2012, 1022, NULL, 'MEMBER_CONFIRMED', NULL, '2026-03-07 17:07:13');
+(98079, 6007, 2012, 1022, NULL, 'MEMBER_CONFIRMED', NULL, '2026-03-07 17:07:13'),
+(98080, 6008, 2013, 1026, NULL, 'DOC_UPLOADED', '{\"documentId\":96029,\"fileName\":\"sample.pdf\"}', '2026-03-07 22:22:34'),
+(98081, 6008, 2013, 1026, NULL, 'MEMBER_CONFIRMED', NULL, '2026-03-07 22:22:36'),
+(98082, 6008, 2013, 1025, NULL, 'DOC_UPLOADED', '{\"documentId\":96030,\"fileName\":\"sample-local-pdf.pdf\"}', '2026-03-07 22:22:56'),
+(98083, 6008, 2013, 1025, NULL, 'MEMBER_CONFIRMED', NULL, '2026-03-07 22:22:58'),
+(98084, 6008, 2013, 1025, NULL, 'TEAM_SUBMITTED', NULL, '2026-03-07 22:24:27'),
+(98085, 6008, 2013, 1025, NULL, 'TEAM_DISBANDED', '{\"reason\":\"aaa\"}', '2026-03-07 22:37:42'),
+(98086, 6009, 2014, 1026, NULL, 'DOC_UPLOADED', '{\"documentId\":96031,\"fileName\":\"sample.pdf\"}', '2026-03-07 22:38:51'),
+(98087, 6009, 2014, 1026, NULL, 'MEMBER_CONFIRMED', NULL, '2026-03-07 22:38:53'),
+(98088, 6009, 2014, 1025, NULL, 'DOC_UPLOADED', '{\"documentId\":96032,\"fileName\":\"sample.pdf\"}', '2026-03-07 22:38:59'),
+(98089, 6009, 2014, 1025, NULL, 'MEMBER_CONFIRMED', NULL, '2026-03-07 22:39:01'),
+(98090, 6009, 2014, 1025, NULL, 'TEAM_SUBMITTED', NULL, '2026-03-07 22:39:44'),
+(98091, 6010, 2015, 1017, NULL, 'DOC_UPLOADED', '{\"documentId\":96033,\"fileName\":\"sample.pdf\"}', '2026-03-11 17:44:37'),
+(98092, 6010, 2015, 1017, NULL, 'MEMBER_CONFIRMED', NULL, '2026-03-11 17:45:21');
 
 -- --------------------------------------------------------
 
@@ -1767,7 +2377,12 @@ INSERT INTO `verify_member_documents` (`document_id`, `verify_round_id`, `team_i
 (96025, 6001, 2001, 1004, 5002, 'verification/ทีมพัซเซิล/palm/1772705664948_8622a494_Proposal1-7.pdf', 'Proposal1-7.pdf', 'application/pdf', 385505, NULL, 1, NULL, '2026-03-05 17:14:24', 1004, NULL),
 (96026, 6007, 2012, 1023, 5002, 'verification/Test4/david3/1772714258332_20ec32d4_sample.pdf', 'sample.pdf', 'application/pdf', 18810, NULL, 1, NULL, '2026-03-05 19:37:38', 1023, NULL),
 (96027, 6007, 2012, 1022, 5002, 'verification/Test4/david2/1772714358352_d7c2a831_sample-local-pdf.pdf', 'sample-local-pdf.pdf', 'application/pdf', 49672, NULL, 1, NULL, '2026-03-05 19:39:18', 1022, NULL),
-(96028, 6007, 2012, 1022, 5002, 'verification/Test4/david2/1772877567910_4ad99528_sample.pdf', 'sample.pdf', 'application/pdf', 18810, NULL, 1, NULL, '2026-03-07 16:59:27', 1022, NULL);
+(96028, 6007, 2012, 1022, 5002, 'verification/Test4/david2/1772877567910_4ad99528_sample.pdf', 'sample.pdf', 'application/pdf', 18810, NULL, 1, NULL, '2026-03-07 16:59:27', 1022, NULL),
+(96029, 6008, 2013, 1026, 5002, 'verification/AnotherOne/KKLZ/1772896955061_329df0a8_sample.pdf', 'sample.pdf', 'application/pdf', 18810, NULL, 1, NULL, '2026-03-07 22:22:34', 1026, NULL),
+(96030, 6008, 2013, 1025, 5002, 'verification/AnotherOne/Aum/1772896976975_9e2aab7d_sample-local-pdf.pdf', 'sample-local-pdf.pdf', 'application/pdf', 49672, NULL, 1, NULL, '2026-03-07 22:22:56', 1025, NULL),
+(96031, 6009, 2014, 1026, 5002, 'verification/TestAnother/KKLZ/1772897931396_ddc58e4a_sample.pdf', 'sample.pdf', 'application/pdf', 18810, NULL, 1, NULL, '2026-03-07 22:38:51', 1026, NULL),
+(96032, 6009, 2014, 1025, 5002, 'verification/TestAnother/Aum/1772897940174_551e4658_sample.pdf', 'sample.pdf', 'application/pdf', 18810, NULL, 1, NULL, '2026-03-07 22:38:59', 1025, NULL),
+(96033, 6010, 2015, 1017, 5002, 'verification/Testaaa/davidd/1773225877879_4fb0d99a_sample.pdf', 'sample.pdf', 'application/pdf', 18810, NULL, 1, NULL, '2026-03-11 17:44:37', 1017, NULL);
 
 -- --------------------------------------------------------
 
@@ -1814,7 +2429,12 @@ INSERT INTO `verify_member_profiles` (`verify_profile_id`, `verify_round_id`, `t
 (95015, 6006, 2011, 1017, NULL, NULL, NULL, NULL, 0, 1, '2026-03-04 19:55:43', NULL, NULL, '2026-03-04 19:55:43'),
 (95016, 6006, 2011, 1022, NULL, NULL, NULL, NULL, 0, 1, '2026-03-04 19:56:16', NULL, NULL, '2026-03-04 19:56:16'),
 (95017, 6007, 2012, 1023, NULL, NULL, NULL, NULL, 0, 1, '2026-03-05 19:37:48', NULL, NULL, '2026-03-05 19:37:48'),
-(95018, 6007, 2012, 1022, NULL, NULL, NULL, NULL, 0, 1, '2026-03-07 17:07:13', '2026-03-07 16:57:42', NULL, '2026-03-07 17:07:13');
+(95018, 6007, 2012, 1022, NULL, NULL, NULL, NULL, 0, 1, '2026-03-07 17:07:13', '2026-03-07 16:57:42', NULL, '2026-03-07 17:07:13'),
+(95019, 6008, 2013, 1026, NULL, NULL, NULL, NULL, 0, 1, '2026-03-07 22:22:36', NULL, NULL, '2026-03-07 22:22:36'),
+(95020, 6008, 2013, 1025, NULL, NULL, NULL, NULL, 0, 1, '2026-03-07 22:22:58', NULL, NULL, '2026-03-07 22:22:58'),
+(95021, 6009, 2014, 1026, NULL, NULL, NULL, NULL, 0, 1, '2026-03-07 22:38:53', NULL, NULL, '2026-03-07 22:38:53'),
+(95022, 6009, 2014, 1025, NULL, NULL, NULL, NULL, 0, 1, '2026-03-07 22:39:01', NULL, NULL, '2026-03-07 22:39:01'),
+(95023, 6010, 2015, 1017, NULL, NULL, NULL, NULL, 0, 1, '2026-03-11 17:45:21', NULL, NULL, '2026-03-11 17:45:21');
 
 -- --------------------------------------------------------
 
@@ -1875,7 +2495,10 @@ INSERT INTO `verify_review_rounds` (`verify_round_id`, `team_id`, `round_no`, `s
 (6004, 2009, 1, 'submitted', 1017, '2026-03-04 05:04:50', '2026-03-04 19:05:18', '2026-03-04 19:05:18', NULL, NULL, NULL),
 (6005, 2010, 1, 'cancelled', 1017, '2026-03-04 19:19:15', '2026-03-04 19:22:28', '2026-03-04 19:22:28', NULL, NULL, '\n[System] ยกเลิกรอบการตรวจสอบเนื่องจากยุบทีมเหตุผล: Test Test'),
 (6006, 2011, 1, 'cancelled', 1017, '2026-03-04 19:55:39', '2026-03-04 19:56:45', '2026-03-04 19:56:45', NULL, NULL, 'ยุบ'),
-(6007, 2012, 1, 'draft', 1023, '2026-03-05 19:37:38', NULL, NULL, NULL, NULL, NULL);
+(6007, 2012, 1, 'draft', 1023, '2026-03-05 19:37:38', NULL, NULL, NULL, NULL, NULL),
+(6008, 2013, 1, 'cancelled', 1026, '2026-03-07 22:22:34', '2026-03-07 22:24:27', '2026-03-07 22:24:27', NULL, NULL, 'aaa'),
+(6009, 2014, 1, 'submitted', 1026, '2026-03-07 22:38:50', '2026-03-07 22:39:44', '2026-03-07 22:39:44', NULL, NULL, NULL),
+(6010, 2015, 1, 'draft', 1017, '2026-03-11 17:44:37', NULL, NULL, NULL, NULL, NULL);
 
 --
 -- Indexes for dumped tables
@@ -1889,6 +2512,22 @@ ALTER TABLE `access_allowlist`
   ADD UNIQUE KEY `uq_access_allowlist_user_role` (`user_id`,`access_role`),
   ADD KEY `idx_access_allowlist_role_active` (`access_role`,`is_active`),
   ADD KEY `fk_access_allowlist_granted_by` (`granted_by_user_id`);
+
+--
+-- Indexes for table `admin_notification_settings`
+--
+ALTER TABLE `admin_notification_settings`
+  ADD PRIMARY KEY (`event_code`),
+  ADD KEY `idx_admin_notification_settings_updated_by` (`updated_by_user_id`);
+
+--
+-- Indexes for table `content_carousel_slides`
+--
+ALTER TABLE `content_carousel_slides`
+  ADD PRIMARY KEY (`slide_id`),
+  ADD KEY `idx_content_carousel_enabled_sort` (`is_enabled`,`sort_order`),
+  ADD KEY `idx_content_carousel_publish_window` (`start_at`,`end_at`),
+  ADD KEY `idx_content_carousel_created_by` (`created_by_user_id`);
 
 --
 -- Indexes for table `content_contacts`
@@ -2054,6 +2693,25 @@ ALTER TABLE `event_winners`
   ADD KEY `fk_event_winners_created_by` (`created_by_user_id`);
 
 --
+-- Indexes for table `notification_logs`
+--
+ALTER TABLE `notification_logs`
+  ADD PRIMARY KEY (`notification_log_id`),
+  ADD KEY `idx_notification_logs_team_created` (`team_id`,`created_at`),
+  ADD KEY `idx_notification_logs_recipient_created` (`recipient_user_id`,`created_at`),
+  ADD KEY `idx_notification_logs_event` (`event_code`),
+  ADD KEY `fk_notification_logs_actor` (`actor_user_id`);
+
+--
+-- Indexes for table `notify_admin_recipients`
+--
+ALTER TABLE `notify_admin_recipients`
+  ADD PRIMARY KEY (`notify_admin_recipient_id`),
+  ADD UNIQUE KEY `uq_notify_admin_recipients_user` (`user_id`),
+  ADD KEY `idx_notify_admin_recipients_enabled` (`is_enabled`),
+  ADD KEY `idx_notify_admin_recipients_updated_by` (`updated_by_user_id`);
+
+--
 -- Indexes for table `notify_announcements`
 --
 ALTER TABLE `notify_announcements`
@@ -2096,6 +2754,15 @@ ALTER TABLE `notify_email_templates`
   ADD UNIQUE KEY `uq_notify_email_templates_code` (`template_code`),
   ADD KEY `idx_notify_email_templates_enabled` (`is_enabled`),
   ADD KEY `fk_notify_email_templates_created_by` (`created_by_user_id`);
+
+--
+-- Indexes for table `privileges`
+--
+ALTER TABLE `privileges`
+  ADD PRIMARY KEY (`privilege_id`),
+  ADD UNIQUE KEY `uq_privileges_code` (`privilege_code`),
+  ADD KEY `idx_privileges_active_published` (`is_active`,`is_published`,`sort_order`),
+  ADD KEY `idx_privileges_created_by` (`created_by_user_id`);
 
 --
 -- Indexes for table `review_assignments`
@@ -2227,7 +2894,9 @@ ALTER TABLE `team_teams`
   ADD KEY `idx_team_teams_leader` (`current_leader_user_id`),
   ADD KEY `idx_team_teams_visibility` (`visibility`),
   ADD KEY `idx_team_teams_status` (`status`),
-  ADD KEY `idx_tt_status` (`status`);
+  ADD KEY `idx_tt_status` (`status`),
+  ADD KEY `idx_team_teams_confirm_deadline` (`confirmation_deadline_at`),
+  ADD KEY `idx_team_teams_confirmed_by` (`confirmed_by_user_id`);
 
 --
 -- Indexes for table `team_team_codes`
@@ -2277,10 +2946,39 @@ ALTER TABLE `user_privacy_settings`
   ADD PRIMARY KEY (`user_id`);
 
 --
+-- Indexes for table `user_privilege_claims`
+--
+ALTER TABLE `user_privilege_claims`
+  ADD PRIMARY KEY (`privilege_claim_id`),
+  ADD UNIQUE KEY `uq_user_privilege_claim` (`privilege_id`,`user_id`),
+  ADD UNIQUE KEY `uq_user_privilege_claim_token` (`qr_token`),
+  ADD KEY `idx_user_privilege_claim_team_status` (`team_id`,`privilege_id`,`claim_status`),
+  ADD KEY `idx_user_privilege_claim_user_status` (`user_id`,`claim_status`),
+  ADD KEY `idx_user_privilege_claim_claimed_by` (`claimed_by_user_id`);
+
+--
+-- Indexes for table `user_privilege_claim_logs`
+--
+ALTER TABLE `user_privilege_claim_logs`
+  ADD PRIMARY KEY (`claim_log_id`),
+  ADD KEY `idx_privilege_claim_logs_claim` (`privilege_claim_id`,`created_at`),
+  ADD KEY `idx_privilege_claim_logs_actor` (`actor_user_id`);
+
+--
 -- Indexes for table `user_public_profiles`
 --
 ALTER TABLE `user_public_profiles`
   ADD PRIMARY KEY (`user_id`);
+
+--
+-- Indexes for table `user_registration_verifications`
+--
+ALTER TABLE `user_registration_verifications`
+  ADD PRIMARY KEY (`registration_id`),
+  ADD UNIQUE KEY `uq_urv_email` (`email`),
+  ADD KEY `idx_urv_user_name` (`user_name`),
+  ADD KEY `idx_urv_expires` (`expires_at`),
+  ADD KEY `idx_urv_consumed` (`consumed_at`);
 
 --
 -- Indexes for table `user_social_links`
@@ -2384,6 +3082,12 @@ ALTER TABLE `verify_review_rounds`
 --
 ALTER TABLE `access_allowlist`
   MODIFY `allow_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of allowlist record', AUTO_INCREMENT=190004;
+
+--
+-- AUTO_INCREMENT for table `content_carousel_slides`
+--
+ALTER TABLE `content_carousel_slides`
+  MODIFY `slide_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of carousel slide record', AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `content_contacts`
@@ -2494,6 +3198,18 @@ ALTER TABLE `event_winners`
   MODIFY `winner_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of winner record';
 
 --
+-- AUTO_INCREMENT for table `notification_logs`
+--
+ALTER TABLE `notification_logs`
+  MODIFY `notification_log_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key', AUTO_INCREMENT=27;
+
+--
+-- AUTO_INCREMENT for table `notify_admin_recipients`
+--
+ALTER TABLE `notify_admin_recipients`
+  MODIFY `notify_admin_recipient_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `notify_announcements`
 --
 ALTER TABLE `notify_announcements`
@@ -2522,6 +3238,12 @@ ALTER TABLE `notify_deliveries`
 --
 ALTER TABLE `notify_email_templates`
   MODIFY `template_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of email template', AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `privileges`
+--
+ALTER TABLE `privileges`
+  MODIFY `privilege_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of privilege template', AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `review_assignments`
@@ -2569,55 +3291,55 @@ ALTER TABLE `review_submission_members`
 -- AUTO_INCREMENT for table `team_advisors`
 --
 ALTER TABLE `team_advisors`
-  MODIFY `advisor_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of advisor record', AUTO_INCREMENT=4;
+  MODIFY `advisor_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of advisor record', AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `team_audit_logs`
 --
 ALTER TABLE `team_audit_logs`
-  MODIFY `team_audit_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of team audit log entry', AUTO_INCREMENT=93030;
+  MODIFY `team_audit_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of team audit log entry', AUTO_INCREMENT=93060;
 
 --
 -- AUTO_INCREMENT for table `team_invitations`
 --
 ALTER TABLE `team_invitations`
-  MODIFY `invitation_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of invitation', AUTO_INCREMENT=92016;
+  MODIFY `invitation_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of invitation', AUTO_INCREMENT=92017;
 
 --
 -- AUTO_INCREMENT for table `team_join_requests`
 --
 ALTER TABLE `team_join_requests`
-  MODIFY `join_request_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of join request', AUTO_INCREMENT=91009;
+  MODIFY `join_request_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of join request', AUTO_INCREMENT=91012;
 
 --
 -- AUTO_INCREMENT for table `team_members`
 --
 ALTER TABLE `team_members`
-  MODIFY `team_member_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of team member record', AUTO_INCREMENT=80039;
+  MODIFY `team_member_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of team member record', AUTO_INCREMENT=80044;
 
 --
 -- AUTO_INCREMENT for table `team_submission_files`
 --
 ALTER TABLE `team_submission_files`
-  MODIFY `file_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of submission file', AUTO_INCREMENT=3;
+  MODIFY `file_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of submission file', AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `team_teams`
 --
 ALTER TABLE `team_teams`
-  MODIFY `team_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of team', AUTO_INCREMENT=2013;
+  MODIFY `team_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of team', AUTO_INCREMENT=2016;
 
 --
 -- AUTO_INCREMENT for table `team_team_codes`
 --
 ALTER TABLE `team_team_codes`
-  MODIFY `team_code_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of team code record', AUTO_INCREMENT=90010;
+  MODIFY `team_code_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of team code record', AUTO_INCREMENT=90013;
 
 --
 -- AUTO_INCREMENT for table `user_consents`
 --
 ALTER TABLE `user_consents`
-  MODIFY `user_consent_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of user consent record', AUTO_INCREMENT=70013;
+  MODIFY `user_consent_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of user consent record', AUTO_INCREMENT=70017;
 
 --
 -- AUTO_INCREMENT for table `user_consent_documents`
@@ -2629,13 +3351,31 @@ ALTER TABLE `user_consent_documents`
 -- AUTO_INCREMENT for table `user_credentials_local`
 --
 ALTER TABLE `user_credentials_local`
-  MODIFY `cred_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of local credentials record', AUTO_INCREMENT=40020;
+  MODIFY `cred_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of local credentials record', AUTO_INCREMENT=40022;
 
 --
 -- AUTO_INCREMENT for table `user_identities`
 --
 ALTER TABLE `user_identities`
-  MODIFY `identity_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of identity record', AUTO_INCREMENT=50019;
+  MODIFY `identity_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of identity record', AUTO_INCREMENT=50021;
+
+--
+-- AUTO_INCREMENT for table `user_privilege_claims`
+--
+ALTER TABLE `user_privilege_claims`
+  MODIFY `privilege_claim_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of user privilege claim', AUTO_INCREMENT=708;
+
+--
+-- AUTO_INCREMENT for table `user_privilege_claim_logs`
+--
+ALTER TABLE `user_privilege_claim_logs`
+  MODIFY `claim_log_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of claim log', AUTO_INCREMENT=273;
+
+--
+-- AUTO_INCREMENT for table `user_registration_verifications`
+--
+ALTER TABLE `user_registration_verifications`
+  MODIFY `registration_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of pending registration';
 
 --
 -- AUTO_INCREMENT for table `user_social_links`
@@ -2659,13 +3399,13 @@ ALTER TABLE `user_sso_providers`
 -- AUTO_INCREMENT for table `user_users`
 --
 ALTER TABLE `user_users`
-  MODIFY `user_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of user', AUTO_INCREMENT=1025;
+  MODIFY `user_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of user', AUTO_INCREMENT=1027;
 
 --
 -- AUTO_INCREMENT for table `verify_audit_logs`
 --
 ALTER TABLE `verify_audit_logs`
-  MODIFY `verify_audit_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of verify audit log entry', AUTO_INCREMENT=98080;
+  MODIFY `verify_audit_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of verify audit log entry', AUTO_INCREMENT=98093;
 
 --
 -- AUTO_INCREMENT for table `verify_member_checks`
@@ -2677,13 +3417,13 @@ ALTER TABLE `verify_member_checks`
 -- AUTO_INCREMENT for table `verify_member_documents`
 --
 ALTER TABLE `verify_member_documents`
-  MODIFY `document_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of uploaded document record', AUTO_INCREMENT=96029;
+  MODIFY `document_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of uploaded document record', AUTO_INCREMENT=96034;
 
 --
 -- AUTO_INCREMENT for table `verify_member_profiles`
 --
 ALTER TABLE `verify_member_profiles`
-  MODIFY `verify_profile_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of member verification profile', AUTO_INCREMENT=95019;
+  MODIFY `verify_profile_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of member verification profile', AUTO_INCREMENT=95024;
 
 --
 -- AUTO_INCREMENT for table `verify_requirements`
@@ -2695,7 +3435,7 @@ ALTER TABLE `verify_requirements`
 -- AUTO_INCREMENT for table `verify_review_rounds`
 --
 ALTER TABLE `verify_review_rounds`
-  MODIFY `verify_round_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of verification round', AUTO_INCREMENT=6008;
+  MODIFY `verify_round_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key of verification round', AUTO_INCREMENT=6011;
 
 --
 -- Constraints for dumped tables
@@ -2707,6 +3447,18 @@ ALTER TABLE `verify_review_rounds`
 ALTER TABLE `access_allowlist`
   ADD CONSTRAINT `fk_access_allowlist_granted_by` FOREIGN KEY (`granted_by_user_id`) REFERENCES `user_users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_access_allowlist_user` FOREIGN KEY (`user_id`) REFERENCES `user_users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `admin_notification_settings`
+--
+ALTER TABLE `admin_notification_settings`
+  ADD CONSTRAINT `fk_admin_notification_settings_updated_by` FOREIGN KEY (`updated_by_user_id`) REFERENCES `user_users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Constraints for table `content_carousel_slides`
+--
+ALTER TABLE `content_carousel_slides`
+  ADD CONSTRAINT `fk_content_carousel_created_by` FOREIGN KEY (`created_by_user_id`) REFERENCES `user_users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `content_contact_channels`
@@ -2812,6 +3564,21 @@ ALTER TABLE `event_winners`
   ADD CONSTRAINT `fk_event_winners_team` FOREIGN KEY (`team_id`) REFERENCES `team_teams` (`team_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
+-- Constraints for table `notification_logs`
+--
+ALTER TABLE `notification_logs`
+  ADD CONSTRAINT `fk_notification_logs_actor` FOREIGN KEY (`actor_user_id`) REFERENCES `user_users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_notification_logs_recipient` FOREIGN KEY (`recipient_user_id`) REFERENCES `user_users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_notification_logs_team` FOREIGN KEY (`team_id`) REFERENCES `team_teams` (`team_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `notify_admin_recipients`
+--
+ALTER TABLE `notify_admin_recipients`
+  ADD CONSTRAINT `fk_notify_admin_recipients_updated_by` FOREIGN KEY (`updated_by_user_id`) REFERENCES `user_users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_notify_admin_recipients_user` FOREIGN KEY (`user_id`) REFERENCES `user_users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Constraints for table `notify_announcements`
 --
 ALTER TABLE `notify_announcements`
@@ -2844,6 +3611,12 @@ ALTER TABLE `notify_deliveries`
 --
 ALTER TABLE `notify_email_templates`
   ADD CONSTRAINT `fk_notify_email_templates_created_by` FOREIGN KEY (`created_by_user_id`) REFERENCES `user_users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Constraints for table `privileges`
+--
+ALTER TABLE `privileges`
+  ADD CONSTRAINT `fk_privileges_created_by` FOREIGN KEY (`created_by_user_id`) REFERENCES `user_users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `review_assignments`
@@ -2926,6 +3699,7 @@ ALTER TABLE `team_members`
 -- Constraints for table `team_teams`
 --
 ALTER TABLE `team_teams`
+  ADD CONSTRAINT `fk_team_teams_confirmed_by` FOREIGN KEY (`confirmed_by_user_id`) REFERENCES `user_users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_team_teams_leader_user` FOREIGN KEY (`current_leader_user_id`) REFERENCES `user_users` (`user_id`) ON UPDATE CASCADE;
 
 --
@@ -2959,6 +3733,22 @@ ALTER TABLE `user_identities`
 --
 ALTER TABLE `user_privacy_settings`
   ADD CONSTRAINT `fk_user_privacy_settings_user` FOREIGN KEY (`user_id`) REFERENCES `user_users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `user_privilege_claims`
+--
+ALTER TABLE `user_privilege_claims`
+  ADD CONSTRAINT `fk_user_privilege_claim_claimed_by` FOREIGN KEY (`claimed_by_user_id`) REFERENCES `user_users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_user_privilege_claim_privilege` FOREIGN KEY (`privilege_id`) REFERENCES `privileges` (`privilege_id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_user_privilege_claim_team` FOREIGN KEY (`team_id`) REFERENCES `team_teams` (`team_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_user_privilege_claim_user` FOREIGN KEY (`user_id`) REFERENCES `user_users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `user_privilege_claim_logs`
+--
+ALTER TABLE `user_privilege_claim_logs`
+  ADD CONSTRAINT `fk_privilege_claim_logs_actor` FOREIGN KEY (`actor_user_id`) REFERENCES `user_users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_privilege_claim_logs_claim` FOREIGN KEY (`privilege_claim_id`) REFERENCES `user_privilege_claims` (`privilege_claim_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `user_public_profiles`

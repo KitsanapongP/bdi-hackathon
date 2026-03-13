@@ -150,7 +150,6 @@ export async function getDashboardOverview(db: DB, input: DashboardQueryInput) {
         male: 0,
         female: 0,
         other: 0,
-        prefer_not_to_say: 0,
         unknown: 0,
     };
 

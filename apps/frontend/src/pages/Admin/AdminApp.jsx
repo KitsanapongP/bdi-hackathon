@@ -290,8 +290,7 @@ const dashboardStatusOptions = [
 const genderLabelMap = {
   male: 'Male',
   female: 'Female',
-  other: 'Other',
-  prefer_not_to_say: 'Prefer not to say',
+  other: 'Not specified / Other',
   unknown: 'Unknown',
 }
 

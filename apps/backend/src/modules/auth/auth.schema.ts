@@ -9,7 +9,7 @@ export const registerSchema = z.object({
     lastNameTh: z.string().min(1, 'กรุณากรอกนามสกุลภาษาไทย').max(100),
     firstNameEn: z.string().min(1, 'กรุณากรอกชื่อภาษาอังกฤษ').max(100),
     lastNameEn: z.string().min(1, 'กรุณากรอกนามสกุลภาษาอังกฤษ').max(100),
-    gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']),
+    gender: z.enum(['male', 'female', 'other']),
     birthDate: z.string().date('วันเดือนปีเกิดไม่ถูกต้อง'),
     educationLevel: z.enum(['secondary', 'high_school', 'bachelor', 'master', 'doctorate']),
     institutionNameTh: z.string().min(1, 'กรุณากรอกสถาบันศึกษา (TH)').max(255),

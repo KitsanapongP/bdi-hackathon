@@ -6,7 +6,7 @@ export interface UserProfileRow {
     phone: string | null;
     institution_name_th: string | null;
     institution_name_en: string | null;
-    gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+    gender: 'male' | 'female' | 'other' | null;
     birth_date: string | null;
     education_level: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | null;
     home_province: string | null;
@@ -26,7 +26,7 @@ export interface UserProfileSafe {
     phone: string | null;
     institutionNameTh: string | null;
     institutionNameEn: string | null;
-    gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+    gender: 'male' | 'female' | 'other' | null;
     birthDate: string | null;
     educationLevel: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | null;
     homeProvince: string | null;
