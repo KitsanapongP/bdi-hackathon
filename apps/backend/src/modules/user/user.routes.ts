@@ -3,6 +3,8 @@ import { authRequired } from '../../middleware/authRequired.js';
 import {
     handleGetProfile,
     handleUpdateProfile,
+    handleUploadProfileAvatar,
+    handleDeleteProfileAvatar,
     handleGetPrivacy,
     handleUpdatePrivacy,
     handleGetSocialLinks,
@@ -22,6 +24,8 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
     /* 1.6 Profile */
     app.get('/profile', handleGetProfile);
     app.put('/profile', handleUpdateProfile);
+    app.post('/profile/avatar', handleUploadProfileAvatar);
+    app.delete('/profile/avatar', handleDeleteProfileAvatar);
 
     /* 1.7 Privacy */
     app.get('/privacy', handleGetPrivacy);

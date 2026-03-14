@@ -620,6 +620,13 @@
     color: #fff;
     position: relative;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.gl-member-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .gl-member-avatar.gl-empty-avatar {
@@ -1043,6 +1050,13 @@
     font-weight: 800;
     position: relative;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.gl-member-profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .gl-member-profile-hero-text {
@@ -2748,6 +2762,13 @@
     font-size: 0.9rem;
     color: #fff;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.gl-manage-member-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .gl-manage-member-name {

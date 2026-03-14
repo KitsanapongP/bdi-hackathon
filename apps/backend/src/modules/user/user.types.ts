@@ -2,6 +2,7 @@
 export interface UserProfileRow {
     user_id: number;
     user_name: string;
+    avatar_url: string | null;
     email: string | null;
     phone: string | null;
     institution_name_th: string | null;
@@ -22,6 +23,7 @@ export interface UserProfileRow {
 export interface UserProfileSafe {
     userId: number;
     userName: string;
+    avatarUrl: string | null;
     email: string | null;
     phone: string | null;
     institutionNameTh: string | null;
@@ -88,6 +90,7 @@ export interface PublicProfileRow {
 export interface PublicProfileSafe {
     userId: number;
     userName: string;
+    avatarUrl: string | null;
     bioTh: string | null;
     bioEn: string | null;
     lookingForTeam: boolean;

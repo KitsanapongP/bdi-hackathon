@@ -25,6 +25,7 @@ type PendingRegistrationPayload = Omit<RegisterInput, 'password'> & {
 function toUserSafe(row: {
     user_id: number;
     user_name: string;
+    avatar_url?: string | null;
     email: string | null;
     phone?: string | null;
     first_name_th?: string | null;
@@ -42,6 +43,7 @@ function toUserSafe(row: {
     return {
         userId: row.user_id,
         userName: row.user_name,
+        avatarUrl: row.avatar_url ?? null,
         email: row.email,
         phone: row.phone ?? null,
         firstNameTh: row.first_name_th ?? null,
@@ -231,6 +233,7 @@ async function buildUserResponse(db: DB, input: {
     return {
         userId: input.userId,
         userName: input.userName,
+        avatarUrl: null,
         email: input.email,
         phone: input.phone,
         firstNameTh: input.firstNameTh,
@@ -495,6 +498,7 @@ export async function registerUser(db: DB, input: RegisterInput): Promise<UserSa
     return {
         userId,
         userName: input.userName,
+        avatarUrl: null,
         email: normalizedEmail,
         phone: input.phone,
         firstNameTh: input.firstNameTh,

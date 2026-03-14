@@ -66,6 +66,7 @@ export interface TeamInvitationRow {
 export interface TeamMemberProfileRow {
     user_id: number;
     user_name: string;
+    avatar_url: string | null;
     email: string | null;
     phone: string | null;
     institution_name_th: string | null;
@@ -94,6 +95,7 @@ export interface TeamMemberSocialLinkRow {
 export interface TeamMemberProfileSafe {
     userId: number;
     userName: string;
+    avatarUrl: string | null;
     displayName: string;
     privacy: {
         showEmail: boolean;

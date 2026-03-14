@@ -83,6 +83,7 @@ function HomeShell({ children }) {
                         accessRole: data.data.accessRole || null,
                         hasTeam: data.data.hasTeam || false,
                         teamId: data.data.teamId || null,
+                        avatarUrl: data.data.avatarUrl || null,
                         avatar: data.data.userName?.charAt(0)?.toUpperCase() || 'U',
                         color: '#6366f1',
                     };

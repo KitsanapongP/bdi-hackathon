@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     User, Shield, Link2, Globe, FileText,
-    ChevronLeft, Save, Plus, Edit2, Trash2,
+    ChevronLeft, Save, Plus, Edit2, Trash2, Upload,
     CheckCircle, Loader2, AlertCircle,
     Lock, PenLine, Handshake, MessageCircle, ClipboardList,
     Languages, GraduationCap, QrCode, RefreshCw, Ticket,
@@ -40,7 +40,8 @@ function ProfileContent({ user }) {
     const apiFetch = useCallback(async (path, opts = {}) => {
         const headers = { ...opts.headers };
         const hasBody = opts.body !== undefined && opts.body !== null;
-        if (hasBody && !('Content-Type' in headers) && !('content-type' in headers)) {
+        const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+        if (hasBody && !isFormData && !('Content-Type' in headers) && !('content-type' in headers)) {
             headers['Content-Type'] = 'application/json';
         }
 
@@ -416,6 +417,8 @@ function ProfileTab({ apiFetch, showToast, user }) {
     const [saving, setSaving] = useState(false);
     const [lockLoading, setLockLoading] = useState(false);
     const [profileLocked, setProfileLocked] = useState(false);
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const [avatarDeleting, setAvatarDeleting] = useState(false);
 
     useEffect(() => {
         apiFetch('/user/profile')
@@ -439,6 +442,76 @@ function ProfileTab({ apiFetch, showToast, user }) {
             .catch(() => setProfileLocked(false))
             .finally(() => setLockLoading(false));
     }, [apiFetch, user]);
+
+    const syncLocalUserAvatar = useCallback((avatarUrl) => {
+        try {
+            const raw = localStorage.getItem('gt_user');
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            localStorage.setItem('gt_user', JSON.stringify({ ...parsed, avatarUrl: avatarUrl || null }));
+        } catch {
+            // ignore localStorage parse error
+        }
+    }, []);
+
+    const handleAvatarUpload = useCallback(async (file) => {
+        if (!file) return;
+        if (profileLocked) {
+            showToast('ข้อมูลโปรไฟล์ถูกล็อกหลังยืนยันตัวตนแล้ว', 'error');
+            return;
+        }
+
+        const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+        if (!allowedMimeTypes.has(file.type)) {
+            showToast('รองรับเฉพาะไฟล์ JPG, PNG หรือ WEBP', 'error');
+            return;
+        }
+
+        if (file.size > 2 * 1024 * 1024) {
+            showToast('ขนาดไฟล์ต้องไม่เกิน 2MB', 'error');
+            return;
+        }
+
+        setAvatarUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('avatar', file);
+            const res = await apiFetch('/user/profile/avatar', {
+                method: 'POST',
+                body: formData,
+            });
+            const nextAvatarUrl = res?.data?.avatarUrl || null;
+            setData((prev) => prev ? ({ ...prev, avatarUrl: nextAvatarUrl }) : prev);
+            syncLocalUserAvatar(nextAvatarUrl);
+            showToast('อัปโหลดรูปโปรไฟล์สำเร็จ');
+        } catch (err) {
+            showToast(err.message, 'error');
+        } finally {
+            setAvatarUploading(false);
+        }
+    }, [apiFetch, profileLocked, showToast, syncLocalUserAvatar]);
+
+    const handleAvatarDelete = useCallback(async () => {
+        if (profileLocked) {
+            showToast('ข้อมูลโปรไฟล์ถูกล็อกหลังยืนยันตัวตนแล้ว', 'error');
+            return;
+        }
+        if (!data?.avatarUrl) return;
+        if (!confirm('ต้องการลบรูปโปรไฟล์หรือไม่?')) return;
+
+        setAvatarDeleting(true);
+        try {
+            const res = await apiFetch('/user/profile/avatar', { method: 'DELETE' });
+            const nextAvatarUrl = res?.data?.avatarUrl || null;
+            setData((prev) => prev ? ({ ...prev, avatarUrl: nextAvatarUrl }) : prev);
+            syncLocalUserAvatar(nextAvatarUrl);
+            showToast('ลบรูปโปรไฟล์สำเร็จ');
+        } catch (err) {
+            showToast(err.message, 'error');
+        } finally {
+            setAvatarDeleting(false);
+        }
+    }, [apiFetch, data?.avatarUrl, profileLocked, showToast, syncLocalUserAvatar]);
 
     const handleSave = async () => {
         if (profileLocked) {
@@ -477,6 +550,8 @@ function ProfileTab({ apiFetch, showToast, user }) {
     if (!data) return null;
 
     const set = (key, val) => setData((d) => ({ ...d, [key]: val }));
+    const avatarBusy = avatarUploading || avatarDeleting;
+    const avatarInitial = (data.userName || user?.name || 'U').charAt(0).toUpperCase();
 
     return (
         <div className="gl-detail-view">
@@ -494,6 +569,48 @@ function ProfileTab({ apiFetch, showToast, user }) {
                 {/* Account info (readonly) */}
                 <div className="gl-info-card">
                     <h4><User size={16} /> ข้อมูลบัญชี</h4>
+                    <div className="pf-avatar-section">
+                        <div className="pf-avatar-preview" aria-label="Profile avatar preview">
+                            {data.avatarUrl ? (
+                                <img
+                                    src={apiUrl(data.avatarUrl)}
+                                    alt="รูปโปรไฟล์"
+                                    className="pf-avatar-image"
+                                />
+                            ) : (
+                                <span>{avatarInitial}</span>
+                            )}
+                        </div>
+                        <div className="pf-avatar-controls">
+                            <div className="pf-avatar-actions">
+                                <label className={`gl-action-btn gl-submit-btn pf-avatar-upload-btn ${avatarBusy || profileLocked ? 'disabled' : ''}`}>
+                                    {avatarUploading ? <Loader2 size={15} /> : <Upload size={15} />}
+                                    {avatarUploading ? 'กำลังอัปโหลด...' : 'อัปโหลดรูปโปรไฟล์'}
+                                    <input
+                                        type="file"
+                                        hidden
+                                        accept="image/jpeg,image/png,image/webp"
+                                        disabled={avatarBusy || profileLocked}
+                                        onChange={(e) => {
+                                            const nextFile = e.target.files?.[0];
+                                            if (nextFile) handleAvatarUpload(nextFile);
+                                            e.target.value = '';
+                                        }}
+                                    />
+                                </label>
+                                <button
+                                    className="gl-action-btn gl-invite-btn"
+                                    type="button"
+                                    onClick={handleAvatarDelete}
+                                    disabled={avatarBusy || profileLocked || !data.avatarUrl}
+                                >
+                                    {avatarDeleting ? <Loader2 size={15} /> : <Trash2 size={15} />}
+                                    ลบรูป
+                                </button>
+                            </div>
+                            <p className="pf-avatar-hint">รองรับไฟล์ JPG, PNG, WEBP ขนาดไม่เกิน 2MB</p>
+                        </div>
+                    </div>
                     <div className="pf-form-grid" style={{ marginTop: 12 }}>
                         <div className="pf-field">
                             <span className="pf-label">Username</span>

@@ -133,6 +133,17 @@ export function buildApp(ctx: AppContext) {
     lastModified: true,
   });
 
+  app.register(fastifyStatic, {
+    root: path.join(process.cwd(), 'public', 'uploads', 'avatars'),
+    prefix: '/static/uploads/avatars/',
+    decorateReply: false,
+    cacheControl: true,
+    maxAge: '7d',
+    immutable: false,
+    etag: true,
+    lastModified: true,
+  });
+
 
   app.register(healthRoutes, { prefix: '/api/health' });
   app.register(authRoutes, { prefix: '/api/auth' });

@@ -8,7 +8,7 @@ import type { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 
 export async function getProfile(db: DB, userId: number): Promise<UserProfileRow | null> {
     const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT user_id, user_name, email, phone,
+        `SELECT user_id, user_name, avatar_url, email, phone,
                 institution_name_th, institution_name_en,
                 first_name_th, last_name_th, first_name_en, last_name_en,
                 gender, birth_date, education_level, home_province,
@@ -19,6 +19,16 @@ export async function getProfile(db: DB, userId: number): Promise<UserProfileRow
         { userId },
     );
     return (rows[0] as UserProfileRow | undefined) ?? null;
+}
+
+export async function updateAvatarUrl(db: DB, userId: number, avatarUrl: string | null): Promise<void> {
+    await db.query(
+        `UPDATE user_users
+         SET avatar_url = :avatarUrl,
+             updated_at = NOW()
+         WHERE user_id = :userId`,
+        { userId, avatarUrl },
+    );
 }
 
 export async function updateProfile(
@@ -204,16 +214,16 @@ export async function deleteSocialLink(db: DB, linkId: number, userId: number): 
    1.9  Public profile
    ═══════════════════════════════════════════════════ */
 
-export async function getPublicProfile(db: DB, userId: number): Promise<(PublicProfileRow & { user_name: string }) | null> {
+export async function getPublicProfile(db: DB, userId: number): Promise<(PublicProfileRow & { user_name: string; avatar_url: string | null }) | null> {
     const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT pp.*, u.user_name
+        `SELECT pp.*, u.user_name, u.avatar_url
          FROM user_public_profiles pp
          INNER JOIN user_users u ON u.user_id = pp.user_id
          WHERE pp.user_id = :userId AND u.is_active = 1 AND u.deleted_at IS NULL
          LIMIT 1`,
         { userId },
     );
-    return (rows[0] as (PublicProfileRow & { user_name: string }) | undefined) ?? null;
+    return (rows[0] as (PublicProfileRow & { user_name: string; avatar_url: string | null }) | undefined) ?? null;
 }
 
 export async function upsertPublicProfile(
@@ -255,13 +265,13 @@ export async function upsertPublicProfile(
 }
 
 /** List users looking for team (for team discovery) */
-export async function findLookingForTeam(db: DB): Promise<(PublicProfileRow & { user_name: string })[]> {
+export async function findLookingForTeam(db: DB): Promise<(PublicProfileRow & { user_name: string; avatar_url: string | null })[]> {
     const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT pp.*, u.user_name
+        `SELECT pp.*, u.user_name, u.avatar_url
          FROM user_public_profiles pp
          INNER JOIN user_users u ON u.user_id = pp.user_id
          WHERE pp.looking_for_team = 1 AND u.is_active = 1 AND u.deleted_at IS NULL
          ORDER BY pp.updated_at DESC`,
     );
-    return rows as (PublicProfileRow & { user_name: string })[];
+    return rows as (PublicProfileRow & { user_name: string; avatar_url: string | null })[];
 }

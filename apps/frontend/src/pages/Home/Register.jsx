@@ -155,6 +155,7 @@ function RegisterPage() {
             accessRole: user.accessRole || null,
             hasTeam: user.hasTeam || false,
             teamId: user.teamId || null,
+            avatarUrl: user.avatarUrl || null,
             avatar: user.userName?.charAt(0)?.toUpperCase() || 'U',
             color: '#6366f1',
         };

@@ -47,6 +47,37 @@ export async function handleUpdateProfile(req: FastifyRequest, reply: FastifyRep
     }
 }
 
+/** POST /api/user/profile/avatar */
+export async function handleUploadProfileAvatar(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const file = await (req as any).file();
+        if (!file) {
+            return reply.status(400).send({ ok: false, message: 'กรุณาแนบไฟล์รูปโปรไฟล์' });
+        }
+
+        const data = await service.uploadProfileAvatar(req.server.ctx.db, getUserId(req), {
+            filename: file.filename,
+            mimetype: file.mimetype,
+            file: file.file,
+        });
+        return reply.send(ok(data, 'อัปโหลดรูปโปรไฟล์สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        throw err;
+    }
+}
+
+/** DELETE /api/user/profile/avatar */
+export async function handleDeleteProfileAvatar(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const data = await service.deleteProfileAvatar(req.server.ctx.db, getUserId(req));
+        return reply.send(ok(data, 'ลบรูปโปรไฟล์สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        throw err;
+    }
+}
+
 /* ═══════════════════════════════════════════════════
    1.7  Privacy settings
    ═══════════════════════════════════════════════════ */

@@ -367,6 +367,7 @@ export default function TeamContent({ user }) {
                 const mappedMembers = dbMembers.map((m, idx) => ({
                     id: m.user_id,
                     name: m.show_real_name && m.first_name_th ? m.first_name_th : (m.user_name || `ผู้ใช้ ${m.user_id}`),
+                    avatarUrl: m.avatar_url || null,
                     role: m.role || 'member',
                     leader: dbTeam.current_leader_user_id === m.user_id,
                     color: colors[idx % colors.length],
@@ -1453,8 +1454,12 @@ export default function TeamContent({ user }) {
                             <div key={`manage-${m.id}`} className="gl-manage-member-row gl-fancy-row">
                                 <div className="gl-manage-member-info">
                                     <div className="gl-manage-member-avatar" style={{ background: m.color, position: 'relative' }}>
+                                        {m.avatarUrl ? (
+                                            <img className="gl-manage-member-avatar-img" src={apiUrl(m.avatarUrl)} alt={m.name || 'member avatar'} />
+                                        ) : (
+                                            m.name.charAt(0)
+                                        )}
                                         {m.leader && <Crown size={14} className="gl-crown-badge-inner" style={{ position: 'absolute', top: -5, right: -5, color: '#fbbf24', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />}
-                                        {m.name.charAt(0)}
                                     </div>
                                     <div className="gl-member-text">
                                         <span className="gl-manage-member-name">{m.name}</span>
@@ -1533,6 +1538,7 @@ export default function TeamContent({ user }) {
             : [];
 
         const socialLinks = Array.isArray(profilePayload?.socialLinks) ? profilePayload.socialLinks : [];
+        const memberAvatarSrc = profilePayload?.avatarUrl ? apiUrl(profilePayload.avatarUrl) : null;
         const hasPublicNotes = profilePayload && (
             String(profilePayload?.publicProfile?.bioTh || '').trim().length > 0 ||
             String(profilePayload?.publicProfile?.bioEn || '').trim().length > 0 ||
@@ -1566,7 +1572,11 @@ export default function TeamContent({ user }) {
                         <>
                             <div className="gl-info-card gl-member-profile-hero">
                                 <div className="gl-member-profile-avatar" style={{ background: selectedMember?.color || '#7c3aed' }}>
-                                    {(selectedMember?.name || profilePayload.displayName || 'U').charAt(0)}
+                                    {memberAvatarSrc ? (
+                                        <img className="gl-member-profile-avatar-img" src={memberAvatarSrc} alt={profilePayload.displayName || 'member avatar'} />
+                                    ) : (
+                                        (selectedMember?.name || profilePayload.displayName || 'U').charAt(0)
+                                    )}
                                     {selectedMember?.leader && <span className="gl-crown-icon"><Crown size={14} color="#fbbf24" fill="#fbbf24" /></span>}
                                 </div>
                                 <div className="gl-member-profile-hero-text">
@@ -2327,7 +2337,11 @@ export default function TeamContent({ user }) {
                                     title="ดูโปรไฟล์สมาชิก"
                                 >
                                     <div className="gl-member-avatar" style={{ background: m.color }}>
-                                        {m.name.charAt(0)}
+                                        {m.avatarUrl ? (
+                                            <img className="gl-member-avatar-img" src={apiUrl(m.avatarUrl)} alt={m.name || 'member avatar'} />
+                                        ) : (
+                                            m.name.charAt(0)
+                                        )}
                                         {m.leader && <span className="gl-crown-icon"><Crown size={14} color="#fbbf24" fill="#fbbf24" /></span>}
                                     </div>
                                     <div className="gl-member-info">

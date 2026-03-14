@@ -369,6 +369,7 @@ export async function getTeamMemberProfile(
     return {
         userId: profileRow.user_id,
         userName: profileRow.user_name,
+        avatarUrl: profileRow.avatar_url,
         displayName: privacy.showRealName && realName ? realName : profileRow.user_name,
         privacy,
         profile: {

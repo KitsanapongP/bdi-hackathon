@@ -6,6 +6,7 @@ import type { RowDataPacket } from 'mysql2/promise';
 export interface UserRow {
     user_id: number;
     user_name: string;
+    avatar_url: string | null;
     email: string | null;
     phone: string | null;
     institution_name_th: string | null;
@@ -84,6 +85,7 @@ export interface JwtPayload {
 export interface UserSafe {
     userId: number;
     userName: string;
+    avatarUrl: string | null;
     email: string | null;
     phone: string | null;
     firstNameTh: string | null;
