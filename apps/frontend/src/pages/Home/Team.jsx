@@ -29,7 +29,6 @@ import {
     XCircle,
     AlertCircle,
     Loader2,
-    Languages,
     GraduationCap,
     Eye,
     Download,
@@ -1924,7 +1923,7 @@ export default function TeamContent({ user }) {
                                 </div>
 
                                 <div className="gl-info-card">
-                                    <h4><Languages size={16} /> ข้อมูลภาษาไทย</h4>
+                                    <h4><User size={16} /> ข้อมูลส่วนตัว</h4>
                                     <div className="pf-form-grid" style={{ marginTop: 12 }}>
                                         <div className="pf-field">
                                             <span className="pf-label">ชื่อ (TH)</span>
@@ -1934,12 +1933,6 @@ export default function TeamContent({ user }) {
                                             <span className="pf-label">นามสกุล (TH)</span>
                                             <input className="pf-input" value={profileData.lastNameTh || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, lastNameTh: e.target.value }))} placeholder="นามสกุลภาษาไทย" />
                                         </div>
-                                    </div>
-                                </div>
-
-                                <div className="gl-info-card">
-                                    <h4><Globe size={16} /> ข้อมูลภาษาอังกฤษ</h4>
-                                    <div className="pf-form-grid" style={{ marginTop: 12 }}>
                                         <div className="pf-field">
                                             <span className="pf-label">First Name (EN)</span>
                                             <input className="pf-input" value={profileData.firstNameEn || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, firstNameEn: e.target.value }))} placeholder="First name" />
@@ -1948,21 +1941,13 @@ export default function TeamContent({ user }) {
                                             <span className="pf-label">Last Name (EN)</span>
                                             <input className="pf-input" value={profileData.lastNameEn || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, lastNameEn: e.target.value }))} placeholder="Last name" />
                                         </div>
-                                    </div>
-                                </div>
-
-                                <div className="gl-info-card">
-                                    <h4><GraduationCap size={16} /> ข้อมูลการศึกษา</h4>
-                                    <div className="pf-form-grid" style={{ marginTop: 12 }}>
                                         <div className="pf-field">
-                                            <span className="pf-label">ระดับการศึกษา</span>
-                                            <select className="pf-input" value={profileData.educationLevel || 'bachelor'} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, educationLevel: e.target.value }))}>
-                                                <option value="secondary">ม.ต้น</option>
-                                                <option value="high_school">ม.ปลาย</option>
-                                                <option value="bachelor">ป.ตรี</option>
-                                                <option value="master">ป.โท</option>
-                                                <option value="doctorate">ป.เอก</option>
-                                            </select>
+                                            <span className="pf-label">วันเดือนปีเกิด</span>
+                                            <input type="date" lang="en-GB" className="pf-input" value={formatDate(profileData.birthDate)} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, birthDate: e.target.value }))} />
+                                        </div>
+                                        <div className="pf-field">
+                                            <span className="pf-label">ภูมิลำเนา (จังหวัด)</span>
+                                            <input className="pf-input" value={profileData.homeProvince || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, homeProvince: e.target.value }))} placeholder="เช่น ขอนแก่น" />
                                         </div>
                                         <div className="pf-field">
                                             <span className="pf-label">เพศ</span>
@@ -1973,27 +1958,35 @@ export default function TeamContent({ user }) {
                                             </select>
                                         </div>
                                         <div className="pf-field">
+                                            <span className="pf-label">เบอร์โทรศัพท์</span>
+                                            <input className="pf-input" value={profileData.phone || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => {
+                                                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                                setProfileData((d) => ({ ...d, phone: value }));
+                                            }} placeholder="08x-xxx-xxxx" maxLength={10} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="gl-info-card">
+                                    <h4><GraduationCap size={16} /> ข้อมูลการศึกษา</h4>
+                                    <div className="pf-form-grid" style={{ marginTop: 12 }}>
+                                        <div className="pf-field full">
+                                            <span className="pf-label">ระดับการศึกษา</span>
+                                            <select className="pf-input" value={profileData.educationLevel || 'bachelor'} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, educationLevel: e.target.value }))}>
+                                                <option value="secondary">ม.ต้น</option>
+                                                <option value="high_school">ม.ปลาย</option>
+                                                <option value="bachelor">ป.ตรี</option>
+                                                <option value="master">ป.โท</option>
+                                                <option value="doctorate">ป.เอก</option>
+                                            </select>
+                                        </div>
+                                        <div className="pf-field">
                                             <span className="pf-label">สถาบันศึกษา (TH)</span>
                                             <input className="pf-input" value={profileData.institutionNameTh || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, institutionNameTh: e.target.value }))} placeholder="เช่น มหาวิทยาลัยขอนแก่น" />
                                         </div>
                                         <div className="pf-field">
                                             <span className="pf-label">Institution (EN)</span>
                                             <input className="pf-input" value={profileData.institutionNameEn || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, institutionNameEn: e.target.value }))} placeholder="e.g. Khon Kaen University" />
-                                        </div>
-                                        <div className="pf-field">
-                                            <span className="pf-label">วันเดือนปีเกิด</span>
-                                            <input type="date" lang="en-GB" className="pf-input" value={formatDate(profileData.birthDate)} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, birthDate: e.target.value }))} />
-                                        </div>
-                                        <div className="pf-field">
-                                            <span className="pf-label">ภูมิลำเนา (จังหวัด)</span>
-                                            <input className="pf-input" value={profileData.homeProvince || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, homeProvince: e.target.value }))} placeholder="เช่น ขอนแก่น" />
-                                        </div>
-                                        <div className="pf-field full">
-                                            <span className="pf-label">เบอร์โทรศัพท์</span>
-                                            <input className="pf-input" value={profileData.phone || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => {
-                                                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                                                setProfileData((d) => ({ ...d, phone: value }));
-                                            }} placeholder="08x-xxx-xxxx" maxLength={10} />
                                         </div>
                                     </div>
                                 </div>
@@ -2217,7 +2210,7 @@ export default function TeamContent({ user }) {
                 <div>
                     <div className="vf-info-banner">
                         <Info size={16} />
-                        <span>สามารถมีอาจารย์ที่ปรึกษาได้มากกว่าหนึ่งท่าน และอาจารย์ที่ปรึกษาไม่สามารถอยู่หลายทีมได้<br />มีหัวหน้าทีมเท่านั้นที่สามารถจัดการได้</span>
+                        <span>สามารถมีอาจารย์ที่ปรึกษาได้มากกว่าหนึ่งท่าน และอาจารย์ที่ปรึกษาแต่ละท่านไม่สามารถอยู่หลายทีมได้<br />มีแค่หัวหน้าทีมเท่านั้นที่สามารถแก้ไขข้อมูลอาจารย์ที่ปรึกษาได้</span>
                     </div>
                     {isAdvisorLocked && (
                         <div className="vf-info-banner vf-submitted">

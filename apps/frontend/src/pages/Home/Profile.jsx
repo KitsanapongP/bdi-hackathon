@@ -5,7 +5,7 @@ import {
     ChevronLeft, Save, Plus, Edit2, Trash2, Upload,
     CheckCircle, Loader2, AlertCircle,
     Lock, PenLine, Handshake, MessageCircle, ClipboardList,
-    Languages, GraduationCap, QrCode, RefreshCw, Ticket,
+    GraduationCap, QrCode, RefreshCw, Ticket,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import './Team.css';
@@ -623,9 +623,8 @@ function ProfileTab({ apiFetch, showToast, user }) {
                     </div>
                 </div>
 
-                {/* Thai info */}
                 <div className="gl-info-card">
-                    <h4><Languages size={16} /> ข้อมูลภาษาไทย</h4>
+                    <h4><User size={16} /> ข้อมูลส่วนตัว</h4>
                     <div className="pf-form-grid" style={{ marginTop: 12 }}>
                         <div className="pf-field">
                             <span className="pf-label">ชื่อ (TH)</span>
@@ -635,13 +634,6 @@ function ProfileTab({ apiFetch, showToast, user }) {
                             <span className="pf-label">นามสกุล (TH)</span>
                             <input className="pf-input" value={data.lastNameTh || ''} onChange={(e) => set('lastNameTh', e.target.value)} placeholder="นามสกุลภาษาไทย" />
                         </div>
-                    </div>
-                </div>
-
-                {/* English info */}
-                <div className="gl-info-card">
-                    <h4><Globe size={16} /> ข้อมูลภาษาอังกฤษ</h4>
-                    <div className="pf-form-grid" style={{ marginTop: 12 }}>
                         <div className="pf-field">
                             <span className="pf-label">First Name (EN)</span>
                             <input className="pf-input" value={data.firstNameEn || ''} onChange={(e) => set('firstNameEn', e.target.value)} placeholder="First name" />
@@ -650,21 +642,13 @@ function ProfileTab({ apiFetch, showToast, user }) {
                             <span className="pf-label">Last Name (EN)</span>
                             <input className="pf-input" value={data.lastNameEn || ''} onChange={(e) => set('lastNameEn', e.target.value)} placeholder="Last name" />
                         </div>
-                    </div>
-                </div>
-
-                <div className="gl-info-card">
-                    <h4><GraduationCap size={16} /> ข้อมูลการศึกษา</h4>
-                    <div className="pf-form-grid" style={{ marginTop: 12 }}>
                         <div className="pf-field">
-                            <span className="pf-label">ระดับการศึกษา</span>
-                            <select className="pf-input" value={data.educationLevel || 'bachelor'} onChange={(e) => set('educationLevel', e.target.value)}>
-                                <option value="secondary">ม.ต้น</option>
-                                <option value="high_school">ม.ปลาย</option>
-                                <option value="bachelor">ป.ตรี</option>
-                                <option value="master">ป.โท</option>
-                                <option value="doctorate">ป.เอก</option>
-                            </select>
+                            <span className="pf-label">วันเดือนปีเกิด</span>
+                            <input type="date" lang="en-GB" className="pf-input" value={formatDate(data.birthDate)} onChange={(e) => set('birthDate', e.target.value)} />
+                        </div>
+                        <div className="pf-field">
+                            <span className="pf-label">ภูมิลำเนา (จังหวัด)</span>
+                            <input className="pf-input" value={data.homeProvince || ''} onChange={(e) => set('homeProvince', e.target.value)} placeholder="เช่น ขอนแก่น" />
                         </div>
                         <div className="pf-field">
                             <span className="pf-label">เพศ</span>
@@ -675,27 +659,35 @@ function ProfileTab({ apiFetch, showToast, user }) {
                             </select>
                         </div>
                         <div className="pf-field">
+                            <span className="pf-label">เบอร์โทรศัพท์</span>
+                            <input className="pf-input" value={data.phone || ''} onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                set('phone', value);
+                            }} placeholder="08x-xxx-xxxx" maxLength={10} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="gl-info-card">
+                    <h4><GraduationCap size={16} /> ข้อมูลการศึกษา</h4>
+                    <div className="pf-form-grid" style={{ marginTop: 12 }}>
+                        <div className="pf-field full">
+                            <span className="pf-label">ระดับการศึกษา</span>
+                            <select className="pf-input" value={data.educationLevel || 'bachelor'} onChange={(e) => set('educationLevel', e.target.value)}>
+                                <option value="secondary">ม.ต้น</option>
+                                <option value="high_school">ม.ปลาย</option>
+                                <option value="bachelor">ป.ตรี</option>
+                                <option value="master">ป.โท</option>
+                                <option value="doctorate">ป.เอก</option>
+                            </select>
+                        </div>
+                        <div className="pf-field">
                             <span className="pf-label">สถาบันศึกษา (TH)</span>
                             <input className="pf-input" value={data.institutionNameTh || ''} onChange={(e) => set('institutionNameTh', e.target.value)} placeholder="เช่น มหาวิทยาลัยขอนแก่น" />
                         </div>
                         <div className="pf-field">
                             <span className="pf-label">Institution (EN)</span>
                             <input className="pf-input" value={data.institutionNameEn || ''} onChange={(e) => set('institutionNameEn', e.target.value)} placeholder="e.g. Khon Kaen University" />
-                        </div>
-                        <div className="pf-field">
-                            <span className="pf-label">วันเดือนปีเกิด</span>
-                            <input type="date" lang="en-GB" className="pf-input" value={formatDate(data.birthDate)} onChange={(e) => set('birthDate', e.target.value)} />
-                        </div>
-                        <div className="pf-field">
-                            <span className="pf-label">ภูมิลำเนา (จังหวัด)</span>
-                            <input className="pf-input" value={data.homeProvince || ''} onChange={(e) => set('homeProvince', e.target.value)} placeholder="เช่น ขอนแก่น" />
-                        </div>
-                        <div className="pf-field full">
-                            <span className="pf-label">เบอร์โทรศัพท์</span>
-                            <input className="pf-input" value={data.phone || ''} onChange={(e) => {
-                                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                                set('phone', value);
-                            }} placeholder="08x-xxx-xxxx" maxLength={10} />
                         </div>
                     </div>
                 </div>
