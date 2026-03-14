@@ -4,6 +4,7 @@ import { AppError } from '../../shared/errors.js';
 import * as crypto from 'crypto';
 import * as notificationService from '../notifications/notifications.service.js';
 import * as privilegesService from '../privileges/privileges.service.js';
+import type { TeamMemberProfileSafe } from './teams.types.js';
 
 const MAX_TEAM_MEMBERS = 5;
 const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
@@ -313,6 +314,76 @@ export async function getTeamDetails(db: DB, teamId: number) {
     const members = await repo.getTeamMembers(db, teamId);
     const activeCode = await repo.getActiveTeamCode(db, teamId);
     return { team, members, activeCode: activeCode?.invite_code };
+}
+
+export async function getTeamMemberProfile(
+    db: DB,
+    teamId: number,
+    viewerUserId: number,
+    targetUserId: number,
+): Promise<TeamMemberProfileSafe> {
+    const viewerMember = await repo.getTeamMemberByTeamAndUser(db, teamId, viewerUserId);
+    if (!viewerMember || viewerMember.member_status !== 'active') {
+        throw new AppError('คุณไม่ได้เป็นสมาชิกของทีมนี้', 403);
+    }
+
+    const targetMember = await repo.getTeamMemberByTeamAndUser(db, teamId, targetUserId);
+    if (!targetMember || targetMember.member_status !== 'active') {
+        throw new AppError('ไม่พบสมาชิกในทีมนี้', 404);
+    }
+
+    const profileRow = await repo.getTeamMemberProfileByUserId(db, targetUserId);
+    if (!profileRow) {
+        throw new AppError('ไม่พบข้อมูลสมาชิก', 404);
+    }
+
+    const privacy = {
+        showEmail: profileRow.show_email === 1,
+        showPhone: profileRow.show_phone === 1,
+        showUniversity: profileRow.show_university === 1,
+        showRealName: profileRow.show_real_name === 1,
+        showSocialLinks: profileRow.show_social_links === 1,
+    };
+
+    const fullNameTh = [profileRow.first_name_th, profileRow.last_name_th]
+        .filter((part): part is string => Boolean(part && String(part).trim()))
+        .join(' ')
+        .trim();
+    const fullNameEn = [profileRow.first_name_en, profileRow.last_name_en]
+        .filter((part): part is string => Boolean(part && String(part).trim()))
+        .join(' ')
+        .trim();
+    const realName = fullNameTh || fullNameEn || null;
+
+    const university = profileRow.institution_name_th || profileRow.institution_name_en || null;
+
+    const socialLinks = privacy.showSocialLinks
+        ? (await repo.getVisibleSocialLinksByUserId(db, targetUserId)).map((row) => ({
+            socialLinkId: row.social_link_id,
+            platformCode: row.platform_code,
+            profileUrl: row.profile_url,
+            displayText: row.display_text,
+        }))
+        : [];
+
+    return {
+        userId: profileRow.user_id,
+        userName: profileRow.user_name,
+        displayName: privacy.showRealName && realName ? realName : profileRow.user_name,
+        privacy,
+        profile: {
+            realName: privacy.showRealName ? realName : null,
+            email: privacy.showEmail ? profileRow.email : null,
+            phone: privacy.showPhone ? profileRow.phone : null,
+            university: privacy.showUniversity ? university : null,
+        },
+        publicProfile: {
+            bioTh: profileRow.bio_th,
+            bioEn: profileRow.bio_en,
+            contactNote: profileRow.contact_note,
+        },
+        socialLinks,
+    };
 }
 
 export async function getPublicTeams(db: DB, visibility?: string) {

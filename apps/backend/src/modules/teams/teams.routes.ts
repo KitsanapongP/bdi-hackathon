@@ -8,6 +8,7 @@ export async function teamsRoutes(app: FastifyInstance) {
     app.post('/', controller.handleCreateTeam);
     app.get('/', controller.handleGetPublicTeams);
     app.get('/:id', controller.handleGetTeamDetails);
+    app.get('/:id/members/:userId/profile', controller.handleGetTeamMemberProfile);
 
     app.post('/:id/rotate-code', controller.handleRotateCode);
     app.post('/join-by-code', controller.handleJoinByCode);

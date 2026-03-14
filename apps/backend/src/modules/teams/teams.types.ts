@@ -62,3 +62,61 @@ export interface TeamInvitationRow {
     team_code?: string;
     invited_by_user_name?: string;
 }
+
+export interface TeamMemberProfileRow {
+    user_id: number;
+    user_name: string;
+    email: string | null;
+    phone: string | null;
+    institution_name_th: string | null;
+    institution_name_en: string | null;
+    first_name_th: string | null;
+    last_name_th: string | null;
+    first_name_en: string | null;
+    last_name_en: string | null;
+    show_email: number;
+    show_phone: number;
+    show_university: number;
+    show_real_name: number;
+    show_social_links: number;
+    bio_th: string | null;
+    bio_en: string | null;
+    contact_note: string | null;
+}
+
+export interface TeamMemberSocialLinkRow {
+    social_link_id: number;
+    platform_code: string;
+    profile_url: string;
+    display_text: string | null;
+}
+
+export interface TeamMemberProfileSafe {
+    userId: number;
+    userName: string;
+    displayName: string;
+    privacy: {
+        showEmail: boolean;
+        showPhone: boolean;
+        showUniversity: boolean;
+        showRealName: boolean;
+        showSocialLinks: boolean;
+    };
+    profile: {
+        realName: string | null;
+        email: string | null;
+        phone: string | null;
+        university: string | null;
+    };
+    publicProfile: {
+        bioTh: string | null;
+        bioEn: string | null;
+        contactNote: string | null;
+    };
+    socialLinks: Array<{
+        socialLinkId: number;
+        platformCode: string;
+        profileUrl: string;
+        displayText: string | null;
+    }>;
+}

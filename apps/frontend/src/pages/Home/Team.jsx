@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
     AlertTriangle,
     Award,
@@ -36,6 +36,8 @@ import {
     Edit2,
     Link,
     Paperclip,
+    Phone,
+    ExternalLink,
 } from 'lucide-react';
 import { apiUrl } from '../../lib/api';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -72,6 +74,22 @@ const normalizeStatus = (raw) => {
 };
 
 const roleLabel = (role) => (role === 'leader' ? 'หัวหน้า' : 'สมาชิก');
+
+const SOCIAL_PLATFORM_LABELS = {
+    github: 'GitHub',
+    linkedin: 'LinkedIn',
+    twitter: 'Twitter/X',
+    facebook: 'Facebook',
+    instagram: 'Instagram',
+    discord: 'Discord',
+    line: 'LINE',
+    other: 'ลิงก์อื่น ๆ',
+};
+
+const getSocialPlatformLabel = (platformCode) => {
+    const key = String(platformCode || '').toLowerCase();
+    return SOCIAL_PLATFORM_LABELS[key] || platformCode || 'ลิงก์';
+};
 
 const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -321,6 +339,10 @@ export default function TeamContent({ user }) {
     const [inboxItems, setInboxItems] = useState([]);
     const [inboxLoading, setInboxLoading] = useState(false);
     const [nowMs, setNowMs] = useState(Date.now());
+    const [memberProfileLoading, setMemberProfileLoading] = useState(false);
+    const [memberProfileData, setMemberProfileData] = useState(null);
+    const [selectedMember, setSelectedMember] = useState(null);
+    const memberProfileReqIdRef = useRef(0);
 
     const isLeader = useMemo(() => team?.leaderUserId === user?.userId, [team, user]);
     const hasPendingJoinRequests = pendingJoinRequests.length > 0;
@@ -458,6 +480,43 @@ export default function TeamContent({ user }) {
             setActionLoading(false);
         }
     };
+
+    const closeMemberProfile = useCallback(() => {
+        memberProfileReqIdRef.current += 1;
+        setSelectedMember(null);
+        setMemberProfileData(null);
+        setMemberProfileLoading(false);
+    }, []);
+
+    const handleOpenMemberProfile = useCallback(async (member) => {
+        if (!team?.id || !member?.id) return;
+
+        const requestId = memberProfileReqIdRef.current + 1;
+        memberProfileReqIdRef.current = requestId;
+
+        setSelectedMember(member);
+        setMemberProfileData(null);
+        setMemberProfileLoading(true);
+        try {
+            const res = await fetch(apiUrl(`/api/teams/${team.id}/members/${member.id}/profile`), {
+                credentials: 'include',
+            });
+            const payload = await res.json();
+            if (!payload.ok || !payload.data) {
+                throw new Error(payload.message || 'ไม่สามารถโหลดโปรไฟล์สมาชิกได้');
+            }
+            if (requestId !== memberProfileReqIdRef.current) return;
+            setMemberProfileData(payload.data);
+        } catch (err) {
+            if (requestId !== memberProfileReqIdRef.current) return;
+            const message = getReadableErrorMessage(err, 'ไม่สามารถโหลดโปรไฟล์สมาชิกได้');
+            setMemberProfileData({ errorMessage: message });
+            showToast(message, 'error');
+        } finally {
+            if (requestId !== memberProfileReqIdRef.current) return;
+            setMemberProfileLoading(false);
+        }
+    }, [team?.id, showToast, getReadableErrorMessage]);
 
     const handleCreateTeam = () => withAction(async () => {
         if (!createName.trim()) return;
@@ -1441,6 +1500,159 @@ export default function TeamContent({ user }) {
         </div>
     );
 
+    const renderMemberProfileDetail = () => {
+        const profilePayload = memberProfileData && !memberProfileData.errorMessage ? memberProfileData : null;
+
+        const visibleProfileItems = profilePayload
+            ? [
+                {
+                    key: 'real-name',
+                    label: 'ชื่อ-นามสกุล',
+                    value: profilePayload?.profile?.realName,
+                    icon: <User size={14} />,
+                },
+                {
+                    key: 'email',
+                    label: 'อีเมล',
+                    value: profilePayload?.profile?.email,
+                    icon: <Mail size={14} />,
+                },
+                {
+                    key: 'phone',
+                    label: 'เบอร์โทรศัพท์',
+                    value: profilePayload?.profile?.phone,
+                    icon: <Phone size={14} />,
+                },
+                {
+                    key: 'university',
+                    label: 'สถาบันการศึกษา',
+                    value: profilePayload?.profile?.university,
+                    icon: <GraduationCap size={14} />,
+                },
+            ].filter((item) => String(item.value || '').trim().length > 0)
+            : [];
+
+        const socialLinks = Array.isArray(profilePayload?.socialLinks) ? profilePayload.socialLinks : [];
+        const hasPublicNotes = profilePayload && (
+            String(profilePayload?.publicProfile?.bioTh || '').trim().length > 0 ||
+            String(profilePayload?.publicProfile?.bioEn || '').trim().length > 0 ||
+            String(profilePayload?.publicProfile?.contactNote || '').trim().length > 0
+        );
+
+        return (
+            <div className="gl-detail-view gl-member-profile-view">
+                <div className="gl-detail-top">
+                    <button className="gl-back-btn" onClick={closeMemberProfile}><ChevronLeft size={16} /> ย้อนกลับ</button>
+                    <h3 className="gl-detail-title"><User size={20} /> โปรไฟล์สมาชิกทีม</h3>
+                </div>
+
+                <div className="gl-detail-body">
+                    {memberProfileLoading && (
+                        <div className="gl-empty-state">
+                            <Loader2 size={36} />
+                            <h3>กำลังโหลดโปรไฟล์สมาชิก...</h3>
+                        </div>
+                    )}
+
+                    {!memberProfileLoading && memberProfileData?.errorMessage && (
+                        <div className="gl-empty-state">
+                            <AlertCircle size={36} />
+                            <h3>โหลดโปรไฟล์ไม่สำเร็จ</h3>
+                            <p>{memberProfileData.errorMessage}</p>
+                        </div>
+                    )}
+
+                    {!memberProfileLoading && profilePayload && (
+                        <>
+                            <div className="gl-info-card gl-member-profile-hero">
+                                <div className="gl-member-profile-avatar" style={{ background: selectedMember?.color || '#7c3aed' }}>
+                                    {(selectedMember?.name || profilePayload.displayName || 'U').charAt(0)}
+                                    {selectedMember?.leader && <span className="gl-crown-icon"><Crown size={14} color="#fbbf24" fill="#fbbf24" /></span>}
+                                </div>
+                                <div className="gl-member-profile-hero-text">
+                                    <div className="gl-member-profile-name">{profilePayload.displayName || selectedMember?.name || '-'}</div>
+                                    <div className="gl-member-profile-meta-row">
+                                        <span className="gl-member-profile-handle">@{profilePayload.userName || '-'}</span>
+                                        <span className="gl-member-profile-dot">•</span>
+                                        <span>{roleLabel(selectedMember?.role)}{selectedMember?.id === user?.userId ? ' (คุณ)' : ''}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="gl-info-card gl-member-profile-section">
+                                <h4><ShieldCheck size={16} /> ข้อมูลส่วนตัว</h4>
+                                <p className="gl-member-profile-note">สามารถตั้งค่าการแสดงผลได้ในโปรไฟล์ -&gt; ความเป็นส่วนตัว</p>
+                                {visibleProfileItems.length === 0 ? (
+                                    <p className="gl-member-profile-empty">ยังไม่มีข้อมูลส่วนตัวที่เปิดให้แสดง</p>
+                                ) : (
+                                    <div className="gl-member-profile-list">
+                                        {visibleProfileItems.map((item) => (
+                                            <div key={item.key} className="gl-member-profile-row">
+                                                <span className="gl-member-profile-label">{item.icon} {item.label}</span>
+                                                <span className="gl-member-profile-value">{item.value}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="gl-info-card gl-member-profile-section">
+                                <h4><Link size={16} /> ลิงก์โซเซียลมีเดีย</h4>
+                                {socialLinks.length === 0 ? (
+                                    <p className="gl-member-profile-empty">
+                                        {profilePayload?.privacy?.showSocialLinks
+                                            ? 'ยังไม่มีลิงก์โซเซียลมีเดียที่แสดงผล'
+                                            : 'เจ้าของโปรไฟล์ปิดการแสดงลิงก์โซเซียลมีเดีย'}
+                                    </p>
+                                ) : (
+                                    <div className="gl-member-social-list">
+                                        {socialLinks.map((social) => (
+                                            <a
+                                                key={social.socialLinkId}
+                                                href={social.profileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="gl-member-social-link"
+                                            >
+                                                <span className="gl-member-social-platform">{getSocialPlatformLabel(social.platformCode)}</span>
+                                                <span className="gl-member-social-text">{social.displayText || social.profileUrl}</span>
+                                                <ExternalLink size={14} />
+                                            </a>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {hasPublicNotes && (
+                                <div className="gl-info-card gl-member-profile-section">
+                                    <h4><Info size={16} /> โปรไฟล์สาธารณะ</h4>
+                                    {profilePayload?.publicProfile?.bioTh && (
+                                        <div className="gl-member-public-block">
+                                            <span className="gl-member-public-label">Bio (TH)</span>
+                                            <p>{profilePayload.publicProfile.bioTh}</p>
+                                        </div>
+                                    )}
+                                    {profilePayload?.publicProfile?.bioEn && (
+                                        <div className="gl-member-public-block">
+                                            <span className="gl-member-public-label">Bio (EN)</span>
+                                            <p>{profilePayload.publicProfile.bioEn}</p>
+                                        </div>
+                                    )}
+                                    {profilePayload?.publicProfile?.contactNote && (
+                                        <div className="gl-member-public-block">
+                                            <span className="gl-member-public-label">Contact Note</span>
+                                            <p>{profilePayload.publicProfile.contactNote}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     const DETAIL_MAP = {
         announce: () => renderSimpleDetail('ประกาศ', <Megaphone size={20} />, <div className="gl-empty-state"><Megaphone size={40} /><h3>ยังไม่มีประกาศ</h3></div>),
         inbox: () => renderSimpleDetail('กล่องข้อความ', <Mail size={20} />, (
@@ -2107,7 +2319,13 @@ export default function TeamContent({ user }) {
                         {sortedMembers.map((m) => {
                             const vm = verifyData?.members?.find(v => v.user_id === m.id);
                             return (
-                                <div key={m.id} className={`gl-member-entry ${m.id === user?.userId ? 'gl-me' : ''}`}>
+                                <button
+                                    key={m.id}
+                                    type="button"
+                                    className={`gl-member-entry gl-member-entry-btn ${m.id === user?.userId ? 'gl-me' : ''}`}
+                                    onClick={() => handleOpenMemberProfile(m)}
+                                    title="ดูโปรไฟล์สมาชิก"
+                                >
                                     <div className="gl-member-avatar" style={{ background: m.color }}>
                                         {m.name.charAt(0)}
                                         {m.leader && <span className="gl-crown-icon"><Crown size={14} color="#fbbf24" fill="#fbbf24" /></span>}
@@ -2125,7 +2343,7 @@ export default function TeamContent({ user }) {
                                             {vm.is_member_confirmed ? <CheckCircle size={20} /> : <XCircle size={20} />}
                                         </span>
                                     )}
-                                </div>
+                                </button>
                             );
                         })}
                         {Array.from({ length: emptySlots }).map((_, i) => <div key={`empty-${i}`} className="gl-member-entry gl-empty"><div className="gl-member-avatar gl-empty-avatar" /></div>)}
@@ -2133,7 +2351,7 @@ export default function TeamContent({ user }) {
                 </aside>
 
                 <main className="gl-content-panel">
-                    {selectedCard === null && (
+                    {selectedMember === null && selectedCard === null && (
                         <div className="gl-team-top-panel">
                             <div className="gl-top-main">
                                 {/* Left: Team identity */}
@@ -2182,7 +2400,9 @@ export default function TeamContent({ user }) {
                             )}
                         </div>
                     )}
-                    {selectedCard === null ? (
+                    {selectedMember ? (
+                        renderMemberProfileDetail()
+                    ) : selectedCard === null ? (
                         <div className="gl-card-grid">
                             {CARDS.map((card) => {
                                 const notify = cardNotifyById[card.id];

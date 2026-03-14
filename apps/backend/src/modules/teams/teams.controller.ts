@@ -43,6 +43,28 @@ export async function handleGetTeamDetails(req: FastifyRequest<{ Params: { id: s
     }
 }
 
+export async function handleGetTeamMemberProfile(
+    req: FastifyRequest<{ Params: { id: string; userId: string } }>,
+    reply: FastifyReply,
+) {
+    const teamId = parseInt(req.params.id, 10);
+    const targetUserId = parseInt(req.params.userId, 10);
+    if (isNaN(teamId) || isNaN(targetUserId)) {
+        return reply.status(400).send({ ok: false, message: 'Invalid ID' });
+    }
+
+    const user = req.user as JwtPayload;
+    try {
+        const profile = await service.getTeamMemberProfile(req.server.ctx.db, teamId, user.userId, targetUserId);
+        return reply.send(ok(profile));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
 export async function handleRotateCode(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
     const teamId = parseInt(req.params.id, 10);
     const user = req.user as JwtPayload;

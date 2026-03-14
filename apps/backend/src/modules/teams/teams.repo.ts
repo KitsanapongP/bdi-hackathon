@@ -1,6 +1,14 @@
 import type { DB } from '../../config/db.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
-import type { TeamRow, TeamMemberRow, TeamCodeRow, TeamJoinRequestRow, TeamInvitationRow } from './teams.types.js';
+import type {
+    TeamRow,
+    TeamMemberRow,
+    TeamCodeRow,
+    TeamJoinRequestRow,
+    TeamInvitationRow,
+    TeamMemberProfileRow,
+    TeamMemberSocialLinkRow,
+} from './teams.types.js';
 
 export async function createTeam(db: DB, data: {
     teamCode: string;
@@ -80,6 +88,51 @@ export async function getTeamMembers(db: DB, teamId: number): Promise<any[]> {
         { teamId }
     );
     return rows;
+}
+
+export async function getTeamMemberProfileByUserId(db: DB, userId: number): Promise<TeamMemberProfileRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT
+            u.user_id,
+            u.user_name,
+            u.email,
+            u.phone,
+            u.institution_name_th,
+            u.institution_name_en,
+            u.first_name_th,
+            u.last_name_th,
+            u.first_name_en,
+            u.last_name_en,
+            IFNULL(p.show_email, 0) AS show_email,
+            IFNULL(p.show_phone, 0) AS show_phone,
+            IFNULL(p.show_university, 1) AS show_university,
+            IFNULL(p.show_real_name, 0) AS show_real_name,
+            IFNULL(p.show_social_links, 1) AS show_social_links,
+            pp.bio_th,
+            pp.bio_en,
+            pp.contact_note
+         FROM user_users u
+         LEFT JOIN user_privacy_settings p ON p.user_id = u.user_id
+         LEFT JOIN user_public_profiles pp ON pp.user_id = u.user_id
+         WHERE u.user_id = :userId
+           AND u.is_active = 1
+           AND u.deleted_at IS NULL
+         LIMIT 1`,
+        { userId },
+    );
+    return (rows[0] as TeamMemberProfileRow | undefined) ?? null;
+}
+
+export async function getVisibleSocialLinksByUserId(db: DB, userId: number): Promise<TeamMemberSocialLinkRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT social_link_id, platform_code, profile_url, display_text
+         FROM user_social_links
+         WHERE user_id = :userId
+           AND is_visible = 1
+         ORDER BY created_at ASC`,
+        { userId },
+    );
+    return rows as TeamMemberSocialLinkRow[];
 }
 
 export async function getPublicTeams(db: DB, visibility?: string): Promise<TeamRow[]> {
