@@ -302,7 +302,6 @@ function PrivilegesTab({ apiFetch, showToast }) {
                                     <div key={claim.claimId} className="pf-priv-item">
                                         <div>
                                             <div className="pf-priv-title">{claim.privilegeNameTh || claim.privilegeCode}</div>
-                                            <div className="pf-priv-sub">ประเภท: auto_admin</div>
                                         </div>
                                         <div className="pf-priv-right">
                                             <span className={`pf-priv-status ${claim.claimStatus === 'claimed' ? 'claimed' : 'pending'}`}>
@@ -321,7 +320,6 @@ function PrivilegesTab({ apiFetch, showToast }) {
                                     <div key={claim.claimId} className="pf-priv-item">
                                         <div>
                                             <div className="pf-priv-title">{claim.privilegeNameTh || claim.privilegeCode}</div>
-                                            <div className="pf-priv-sub">ประเภท: {claim.privilegeType}</div>
                                         </div>
                                         <div className="pf-priv-right">
                                             <span className={`pf-priv-status ${claim.claimStatus === 'claimed' ? 'claimed' : 'pending'}`}>
@@ -634,7 +632,7 @@ function PrivacyTab({ apiFetch, showToast }) {
         { key: 'showPhone', label: 'แสดงเบอร์โทรศัพท์', desc: 'ให้คนอื่นเห็นเบอร์โทรของคุณ' },
         { key: 'showUniversity', label: 'แสดงมหาวิทยาลัย', desc: 'ให้คนอื่นเห็นสถาบันที่ศึกษา' },
         { key: 'showRealName', label: 'แสดงชื่อจริง', desc: 'ให้คนอื่นเห็นชื่อ-นามสกุลจริง' },
-        { key: 'showSocialLinks', label: 'แสดง Social Links', desc: 'ให้คนอื่นเห็นลิงก์โซเชียลมีเดีย' },
+        { key: 'showSocialLinks', label: 'แสดงลิงก์โซเชียลมีเดีย', desc: 'ให้คนอื่นเห็นลิงก์โซเชียลมีเดีย' },
     ];
 
     return (
@@ -644,7 +642,7 @@ function PrivacyTab({ apiFetch, showToast }) {
             </div>
             <div className="gl-detail-body">
                 <div className="gl-info-card">
-                    <h4><Lock size={16} /> ควบคุมข้อมูลที่แสดงใน Public Profile</h4>
+                    <h4><Lock size={16} /> ควบคุมข้อมูลที่แสดงในโปรไฟล์สาธารณะ</h4>
                     {ITEMS.map((item) => (
                         <div key={item.key} className="gl-status-row">
                             <div>
@@ -673,7 +671,7 @@ function SocialTab({ apiFetch, showToast }) {
     const load = useCallback(() => {
         apiFetch('/user/social-links')
             .then((r) => setLinks(r.data || []))
-            .catch(() => showToast('โหลด social links ไม่สำเร็จ', 'error'))
+            .catch(() => showToast('โหลดลิงก์โซเชียลมีเดียไม่สำเร็จ', 'error'))
             .finally(() => setLoading(false));
     }, [apiFetch, showToast]);
 
@@ -686,13 +684,13 @@ function SocialTab({ apiFetch, showToast }) {
                     method: 'PUT',
                     body: JSON.stringify({ profileUrl: form.profileUrl, displayText: form.displayText || undefined }),
                 });
-                showToast('อัปเดต social link สำเร็จ');
+                showToast('อัปเดตลิงก์โซเชียลมีเดียสำเร็จ');
             } else {
                 await apiFetch('/user/social-links', {
                     method: 'POST',
                     body: JSON.stringify(form),
                 });
-                showToast('เพิ่ม social link สำเร็จ');
+                showToast('เพิ่มลิงก์โซเชียลมีเดียสำเร็จ');
             }
             setShowAdd(false);
             setEditId(null);
@@ -704,10 +702,10 @@ function SocialTab({ apiFetch, showToast }) {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('ต้องการลบ social link นี้?')) return;
+        if (!confirm('ต้องการลบลิงก์โซเชียลมีเดียนี้?')) return;
         try {
             await apiFetch(`/user/social-links/${id}`, { method: 'DELETE' });
-            showToast('ลบ social link สำเร็จ');
+            showToast('ลบลิงก์โซเชียลมีเดียสำเร็จ');
             load();
         } catch (err) {
             showToast(err.message, 'error');
@@ -733,16 +731,16 @@ function SocialTab({ apiFetch, showToast }) {
     return (
         <div className="gl-detail-view">
             <div className="gl-detail-top">
-                <h3 className="gl-detail-title"><Link2 size={20} /> Social Links</h3>
+                <h3 className="gl-detail-title"><Link2 size={20} /> ลิงก์โซเชียลมีเดีย</h3>
             </div>
             <div className="gl-detail-body">
                 {links.length === 0 ? (
                     <div className="gl-empty-state">
                         <Link2 size={44} />
-                        <h3>ยังไม่มี Social Links</h3>
+                        <h3>ยังไม่มีลิงก์โซเชียลมีเดีย</h3>
                         <p>เพิ่มลิงก์โซเชียลมีเดียเพื่อให้คนอื่นติดต่อคุณได้</p>
                         <button className="gl-action-btn gl-submit-btn" onClick={openAdd}>
-                            <Plus size={16} /> เพิ่ม Social Link
+                            <Plus size={16} /> เพิ่มลิงก์โซเชียลมีเดีย
                         </button>
                     </div>
                 ) : (
@@ -762,7 +760,7 @@ function SocialTab({ apiFetch, showToast }) {
                         </div>
                         <div className="pf-actions">
                             <button className="gl-action-btn gl-invite-btn" onClick={openAdd}>
-                                <Plus size={16} /> เพิ่ม Social Link
+                                <Plus size={16} /> เพิ่มลิงก์โซเชียลมีเดีย
                             </button>
                         </div>
                     </>
@@ -773,7 +771,7 @@ function SocialTab({ apiFetch, showToast }) {
             {showAdd && (
                 <div className="pf-modal-backdrop" onClick={() => setShowAdd(false)}>
                     <div className="pf-modal" onClick={(e) => e.stopPropagation()}>
-                        <h3><Link2 size={18} /> {editId ? 'แก้ไข' : 'เพิ่ม'} Social Link</h3>
+                        <h3><Link2 size={18} /> {editId ? 'แก้ไข' : 'เพิ่ม'}ลิงก์โซเชียลมีเดีย</h3>
                         <div className="pf-field" style={{ marginBottom: 14 }}>
                             <span className="pf-label">Platform</span>
                             <select
@@ -835,7 +833,7 @@ function PublicTab({ apiFetch, showToast }) {
                 }),
             });
             setData(res.data);
-            showToast('อัปเดต Public Profile สำเร็จ');
+            showToast('อัปเดตโปรไฟล์สาธารณะสำเร็จ');
         } catch (err) {
             showToast(err.message, 'error');
         } finally {
@@ -850,7 +848,7 @@ function PublicTab({ apiFetch, showToast }) {
     return (
         <div className="gl-detail-view">
             <div className="gl-detail-top">
-                <h3 className="gl-detail-title"><Globe size={20} /> Public Profile</h3>
+                <h3 className="gl-detail-title"><Globe size={20} /> โปรไฟล์สาธารณะ</h3>
             </div>
             <div className="gl-detail-body">
                 <div className="gl-info-card">
