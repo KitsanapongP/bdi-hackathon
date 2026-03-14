@@ -58,13 +58,13 @@ const shapeTypes = ['triangle', 'circle', 'square', 'cross'];
 
 /* ═══════════════════════════ Component ═══════════════════════════════ */
 const GameShapes = ({
-    shapeCount = 20,
+    shapeCount = 12,
     sizeRange = [24, 52],
     speedRange = [18, 40],
     rotationRange = [0, 360],
     depthLayers = 3,
     minDistance = 60,
-    seed = 42,
+    seed = 40,
     colors = defaultColors,
     className = '',
 }) => {
