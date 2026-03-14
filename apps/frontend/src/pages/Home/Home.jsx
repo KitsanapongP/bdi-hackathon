@@ -1145,6 +1145,7 @@ function HomePage() {
                                         <h4>Quick Links</h4>
                                         <a href="#schedule" onClick={(e) => { e.preventDefault(); scrollTo('schedule'); }}>กำหนดการ</a>
                                         <a href="#prizes" onClick={(e) => { e.preventDefault(); scrollTo('prizes'); }}>รางวัล</a>
+                                        <Link to="/home/sponsors">ผู้สนับสนุน</Link>
                                     </div>
                                     <div className="gt-footer-col">
                                         <h4>Support</h4>

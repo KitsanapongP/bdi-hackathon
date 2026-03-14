@@ -275,6 +275,7 @@ function HomeShell({ children }) {
                                 <h4>Quick Links</h4>
                                 <Link to="/home" state={{ scrollTo: 'schedule' }}>กำหนดการ</Link>
                                 <Link to="/home" state={{ scrollTo: 'prizes' }}>รางวัล</Link>
+                                <Link to="/home/sponsors">ผู้สนับสนุน</Link>
                             </div>
                             <div className="gt-footer-col">
                                 <h4>Support</h4>
