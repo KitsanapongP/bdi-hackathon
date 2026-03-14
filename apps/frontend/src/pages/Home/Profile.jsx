@@ -15,8 +15,8 @@ import { apiUrl } from '../../lib/api';
 const BASE_MENU = [
     { id: 'profile', icon: <User size={18} />, label: 'โปรไฟล์', color: '#7c3aed' },
     { id: 'privacy', icon: <Shield size={18} />, label: 'ความเป็นส่วนตัว', color: '#3b82f6' },
-    { id: 'social', icon: <Link2 size={18} />, label: 'Social Links', color: '#ec4899' },
-    { id: 'public', icon: <Globe size={18} />, label: 'Public Profile', color: '#14b8a6' },
+    { id: 'social', icon: <Link2 size={18} />, label: 'ลิงก์โซเชียลมีเดีย', color: '#ec4899' },
+    { id: 'public', icon: <Globe size={18} />, label: 'โปรไฟล์สาธารณะ', color: '#14b8a6' },
     { id: 'consent', icon: <FileText size={18} />, label: 'ข้อตกลง', color: '#f59e0b' },
 ];
 
@@ -868,17 +868,6 @@ function PublicTab({ apiFetch, showToast }) {
                 </div>
 
                 <div className="gl-info-card">
-                    <h4><Handshake size={16} /> ค้นหาทีม</h4>
-                    <div className="gl-status-row" style={{ borderBottom: 'none' }}>
-                        <div>
-                            <div className="gl-status-label">กำลังหาทีม</div>
-                            <div className="gl-status-sub">แสดงในรายชื่อคนหาทีม ให้คนอื่นชวนเข้าร่วม</div>
-                        </div>
-                        <button className={`pf-toggle ${data.lookingForTeam ? 'on' : ''}`} onClick={() => set('lookingForTeam', !data.lookingForTeam)} />
-                    </div>
-                </div>
-
-                <div className="gl-info-card">
                     <h4><MessageCircle size={16} /> ช่องทางติดต่อ</h4>
                     <div className="pf-form-grid single" style={{ marginTop: 12 }}>
                         <div className="pf-field">
@@ -960,7 +949,7 @@ function ConsentTab({ apiFetch, showToast }) {
                             <div key={doc.consentDocId} className="pf-consent-doc">
                                 <div>
                                     <div className="pf-consent-title">{doc.titleTh || doc.titleEn}</div>
-                                    <div className="pf-consent-version">v{doc.version}</div>
+                                    <div className="pf-consent-version">{doc.version}</div>
                                 </div>
                                 {isAccepted(doc.consentDocId) ? (
                                     <span className="pf-consent-badge accepted"><CheckCircle size={14} /> ยอมรับแล้ว</span>

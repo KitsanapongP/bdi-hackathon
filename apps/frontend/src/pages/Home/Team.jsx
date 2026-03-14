@@ -875,7 +875,7 @@ export default function TeamContent({ user }) {
     const isMinMembersReady = memberCountForSubmit >= MIN_SUBMIT_MEMBERS;
 
     const submitReadinessRules = [
-        { id: 'members-confirmed', ok: allMembersConfirmed, label: 'สมาชิกทุกคนยืนยันตัวตนครบแล้ว' },
+        { id: 'members-confirmed', ok: allMembersConfirmed, label: 'สมาชิกยังยืนยันตัวตนไม่ครบ' },
         { id: 'advisor', ok: hasAdvisor, label: 'มีอาจารย์ที่ปรึกษาอย่างน้อย 1 คน' },
         { id: 'min-members', ok: isMinMembersReady, label: `มีสมาชิกอย่างน้อย ${MIN_SUBMIT_MEMBERS} คน (ตอนนี้ ${memberCountForSubmit} คน)` },
     ];
@@ -1025,7 +1025,7 @@ export default function TeamContent({ user }) {
             return;
         }
 
-        openConfirm('ยืนยันเอกสารของฉัน', 'คุณแน่ใจหรือไม่ว่าต้องการยืนยันเอกสาร? สามารถยกเลิกการยืนยันได้ก่อนหัวหน้าทีมกดส่ง', () => {
+        openConfirm('ยืนยันเอกสารของฉัน', <>คุณแน่ใจหรือไม่ว่าต้องการยืนยันเอกสาร?<br />สามารถยกเลิกการยืนยันได้ก่อนหัวหน้าทีมกดส่ง</>, () => {
             closeConfirm();
             withAction(async () => {
                 const res = await fetch(apiUrl(`/api/verification/team/${team.id}/confirm`), {
@@ -1530,7 +1530,7 @@ export default function TeamContent({ user }) {
                 <div>
                     <div className="vf-info-banner">
                         <Info size={16} />
-                        <span>หัวหน้าทีมเท่านั้นที่สามารถ่ส่งลิงก์วิดีโอและแนบไฟล์ผลงานได้</span>
+                        <span>หัวหน้าทีมเท่านั้นที่สามารถส่งลิงก์วิดีโอและแนบไฟล์ผลงานได้</span>
                     </div>
                     {isWorksLocked && (
                         <div className="vf-info-banner vf-submitted">
@@ -1638,7 +1638,7 @@ export default function TeamContent({ user }) {
                     {/* Info banner */}
                     <div className="vf-info-banner">
                         <Info size={16} />
-                        <span>เมื่อยื่นเอกสารแล้วหากกดยืนยัน จะสามารถยกเลิกการยืนยันเพื่อกลับมาแก้ไขได้ แต่ถ้าหัวหน้าทีมกดส่งทีมแล้วจะไม่สามารถแก้ไขได้ กรุณาตรวจสอบความถูกต้อง และตั้งชื่อไฟล์ตามที่กำหนด</span>
+                        <span>หากกดยืนยันแล้ว จะไม่สามารถแก้ไขได้ กรุณาตรวจสอบความถูกต้อง</span>
                     </div>
 
                     {isLeader && team.status === 'passed' && !team.confirmedAt && (
@@ -1785,7 +1785,7 @@ export default function TeamContent({ user }) {
                                     </>
                                 )}
                                 {!canEditGeneralInfo && (
-                                    <p className="vf-hint">ข้อมูลส่วนตัวถูกล็อกในสถานะปัจจุบัน</p>
+                                    <p className="vf-hint">ข้อมูลส่วนตัวไม่สามารถแก้ไขได้หากกดยืนยันแล้ว</p>
                                 )}
                                 {canEditGeneralInfo && (
                                     <div className="pf-actions" style={{ marginTop: 12 }}>
@@ -1897,7 +1897,7 @@ export default function TeamContent({ user }) {
                             <span className="gl-team-info-label"><AlertTriangle size={13} /> ยุบทีม (หัวหน้าทีม)</span>
                             <div className="vf-info-banner vf-warning-small">
                                 <AlertTriangle size={14} />
-                                <span>การยุบทีมควรทำเมื่อมีเหตุจำเป็นเท่านั้น เมื่อยุบแล้วทุกคนในทีมจะถูกนำออกจากทีม</span>
+                                <span>การยุบทีมควรทำเมื่อมีเหตุจำเป็นเท่านั้น และหัวหน้าทีมควรแจ้งสมาชิกทุกคนก่อนทำการยุบทีม เมื่อยุบแล้วทุกคนในทีมจะถูกนำออกจากทีม</span>
                             </div>
                             <div className="gl-form-field" style={{ marginBottom: 12 }}>
                                 <label className="gl-form-label">เหตุผลในการยุบทีม</label>
@@ -1995,7 +1995,7 @@ export default function TeamContent({ user }) {
                 <div>
                     <div className="vf-info-banner">
                         <Info size={16} />
-                        <span>1 ทีมสามารถมีอาจารย์ที่ปรึกษาได้หลายท่าน แต่อาจารย์ 1 ท่านเป็นที่ปรึกษาได้แค่ทีมเดียว หัวหน้าทีมเท่านั้นที่สามารถจัดการได้</span>
+                        <span>สามารถมีอาจารย์ที่ปรึกษาได้มากกว่าหนึ่งท่าน และอาจารย์ที่ปรึกษาไม่สามารถอยู่หลายทีมได้<br />มีหัวหน้าทีมเท่านั้นที่สามารถจัดการได้</span>
                     </div>
                     {isAdvisorLocked && (
                         <div className="vf-info-banner vf-submitted">
