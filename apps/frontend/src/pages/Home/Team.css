@@ -137,6 +137,12 @@
     max-width: 180px;
 }
 
+.gl-top-team-code {
+    font-size: 0.74rem;
+    color: rgba(224, 231, 255, 0.82);
+    letter-spacing: 0.2px;
+}
+
 .gl-top-status-chip {
     display: inline-flex;
     align-items: center;

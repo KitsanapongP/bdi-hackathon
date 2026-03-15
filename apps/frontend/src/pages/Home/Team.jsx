@@ -48,10 +48,10 @@ const MAX_MEMBERS = 5;
 const MIN_SUBMIT_MEMBERS = 3;
 
 const CARDS = [
-    { id: 'announce', icon: <Megaphone />, label: 'ประกาศ', color: '#f97316' },
     { id: 'verify', icon: <ShieldCheck />, label: 'ยืนยันตัวตน', color: '#14b8a6' },
     { id: 'advisor', icon: <GraduationCap />, label: 'อาจารย์ที่ปรึกษา', color: '#6366f1' },
     { id: 'works', icon: <Award />, label: 'ส่งผลงาน', color: '#eab308' },
+    { id: 'announce', icon: <Megaphone />, label: 'ประกาศ', color: '#f97316' },
     { id: 'inbox', icon: <Mail />, label: 'กล่องข้อความ', color: '#0ea5e9' },
     { id: 'manage', icon: <Settings />, label: 'จัดการทีม', color: '#6366f1' },
 ];
@@ -239,15 +239,14 @@ export default function TeamContent({ user }) {
         try {
             const res = await fetch(apiUrl(`/api/verification/team/${team.id}/status`), { credentials: 'include' });
             const payload = await res.json();
-            if (payload.ok) setVerifyData(payload.data);
+            if (payload.ok) {
+                setVerifyData(payload.data);
+                return payload.data;
+            }
         } catch (err) { console.error('failed to fetch verify status', err); }
         finally { setVerifyLoading(false); }
+        return null;
     }, [team?.id]);
-
-    // Auto-fetch verify status when team loads
-    useEffect(() => {
-        if (team?.id) fetchVerifyStatus();
-    }, [team?.id, fetchVerifyStatus]);
 
     const loadProfileForVerification = useCallback(async () => {
         setProfileLoading(true);
@@ -282,10 +281,36 @@ export default function TeamContent({ user }) {
             if (payload.ok) {
                 setSubmissionData(payload.data);
                 setVideoLinkInput(payload.data.videoLink || '');
+                return payload.data;
             }
         } catch (err) { console.error('failed to fetch submission data', err); }
         finally { setSubmissionLoading(false); }
+        return null;
     }, [team?.id]);
+
+    useEffect(() => {
+        if (!team?.id) {
+            setReadinessLoaded(false);
+            return;
+        }
+        let cancelled = false;
+        const preloadReadiness = async () => {
+            setReadinessLoading(true);
+            setReadinessLoaded(false);
+            try {
+                await Promise.all([fetchVerifyStatus(), fetchSubmissionData()]);
+            } finally {
+                if (!cancelled) {
+                    setReadinessLoaded(true);
+                    setReadinessLoading(false);
+                }
+            }
+        };
+        preloadReadiness();
+        return () => {
+            cancelled = true;
+        };
+    }, [team?.id, fetchVerifyStatus, fetchSubmissionData]);
 
     useEffect(() => {
         if (selectedCard === 'works' || selectedCard === 'advisor' || selectedCard === 'verify') {
@@ -337,6 +362,8 @@ export default function TeamContent({ user }) {
     const [pendingJoinRequests, setPendingJoinRequests] = useState([]);
     const [inboxItems, setInboxItems] = useState([]);
     const [inboxLoading, setInboxLoading] = useState(false);
+    const [readinessLoading, setReadinessLoading] = useState(false);
+    const [readinessLoaded, setReadinessLoaded] = useState(false);
     const [nowMs, setNowMs] = useState(Date.now());
     const [memberProfileLoading, setMemberProfileLoading] = useState(false);
     const [memberProfileData, setMemberProfileData] = useState(null);
@@ -513,8 +540,9 @@ export default function TeamContent({ user }) {
             setMemberProfileData({ errorMessage: message });
             showToast(message, 'error');
         } finally {
-            if (requestId !== memberProfileReqIdRef.current) return;
-            setMemberProfileLoading(false);
+            if (requestId === memberProfileReqIdRef.current) {
+                setMemberProfileLoading(false);
+            }
         }
     }, [team?.id, showToast, getReadableErrorMessage]);
 
@@ -921,6 +949,7 @@ export default function TeamContent({ user }) {
     const teamInviteCode = team.inviteCode || '------';
     const deadlineMs = toDateMs(team?.confirmationDeadlineAt);
     const countdownText = deadlineMs ? formatCountdown(deadlineMs - nowMs) : '-';
+    const confirmationExpired = deadlineMs ? deadlineMs < nowMs : false;
     const isTeamLocked = ['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded'].includes(String(team?.status || ''));
     const isSubmittedByVerify = Boolean(verifyData?.isTeamSubmitted);
     const isTeamEditLocked = isTeamLocked || isSubmittedByVerify;
@@ -934,13 +963,17 @@ export default function TeamContent({ user }) {
     const isMinMembersReady = memberCountForSubmit >= MIN_SUBMIT_MEMBERS;
 
     const submitReadinessRules = [
-        { id: 'members-confirmed', ok: allMembersConfirmed, label: 'สมาชิกยังยืนยันตัวตนไม่ครบ' },
-        { id: 'advisor', ok: hasAdvisor, label: 'มีอาจารย์ที่ปรึกษาอย่างน้อย 1 คน' },
-        { id: 'min-members', ok: isMinMembersReady, label: `มีสมาชิกอย่างน้อย ${MIN_SUBMIT_MEMBERS} คน (ตอนนี้ ${memberCountForSubmit} คน)` },
+        { id: 'members-confirmed', ok: allMembersConfirmed, label: 'สมาชิกทุกคนต้องยืนยันเอกสารยืนยันตัวตนให้ครบ' },
+        { id: 'advisor', ok: hasAdvisor, label: 'ทีมต้องมีอาจารย์ที่ปรึกษาอย่างน้อย 1 คน' },
+        { id: 'min-members', ok: isMinMembersReady, label: `ทีมต้องมีสมาชิกอย่างน้อย ${MIN_SUBMIT_MEMBERS} คน (ปัจจุบัน ${memberCountForSubmit} คน)` },
     ];
-    const submitMissing = submitReadinessRules.filter((item) => !item.ok).map((item) => item.label);
-    const submitProgress = Math.round((submitReadinessRules.filter((item) => item.ok).length / submitReadinessRules.length) * 100);
-    const canSubmitSelection = isLeader && !isTeamEditLocked && submitMissing.length === 0;
+    const submitMissing = readinessLoaded
+        ? submitReadinessRules.filter((item) => !item.ok).map((item) => item.label)
+        : [];
+    const submitProgress = readinessLoaded
+        ? Math.round((submitReadinessRules.filter((item) => item.ok).length / submitReadinessRules.length) * 100)
+        : 0;
+    const shouldShowParticipationConfirm = team.status === 'passed' && !team.confirmedAt;
 
     const verifyNotify = allMembersConfirmed ? 'success' : 'danger';
     const advisorNotify = hasAdvisor ? 'success' : 'danger';
@@ -1118,6 +1151,10 @@ export default function TeamContent({ user }) {
     };
 
     const handleSubmitTeam = () => {
+        if (!readinessLoaded || readinessLoading) {
+            showToast('กำลังโหลดข้อมูลทีมเพื่อประเมินความพร้อม กรุณารอสักครู่', 'error');
+            return;
+        }
         if (submitMissing.length > 0) {
             showToast(`ยังยืนยันเข้าร่วมการคัดเลือกไม่ได้: ${submitMissing.join(', ')}`, 'error');
             return;
@@ -1850,9 +1887,6 @@ export default function TeamContent({ user }) {
                 ? JSON.stringify(toVerificationProfilePayload(profileData)) !== JSON.stringify(toVerificationProfilePayload(savedProfileData))
                 : false;
             const profileReadyForConfirm = profileComplete && !hasUnsavedProfileChanges;
-            const confirmationExpired = team?.confirmationDeadlineAt
-                ? new Date(team.confirmationDeadlineAt).getTime() < Date.now()
-                : false;
 
             return renderSimpleDetail('ยืนยันตัวตน', <ShieldCheck size={20} />, (
                 <div>
@@ -1862,25 +1896,16 @@ export default function TeamContent({ user }) {
                         <span>หากกดยืนยันแล้ว จะไม่สามารถแก้ไขได้ กรุณาตรวจสอบความถูกต้อง</span>
                     </div>
 
-                    {isLeader && team.status === 'passed' && !team.confirmedAt && (
+                    {team.status === 'passed' && !team.confirmedAt && (
                         <div className="gl-team-info-card">
-                            <span className="gl-team-info-label"><CheckCircle size={13} /> ยืนยันการเข้าร่วมโครงการ</span>
+                            <span className="gl-team-info-label"><Clock size={13} /> กำหนดเวลายืนยันของทีม</span>
                             <div className="gl-status-row"><div className="gl-status-label">หมดเขตยืนยัน</div><span>{formatDateTime(team.confirmationDeadlineAt)}</span></div>
                             <div className="gl-status-row"><div className="gl-status-label"><Clock size={13} /> เวลาที่เหลือ</div><span>{countdownText}</span></div>
                             {confirmationExpired ? (
                                 <p className="vf-hint">เลยเวลายืนยันแล้ว ระบบจะปรับสถานะเป็น "ไม่กดเข้าร่วมโครงการ" อัตโนมัติ</p>
                             ) : (
-                                <button className="gl-action-btn gl-submit-btn" disabled={actionLoading} onClick={handleConfirmParticipation}>
-                                    <CheckCircle size={16} /> ยืนยันการเข้าร่วมโครงการ
-                                </button>
+                                <p className="vf-hint">หัวหน้าทีมสามารถยืนยันการเข้าร่วมโครงการได้จากปุ่มด้านบนของหน้า "ทีมของฉัน"</p>
                             )}
-                        </div>
-                    )}
-                    {!isLeader && team.status === 'passed' && !team.confirmedAt && (
-                        <div className="gl-team-info-card">
-                            <span className="gl-team-info-label"><Clock size={13} /> กำหนดเวลายืนยันของทีม</span>
-                            <div className="gl-status-row"><div className="gl-status-label">หมดเขตยืนยัน</div><span>{formatDateTime(team.confirmationDeadlineAt)}</span></div>
-                            <div className="gl-status-row"><div className="gl-status-label">เวลาที่เหลือ</div><span>{countdownText}</span></div>
                         </div>
                     )}
 
@@ -2368,6 +2393,7 @@ export default function TeamContent({ user }) {
                                     </div>
                                     <div className="gl-top-team-meta">
                                         <span className="gl-top-team-name">{team.name}</span>
+                                        <span className="gl-top-team-code">รหัสทีม: {team.code || '------'}</span>
                                         <span className={`gl-top-status-chip ${team.status}`}>
                                             <span className="gl-top-status-dot" />
                                             {statusInfo.label}
@@ -2382,27 +2408,39 @@ export default function TeamContent({ user }) {
                                         <div className="gl-top-progress-track">
                                             <div className="gl-top-progress-fill" style={{ width: `${submitProgress}%` }} />
                                         </div>
-                                        <span className="gl-top-progress-pct">{submitProgress}%</span>
+                                        <span className="gl-top-progress-pct">{readinessLoading && !readinessLoaded ? '...' : `${submitProgress}%`}</span>
                                     </div>
                                 </div>
 
                                 {/* Right: Action */}
                                 <div className="gl-top-action-section">
-                                    <button className="gl-top-submit-btn" disabled={!isLeader || actionLoading || isTeamEditLocked || submitMissing.length > 0} onClick={handleSubmitTeam}>
-                                        <ShieldCheck size={18} />
-                                        <span>ยืนยันส่งทีมเข้าคัดเลือก</span>
+                                    <button
+                                        className="gl-top-submit-btn"
+                                        disabled={
+                                            !isLeader
+                                            || actionLoading
+                                            || (shouldShowParticipationConfirm
+                                                ? confirmationExpired
+                                                : (!readinessLoaded || readinessLoading || isTeamEditLocked || submitMissing.length > 0))
+                                        }
+                                        onClick={shouldShowParticipationConfirm ? handleConfirmParticipation : handleSubmitTeam}
+                                    >
+                                        {shouldShowParticipationConfirm ? <CheckCircle size={18} /> : <ShieldCheck size={18} />}
+                                        <span>{shouldShowParticipationConfirm ? 'ยืนยันการเข้าร่วมโครงการ' : 'ยืนยันส่งทีมเข้าคัดเลือก'}</span>
                                     </button>
                                 </div>
                             </div>
 
                             {/* Hints row */}
-                            {(submitMissing.length > 0 || !isLeader || isTeamEditLocked) && (
+                            {(submitMissing.length > 0 || !isLeader || isTeamEditLocked || !readinessLoaded || (shouldShowParticipationConfirm && confirmationExpired)) && (
                                 <div className="gl-top-hints">
                                     {!isLeader && <span className="gl-top-hint-item"><Lock size={12} /> เฉพาะหัวหน้าทีม</span>}
-                                    {submitMissing.map((msg, i) => (
+                                    {!readinessLoaded && <span className="gl-top-hint-item"><Loader2 size={12} /> กำลังตรวจสอบข้อมูลความพร้อมของทีม...</span>}
+                                    {readinessLoaded && !shouldShowParticipationConfirm && submitMissing.map((msg, i) => (
                                         <span key={i} className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {msg}</span>
                                     ))}
-                                    {isTeamEditLocked && <span className="gl-top-hint-item"><Lock size={12} /> ทีมอยู่ในสถานะที่แก้ไขไม่ได้</span>}
+                                    {!shouldShowParticipationConfirm && isTeamEditLocked && <span className="gl-top-hint-item"><Lock size={12} /> ทีมอยู่ในสถานะที่แก้ไขไม่ได้</span>}
+                                    {shouldShowParticipationConfirm && confirmationExpired && <span className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> เลยเวลายืนยันการเข้าร่วมโครงการแล้ว</span>}
                                 </div>
                             )}
                         </div>
