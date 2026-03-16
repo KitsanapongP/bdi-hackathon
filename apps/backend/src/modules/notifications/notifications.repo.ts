@@ -3,7 +3,6 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import type {
   AdminNotificationRecipientRow,
   AdminNotificationSettingRow,
-  NotifyEmailTemplateRow,
   NotificationEventCode,
   NotificationLogRow,
 } from './notifications.types.js';
@@ -57,80 +56,6 @@ export async function upsertNotificationSetting(
     customMessage: data.customMessage,
     updatedByUserId: data.updatedByUserId,
   });
-}
-
-export async function getEmailTemplates(db: DB): Promise<NotifyEmailTemplateRow[]> {
-  const [rows] = await db.query<RowDataPacket[]>(`
-    SELECT * FROM notify_email_templates
-    ORDER BY template_code ASC
-  `);
-  return rows as NotifyEmailTemplateRow[];
-}
-
-export async function getEmailTemplateByCode(db: DB, templateCode: string): Promise<NotifyEmailTemplateRow | null> {
-  const [rows] = await db.query<RowDataPacket[]>(`
-    SELECT * FROM notify_email_templates WHERE template_code = :templateCode LIMIT 1
-  `, { templateCode });
-  return (rows[0] as NotifyEmailTemplateRow | undefined) ?? null;
-}
-
-export async function updateEmailTemplateByCode(
-  db: DB,
-  templateCode: string,
-  patch: {
-    templateNameTh?: string | undefined;
-    templateNameEn?: string | undefined;
-    subjectTh?: string | null | undefined;
-    subjectEn?: string | null | undefined;
-    htmlTh?: string | null | undefined;
-    htmlEn?: string | null | undefined;
-    variablesHint?: string | null | undefined;
-    isEnabled?: boolean | undefined;
-  },
-): Promise<void> {
-  const updates: string[] = [];
-  const params: Record<string, unknown> = { templateCode };
-
-  if (patch.templateNameTh !== undefined) {
-    updates.push('template_name_th = :templateNameTh');
-    params.templateNameTh = patch.templateNameTh;
-  }
-  if (patch.templateNameEn !== undefined) {
-    updates.push('template_name_en = :templateNameEn');
-    params.templateNameEn = patch.templateNameEn;
-  }
-  if (patch.subjectTh !== undefined) {
-    updates.push('subject_th = :subjectTh');
-    params.subjectTh = patch.subjectTh;
-  }
-  if (patch.subjectEn !== undefined) {
-    updates.push('subject_en = :subjectEn');
-    params.subjectEn = patch.subjectEn;
-  }
-  if (patch.htmlTh !== undefined) {
-    updates.push('html_th = :htmlTh');
-    params.htmlTh = patch.htmlTh;
-  }
-  if (patch.htmlEn !== undefined) {
-    updates.push('html_en = :htmlEn');
-    params.htmlEn = patch.htmlEn;
-  }
-  if (patch.variablesHint !== undefined) {
-    updates.push('variables_hint = :variablesHint');
-    params.variablesHint = patch.variablesHint;
-  }
-  if (patch.isEnabled !== undefined) {
-    updates.push('is_enabled = :isEnabled');
-    params.isEnabled = patch.isEnabled ? 1 : 0;
-  }
-
-  if (updates.length === 0) return;
-
-  await db.query(`
-    UPDATE notify_email_templates
-    SET ${updates.join(', ')}, updated_at = NOW()
-    WHERE template_code = :templateCode
-  `, params);
 }
 
 export async function createNotificationLog(
@@ -305,6 +230,28 @@ export async function getTeamContext(db: DB, teamId: number): Promise<{ team_id:
     LIMIT 1
   `, { teamId });
   return (rows[0] as { team_id: number; team_name_th: string; team_name_en: string; team_code: string } | undefined) ?? null;
+}
+
+export async function getTeamMemberDisplayNames(db: DB, teamId: number): Promise<string[]> {
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT
+      COALESCE(
+        NULLIF(TRIM(CONCAT(COALESCE(u.first_name_th, ''), ' ', COALESCE(u.last_name_th, ''))), ''),
+        NULLIF(TRIM(CONCAT(COALESCE(u.first_name_en, ''), ' ', COALESCE(u.last_name_en, ''))), ''),
+        u.user_name
+      ) AS display_name
+    FROM team_members m
+    JOIN user_users u ON u.user_id = m.user_id
+    WHERE m.team_id = :teamId
+      AND m.member_status = 'active'
+      AND u.is_active = 1
+      AND u.deleted_at IS NULL
+    ORDER BY CASE WHEN m.role = 'leader' THEN 0 ELSE 1 END, display_name ASC
+  `, { teamId });
+
+  return rows
+    .map((row) => String((row as { display_name?: string | null }).display_name || '').trim())
+    .filter((name) => name.length > 0);
 }
 
 export async function getUserDisplayName(db: DB, userId: number): Promise<string> {

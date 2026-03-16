@@ -4,8 +4,6 @@ import { isAdmin } from '../../middleware/isAdmin.js';
 import {
   handleGetNotificationSettings,
   handleUpdateNotificationSetting,
-  handleGetNotificationTemplates,
-  handleUpdateNotificationTemplate,
   handleGetTeamInbox,
   handleMarkTeamInboxRead,
   handleAdminSendCustomEmail,
@@ -24,8 +22,6 @@ export async function notificationsRoutes(app: FastifyInstance) {
 
     adminApp.get('/admin/settings', handleGetNotificationSettings);
     adminApp.put('/admin/settings/:eventCode', handleUpdateNotificationSetting);
-    adminApp.get('/admin/templates', handleGetNotificationTemplates);
-    adminApp.put('/admin/templates/:templateCode', handleUpdateNotificationTemplate);
     adminApp.post('/admin/custom-email', handleAdminSendCustomEmail);
     adminApp.get('/admin/recipients', handleGetAdminNotificationRecipients);
     adminApp.put('/admin/recipients/:userId', handleUpdateAdminNotificationRecipient);

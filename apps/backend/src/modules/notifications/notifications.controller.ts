@@ -8,7 +8,6 @@ import {
   notificationRecipientParamSchema,
   updateNotificationRecipientSchema,
   updateNotificationSettingSchema,
-  updateTemplateSchema,
 } from './notifications.schema.js';
 import type { JwtPayload } from '../auth/auth.types.js';
 
@@ -40,39 +39,6 @@ export async function handleUpdateNotificationSetting(
     const user = req.user as JwtPayload;
     const data = await service.updateAdminNotificationSetting(req.server.ctx.db, eventParsed.data, parsed.data, user.userId);
     return reply.send(ok(data, 'อัปเดตการตั้งค่าแจ้งเตือนสำเร็จ'));
-  } catch (err) {
-    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
-    throw err;
-  }
-}
-
-export async function handleGetNotificationTemplates(req: FastifyRequest, reply: FastifyReply) {
-  try {
-    const rows = await service.getAdminNotificationTemplates(req.server.ctx.db);
-    return reply.send(ok(rows));
-  } catch (err) {
-    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
-    throw err;
-  }
-}
-
-export async function handleUpdateNotificationTemplate(
-  req: FastifyRequest<{ Params: { templateCode: string } }>,
-  reply: FastifyReply,
-) {
-  const templateCode = String(req.params.templateCode || '').trim();
-  if (!templateCode) {
-    return reply.status(400).send({ ok: false, message: 'templateCode ไม่ถูกต้อง' });
-  }
-
-  const parsed = updateTemplateSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
-  }
-
-  try {
-    const data = await service.updateAdminNotificationTemplate(req.server.ctx.db, templateCode, parsed.data);
-    return reply.send(ok(data, 'อัปเดต template สำเร็จ'));
   } catch (err) {
     if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
     throw err;

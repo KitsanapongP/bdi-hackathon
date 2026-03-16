@@ -5419,7 +5419,6 @@ function SelectionPage() {
 function NotificationSettingsPage() {
   const { pushToast } = useAdminToast()
   const [settings, setSettings] = useState([])
-  const [templates, setTemplates] = useState([])
   const [recipients, setRecipients] = useState([])
   const [teamOptions, setTeamOptions] = useState([])
   const [eventDrafts, setEventDrafts] = useState({})
@@ -5454,21 +5453,17 @@ function NotificationSettingsPage() {
   const load = useCallback(async () => {
     try {
       setLoading(true)
-      const [settingsRes, templatesRes, recipientsRes] = await Promise.all([
+      const [settingsRes, recipientsRes] = await Promise.all([
         fetch(apiUrl('/api/notifications/admin/settings'), { credentials: 'include' }),
-        fetch(apiUrl('/api/notifications/admin/templates'), { credentials: 'include' }),
         fetch(apiUrl('/api/notifications/admin/recipients'), { credentials: 'include' }),
       ])
       const settingsPayload = await settingsRes.json()
-      const templatesPayload = await templatesRes.json()
       const recipientsPayload = await recipientsRes.json()
       if (!settingsRes.ok || !settingsPayload?.ok) throw new Error(settingsPayload?.message || 'load settings failed')
-      if (!templatesRes.ok || !templatesPayload?.ok) throw new Error(templatesPayload?.message || 'load templates failed')
       if (!recipientsRes.ok || !recipientsPayload?.ok) throw new Error(recipientsPayload?.message || 'load recipients failed')
 
       const settingsRows = settingsPayload.data || []
       setSettings(settingsRows)
-      setTemplates(templatesPayload.data || [])
       setRecipients(recipientsPayload.data || [])
       setEventDrafts(
         settingsRows.reduce((acc, row) => {
@@ -5568,7 +5563,7 @@ function NotificationSettingsPage() {
 
   return (
     <div className="admin-ui-stack">
-      <SectionHeading title="Notification Settings" description="ตั้งค่า event email, แก้ข้อความ template ราย event และส่งเมล custom ถึงทีมที่เลือก" />
+      <SectionHeading title="Notification Settings" description="ตั้งค่า event email, แก้ข้อความราย event และส่งเมล custom ถึงทีมที่เลือก" />
 
       <article className="admin-ui-panel">
         <h3>Admin Recipient List</h3>
@@ -5664,7 +5659,7 @@ function NotificationSettingsPage() {
                       customMessage: prev[row.eventCode]?.customMessage || '',
                     },
                   }))}
-                  placeholder="ถ้าไม่กรอก จะใช้ค่าจาก template ปกติ"
+                  placeholder="ถ้าไม่กรอก จะใช้หัวข้อมาตรฐานของระบบ"
                 />
               </label>
               <label>
@@ -5679,7 +5674,7 @@ function NotificationSettingsPage() {
                       customMessage: e.target.value,
                     },
                   }))}
-                  placeholder="รองรับตัวแปร {{team_name_th}}, {{team_code}}"
+                  placeholder="รองรับตัวแปร เช่น {{team_name}}, {{team_code}}, {{member_names}}, {{actor_name}}"
                 />
               </label>
               <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={() => saveEventMessage(row.eventCode)}>
@@ -5730,22 +5725,6 @@ function NotificationSettingsPage() {
         </div>
       </article>
 
-      <AdminDataTable
-        rows={templates.map((t) => ({ ...t, id: t.templateCode }))}
-        loading={loading}
-        searchKeys={['templateCode', 'templateNameTh', 'templateNameEn']}
-        searchPlaceholder="ค้นหา template"
-        columns={[
-          { key: 'templateCode', label: 'Template Code' },
-          { key: 'templateNameTh', label: 'Name TH' },
-          { key: 'subjectTh', label: 'Subject TH' },
-          {
-            key: 'isEnabled',
-            label: 'Enabled',
-            render: (row) => String(row.isEnabled),
-          },
-        ]}
-      />
     </div>
   )
 }

@@ -22,17 +22,6 @@ export const updateNotificationSettingSchema = z.object({
   { message: 'ต้องส่งอย่างน้อยหนึ่งค่าเพื่ออัปเดต setting' },
 );
 
-export const updateTemplateSchema = z.object({
-  templateNameTh: z.string().trim().min(1).optional(),
-  templateNameEn: z.string().trim().min(1).optional(),
-  subjectTh: z.string().trim().nullable().optional(),
-  subjectEn: z.string().trim().nullable().optional(),
-  htmlTh: z.string().trim().nullable().optional(),
-  htmlEn: z.string().trim().nullable().optional(),
-  variablesHint: z.string().trim().nullable().optional(),
-  isEnabled: z.boolean().optional(),
-}).refine((v) => Object.keys(v).length > 0, { message: 'ไม่มีข้อมูลสำหรับอัปเดต' });
-
 export const adminSendCustomEmailSchema = z.object({
   teamId: z.number().int().positive(),
   subject: z.string().trim().min(1).max(255),

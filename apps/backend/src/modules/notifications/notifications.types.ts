@@ -16,22 +16,6 @@ export interface AdminNotificationSettingRow extends RowDataPacket {
   updated_at: Date;
 }
 
-export interface NotifyEmailTemplateRow extends RowDataPacket {
-  template_id: number;
-  template_code: string;
-  template_name_th: string;
-  template_name_en: string;
-  subject_th: string | null;
-  subject_en: string | null;
-  html_th: string | null;
-  html_en: string | null;
-  variables_hint: string | null;
-  is_enabled: number;
-  created_by_user_id: number | null;
-  created_at: Date;
-  updated_at: Date;
-}
-
 export interface NotificationLogRow extends RowDataPacket {
   notification_log_id: number;
   event_code: string;

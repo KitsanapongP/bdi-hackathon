@@ -12,11 +12,25 @@ const DEFAULT_EVENT_CHANNELS: Record<NotificationEventCode, { inApp: boolean; em
   TEAM_CONFIRMED: { inApp: true, email: true },
 };
 
-const EVENT_TEMPLATE_MAP: Record<NotificationEventCode, string> = {
-  IDENTITY_SUBMITTED: 'IDENTITY_SUBMITTED',
-  SELECTION_PASSED: 'SELECTION_PASSED',
-  SELECTION_FAILED: 'SELECTION_FAILED',
-  TEAM_CONFIRMED: 'TEAM_CONFIRMED',
+const EVENT_TITLES: Record<NotificationEventCode, string> = {
+  IDENTITY_SUBMITTED: 'แจ้งการส่งเอกสารยืนยันตัวตน',
+  SELECTION_PASSED: 'แจ้งผลการคัดเลือก: ผ่าน',
+  SELECTION_FAILED: 'แจ้งผลการคัดเลือก: ไม่ผ่าน',
+  TEAM_CONFIRMED: 'แจ้งการยืนยันเข้าร่วมโครงการ',
+};
+
+const DEFAULT_EVENT_SUBJECTS: Record<NotificationEventCode, string> = {
+  IDENTITY_SUBMITTED: 'แจ้งการส่งเอกสารยืนยันตัวตนของทีม',
+  SELECTION_PASSED: 'แจ้งผลการคัดเลือกทีม: ผ่านการคัดเลือก',
+  SELECTION_FAILED: 'แจ้งผลการคัดเลือกทีม: ไม่ผ่านการคัดเลือก',
+  TEAM_CONFIRMED: 'แจ้งการยืนยันเข้าร่วมโครงการจากทีม',
+};
+
+const DEFAULT_EVENT_MESSAGES: Record<NotificationEventCode, string> = {
+  IDENTITY_SUBMITTED: 'ทีม {{team_name}} ({{team_code}}) ได้ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว กรุณาตรวจสอบข้อมูลในระบบผู้ดูแล',
+  SELECTION_PASSED: 'ทีม {{team_name}} ({{team_code}}) ผ่านการคัดเลือกแล้ว กรุณาดำเนินการยืนยันสิทธิ์เข้าร่วมภายในกำหนดเวลา {{confirmation_deadline_at}}',
+  SELECTION_FAILED: 'ทีม {{team_name}} ({{team_code}}) ไม่ผ่านการคัดเลือกในรอบนี้ ขอขอบคุณที่เข้าร่วมโครงการ',
+  TEAM_CONFIRMED: 'ทีม {{team_name}} ({{team_code}}) ได้ยืนยันเข้าร่วมโครงการเรียบร้อยแล้ว โดย {{actor_name}}',
 };
 
 const requireModule = createRequire(import.meta.url);
@@ -40,6 +54,77 @@ function renderTemplate(text: string | null | undefined, variables: Record<strin
   return source.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, token: string) => {
     return variables[token] ?? '';
   });
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function textToHtml(text: string): string {
+  return escapeHtml(text).replace(/\r?\n/g, '<br />');
+}
+
+function formatDetailLine(label: string, value: string): string {
+  return `${label}: ${value}`;
+}
+
+function formatThaiDateTime(rawValue: string): string {
+  const date = new Date(rawValue);
+  if (Number.isNaN(date.getTime())) return rawValue;
+
+  const timeText = new Intl.DateTimeFormat('th-TH', {
+    timeZone: 'Asia/Bangkok',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+
+  const dateText = new Intl.DateTimeFormat('th-TH', {
+    timeZone: 'Asia/Bangkok',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+
+  return `${timeText} น. ${dateText}`;
+}
+
+function buildStandardEmailHtml(input: {
+  eventTitle: string;
+  headline: string;
+  message: string;
+  detailLines: string[];
+}): string {
+  const detailsHtml = input.detailLines
+    .map((line) => `<li style="margin: 0 0 8px 0;">${textToHtml(line)}</li>`)
+    .join('');
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; color: #0f172a; line-height: 1.6;">
+      <div style="padding: 18px 20px; background: #0b2545; color: #ffffff; border-radius: 12px 12px 0 0;">
+        <div style="font-size: 12px; letter-spacing: 0.08em; opacity: 0.9; text-transform: uppercase;">Intelligent Living Hackathon 2026</div>
+        <h2 style="margin: 8px 0 0 0; font-size: 20px;">${escapeHtml(input.eventTitle)}</h2>
+      </div>
+      <div style="padding: 20px; border: 1px solid #dbe3ef; border-top: 0; border-radius: 0 0 12px 12px; background: #ffffff;">
+        <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #102a43;">${escapeHtml(input.headline)}</h3>
+        <p style="margin: 0 0 16px 0; color: #243b53;">${textToHtml(input.message)}</p>
+        <div style="margin: 0 0 16px 0; padding: 14px 16px; background: #f8fafc; border: 1px solid #dbe3ef; border-radius: 10px;">
+          <div style="font-weight: 700; margin-bottom: 8px; color: #102a43;">รายละเอียด</div>
+          <ul style="margin: 0; padding-left: 18px; color: #334e68;">
+            ${detailsHtml}
+          </ul>
+        </div>
+        <p style="margin: 0; font-size: 13px; color: #627d98;">
+          อีเมลฉบับนี้ส่งจากเว็บไซต์ Intelligent Living Hackathon 2026 กรุณาอย่าตอบกลับอีเมลอัตโนมัติฉบับนี้
+        </p>
+      </div>
+    </div>
+  `;
 }
 
 function getTransporter() {
@@ -114,10 +199,9 @@ async function resolveTemplateAndVariables(
   if (!team) {
     throw new NotFoundError('ไม่พบทีมสำหรับส่ง notification');
   }
+  const memberNames = await repo.getTeamMemberDisplayNames(db, teamId);
 
   const actorName = actorUserId ? await repo.getUserDisplayName(db, actorUserId) : 'system';
-  const templateCode = EVENT_TEMPLATE_MAP[eventCode];
-  const template = await repo.getEmailTemplateByCode(db, templateCode);
 
   const variables: Record<string, string> = {
     team_id: String(team.team_id),
@@ -127,6 +211,9 @@ async function resolveTemplateAndVariables(
     team_name_en: team.team_name_en || '',
     actor_name: actorName,
     event_code: eventCode,
+    event_title: EVENT_TITLES[eventCode],
+    member_names: memberNames.join(', '),
+    member_count: String(memberNames.length),
   };
 
   if (extra) {
@@ -135,41 +222,43 @@ async function resolveTemplateAndVariables(
     }
   }
 
-  const teamLabel = `${team.team_name_th || team.team_name_en} [${team.team_code}]`;
-  let fallbackSubject = `Notification: ${eventCode}`;
-  let fallbackMessage = `Event ${eventCode} was triggered for team ${team.team_name_th || team.team_name_en}.`;
+  const actionAtRaw = (variables.action_at || new Date().toISOString()).trim();
+  const actionAtFormatted = formatThaiDateTime(actionAtRaw);
+  variables.action_at = actionAtRaw;
+  variables.action_at_formatted = actionAtFormatted;
 
-  if (eventCode === 'IDENTITY_SUBMITTED') {
-    fallbackSubject = 'ทีมส่งเอกสารยืนยันตัวตนแล้ว';
-    fallbackMessage = `ทีม ${team.team_name_th || team.team_name_en} ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว`;
-  } else if (eventCode === 'SELECTION_PASSED') {
-    fallbackSubject = 'ประกาศผลคัดเลือก: ผ่าน';
-    fallbackMessage = `ทีม ${team.team_name_th || team.team_name_en} ผ่านการคัดเลือก กรุณายืนยันเข้าร่วมภายในกำหนดเวลา`;
-  } else if (eventCode === 'SELECTION_FAILED') {
-    fallbackSubject = 'ประกาศผลคัดเลือก: ไม่ผ่าน';
-    fallbackMessage = `ทีม ${team.team_name_th || team.team_name_en} ไม่ผ่านการคัดเลือกในรอบนี้`;
-  } else if (eventCode === 'TEAM_CONFIRMED') {
-    fallbackSubject = 'ทีมยืนยันเข้าร่วมโครงการแล้ว';
-    fallbackMessage = `ทีม ${team.team_name_th || team.team_name_en} ยืนยันเข้าร่วมโครงการเรียบร้อยแล้ว โดย ${actorName}`;
-  }
-
-  const resolvedSubject = template && template.is_enabled === 1
-    ? renderTemplate(template.subject_th || template.subject_en, variables) || fallbackSubject
-    : fallbackSubject;
+  const teamLabel = `${team.team_name_th || team.team_name_en}[${team.team_code}]`;
+  const resolvedSubject = renderTemplate(DEFAULT_EVENT_SUBJECTS[eventCode], variables) || DEFAULT_EVENT_SUBJECTS[eventCode];
   const subjectFromSetting = renderTemplate(setting.customSubject, variables).trim();
   const baseSubject = subjectFromSetting || resolvedSubject;
-  const subject = baseSubject.includes(teamLabel) ? baseSubject : `${teamLabel} | ${baseSubject}`;
+  const subject = baseSubject.startsWith(`${teamLabel} |`) ? baseSubject : `${teamLabel} | ${baseSubject}`;
 
-  const renderedMessage = template && template.is_enabled === 1
-    ? renderTemplate(template.html_th || template.html_en, variables) || fallbackMessage
-    : fallbackMessage;
+  const renderedMessage = renderTemplate(DEFAULT_EVENT_MESSAGES[eventCode], variables) || DEFAULT_EVENT_MESSAGES[eventCode];
   const messageFromSetting = renderTemplate(setting.customMessage, variables).trim();
-  const htmlBody = messageFromSetting || renderedMessage;
+  const messageText = messageFromSetting || renderedMessage;
+
+  const detailLines = [
+    formatDetailLine('ชื่อทีม', team.team_name_th || team.team_name_en),
+    formatDetailLine('รหัสทีม', team.team_code || '-'),
+    formatDetailLine('ผู้ดำเนินการ', actorName),
+    formatDetailLine('สมาชิกในทีม', memberNames.length > 0 ? memberNames.join(', ') : '-'),
+    formatDetailLine('จำนวนสมาชิก', String(memberNames.length)),
+    formatDetailLine('เวลาที่ดำเนินการ', actionAtFormatted),
+  ];
+
+  const htmlBody = buildStandardEmailHtml({
+    eventTitle: EVENT_TITLES[eventCode],
+    headline: subject,
+    message: messageText,
+    detailLines,
+  });
+
+  const logMessage = [messageText, '', ...detailLines.map((line) => `- ${line}`)].join('\n').trim();
 
   return {
-    templateCode,
     subject,
-    message: htmlBody,
+    htmlMessage: htmlBody,
+    logMessage,
   };
 }
 
@@ -181,7 +270,8 @@ async function sendEmailWithLog(
     actorUserId: number | null;
     templateCode: string | null;
     subject: string;
-    message: string;
+    htmlMessage: string;
+    logMessage: string;
     recipients: Array<{ user_id: number; email: string | null }>;
   },
 ) {
@@ -204,7 +294,7 @@ async function sendEmailWithLog(
           actorUserId: input.actorUserId,
           templateCode: input.templateCode,
           subjectText: input.subject,
-          messageText: input.message,
+          messageText: input.logMessage,
           status: 'skipped',
           errorMessage: 'recipient email is empty',
         });
@@ -221,7 +311,7 @@ async function sendEmailWithLog(
           actorUserId: input.actorUserId,
           templateCode: input.templateCode,
           subjectText: input.subject,
-          messageText: input.message,
+          messageText: input.logMessage,
           status: 'skipped',
           errorMessage: `SMTP is not configured: ${reason ?? 'unknown reason'}`,
         });
@@ -233,7 +323,7 @@ async function sendEmailWithLog(
           from: fromEmail,
           to: recipient.email,
           subject: input.subject,
-          html: input.message,
+          html: input.htmlMessage,
         });
 
         sent += 1;
@@ -245,7 +335,7 @@ async function sendEmailWithLog(
           actorUserId: input.actorUserId,
           templateCode: input.templateCode,
           subjectText: input.subject,
-          messageText: input.message,
+          messageText: input.logMessage,
           status: 'sent',
           providerMessageId: result.messageId,
           sentAt: new Date(),
@@ -260,7 +350,7 @@ async function sendEmailWithLog(
           actorUserId: input.actorUserId,
           templateCode: input.templateCode,
           subjectText: input.subject,
-          messageText: input.message,
+          messageText: input.logMessage,
           status: 'failed',
           errorMessage: String(error?.message || error),
         });
@@ -291,9 +381,10 @@ export async function triggerNotificationEvent(db: DB, input: TriggerEventInput)
     eventCode: input.eventCode,
     teamId: input.teamId,
     actorUserId: input.actorUserId,
-    templateCode: composed.templateCode,
+    templateCode: null,
     subject: composed.subject,
-    message: composed.message,
+    htmlMessage: composed.htmlMessage,
+    logMessage: composed.logMessage,
     recipients,
   });
 }
@@ -421,15 +512,33 @@ export async function sendCustomEmailToTeam(
     };
   }
 
-  const teamLabel = `${team.team_name_th || team.team_name_en} [${team.team_code}]`;
-  const subject = data.subject.includes(teamLabel) ? data.subject : `${teamLabel} | ${data.subject}`;
+  const teamLabel = `${team.team_name_th || team.team_name_en}[${team.team_code}]`;
+  const subject = data.subject.startsWith(`${teamLabel} |`) ? data.subject : `${teamLabel} | ${data.subject}`;
+  const customMessage = data.message.trim();
+  const customDetailLines = [
+    formatDetailLine('เหตุการณ์', 'อีเมลแจ้งเตือนจากผู้ดูแลระบบ'),
+    formatDetailLine('รหัสเหตุการณ์', 'ADMIN_CUSTOM_EMAIL'),
+    formatDetailLine('ทีม', team.team_name_th || team.team_name_en),
+    formatDetailLine('รหัสทีม', team.team_code || '-'),
+  ];
+
+  const htmlMessage = buildStandardEmailHtml({
+    eventTitle: 'อีเมลแจ้งเตือนจากผู้ดูแลระบบ',
+    headline: subject,
+    message: customMessage,
+    detailLines: customDetailLines,
+  });
+
+  const logMessage = [customMessage, '', ...customDetailLines.map((line) => `- ${line}`)].join('\n').trim();
+
   const result = await sendEmailWithLog(db, {
     eventCode: 'ADMIN_CUSTOM_EMAIL',
     teamId: data.teamId,
     actorUserId: data.actorUserId,
     templateCode: null,
     subject,
-    message: data.message,
+    htmlMessage,
+    logMessage,
     recipients,
   });
 
@@ -450,58 +559,6 @@ export async function sendCustomEmailToTeam(
     teamId: data.teamId,
     subject,
     ...result,
-  };
-}
-
-export async function getAdminNotificationTemplates(db: DB) {
-  const rows = await repo.getEmailTemplates(db);
-  return rows.map((row) => ({
-    templateCode: row.template_code,
-    templateNameTh: row.template_name_th,
-    templateNameEn: row.template_name_en,
-    subjectTh: row.subject_th,
-    subjectEn: row.subject_en,
-    htmlTh: row.html_th,
-    htmlEn: row.html_en,
-    variablesHint: row.variables_hint,
-    isEnabled: row.is_enabled === 1,
-    updatedAt: row.updated_at,
-  }));
-}
-
-export async function updateAdminNotificationTemplate(
-  db: DB,
-  templateCode: string,
-  patch: {
-    templateNameTh?: string | undefined;
-    templateNameEn?: string | undefined;
-    subjectTh?: string | null | undefined;
-    subjectEn?: string | null | undefined;
-    htmlTh?: string | null | undefined;
-    htmlEn?: string | null | undefined;
-    variablesHint?: string | null | undefined;
-    isEnabled?: boolean | undefined;
-  },
-) {
-  const current = await repo.getEmailTemplateByCode(db, templateCode);
-  if (!current) {
-    throw new NotFoundError('ไม่พบ template ตาม templateCode ที่ระบุ');
-  }
-
-  await repo.updateEmailTemplateByCode(db, templateCode, patch);
-  const updated = await repo.getEmailTemplateByCode(db, templateCode);
-
-  return {
-    templateCode: updated!.template_code,
-    templateNameTh: updated!.template_name_th,
-    templateNameEn: updated!.template_name_en,
-    subjectTh: updated!.subject_th,
-    subjectEn: updated!.subject_en,
-    htmlTh: updated!.html_th,
-    htmlEn: updated!.html_en,
-    variablesHint: updated!.variables_hint,
-    isEnabled: updated!.is_enabled === 1,
-    updatedAt: updated!.updated_at,
   };
 }
 
