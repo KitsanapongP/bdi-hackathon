@@ -32,6 +32,21 @@ VITE_API_BASE_URL=https://api.your-domain.com
 
 The app will build request URLs as `${VITE_API_BASE_URL}/api/...`.
 
+## Process step highlight schedule
+
+You can control when the process highlight moves between steps via env vars:
+
+```bash
+VITE_PROCESS_STEP4_HIGHLIGHT_START_DATE=2026-06-21
+VITE_PROCESS_STEP5_HIGHLIGHT_START_DATE=2026-07-03
+```
+
+Behavior:
+
+- Before `STEP4` date: highlight step 1-3
+- On/after `STEP4` date: fade step 1-3, highlight step 4
+- On/after `STEP5` date: fade step 1-4, highlight step 5
+
 ## SPA routing on refresh (fixes 404 on `/home`)
 
 If users open a deep link like `/home` directly, the web server must return `index.html` so React Router can handle the route.

@@ -55,6 +55,10 @@ const config = {
         scheduleDesc: 'ตารางเวลาของกิจกรรมทั้งหมดตลอดทั้งงาน',
         footer: '© 2026 Intelligent Living Hackathon 2026',
     },
+    process: {
+        step4HighlightStartDate: import.meta.env.VITE_PROCESS_STEP4_HIGHLIGHT_START_DATE || '2026-06-21',
+        step5HighlightStartDate: import.meta.env.VITE_PROCESS_STEP5_HIGHLIGHT_START_DATE || '2026-07-03',
+    },
 };
 
 const competitionSteps = [
@@ -285,6 +289,20 @@ function HomePage() {
         return window.matchMedia('(max-width: 768px)').matches;
     });
     const [openScheduleDay, setOpenScheduleDay] = useState(-1);
+
+    const processHighlightPhase = useMemo(() => {
+        const step4Start = new Date(`${config.process.step4HighlightStartDate}T00:00:00+07:00`);
+        const step5Start = new Date(`${config.process.step5HighlightStartDate}T00:00:00+07:00`);
+        const now = new Date();
+
+        const hasStep4Date = !Number.isNaN(step4Start.getTime());
+        const hasStep5Date = !Number.isNaN(step5Start.getTime());
+
+        if (!hasStep4Date) return 'early';
+        if (hasStep5Date && now >= step5Start) return 'final';
+        if (now >= step4Start) return 'review';
+        return 'early';
+    }, []);
 
     useEffect(() => {
         // Initialize from localStorage first for immediate render
@@ -998,20 +1016,37 @@ function HomePage() {
                             <p>5 ขั้นตอน สู่การเข้าร่วมกิจกรรม Hackathon</p>
                         </div>
                         <div className="gt-process-steps gt-reveal">
-                            {competitionSteps.map((step) => (
-                                <div key={step.number} className="gt-step">
-                                    <div className={`gt-step-date${step.date ? '' : ' is-empty'}`} aria-hidden={!step.date}>{step.date || '\u00A0'}</div>
-                                    <div className="step-num">{step.number}</div>
-                                    <div className="gt-step-body">
-                                        <h3>{step.title}</h3>
-                                        <ul className="gt-step-list">
-                                            {step.items.map((item) => (
-                                                <li key={item}>{item}</li>
-                                            ))}
-                                        </ul>
+                            {competitionSteps.map((step) => {
+                                const stepIndex = Number(step.number);
+                                const isActive =
+                                    processHighlightPhase === 'early'
+                                        ? stepIndex <= 3
+                                        : processHighlightPhase === 'review'
+                                            ? stepIndex === 4
+                                            : stepIndex === 5;
+                                const isDim =
+                                    processHighlightPhase === 'review'
+                                        ? stepIndex <= 3
+                                        : processHighlightPhase === 'final'
+                                            ? stepIndex <= 4
+                                            : false;
+                                const stepStateClass = isActive ? 'is-active' : isDim ? 'is-dim' : 'is-normal';
+
+                                return (
+                                    <div key={step.number} className={`gt-step ${stepStateClass}`}>
+                                        <div className={`gt-step-date${step.date ? '' : ' is-empty'}`} aria-hidden={!step.date}>{step.date || '\u00A0'}</div>
+                                        <div className="step-num">{step.number}</div>
+                                        <div className="gt-step-body">
+                                            <h3>{step.title}</h3>
+                                            <ul className="gt-step-list">
+                                                {step.items.map((item) => (
+                                                    <li key={item}>{item}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </section>
 

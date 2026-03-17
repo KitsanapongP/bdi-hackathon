@@ -1478,6 +1478,7 @@ section.gt-hero {
     flex-direction: column;
     align-items: center;
     gap: 12px;
+    transition: opacity 0.35s ease, filter 0.35s ease;
 }
 
 .gt-step-date {
@@ -1516,6 +1517,7 @@ section.gt-hero {
     font-weight: 800;
     border: 3px solid var(--gt-surface);
     box-shadow: 0 10px 24px -10px var(--gt-primary-glow);
+    transition: transform 0.28s ease, box-shadow 0.28s ease, filter 0.28s ease;
 }
 
 .gt-step-body {
@@ -1530,6 +1532,95 @@ section.gt-hero {
     box-sizing: border-box;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.gt-step-date,
+.gt-step h3,
+.gt-step-list,
+.gt-step-list li::before {
+    transition: opacity 0.3s ease, filter 0.3s ease, color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gt-step.is-active .step-num {
+    box-shadow: 0 0 0 8px rgba(14, 116, 255, 0.2), 0 18px 36px -10px rgba(8, 145, 178, 0.6);
+    animation: gt-step-highlight-pulse 2.1s ease-in-out infinite;
+    transform: translateY(-1px) scale(1.03);
+}
+
+.gt-step.is-active .gt-step-date {
+    color: #0f4fc2;
+    border-color: rgba(14, 116, 255, 0.42);
+    background: linear-gradient(180deg, rgba(14, 116, 255, 0.14) 0%, rgba(20, 184, 166, 0.06) 100%);
+    box-shadow: 0 10px 26px rgba(14, 116, 255, 0.2);
+}
+
+.gt-step.is-active .gt-step-body {
+    border-color: rgba(14, 116, 255, 0.56);
+    background:
+        linear-gradient(180deg, rgba(14, 116, 255, 0.2) 0%, rgba(20, 184, 166, 0.06) 42%),
+        var(--gt-surface);
+    box-shadow:
+        0 0 0 2px rgba(14, 116, 255, 0.1),
+        0 22px 44px -18px rgba(8, 145, 178, 0.42);
+}
+
+.gt-step.is-active .gt-step-list li::before {
+    width: 7px;
+    height: 7px;
+    background: #0ea5b7;
+    box-shadow: 0 0 0 4px rgba(14, 116, 255, 0.16);
+}
+
+.gt-step.is-dim {
+    opacity: 0.45;
+    filter: saturate(0.78);
+}
+
+.gt-step.is-dim .gt-step-body {
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+.gt-step.is-dim:hover .gt-step-body {
+    transform: none;
+    border-color: var(--gt-border);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+@keyframes gt-step-highlight-pulse {
+    0%,
+    100% {
+        box-shadow: 0 0 0 8px rgba(14, 116, 255, 0.2), 0 18px 36px -10px rgba(8, 145, 178, 0.6);
+    }
+
+    50% {
+        box-shadow: 0 0 0 12px rgba(14, 116, 255, 0.26), 0 22px 42px -10px rgba(8, 145, 178, 0.52);
+    }
+}
+
+.dark .gt-step.is-active .step-num {
+    box-shadow: 0 0 0 8px rgba(124, 58, 237, 0.22), 0 18px 36px -10px rgba(59, 130, 246, 0.72);
+}
+
+.dark .gt-step.is-active .gt-step-date {
+    color: var(--gt-primary);
+    border-color: rgba(124, 58, 237, 0.5);
+    background: linear-gradient(180deg, rgba(124, 58, 237, 0.14) 0%, rgba(124, 58, 237, 0.06) 100%);
+    box-shadow: 0 10px 26px rgba(124, 58, 237, 0.24);
+}
+
+.dark .gt-step.is-active .gt-step-body {
+    border-color: rgba(124, 58, 237, 0.68);
+    background:
+        linear-gradient(180deg, rgba(124, 58, 237, 0.22) 0%, rgba(124, 58, 237, 0.05) 42%),
+        var(--gt-surface);
+    box-shadow:
+        0 0 0 1px rgba(124, 58, 237, 0.24),
+        0 20px 40px -20px rgba(59, 130, 246, 0.42);
+}
+
+.dark .gt-step.is-active .gt-step-list li::before {
+    background: var(--gt-primary);
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.18);
 }
 
 .gt-step:hover .gt-step-body {
