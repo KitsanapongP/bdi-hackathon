@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 function getRelativeOffset(index, activeIndex, total) {
   let diff = index - activeIndex
@@ -25,6 +26,7 @@ function HeroCarousel({ slides = [] }) {
   const normalizedSlides = Array.isArray(slides) ? slides.filter((item) => item?.imageUrl) : []
   const [activeIndex, setActiveIndex] = useState(0)
   const [paused, setPaused] = useState(false)
+  const [previewSlide, setPreviewSlide] = useState(null)
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.matchMedia('(max-width: 768px)').matches
@@ -62,6 +64,21 @@ function HeroCarousel({ slides = [] }) {
     return () => window.clearInterval(timer)
   }, [normalizedSlides.length, paused])
 
+  useEffect(() => {
+    if (!previewSlide) return undefined
+
+    const handleKeydown = (event) => {
+      if (event.key === 'Escape') {
+        setPreviewSlide(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeydown)
+    return () => {
+      window.removeEventListener('keydown', handleKeydown)
+    }
+  }, [previewSlide])
+
   const visibleSlides = useMemo(
     () =>
       normalizedSlides
@@ -75,6 +92,52 @@ function HeroCarousel({ slides = [] }) {
   )
 
   if (!normalizedSlides.length) return null
+
+  const lightbox = previewSlide ? (
+    <div className="gt-hero-carousel-lightbox" role="dialog" aria-modal="true" aria-label="Image preview" onClick={() => setPreviewSlide(null)}>
+      <div className="gt-hero-carousel-lightbox-panel" onClick={(event) => event.stopPropagation()}>
+        <div className="gt-hero-carousel-lightbox-topbar">
+          <p className="gt-hero-carousel-lightbox-title">{previewSlide.title || 'Image preview'}</p>
+          <div className="gt-hero-carousel-lightbox-topbar-actions">
+            <a
+              className="gt-hero-carousel-lightbox-btn"
+              href={previewSlide.imageUrl}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              ดาวน์โหลด
+            </a>
+            {previewSlide.targetUrl ? (
+              <a
+                className="gt-hero-carousel-lightbox-btn gt-hero-carousel-lightbox-btn-primary"
+                href={previewSlide.targetUrl}
+                target={previewSlide.openInNewTab !== false ? '_blank' : '_self'}
+                rel={previewSlide.openInNewTab !== false ? 'noopener noreferrer' : undefined}
+              >
+                ไปยังเว็บไซต์
+              </a>
+            ) : null}
+            <button
+              type="button"
+              className="gt-hero-carousel-lightbox-close"
+              onClick={() => setPreviewSlide(null)}
+              aria-label="Close image preview"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        <img
+          className="gt-hero-carousel-lightbox-image"
+          src={previewSlide.imageUrl}
+          alt={previewSlide.imageAlt || previewSlide.title}
+          loading="eager"
+        />
+      </div>
+    </div>
+  ) : null
 
   return (
     <section
@@ -111,29 +174,6 @@ function HeroCarousel({ slides = [] }) {
             </>
           )
 
-          if (slide.targetUrl) {
-            const openInNewTab = slide.openInNewTab !== false
-            return (
-              <a
-                key={slide.id}
-                className={`gt-hero-carousel-card ${isActive ? 'is-active' : ''}`}
-                href={slide.targetUrl}
-                target={openInNewTab ? '_blank' : '_self'}
-                rel={openInNewTab ? 'noopener noreferrer' : undefined}
-                style={style}
-                data-offset={offset}
-                onClick={(event) => {
-                  if (!isActive) {
-                    event.preventDefault()
-                    setActiveIndex(index)
-                  }
-                }}
-              >
-                {cardInner}
-              </a>
-            )
-          }
-
           return (
             <button
               key={slide.id}
@@ -141,13 +181,23 @@ function HeroCarousel({ slides = [] }) {
               className={`gt-hero-carousel-card gt-hero-carousel-card-btn ${isActive ? 'is-active' : ''}`}
               style={style}
               data-offset={offset}
-              onClick={() => setActiveIndex(index)}
+              onClick={() => {
+                if (!isActive) {
+                  setActiveIndex(index)
+                  return
+                }
+
+                setPreviewSlide(slide)
+              }}
+              aria-label={isActive ? `Open image preview: ${slide.title}` : `Select slide: ${slide.title}`}
             >
               {cardInner}
             </button>
           )
         })}
       </div>
+
+      {typeof document !== 'undefined' && lightbox ? createPortal(lightbox, document.body) : null}
 
     </section>
   )

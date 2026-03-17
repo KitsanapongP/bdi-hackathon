@@ -45,8 +45,6 @@ const config = {
         nav: ['หน้าแรก', 'เกี่ยวกับ', 'กำหนดการกิจกรรม', 'ลงทะเบียน'],
         heroBadge: '🏆 Hackathon 2026',
         heroTitle: 'Intelligent Living Hackathon 2026',
-        heroSubtitle:
-            'โครงการกิจกรรมส่งเสริมการพัฒนานวัตกรรมและทักษะด้านการประยุกต์ใช้เทคโนโลยี\nการวิเคราะห์ข้อมูลและปัญญาประดิษฐ์ ประจำปี 2569\nIntelligent Living เพื่อส่งเสริมสุขภาพและคุณภาพชีวิตอย่างยั่งยืน\nณ อุทยานวิทยาศาสตร์ ภาคตะวันออกเฉียงเหนือ มหาวิทยาลัยขอนแก่น',
         ctaPrimary: 'ลงทะเบียนเลย',
         ctaSecondary: 'ดูกำหนดการ',
         aboutTitle: 'ทำไมต้องร่วมกิจกรรมนี้?',
@@ -752,6 +750,18 @@ function HomePage() {
         requestAnimationFrame(step);
     };
 
+    const handlePrimaryCta = () => {
+        if (user) {
+            setShowLobby(true);
+            setShowProfile(false);
+            setMobileOpen(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        navigate('/home/register');
+    };
+
     useEffect(() => {
         const targetId = location.state?.scrollTo;
         if (!targetId) return;
@@ -909,11 +919,10 @@ function HomePage() {
                     <section id="hero" className="gt-section gt-hero gt-container gt-reveal">
                         <h1 style={{ whiteSpace: 'pre-line' }}>{config.locale.heroTitle}</h1>
                         <HeroCarousel slides={carouselSlides} />
-                        {config.locale.heroSubtitle && <p className="gt-hero-sub" style={{ whiteSpace: 'pre-line' }}>{config.locale.heroSubtitle}</p>}
                         <div className="gt-hero-actions">
-                            <Link to="/home/register" className="gt-btn gt-btn-primary">
-                                {config.locale.ctaPrimary} <ArrowRight size={18} />
-                            </Link>
+                            <button type="button" className="gt-btn gt-btn-primary" onClick={handlePrimaryCta}>
+                                {user ? 'ไปยังทีมของฉัน' : config.locale.ctaPrimary} <ArrowRight size={18} />
+                            </button>
                             <button className="gt-btn gt-btn-secondary" onClick={() => scrollTo('schedule')}>
                                 {config.locale.ctaSecondary}
                             </button>
