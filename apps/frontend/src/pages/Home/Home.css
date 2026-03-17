@@ -1292,11 +1292,15 @@ section.gt-hero {
 
 .gt-participation-axis {
     margin-top: 4px;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
     color: var(--gt-text-muted);
     font-size: 0.72rem;
     font-weight: 600;
+}
+
+.gt-participation-axis span {
+    text-align: center;
+    white-space: nowrap;
 }
 
 .gt-participation-chart-empty,

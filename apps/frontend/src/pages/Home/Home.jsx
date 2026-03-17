@@ -64,7 +64,7 @@ const config = {
 const competitionSteps = [
     {
         number: '01',
-        date: '20 มีนาคม 2569',
+        date: '1 เมษายน 2569',
         title: 'สมัครสมาชิก',
         items: [
             'สมัครสมาชิกด้วยอีเมลจริง',
@@ -83,13 +83,13 @@ const competitionSteps = [
     },
     {
         number: '03',
-        date: '20 มิถุนายน 2569',
+        date: '31 พฤษภาคม 2569',
         title: 'ส่งทีมเข้าร่วมการพิจารณา',
         items: [
             'สมาชิกทุกคนตรวจสอบความถูกต้องของข้อมูลอีกครั้ง',
             'หัวหน้าทีมส่งรายชื่อสมาชิกเข้าร่วมการพิจารณา',
             'หลังจากส่งรายชื่อจะไม่สามารถแก้ไขข้อมูลได้',
-            'ต้องส่งทีมเข้าร่วมการพิจารณาภายในวันที่ 20 มิถุนายน 2569 เท่านั้น',
+            'ต้องส่งทีมเข้าร่วมการพิจารณาภายในวันที่ 31 พฤษภาคม 2569 เท่านั้น',
         ],
     },
     {
@@ -112,17 +112,59 @@ const competitionSteps = [
     },
 ];
 
+const REGISTRATION_PERIOD_START = '2026-04-01';
+const REGISTRATION_PERIOD_END = '2026-05-31';
+
+function parseThaiDateOnly(raw) {
+    if (!raw) return null;
+    const parsed = new Date(`${raw}T00:00:00+07:00`);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+}
+
+function addDays(date, days) {
+    const next = new Date(date.getTime());
+    next.setDate(next.getDate() + days);
+    return next;
+}
+
+function endOfMonth(date) {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+
+function formatShortThaiDate(date) {
+    return date.toLocaleDateString('th-TH', {
+        day: 'numeric',
+        month: 'short',
+    });
+}
+
+function formatThaiDateRange(startDate, endDate) {
+    if (startDate.getTime() === endDate.getTime()) {
+        return formatShortThaiDate(startDate);
+    }
+
+    if (
+        startDate.getMonth() === endDate.getMonth()
+        && startDate.getFullYear() === endDate.getFullYear()
+    ) {
+        return `${startDate.toLocaleDateString('th-TH', { day: 'numeric' })}-${formatShortThaiDate(endDate)}`;
+    }
+
+    return `${formatShortThaiDate(startDate)}-${formatShortThaiDate(endDate)}`;
+}
+
 function formatCompactNumber(value) {
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return '-';
     return numeric.toLocaleString('th-TH');
 }
 
-function formatTrendPeriodLabel(periodStart, mode) {
+function formatTrendPeriodLabel(periodStart, mode, chartStartDate, chartEndDate) {
     if (!periodStart) return '-';
 
-    const parsed = new Date(`${periodStart}T00:00:00`);
-    if (Number.isNaN(parsed.getTime())) return String(periodStart);
+    const parsed = parseThaiDateOnly(periodStart);
+    if (!parsed) return String(periodStart);
 
     if (mode === 'monthly') {
         return parsed.toLocaleDateString('th-TH', {
@@ -131,39 +173,32 @@ function formatTrendPeriodLabel(periodStart, mode) {
         });
     }
 
-    return parsed.toLocaleDateString('th-TH', {
-        day: 'numeric',
-        month: 'short',
-    });
+    const naturalRangeStart = parsed;
+    const naturalRangeEnd = addDays(parsed, 6);
+    const effectiveStart = chartStartDate && naturalRangeStart < chartStartDate ? chartStartDate : naturalRangeStart;
+    const effectiveEnd = chartEndDate && naturalRangeEnd > chartEndDate ? chartEndDate : naturalRangeEnd;
+
+    return formatThaiDateRange(effectiveStart, effectiveEnd);
 }
 
-function buildLineGeometry(values, width, height, paddingX, paddingY, maxValue) {
-    if (!values.length) {
-        return { points: [], linePath: '', areaPath: '' };
-    }
-
-    const usableWidth = Math.max(1, width - (paddingX * 2));
+function buildBarGeometry(values, width, height, paddingX, paddingY, maxValue, offsetX, barWidth, stepX) {
     const usableHeight = Math.max(1, height - (paddingY * 2));
-    const denominator = values.length > 1 ? values.length - 1 : 1;
     const safeMax = Math.max(1, maxValue);
-
-    const points = values.map((value, index) => {
-        const ratio = Math.max(0, Number(value)) / safeMax;
-        const x = paddingX + (usableWidth * index) / denominator;
-        const y = paddingY + usableHeight - (ratio * usableHeight);
-        return { x, y };
-    });
-
-    const linePath = points
-        .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
-        .join(' ');
-
-    const first = points[0];
-    const last = points[points.length - 1];
     const baseline = height - paddingY;
-    const areaPath = `${linePath} L ${last.x.toFixed(2)} ${baseline.toFixed(2)} L ${first.x.toFixed(2)} ${baseline.toFixed(2)} Z`;
 
-    return { points, linePath, areaPath };
+    return values.map((value, index) => {
+        const ratio = Math.max(0, Number(value)) / safeMax;
+        const barHeight = ratio * usableHeight;
+        const x = paddingX + (stepX * index) + offsetX;
+        const y = baseline - barHeight;
+
+        return {
+            x,
+            y,
+            width: barWidth,
+            height: barHeight,
+        };
+    });
 }
 
 function ParticipationTrendChart({ rows, mode }) {
@@ -179,15 +214,24 @@ function ParticipationTrendChart({ rows, mode }) {
     const teamValues = rows.map((row) => Number(row.totalTeams) || 0);
     const maxValue = Math.max(...participantValues, ...teamValues, 1);
 
-    const participantLine = buildLineGeometry(participantValues, width, height, paddingX, paddingY, maxValue);
-    const teamLine = buildLineGeometry(teamValues, width, height, paddingX, paddingY, maxValue);
+    const usableWidth = Math.max(1, width - (paddingX * 2));
+    const groupCount = Math.max(rows.length, 1);
+    const stepX = usableWidth / groupCount;
+    const innerGap = Math.max(1.5, stepX * 0.08);
+    const barWidth = Math.min(14, Math.max(2, ((stepX - innerGap) * 0.42)));
+    const groupWidth = (barWidth * 2) + innerGap;
+    const startOffset = (stepX - groupWidth) / 2;
 
-    const firstLabel = formatTrendPeriodLabel(rows[0]?.periodStart, mode);
-    const lastLabel = formatTrendPeriodLabel(rows[rows.length - 1]?.periodStart, mode);
+    const participantBars = buildBarGeometry(participantValues, width, height, paddingX, paddingY, maxValue, startOffset, barWidth, stepX);
+    const teamBars = buildBarGeometry(teamValues, width, height, paddingX, paddingY, maxValue, startOffset + barWidth + innerGap, barWidth, stepX);
+
+    const axisPaddingPercent = (paddingX / width) * 100;
+    const chartStartDate = parseThaiDateOnly(REGISTRATION_PERIOD_START);
+    const chartEndDate = parseThaiDateOnly(REGISTRATION_PERIOD_END);
 
     return (
         <div className="gt-participation-chart-shell">
-            <svg className="gt-participation-chart" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" role="img" aria-label="แนวโน้มผู้สมัครและทีม">
+            <svg className="gt-participation-chart" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" role="img" aria-label="กราฟแท่งผู้สมัครและทีม">
                 <defs>
                     <linearGradient id="gt-participation-users-fill" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="rgba(124, 58, 237, 0.34)" />
@@ -199,22 +243,28 @@ function ParticipationTrendChart({ rows, mode }) {
                     </linearGradient>
                 </defs>
 
-                <path d={participantLine.areaPath} fill="url(#gt-participation-users-fill)" />
-                <path d={teamLine.areaPath} fill="url(#gt-participation-teams-fill)" />
+                <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="rgba(148, 163, 184, 0.42)" strokeWidth="1" />
 
-                <path d={participantLine.linePath} fill="none" stroke="#7c3aed" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d={teamLine.linePath} fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-
-                {participantLine.points.map((point, index) => (
-                    <circle key={`participants-${index}`} cx={point.x} cy={point.y} r="2.7" fill="#7c3aed" />
+                {participantBars.map((bar, index) => (
+                    <rect key={`participants-${index}`} x={bar.x} y={bar.y} width={bar.width} height={bar.height} rx="2.8" fill="url(#gt-participation-users-fill)" stroke="rgba(124, 58, 237, 0.9)" strokeWidth="1" />
                 ))}
-                {teamLine.points.map((point, index) => (
-                    <circle key={`teams-${index}`} cx={point.x} cy={point.y} r="2.5" fill="#3b82f6" />
+                {teamBars.map((bar, index) => (
+                    <rect key={`teams-${index}`} x={bar.x} y={bar.y} width={bar.width} height={bar.height} rx="2.8" fill="url(#gt-participation-teams-fill)" stroke="rgba(59, 130, 246, 0.9)" strokeWidth="1" />
                 ))}
             </svg>
-            <div className="gt-participation-axis">
-                <span>{firstLabel}</span>
-                <span>{lastLabel}</span>
+            <div
+                className="gt-participation-axis gt-participation-axis-grid"
+                style={{
+                    gridTemplateColumns: `repeat(${rows.length}, minmax(0, 1fr))`,
+                    paddingLeft: `${axisPaddingPercent}%`,
+                    paddingRight: `${axisPaddingPercent}%`,
+                }}
+            >
+                {rows.map((row, index) => (
+                    <span key={`${row.periodStart || 'period'}-${index}`}>
+                        {formatTrendPeriodLabel(row.periodStart, mode, chartStartDate, chartEndDate)}
+                    </span>
+                ))}
             </div>
         </div>
     );
@@ -559,7 +609,18 @@ function HomePage() {
     const participationTrendRows = useMemo(() => {
         const rows = participationOverview?.trend?.[participationMode];
         if (!Array.isArray(rows)) return [];
-        return rows;
+
+        const rangeStart = parseThaiDateOnly(REGISTRATION_PERIOD_START);
+        const rangeEnd = parseThaiDateOnly(REGISTRATION_PERIOD_END);
+        if (!rangeStart || !rangeEnd) return rows;
+
+        return rows.filter((row) => {
+            const rowStart = parseThaiDateOnly(row?.periodStart);
+            if (!rowStart) return false;
+
+            const rowEnd = participationMode === 'weekly' ? addDays(rowStart, 6) : endOfMonth(rowStart);
+            return rowEnd >= rangeStart && rowStart <= rangeEnd;
+        });
     }, [participationMode, participationOverview]);
 
     const participationUpdatedAtLabel = useMemo(() => {
