@@ -1,28 +1,157 @@
 import type { DB } from '../../config/db.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
-import type { SubmissionFileRow, TeamAdvisorRow } from './submissions.types.js';
+import type {
+    SubmissionFileRow,
+    SubmissionTaskRow,
+    TeamAdvisorRow,
+    TeamSubmissionTaskRow,
+    TeamSubmissionTaskWithMetaRow,
+} from './submissions.types.js';
 
-// ── Video Link ──
+// -- Submission Tasks --
 
-export async function getVideoLink(db: DB, teamId: number): Promise<string | null> {
-    const [rows] = await db.query<RowDataPacket[]>(
-        'SELECT video_link FROM team_teams WHERE team_id = ? AND deleted_at IS NULL',
-        [teamId]
+export async function getEnabledSubmissionTasks(db: DB): Promise<SubmissionTaskRow[]> {
+    const [rows] = await db.query<SubmissionTaskRow[]>(
+        `SELECT *
+         FROM submission_tasks
+         WHERE deleted_at IS NULL
+           AND is_enabled = 1
+         ORDER BY sort_order ASC, submission_task_id ASC`
     );
-    return rows[0]?.video_link ?? null;
+    return rows;
 }
 
-export async function updateVideoLink(db: DB, teamId: number, videoLink: string | null): Promise<void> {
+export async function getSubmissionTaskById(db: DB, submissionTaskId: number): Promise<SubmissionTaskRow | null> {
+    const [rows] = await db.query<SubmissionTaskRow[]>(
+        `SELECT *
+         FROM submission_tasks
+         WHERE submission_task_id = :submissionTaskId
+           AND deleted_at IS NULL
+         LIMIT 1`,
+        { submissionTaskId }
+    );
+    return rows[0] ?? null;
+}
+
+export async function getTeamSubmissionTasks(db: DB, teamId: number): Promise<TeamSubmissionTaskWithMetaRow[]> {
+    const [rows] = await db.query<TeamSubmissionTaskWithMetaRow[]>(
+        `SELECT
+            tst.*,
+            st.task_name,
+            st.task_type,
+            st.is_required,
+            st.is_default AS task_is_default,
+            st.allowed_extensions,
+            st.sort_order,
+            st.is_enabled AS task_is_enabled
+         FROM team_submission_tasks tst
+         JOIN submission_tasks st
+           ON st.submission_task_id = tst.submission_task_id
+         WHERE tst.team_id = :teamId
+           AND tst.deleted_at IS NULL
+           AND st.deleted_at IS NULL
+           AND st.is_enabled = 1
+         ORDER BY st.sort_order ASC, tst.team_submission_task_id ASC`,
+        { teamId }
+    );
+    return rows;
+}
+
+export async function getTeamSubmissionTaskById(db: DB, teamSubmissionTaskId: number): Promise<TeamSubmissionTaskWithMetaRow | null> {
+    const [rows] = await db.query<TeamSubmissionTaskWithMetaRow[]>(
+        `SELECT
+            tst.*,
+            st.task_name,
+            st.task_type,
+            st.is_required,
+            st.is_default AS task_is_default,
+            st.allowed_extensions,
+            st.sort_order,
+            st.is_enabled AS task_is_enabled
+         FROM team_submission_tasks tst
+         JOIN submission_tasks st
+           ON st.submission_task_id = tst.submission_task_id
+         WHERE tst.team_submission_task_id = :teamSubmissionTaskId
+           AND tst.deleted_at IS NULL
+           AND st.deleted_at IS NULL
+         LIMIT 1`,
+        { teamSubmissionTaskId }
+    );
+    return rows[0] ?? null;
+}
+
+export async function updateTeamTaskLink(db: DB, teamSubmissionTaskId: number, linkUrl: string | null): Promise<void> {
     await db.query(
-        'UPDATE team_teams SET video_link = ? WHERE team_id = ? AND deleted_at IS NULL',
-        [videoLink, teamId]
+        `UPDATE team_submission_tasks
+         SET link_url = :linkUrl,
+             updated_at = NOW()
+         WHERE team_submission_task_id = :teamSubmissionTaskId
+           AND deleted_at IS NULL`,
+        { teamSubmissionTaskId, linkUrl }
     );
 }
 
-// ── Submission Files ──
+export async function assignTaskToTeam(
+    db: DB,
+    data: {
+        teamId: number;
+        submissionTaskId: number;
+        assignedByUserId: number | null;
+        assignedSource: 'default' | 'admin_team' | 'admin_status' | 'system_backfill';
+    }
+): Promise<number> {
+    const [result] = await db.query<ResultSetHeader>(
+        `INSERT INTO team_submission_tasks
+            (team_id, submission_task_id, assigned_by_user_id, assigned_source)
+         VALUES (:teamId, :submissionTaskId, :assignedByUserId, :assignedSource)
+         ON DUPLICATE KEY UPDATE
+            deleted_at = NULL,
+            updated_at = NOW(),
+            assigned_by_user_id = VALUES(assigned_by_user_id),
+            assigned_source = VALUES(assigned_source)`,
+        data
+    );
+    return result.insertId;
+}
+
+export async function getTeamTaskByTeamAndTask(db: DB, teamId: number, submissionTaskId: number): Promise<TeamSubmissionTaskRow | null> {
+    const [rows] = await db.query<TeamSubmissionTaskRow[]>(
+        `SELECT *
+         FROM team_submission_tasks
+         WHERE team_id = :teamId
+           AND submission_task_id = :submissionTaskId
+           AND deleted_at IS NULL
+         LIMIT 1`,
+        { teamId, submissionTaskId }
+    );
+    return rows[0] ?? null;
+}
+
+export async function assignDefaultTasksToTeam(db: DB, teamId: number): Promise<void> {
+    await db.query(
+        `INSERT INTO team_submission_tasks
+            (team_id, submission_task_id, assigned_by_user_id, assigned_source)
+         SELECT
+            :teamId,
+            st.submission_task_id,
+            NULL,
+            'default'
+         FROM submission_tasks st
+         WHERE st.deleted_at IS NULL
+           AND st.is_enabled = 1
+           AND st.is_default = 1
+         ON DUPLICATE KEY UPDATE
+            deleted_at = NULL,
+            updated_at = NOW()`,
+        { teamId }
+    );
+}
+
+// -- Submission Files --
 
 export async function insertSubmissionFile(db: DB, data: {
     teamId: number;
+    teamSubmissionTaskId: number;
     fileStorageKey: string;
     fileOriginalName: string;
     fileMimeType: string;
@@ -31,37 +160,55 @@ export async function insertSubmissionFile(db: DB, data: {
 }): Promise<number> {
     const [result] = await db.query<ResultSetHeader>(
         `INSERT INTO team_submission_files
-            (team_id, file_storage_key, file_original_name, file_mime_type, file_size_bytes, uploaded_by_user_id)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [data.teamId, data.fileStorageKey, data.fileOriginalName, data.fileMimeType, data.fileSizeBytes, data.uploadedByUserId]
+            (team_id, team_submission_task_id, file_storage_key, file_original_name, file_mime_type, file_size_bytes, uploaded_by_user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+            data.teamId,
+            data.teamSubmissionTaskId,
+            data.fileStorageKey,
+            data.fileOriginalName,
+            data.fileMimeType,
+            data.fileSizeBytes,
+            data.uploadedByUserId,
+        ]
     );
     return result.insertId;
 }
 
-export async function getSubmissionFiles(db: DB, teamId: number): Promise<SubmissionFileRow[]> {
+export async function getSubmissionFilesByTeamTask(db: DB, teamSubmissionTaskId: number): Promise<SubmissionFileRow[]> {
     const [rows] = await db.query<SubmissionFileRow[]>(
-        'SELECT * FROM team_submission_files WHERE team_id = ? AND deleted_at IS NULL ORDER BY uploaded_at DESC',
-        [teamId]
+        `SELECT *
+         FROM team_submission_files
+         WHERE team_submission_task_id = :teamSubmissionTaskId
+           AND deleted_at IS NULL
+         ORDER BY uploaded_at DESC`,
+        { teamSubmissionTaskId }
     );
     return rows;
 }
 
 export async function getSubmissionFileById(db: DB, fileId: number): Promise<SubmissionFileRow | null> {
     const [rows] = await db.query<SubmissionFileRow[]>(
-        'SELECT * FROM team_submission_files WHERE file_id = ? AND deleted_at IS NULL',
-        [fileId]
+        `SELECT *
+         FROM team_submission_files
+         WHERE file_id = :fileId
+           AND deleted_at IS NULL
+         LIMIT 1`,
+        { fileId }
     );
     return rows[0] ?? null;
 }
 
 export async function softDeleteSubmissionFile(db: DB, fileId: number): Promise<void> {
     await db.query(
-        'UPDATE team_submission_files SET deleted_at = NOW() WHERE file_id = ?',
-        [fileId]
+        `UPDATE team_submission_files
+         SET deleted_at = NOW()
+         WHERE file_id = :fileId`,
+        { fileId }
     );
 }
 
-// ── Advisors ──
+// -- Advisors --
 
 export async function insertAdvisor(db: DB, data: {
     teamId: number;
@@ -147,7 +294,7 @@ export async function deleteAdvisor(db: DB, advisorId: number): Promise<void> {
     await db.query('DELETE FROM team_advisors WHERE advisor_id = ?', [advisorId]);
 }
 
-// ── Team helpers ──
+// -- Team helpers --
 
 export async function getTeamById(db: DB, teamId: number): Promise<RowDataPacket | null> {
     const [rows] = await db.query<RowDataPacket[]>(
@@ -163,4 +310,19 @@ export async function getTeamMember(db: DB, teamId: number, userId: number): Pro
         [teamId, userId]
     );
     return rows[0] ?? null;
+}
+
+export async function listTeamIdsByStatuses(
+    db: DB,
+    statuses: Array<'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined' | 'disbanded'>,
+): Promise<number[]> {
+    if (statuses.length === 0) return [];
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT team_id
+         FROM team_teams
+         WHERE status IN (?)
+           AND deleted_at IS NULL`,
+        [statuses]
+    );
+    return rows.map((row) => Number(row.team_id)).filter((id) => Number.isFinite(id));
 }

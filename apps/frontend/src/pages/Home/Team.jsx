@@ -225,8 +225,8 @@ export default function TeamContent({ user }) {
     // ── Submission state ──
     const [submissionData, setSubmissionData] = useState(null);
     const [submissionLoading, setSubmissionLoading] = useState(false);
-    const [videoLinkInput, setVideoLinkInput] = useState('');
-    const [videoLinkSaving, setVideoLinkSaving] = useState(false);
+    const [taskLinkInputs, setTaskLinkInputs] = useState({});
+    const [savingTaskLinkId, setSavingTaskLinkId] = useState(null);
 
     // ── Advisor state ──
     const [advisorForm, setAdvisorForm] = useState({ open: false, editId: null, prefix: '', firstNameTh: '', lastNameTh: '', firstNameEn: '', lastNameEn: '', email: '', phone: '', institutionNameTh: '', position: '' });
@@ -280,7 +280,13 @@ export default function TeamContent({ user }) {
             const payload = await res.json();
             if (payload.ok) {
                 setSubmissionData(payload.data);
-                setVideoLinkInput(payload.data.videoLink || '');
+                const nextLinkInputs = {};
+                (payload.data?.tasks || []).forEach((task) => {
+                    if (task.taskType === 'link') {
+                        nextLinkInputs[task.teamSubmissionTaskId] = task.linkUrl || '';
+                    }
+                });
+                setTaskLinkInputs(nextLinkInputs);
                 return payload.data;
             }
         } catch (err) { console.error('failed to fetch submission data', err); }
@@ -626,7 +632,7 @@ export default function TeamContent({ user }) {
         }
         const inviteeUserName = inviteUserNameInput.trim();
         if (!inviteeUserName) {
-            throw new Error('กรุณากรอก username ที่ต้องการเชิญ');
+            throw new Error('กรุณากรอก Username ที่ต้องการเชิญ');
         }
         const res = await fetch(apiUrl(`/api/teams/${team.id}/invitations`), {
             method: 'POST',
@@ -960,12 +966,30 @@ export default function TeamContent({ user }) {
     const allMembersConfirmed = verifyMembers.length > 0 && verifyMembers.every((m) => m.is_member_confirmed);
     const advisorCount = Array.isArray(submissionData?.advisors) ? submissionData.advisors.length : 0;
     const hasAdvisor = advisorCount > 0;
+    const requiredSubmissionTasksForReadiness = Array.isArray(submissionData?.tasks)
+        ? submissionData.tasks.filter((task) => task.isRequired && task.isDefault)
+        : [];
+    const requiredSubmissionTasksForCard = Array.isArray(submissionData?.tasks)
+        ? submissionData.tasks.filter((task) => task.isRequired)
+        : [];
+    const hasRequiredSubmissionTaskForCard = requiredSubmissionTasksForCard.length > 0;
+    const hasMissingRequiredTaskForReadiness = requiredSubmissionTasksForReadiness.some((task) => {
+        if (task.taskType === 'link') return !String(task.linkUrl || '').trim();
+        if (task.taskType === 'file') return !Array.isArray(task.files) || task.files.length === 0;
+        return false;
+    });
+    const hasMissingRequiredTaskForCard = requiredSubmissionTasksForCard.some((task) => {
+        if (task.taskType === 'link') return !String(task.linkUrl || '').trim();
+        if (task.taskType === 'file') return !Array.isArray(task.files) || task.files.length === 0;
+        return false;
+    });
     const isMinMembersReady = memberCountForSubmit >= MIN_SUBMIT_MEMBERS;
 
     const submitReadinessRules = [
         { id: 'members-confirmed', ok: allMembersConfirmed, label: 'สมาชิกทุกคนต้องยืนยันเอกสารยืนยันตัวตนให้ครบ' },
         { id: 'advisor', ok: hasAdvisor, label: 'ทีมต้องมีอาจารย์ที่ปรึกษาอย่างน้อย 1 คน' },
         { id: 'min-members', ok: isMinMembersReady, label: `ทีมต้องมีสมาชิกอย่างน้อย ${MIN_SUBMIT_MEMBERS} คน (ปัจจุบัน ${memberCountForSubmit} คน)` },
+        { id: 'required-submission-tasks', ok: !hasMissingRequiredTaskForReadiness, label: 'กรุณาส่งข้อมูลงานที่บังคับให้ครบก่อนยืนยันเข้าร่วมการคัดเลือก' },
     ];
     const submitMissing = readinessLoaded
         ? submitReadinessRules.filter((item) => !item.ok).map((item) => item.label)
@@ -974,10 +998,15 @@ export default function TeamContent({ user }) {
         ? Math.round((submitReadinessRules.filter((item) => item.ok).length / submitReadinessRules.length) * 100)
         : 0;
     const shouldShowParticipationConfirm = team.status === 'passed' && !team.confirmedAt;
+    const isParticipationConfirmed = team.status === 'confirmed';
 
-    const verifyNotify = allMembersConfirmed ? 'success' : 'danger';
+    const verifyNotify = isLeader
+        ? (allMembersConfirmed ? 'success' : 'danger')
+        : (isMyVerificationConfirmed ? 'success' : 'danger');
     const advisorNotify = hasAdvisor ? 'success' : 'danger';
-    const workNotify = 'optional';
+    const workNotify = hasRequiredSubmissionTaskForCard
+        ? (hasMissingRequiredTaskForCard ? 'danger' : 'success')
+        : 'optional';
     const cardNotifyById = {
         verify: verifyNotify,
         advisor: advisorNotify,
@@ -1186,6 +1215,17 @@ export default function TeamContent({ user }) {
                 if (!hasAdvisor) {
                     throw new Error('ทีมต้องมีอาจารย์ที่ปรึกษาอย่างน้อย 1 คนก่อนยืนยันเข้าร่วมการคัดเลือก');
                 }
+                const requiredTasks = Array.isArray(latestSubmission.tasks)
+                    ? latestSubmission.tasks.filter((task) => task.isRequired && task.isDefault)
+                    : [];
+                const missingRequiredTask = requiredTasks.find((task) => {
+                    if (task.taskType === 'link') return !String(task.linkUrl || '').trim();
+                    if (task.taskType === 'file') return !Array.isArray(task.files) || task.files.length === 0;
+                    return false;
+                });
+                if (missingRequiredTask) {
+                    throw new Error(`ยังไม่ได้ส่งงานที่บังคับ: ${missingRequiredTask.taskName}`);
+                }
 
                 const res = await fetch(apiUrl(`/api/verification/team/${team.id}/submit`), {
                     method: 'POST', credentials: 'include',
@@ -1256,6 +1296,22 @@ export default function TeamContent({ user }) {
                 window.location.reload();
             }, { toastError: true });
         }, 'success');
+    };
+
+    const handleDeclineParticipation = () => {
+        openConfirm('ปฏิเสธการเข้าร่วมโครงการ', 'หากปฏิเสธแล้ว ทีมจะถูกปรับเป็นสถานะ "ไม่กดเข้าร่วมโครงการ" ทันที', () => {
+            closeConfirm();
+            withAction(async () => {
+                const res = await fetch(apiUrl(`/api/teams/${team.id}/decline-participation`), {
+                    method: 'POST',
+                    credentials: 'include',
+                });
+                const payload = await res.json();
+                if (!payload.ok) throw new Error(payload.message || 'ปฏิเสธการเข้าร่วมไม่สำเร็จ');
+                showToast('ปฏิเสธการเข้าร่วมสำเร็จ', 'success');
+                window.location.reload();
+            }, { toastError: true });
+        }, 'danger');
     };
 
     const handleUpdateTeamName = () => {
@@ -1723,31 +1779,32 @@ export default function TeamContent({ user }) {
         works: () => {
             if (submissionLoading && !submissionData) return renderSimpleDetail('ส่งผลงาน', <Award size={20} />, <div className="gl-empty-state"><Loader2 size={40} /><h3>กำลังโหลด...</h3></div>);
 
-            const files = submissionData?.files || [];
-            const isWorksLocked = isTeamEditLocked;
-            const handleSaveVideoLink = async () => {
-                if (!team?.id) return;
+            const tasks = Array.isArray(submissionData?.tasks) ? submissionData.tasks : [];
+            const isWorksLocked = ['disbanded', 'not_joined'].includes(String(team?.status || ''));
+            const handleSaveTaskLink = async (task) => {
+                if (!team?.id || !task?.teamSubmissionTaskId) return;
                 if (isWorksLocked) {
                     showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขผลงานได้', 'error');
                     return;
                 }
-                setVideoLinkSaving(true);
+                const currentValue = String(taskLinkInputs?.[task.teamSubmissionTaskId] ?? task.linkUrl ?? '').trim();
+                setSavingTaskLinkId(task.teamSubmissionTaskId);
                 try {
-                    const res = await fetch(apiUrl(`/api/submissions/team/${team.id}/video-link`), {
+                    const res = await fetch(apiUrl(`/api/submissions/team/${team.id}/tasks/${task.teamSubmissionTaskId}/link`), {
                         method: 'PUT', credentials: 'include',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ videoLink: videoLinkInput.trim() || null }),
+                        body: JSON.stringify({ linkUrl: currentValue || null }),
                     });
                     const payload = await res.json();
                     if (!payload.ok) throw new Error(payload.message || 'บันทึกไม่สำเร็จ');
-                    showToast('บันทึกลิงก์วิดีโอสำเร็จ', 'success');
+                    showToast('บันทึกลิงก์สำเร็จ', 'success');
                     fetchSubmissionData();
                 } catch (err) { showToast(getReadableErrorMessage(err, 'บันทึกไม่สำเร็จ'), 'error'); }
-                finally { setVideoLinkSaving(false); }
+                finally { setSavingTaskLinkId(null); }
             };
 
-            const handleUploadSubmissionFiles = async (fileList) => {
-                if (!team?.id || !fileList?.length) return;
+            const handleUploadSubmissionFiles = async (task, fileList) => {
+                if (!team?.id || !task?.teamSubmissionTaskId || !fileList?.length) return;
                 if (isWorksLocked) {
                     showToast('ทีมถูกล็อกแล้ว ไม่สามารถอัปโหลดไฟล์ผลงานได้', 'error');
                     return;
@@ -1755,7 +1812,7 @@ export default function TeamContent({ user }) {
                 await withAction(async () => {
                     const formData = new FormData();
                     for (const f of fileList) formData.append('files', f);
-                    const res = await fetch(apiUrl(`/api/submissions/team/${team.id}/files`), {
+                    const res = await fetch(apiUrl(`/api/submissions/team/${team.id}/tasks/${task.teamSubmissionTaskId}/files`), {
                         method: 'POST', credentials: 'include', body: formData,
                     });
                     const payload = await res.json();
@@ -1788,86 +1845,128 @@ export default function TeamContent({ user }) {
                 <div>
                     <div className="vf-info-banner">
                         <Info size={16} />
-                        <span>หัวหน้าทีมเท่านั้นที่สามารถส่งลิงก์วิดีโอและแนบไฟล์ผลงานได้</span>
+                        <span>หัวหน้าทีมเท่านั้นที่สามารถแก้ไขรายการส่งผลงานได้</span>
                     </div>
                     {isWorksLocked && (
                         <div className="vf-info-banner vf-submitted">
                             <Lock size={16} />
-                            <span>ทีมส่งเข้าคัดเลือกแล้ว ไม่สามารถแก้ไขข้อมูลส่งผลงานได้</span>
+                            <span>ทีมอยู่ในสถานะที่ไม่สามารถแก้ไขงานส่งผลงานได้</span>
                         </div>
                     )}
 
-                    {/* Video Link Section */}
-                    <div className="gl-team-info-card">
-                        <span className="gl-team-info-label"><Link size={13} /> ลิงก์วิดีโอ</span>
-                        <p className="vf-hint" style={{ marginBottom: 8 }}>ระบุลิงก์ YouTube หรือ Google Drive เท่านั้น</p>
-                        <div className="sub-video-input-row">
-                            <input
-                                className="pf-input"
-                                value={videoLinkInput}
-                                onChange={(e) => setVideoLinkInput(e.target.value)}
-                                placeholder="https://www.youtube.com/watch?v=... หรือ https://drive.google.com/..."
-                                disabled={!isLeader || videoLinkSaving || isWorksLocked}
-                            />
-                            {isLeader && (
-                                <button className="gl-action-btn gl-submit-btn" onClick={handleSaveVideoLink} disabled={videoLinkSaving || isWorksLocked}>
-                                    {videoLinkSaving ? <Loader2 size={16} /> : <Save size={16} />}
-                                    บันทึก
-                                </button>
-                            )}
-                        </div>
-                        {submissionData?.videoLink && (
-                            <a href={submissionData.videoLink} target="_blank" rel="noopener noreferrer" className="sub-video-link-preview">
-                                <Link size={14} /> {submissionData.videoLink}
-                            </a>
-                        )}
-                    </div>
-
-                    {/* File Attachments Section */}
-                    <div className="gl-team-info-card">
-                        <span className="gl-team-info-label"><Paperclip size={13} /> ไฟล์แนบผลงาน ({files.length} ไฟล์)</span>
-                        <p className="vf-hint" style={{ marginBottom: 8 }}>รองรับไฟล์ .pdf, .docx, .png, .pptx</p>
-
-                        {files.length === 0 && (
+                    {tasks.length === 0 && (
+                        <div className="gl-team-info-card">
                             <div className="vf-empty-docs">
                                 <Upload size={28} />
-                                <span>ยังไม่มีไฟล์แนบ</span>
+                                <span>ยังไม่มีรายการงานที่ถูกมอบหมายให้ทีมนี้</span>
                             </div>
-                        )}
+                        </div>
+                    )}
 
-                        {files.map(f => (
-                            <div key={f.file_id} className="vf-doc-row">
-                                <div className="vf-doc-info">
-                                    <FileText size={16} />
-                                    <span className="vf-doc-name">{f.file_original_name}</span>
-                                    <span className="vf-doc-size">{(f.file_size_bytes / 1024).toFixed(0)} KB</span>
+                    {tasks.map((task) => {
+                        const files = Array.isArray(task.files) ? task.files : [];
+                        const linkValue = String(taskLinkInputs?.[task.teamSubmissionTaskId] ?? task.linkUrl ?? '');
+                        const requiredClass = task.isRequired ? 'required' : 'optional';
+                        const requiredLabel = task.isRequired ? 'บังคับ' : 'ไม่บังคับ';
+                        const isTaskLocked = isWorksLocked || !task.isSubmissionOpen || task.isDeadlinePassed;
+
+                        return (
+                            <div key={task.teamSubmissionTaskId} className="gl-team-info-card">
+                                <div className="sub-task-card-header">
+                                    <span className="gl-team-info-label">
+                                        {task.taskType === 'link' ? <Link size={13} /> : <Paperclip size={13} />} {task.taskName}
+                                    </span>
+                                    <div className="sub-task-header-badges">
+                                        <span className={`sub-task-required ${requiredClass}`}>{requiredLabel}</span>
+                                        {!task.isSubmissionOpen && <span className="sub-task-required warning"><Lock size={12} /> งานนี้ปิดการส่งแล้ว</span>}
+                                        {task.isDeadlinePassed && <span className="sub-task-required warning"><Clock size={12} /> หมดเวลาส่ง</span>}
+                                    </div>
                                 </div>
-                                <div className="vf-doc-actions">
-                                    <a href={apiUrl(`/api/submissions/team/${team.id}/files/${f.file_id}/download`)} target="_blank" rel="noopener noreferrer" className="vf-doc-open">
-                                        <Eye size={14} /> ดู
-                                    </a>
-                                    <a href={apiUrl(`/api/submissions/team/${team.id}/files/${f.file_id}/download?download=1`)} target="_blank" rel="noopener noreferrer" className="vf-doc-download">
-                                        <Download size={14} /> ดาวน์โหลด
-                                    </a>
-                                    {isLeader && (
-                                        <button className="vf-doc-delete" disabled={actionLoading || isWorksLocked} onClick={() => handleDeleteSubmissionFile(f.file_id, f.file_original_name)}>
-                                            <Trash2 size={14} />
-                                        </button>
-                                    )}
-                                </div>
+
+                                {task.deadlineAt && !task.isDeadlinePassed && (
+                                    <div className="sub-task-hint-row">
+                                        <span className="sub-task-required info"><Clock size={12} /> กำหนดส่ง: {formatDateTime(task.deadlineAt)}</span>
+                                    </div>
+                                )}
+
+                                {task.taskType === 'link' ? (
+                                    <>
+                                        <p className="vf-hint" style={{ marginBottom: 8 }}>กรอกลิงก์ผลงานของงานนี้</p>
+                                        <div className="sub-video-input-row">
+                                            <input
+                                                className="pf-input"
+                                                value={linkValue}
+                                                onChange={(e) => setTaskLinkInputs((prev) => ({ ...prev, [task.teamSubmissionTaskId]: e.target.value }))}
+                                                placeholder="https://..."
+                                                disabled={!isLeader || isTaskLocked || savingTaskLinkId === task.teamSubmissionTaskId}
+                                            />
+                                            {isLeader && (
+                                                <button
+                                                    className="gl-action-btn gl-submit-btn"
+                                                    onClick={() => handleSaveTaskLink(task)}
+                                                    disabled={isTaskLocked || savingTaskLinkId === task.teamSubmissionTaskId}
+                                                >
+                                                    {savingTaskLinkId === task.teamSubmissionTaskId ? <Loader2 size={16} /> : <Save size={16} />}
+                                                    บันทึก
+                                                </button>
+                                            )}
+                                        </div>
+                                        {task.linkUrl && (
+                                            <a href={task.linkUrl} target="_blank" rel="noopener noreferrer" className="sub-video-link-preview">
+                                                <Link size={14} /> {task.linkUrl}
+                                            </a>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="vf-hint" style={{ marginBottom: 8 }}>
+                                            รองรับไฟล์ {Array.isArray(task.allowedExtensions) && task.allowedExtensions.length > 0 ? task.allowedExtensions.join(', ') : '.pdf,.docx,.png,.pptx'}
+                                        </p>
+                                        {files.length === 0 && <p className="vf-hint">ยังไม่มีไฟล์แนบ</p>}
+                                        {files.map((f) => (
+                                            <div key={f.file_id} className="vf-doc-row">
+                                                <div className="vf-doc-info">
+                                                    <FileText size={16} />
+                                                    <span className="vf-doc-name">{f.file_original_name}</span>
+                                                    <span className="vf-doc-size">{(f.file_size_bytes / 1024).toFixed(0)} KB</span>
+                                                </div>
+                                                <div className="vf-doc-actions">
+                                                    <a href={apiUrl(`/api/submissions/team/${team.id}/files/${f.file_id}/download`)} target="_blank" rel="noopener noreferrer" className="vf-doc-open">
+                                                        <Eye size={14} /> ดู
+                                                    </a>
+                                                    <a href={apiUrl(`/api/submissions/team/${team.id}/files/${f.file_id}/download?download=1`)} target="_blank" rel="noopener noreferrer" className="vf-doc-download">
+                                                        <Download size={14} /> ดาวน์โหลด
+                                                    </a>
+                                                    {isLeader && (
+                                                        <button className="vf-doc-delete" disabled={actionLoading || isTaskLocked} onClick={() => handleDeleteSubmissionFile(f.file_id, f.file_original_name)}>
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {isLeader && !isTaskLocked && (
+                                            <label className="vf-upload-btn">
+                                                <Upload size={16} /> เลือกไฟล์
+                                                <input
+                                                    type="file"
+                                                    accept={(Array.isArray(task.allowedExtensions) && task.allowedExtensions.length > 0)
+                                                        ? task.allowedExtensions.join(',')
+                                                        : '.pdf,.docx,.png,.pptx'}
+                                                    multiple
+                                                    hidden
+                                                    onChange={(e) => {
+                                                        handleUploadSubmissionFiles(task, Array.from(e.target.files));
+                                                        e.target.value = '';
+                                                    }}
+                                                />
+                                            </label>
+                                        )}
+                                    </>
+                                )}
                             </div>
-                        ))}
-
-                        {isLeader && !isWorksLocked && (
-                            <label className="vf-upload-btn">
-                                <Upload size={16} /> เลือกไฟล์
-                                <input type="file" accept=".pdf,.docx,.png,.pptx,.jpg,.jpeg" multiple hidden
-                                    onChange={(e) => { handleUploadSubmissionFiles(Array.from(e.target.files)); e.target.value = ''; }}
-                                />
-                            </label>
-                        )}
-                        {isLeader && isWorksLocked && <p className="vf-hint">ทีมถูกล็อกแล้ว ไม่สามารถอัปโหลดไฟล์เพิ่มได้</p>}
-                    </div>
+                        );
+                    })}
                 </div>
             ));
         },
@@ -2385,7 +2484,7 @@ export default function TeamContent({ user }) {
                 <main className="gl-content-panel">
                     {selectedMember === null && selectedCard === null && (
                         <div className="gl-team-top-panel">
-                            <div className="gl-top-main">
+                            <div className={`gl-top-main ${isParticipationConfirmed ? 'is-confirmed' : ''}`}>
                                 {/* Left: Team identity */}
                                 <div className="gl-top-identity">
                                     <div className="gl-top-team-icon">
@@ -2398,47 +2497,78 @@ export default function TeamContent({ user }) {
                                             <span className="gl-top-status-dot" />
                                             {statusInfo.label}
                                         </span>
+                                        {isParticipationConfirmed && team.confirmedAt && (
+                                            <span className="gl-top-team-code">ยืนยันเข้าร่วมเมื่อ: {formatDateTime(team.confirmedAt)}</span>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Center: Progress */}
-                                <div className="gl-top-progress-section">
-                                    <div className="gl-top-progress-label">ความพร้อมในการส่งทีมเข้าคัดเลือก</div>
-                                    <div className="gl-top-progress-bar-wrap">
-                                        <div className="gl-top-progress-track">
-                                            <div className="gl-top-progress-fill" style={{ width: `${submitProgress}%` }} />
+                                {isParticipationConfirmed && (
+                                    <div className="gl-top-confirmed-summary">
+                                        <span className="gl-top-confirmed-pill"><CheckCircle size={14} /> ยืนยันการเข้าร่วมโครงการแล้ว</span>
+                                    </div>
+                                )}
+
+                                {!isParticipationConfirmed && (
+                                    <>
+                                        {/* Center: Progress */}
+                                        <div className="gl-top-progress-section">
+                                            <div className="gl-top-progress-label">ความพร้อมในการส่งทีมเข้าคัดเลือก</div>
+                                            <div className="gl-top-progress-bar-wrap">
+                                                <div className="gl-top-progress-track">
+                                                    <div className="gl-top-progress-fill" style={{ width: `${submitProgress}%` }} />
+                                                </div>
+                                                <span className="gl-top-progress-pct">{readinessLoading && !readinessLoaded ? '...' : `${submitProgress}%`}</span>
+                                            </div>
                                         </div>
-                                        <span className="gl-top-progress-pct">{readinessLoading && !readinessLoaded ? '...' : `${submitProgress}%`}</span>
-                                    </div>
-                                </div>
 
-                                {/* Right: Action */}
-                                <div className="gl-top-action-section">
-                                    <button
-                                        className="gl-top-submit-btn"
-                                        disabled={
-                                            !isLeader
-                                            || actionLoading
-                                            || (shouldShowParticipationConfirm
-                                                ? confirmationExpired
-                                                : (!readinessLoaded || readinessLoading || isTeamEditLocked || submitMissing.length > 0))
-                                        }
-                                        onClick={shouldShowParticipationConfirm ? handleConfirmParticipation : handleSubmitTeam}
-                                    >
-                                        {shouldShowParticipationConfirm ? <CheckCircle size={18} /> : <ShieldCheck size={18} />}
-                                        <span>{shouldShowParticipationConfirm ? 'ยืนยันการเข้าร่วมโครงการ' : 'ยืนยันส่งทีมเข้าคัดเลือก'}</span>
-                                    </button>
-                                </div>
+                                        {/* Right: Action */}
+                                        <div className={`gl-top-action-section ${shouldShowParticipationConfirm ? 'is-participation-choice' : ''}`}>
+                                            {shouldShowParticipationConfirm ? (
+                                                <div className="gl-top-action-group">
+                                                    <button
+                                                        className="gl-top-confirm-btn"
+                                                        disabled={!isLeader || actionLoading || confirmationExpired}
+                                                        onClick={handleConfirmParticipation}
+                                                    >
+                                                        <span className="gl-top-btn-icon"><CheckCircle size={18} /></span>
+                                                        <span className="gl-top-btn-text">ยืนยันการเข้าร่วมโครงการ</span>
+                                                    </button>
+                                                    <button
+                                                        className="gl-top-decline-btn"
+                                                        disabled={!isLeader || actionLoading || confirmationExpired}
+                                                        onClick={handleDeclineParticipation}
+                                                    >
+                                                        <span className="gl-top-btn-icon"><XCircle size={16} /></span>
+                                                        <span className="gl-top-btn-text">ปฏิเสธ</span>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    className="gl-top-submit-btn"
+                                                    disabled={!isLeader || actionLoading || !readinessLoaded || readinessLoading || isTeamEditLocked || submitMissing.length > 0}
+                                                    onClick={handleSubmitTeam}
+                                                >
+                                                    <ShieldCheck size={18} />
+                                                    <span>ยืนยันส่งทีมเข้าคัดเลือก</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             {/* Hints row */}
-                            {(submitMissing.length > 0 || !isLeader || isTeamEditLocked || !readinessLoaded || (shouldShowParticipationConfirm && confirmationExpired)) && (
+                            {!isParticipationConfirmed && (submitMissing.length > 0 || !isLeader || isTeamEditLocked || !readinessLoaded || (shouldShowParticipationConfirm && confirmationExpired)) && (
                                 <div className="gl-top-hints">
                                     {!isLeader && <span className="gl-top-hint-item"><Lock size={12} /> เฉพาะหัวหน้าทีม</span>}
                                     {!readinessLoaded && <span className="gl-top-hint-item"><Loader2 size={12} /> กำลังตรวจสอบข้อมูลความพร้อมของทีม...</span>}
                                     {readinessLoaded && !shouldShowParticipationConfirm && submitMissing.map((msg, i) => (
                                         <span key={i} className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {msg}</span>
                                     ))}
+                                    {shouldShowParticipationConfirm && !confirmationExpired && (
+                                        <span className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> ทีมผ่านการคัดเลือกแล้ว กรุณากดยืนยันเข้าร่วมโครงการ หรือกดปฏิเสธหากไม่ประสงค์เข้าร่วม</span>
+                                    )}
                                     {!shouldShowParticipationConfirm && isTeamEditLocked && <span className="gl-top-hint-item"><Lock size={12} /> ทีมอยู่ในสถานะที่แก้ไขไม่ได้</span>}
                                     {shouldShowParticipationConfirm && confirmationExpired && <span className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> เลยเวลายืนยันการเข้าร่วมโครงการแล้ว</span>}
                                 </div>
@@ -2452,9 +2582,9 @@ export default function TeamContent({ user }) {
                             {CARDS.map((card) => {
                                 const notify = cardNotifyById[card.id];
                                 const notifyConfig = {
-                                    verify: { require: true, label: 'จำเป็น' },
-                                    advisor: { require: true, label: 'จำเป็น' },
-                                    works: { require: false, label: 'ไม่บังคับ' },
+                                    verify: { require: true, label: 'บังคับ' },
+                                    advisor: { require: true, label: 'บังคับ' },
+                                    works: { require: hasRequiredSubmissionTaskForCard, label: hasRequiredSubmissionTaskForCard ? 'บังคับ' : 'ไม่บังคับ' },
                                 };
                                 const cfg = notifyConfig[card.id];
                                 return (

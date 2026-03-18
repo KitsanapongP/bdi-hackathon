@@ -18,23 +18,23 @@ export async function getSubmissionData(req: FastifyRequest, reply: FastifyReply
     }
 }
 
-export async function saveVideoLink(req: FastifyRequest, reply: FastifyReply) {
-    const { teamId } = req.params as { teamId: string };
+export async function saveTaskLink(req: FastifyRequest, reply: FastifyReply) {
+    const { teamId, teamSubmissionTaskId } = req.params as { teamId: string; teamSubmissionTaskId: string };
     const userId = (req.user as any).userId;
     const db = req.server.ctx.db;
-    const { videoLink } = req.body as { videoLink: string | null };
+    const { linkUrl } = req.body as { linkUrl: string | null };
 
     try {
-        await service.saveVideoLink(db, Number(teamId), userId, videoLink);
-        return reply.send(ok(null, 'บันทึกลิงก์วิดีโอสำเร็จ'));
+        await service.saveTaskLink(db, Number(teamId), userId, Number(teamSubmissionTaskId), linkUrl);
+        return reply.send(ok(null, 'บันทึกลิงก์สำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
         throw err;
     }
 }
 
-export async function uploadFiles(req: FastifyRequest, reply: FastifyReply) {
-    const { teamId } = req.params as { teamId: string };
+export async function uploadTaskFiles(req: FastifyRequest, reply: FastifyReply) {
+    const { teamId, teamSubmissionTaskId } = req.params as { teamId: string; teamSubmissionTaskId: string };
     const userId = (req.user as any).userId;
     const db = req.server.ctx.db;
 
@@ -44,7 +44,7 @@ export async function uploadFiles(req: FastifyRequest, reply: FastifyReply) {
 
         for await (const part of parts) {
             if (part.type === 'file') {
-                const result = await service.uploadSubmissionFile(db, Number(teamId), userId, {
+                const result = await service.uploadSubmissionFile(db, Number(teamId), userId, Number(teamSubmissionTaskId), {
                     filename: part.filename,
                     mimetype: part.mimetype,
                     file: part.file,

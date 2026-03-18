@@ -157,6 +157,33 @@ export async function countTeamAdvisors(db: DB, teamId: number): Promise<number>
     return Number(row?.advisor_count ?? 0);
 }
 
+export async function countMissingRequiredSubmissionTasks(db: DB, teamId: number): Promise<number> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT COUNT(*) AS missing_count
+        FROM team_submission_tasks tst
+        JOIN submission_tasks st
+          ON st.submission_task_id = tst.submission_task_id
+         AND st.deleted_at IS NULL
+         AND st.is_enabled = 1
+         AND st.is_required = 1
+         AND st.is_default = 1
+        WHERE tst.team_id = :teamId
+          AND tst.deleted_at IS NULL
+          AND (
+            (st.task_type = 'link' AND (tst.link_url IS NULL OR TRIM(tst.link_url) = ''))
+            OR
+            (st.task_type = 'file' AND NOT EXISTS (
+                SELECT 1
+                FROM team_submission_files tsf
+                WHERE tsf.team_submission_task_id = tst.team_submission_task_id
+                  AND tsf.deleted_at IS NULL
+            ))
+          )
+    `, { teamId });
+    const row = rows[0] as { missing_count: number | string } | undefined;
+    return Number(row?.missing_count ?? 0);
+}
+
 // ── Documents ──
 
 export async function getDocumentsByTeamAndUser(db: DB, teamId: number, userId: number): Promise<VerifyMemberDocumentRow[]> {
@@ -216,6 +243,20 @@ export async function updateTeamStatus(db: DB, teamId: number, status: string): 
     await db.query(`
         UPDATE team_teams SET status = :status, updated_at = NOW() WHERE team_id = :teamId
     `, { teamId, status });
+}
+
+export async function closeDefaultSubmissionTasksByTeam(db: DB, teamId: number): Promise<void> {
+    await db.query(`
+        UPDATE team_submission_tasks tst
+        JOIN submission_tasks st
+          ON st.submission_task_id = tst.submission_task_id
+         AND st.deleted_at IS NULL
+         AND st.is_default = 1
+        SET tst.is_submission_open = 0,
+            tst.updated_at = NOW()
+        WHERE tst.team_id = :teamId
+          AND tst.deleted_at IS NULL
+    `, { teamId });
 }
 
 export async function disbandTeam(db: DB, teamId: number, userId: number, reason: string): Promise<void> {

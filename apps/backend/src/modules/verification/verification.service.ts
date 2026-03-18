@@ -345,6 +345,11 @@ export async function submitTeam(
         throw new BadRequestError('ทีมต้องมีอาจารย์ที่ปรึกษาอย่างน้อย 1 คนก่อนยืนยันเข้าร่วมการคัดเลือก');
     }
 
+    const missingRequiredSubmissionTasks = await repo.countMissingRequiredSubmissionTasks(db, teamId);
+    if (missingRequiredSubmissionTasks > 0) {
+        throw new BadRequestError('ยังส่งข้อมูลงานที่บังคับไม่ครบ กรุณาตรวจสอบหน้า "ส่งผลงาน"');
+    }
+
     const allConfirmed = await repo.areAllMembersConfirmed(db, teamId, round.verify_round_id);
     if (!allConfirmed) {
         throw new BadRequestError('\u0e2a\u0e21\u0e32\u0e0a\u0e34\u0e01\u0e17\u0e38\u0e01\u0e04\u0e19\u0e15\u0e49\u0e2d\u0e07\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23\u0e01\u0e48\u0e2d\u0e19\u0e2a\u0e48\u0e07');
@@ -356,6 +361,7 @@ export async function submitTeam(
     await repo.lockVerifyRound(db, round.verify_round_id);
     await repo.submitVerifyRound(db, round.verify_round_id);
     await repo.updateTeamStatus(db, teamId, 'submitted');
+    await repo.closeDefaultSubmissionTasksByTeam(db, teamId);
 
     await repo.createVerifyAuditLog(db, {
         verifyRoundId: round.verify_round_id,

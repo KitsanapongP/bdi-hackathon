@@ -17,6 +17,7 @@ import {
     reorderContactChannelsSchema,
     createScheduleItemSchema,
     updateScheduleItemSchema,
+    createSubmissionTaskSchema,
     selectionTeamsQuerySchema,
     selectionResultSchema,
     updateGlobalSelectionDeadlineSchema,
@@ -722,6 +723,37 @@ export async function handleExportSubmittedVerificationBundle(req: FastifyReques
         reply.header('Content-Type', 'application/zip');
         reply.header('Content-Disposition', buildAttachmentHeader(result.fileName));
         return reply.send(result.stream);
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleGetSubmissionTasksAdmin(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const rows = await service.listSubmissionTasksAdmin(req.server.ctx.db);
+        return reply.send(ok(rows));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleCreateSubmissionTaskAdmin(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = createSubmissionTaskSchema.safeParse(req.body);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const user = req.user as JwtPayload;
+        const result = await service.createSubmissionTaskAdmin(req.server.ctx.db, parsed.data, user.userId);
+        return reply.status(201).send(ok(result, 'สร้างงานส่งผลงานและ assign ทีมสำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });
