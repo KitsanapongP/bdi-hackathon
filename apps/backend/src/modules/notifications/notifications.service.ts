@@ -98,11 +98,23 @@ function buildStandardEmailHtml(input: {
   eventTitle: string;
   headline: string;
   message: string;
-  detailLines: string[];
+  detailLines?: string[];
 }): string {
-  const detailsHtml = input.detailLines
+  const detailLines = (input.detailLines ?? []).filter((line) => String(line || '').trim().length > 0);
+  const detailsHtml = detailLines
     .map((line) => `<li style="margin: 0 0 8px 0;">${textToHtml(line)}</li>`)
     .join('');
+
+  const detailsSection = detailLines.length > 0
+    ? `
+        <div style="margin: 0 0 16px 0; padding: 14px 16px; background: #f8fafc; border: 1px solid #dbe3ef; border-radius: 10px;">
+          <div style="font-weight: 700; margin-bottom: 8px; color: #102a43;">รายละเอียด</div>
+          <ul style="margin: 0; padding-left: 18px; color: #334e68;">
+            ${detailsHtml}
+          </ul>
+        </div>
+      `
+    : '';
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; color: #0f172a; line-height: 1.6;">
@@ -113,12 +125,7 @@ function buildStandardEmailHtml(input: {
       <div style="padding: 20px; border: 1px solid #dbe3ef; border-top: 0; border-radius: 0 0 12px 12px; background: #ffffff;">
         <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #102a43;">${escapeHtml(input.headline)}</h3>
         <p style="margin: 0 0 16px 0; color: #243b53;">${textToHtml(input.message)}</p>
-        <div style="margin: 0 0 16px 0; padding: 14px 16px; background: #f8fafc; border: 1px solid #dbe3ef; border-radius: 10px;">
-          <div style="font-weight: 700; margin-bottom: 8px; color: #102a43;">รายละเอียด</div>
-          <ul style="margin: 0; padding-left: 18px; color: #334e68;">
-            ${detailsHtml}
-          </ul>
-        </div>
+        ${detailsSection}
         <p style="margin: 0; font-size: 13px; color: #627d98;">
           อีเมลฉบับนี้ส่งจากเว็บไซต์ Intelligent Living Hackathon 2026 กรุณาอย่าตอบกลับอีเมลอัตโนมัติฉบับนี้
         </p>
@@ -512,24 +519,17 @@ export async function sendCustomEmailToTeam(
     };
   }
 
-  const teamLabel = `${team.team_name_th || team.team_name_en}[${team.team_code}]`;
+  const teamLabel = `${team.team_name_th || team.team_name_en} [${team.team_code}]`;
   const subject = data.subject.startsWith(`${teamLabel} |`) ? data.subject : `${teamLabel} | ${data.subject}`;
   const customMessage = data.message.trim();
-  const customDetailLines = [
-    formatDetailLine('เหตุการณ์', 'อีเมลแจ้งเตือนจากผู้ดูแลระบบ'),
-    formatDetailLine('รหัสเหตุการณ์', 'ADMIN_CUSTOM_EMAIL'),
-    formatDetailLine('ทีม', team.team_name_th || team.team_name_en),
-    formatDetailLine('รหัสทีม', team.team_code || '-'),
-  ];
 
   const htmlMessage = buildStandardEmailHtml({
     eventTitle: 'อีเมลแจ้งเตือนจากผู้ดูแลระบบ',
     headline: subject,
     message: customMessage,
-    detailLines: customDetailLines,
   });
 
-  const logMessage = [customMessage, '', ...customDetailLines.map((line) => `- ${line}`)].join('\n').trim();
+  const logMessage = customMessage;
 
   const result = await sendEmailWithLog(db, {
     eventCode: 'ADMIN_CUSTOM_EMAIL',
