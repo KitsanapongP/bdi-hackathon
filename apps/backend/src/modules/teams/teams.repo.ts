@@ -414,6 +414,20 @@ export async function confirmTeamParticipation(
     `, { teamId, leaderUserId });
 }
 
+export async function declineTeamParticipation(
+    db: DB,
+    teamId: number,
+): Promise<void> {
+    await db.query(`
+        UPDATE team_teams
+        SET status = 'not_joined',
+            updated_at = NOW()
+        WHERE team_id = :teamId
+          AND status = 'passed'
+          AND confirmed_at IS NULL
+    `, { teamId });
+}
+
 export async function failTeamIfConfirmationExpired(db: DB, teamId: number): Promise<boolean> {
     const [result] = await db.query<ResultSetHeader>(`
         UPDATE team_teams

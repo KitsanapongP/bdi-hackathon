@@ -4,6 +4,7 @@ import { AppError } from '../../shared/errors.js';
 import * as crypto from 'crypto';
 import * as notificationService from '../notifications/notifications.service.js';
 import * as privilegesService from '../privileges/privileges.service.js';
+import * as submissionsRepo from '../submissions/submissions.repo.js';
 import type { TeamMemberProfileSafe } from './teams.types.js';
 
 const MAX_TEAM_MEMBERS = 5;
@@ -67,6 +68,8 @@ export async function createTeam(db: DB, userId: number, data: { teamNameTh: str
         inviteCode,
         createdByUserId: userId,
     });
+
+    await submissionsRepo.assignDefaultTasksToTeam(db, teamId);
 
     await repo.createTeamAuditLog(db, {
         teamId,
@@ -418,7 +421,7 @@ export async function sendInvitation(
         inviteeUserId = await repo.findActiveUserIdByUserName(db, input.inviteeUserName.trim());
     }
     if (!inviteeUserId) {
-        throw new AppError('ไม่พบผู้ใช้จาก username ที่ระบุ', 404);
+        throw new AppError('ไม่พบผู้ใช้งานนี้ในระบบ', 404);
     }
 
     if (members.some(m => m.user_id === inviteeUserId)) {
@@ -553,6 +556,34 @@ export async function confirmParticipation(db: DB, teamId: number, leaderUserId:
         eventCode: 'TEAM_CONFIRMED',
         teamId,
         actorUserId: leaderUserId,
+    });
+
+    return { success: true };
+}
+
+export async function declineParticipation(db: DB, teamId: number, leaderUserId: number) {
+    await applySelectionExpiryIfNeeded(db, teamId);
+    const team = await repo.getTeamById(db, teamId);
+    if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
+    if (team.current_leader_user_id !== leaderUserId) {
+        throw new AppError('เฉพาะหัวหน้าทีมเท่านั้นที่ปฏิเสธได้', 403);
+    }
+    if (team.status !== 'passed') {
+        throw new AppError('ทีมนี้ยังไม่อยู่ในสถานะผ่านการคัดเลือก', 400);
+    }
+    if (team.confirmed_at) {
+        throw new AppError('ทีมนี้ยืนยันการเข้าร่วมไปแล้ว', 400);
+    }
+
+    await repo.declineTeamParticipation(db, teamId);
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: leaderUserId,
+        actionCode: 'TEAM_DECLINED_PARTICIPATION',
+        actionDetail: {
+            status: team.status,
+            confirmation_deadline_at: team.confirmation_deadline_at,
+        },
     });
 
     return { success: true };

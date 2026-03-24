@@ -163,3 +163,18 @@ export const selectionResultSchema = z.object({
 export const updateGlobalSelectionDeadlineSchema = z.object({
     confirmDeadlineAt: z.string().trim().min(1, 'กรุณาระบุวันเวลาหมดเขต'),
 });
+
+export const createSubmissionTaskSchema = z.object({
+    taskName: z.string().trim().min(1, 'กรุณาระบุชื่องาน'),
+    taskType: z.enum(['link', 'file']),
+    isRequired: z.boolean().optional(),
+    allowedExtensions: z.string().trim().nullable().optional(),
+    sortOrder: z.number().int().min(0).optional(),
+    deadlineAt: z.string().trim().nullable().optional(),
+    isSubmissionOpen: z.boolean().optional(),
+    teamIds: z.array(z.number().int().positive()).optional(),
+    teamStatuses: z.array(z.enum(['forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined', 'disbanded'])).optional(),
+}).refine((value) => (value.teamIds?.length ?? 0) > 0 || (value.teamStatuses?.length ?? 0) > 0, {
+    message: 'กรุณาระบุทีมเป้าหมายอย่างน้อย 1 ทีม หรือ 1 สถานะทีม',
+    path: ['teamIds'],
+});

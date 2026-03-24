@@ -19,6 +19,39 @@ function sanitizePathSegment(value: string | null | undefined, fallback: string)
     return cleaned || fallback;
 }
 
+function parseAllowedExtensions(allowedExtensions: string | null): string[] {
+    if (!allowedExtensions) return [];
+    return allowedExtensions
+        .split(',')
+        .map((ext) => ext.trim().toLowerCase())
+        .filter(Boolean)
+        .map((ext) => (ext.startsWith('.') ? ext : `.${ext}`));
+}
+
+function assertTeamFileExtension(fileName: string, allowedExtensions: string[]): void {
+    if (allowedExtensions.length === 0) return;
+    const ext = path.extname(fileName).toLowerCase();
+    if (!ext || !allowedExtensions.includes(ext)) {
+        throw new BadRequestError(`ไฟล์นามสกุล ${ext || '(ไม่มีนามสกุล)'} ไม่ได้รับอนุญาต`);
+    }
+}
+
+function isTaskDeadlinePassed(deadlineAt: Date | string | null): boolean {
+    if (!deadlineAt) return false;
+    const date = deadlineAt instanceof Date ? deadlineAt : new Date(deadlineAt);
+    if (Number.isNaN(date.getTime())) return false;
+    return date.getTime() < Date.now();
+}
+
+function assertTaskSubmissionOpen(task: { is_submission_open: number; deadline_at: Date | string | null }): void {
+    if (task.is_submission_open !== 1) {
+        throw new BadRequestError('งานนี้ถูกปิดการส่งชั่วคราว');
+    }
+    if (isTaskDeadlinePassed(task.deadline_at)) {
+        throw new BadRequestError('หมดเวลาการส่งงานนี้แล้ว');
+    }
+}
+
 async function ensureLeader(db: DB, teamId: number, userId: number): Promise<void> {
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new NotFoundError('ไม่พบทีม');
@@ -46,48 +79,101 @@ async function ensureMember(db: DB, teamId: number, userId: number): Promise<voi
     if (!member) throw new AppError('คุณไม่ได้เป็นสมาชิกของทีมนี้', 403);
 }
 
-// ── Get all submission data ──
+async function getTeamSubmissionTaskOrThrow(db: DB, teamId: number, teamSubmissionTaskId: number) {
+    const task = await repo.getTeamSubmissionTaskById(db, teamSubmissionTaskId);
+    if (!task || task.team_id !== teamId) {
+        throw new NotFoundError('ไม่พบรายการงานส่งผลงาน');
+    }
+    if (task.task_is_enabled !== 1) {
+        throw new BadRequestError('งานส่งผลงานนี้ถูกปิดใช้งานแล้ว');
+    }
+    return task;
+}
+
+// -- User Submission Data --
 
 export async function getSubmissionData(db: DB, teamId: number, userId: number) {
     await ensureMember(db, teamId, userId);
 
-    const [videoLink, files, advisors] = await Promise.all([
-        repo.getVideoLink(db, teamId),
-        repo.getSubmissionFiles(db, teamId),
+    const [tasks, advisors] = await Promise.all([
+        repo.getTeamSubmissionTasks(db, teamId),
         repo.getAdvisors(db, teamId),
     ]);
 
-    return { videoLink, files, advisors };
+    const filesByTask = await Promise.all(
+        tasks.map(async (task) => ({
+            taskId: task.team_submission_task_id,
+            files: task.task_type === 'file'
+                ? await repo.getSubmissionFilesByTeamTask(db, task.team_submission_task_id)
+                : [],
+        }))
+    );
+
+    const fileMap = new Map<number, Awaited<typeof filesByTask>[number]['files']>();
+    filesByTask.forEach((row) => fileMap.set(row.taskId, row.files));
+
+    return {
+        tasks: tasks.map((task) => ({
+            teamSubmissionTaskId: task.team_submission_task_id,
+            submissionTaskId: task.submission_task_id,
+            taskName: task.task_name,
+            taskType: task.task_type,
+            isRequired: task.is_required === 1,
+            isDefault: task.task_is_default === 1,
+            allowedExtensions: parseAllowedExtensions(task.allowed_extensions),
+            sortOrder: task.sort_order,
+            linkUrl: task.link_url,
+            deadlineAt: task.deadline_at,
+            isSubmissionOpen: task.is_submission_open === 1,
+            isDeadlinePassed: isTaskDeadlinePassed(task.deadline_at),
+            files: fileMap.get(task.team_submission_task_id) ?? [],
+        })),
+        advisors,
+    };
 }
 
-// ── Video Link ──
-
-export async function saveVideoLink(db: DB, teamId: number, userId: number, videoLink: string | null) {
-    await ensureLeaderAndEditable(db, teamId, userId);
-
-    if (videoLink) {
-        const trimmed = videoLink.trim();
-        // Validate YouTube or Google Drive URL
-        const isYoutube = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(trimmed);
-        const isGDrive = /^https?:\/\/(drive|docs)\.google\.com\//i.test(trimmed);
-        if (!isYoutube && !isGDrive) {
-            throw new BadRequestError('ลิงก์ต้องเป็น YouTube หรือ Google Drive เท่านั้น');
-        }
-        await repo.updateVideoLink(db, teamId, trimmed);
-    } else {
-        await repo.updateVideoLink(db, teamId, null);
+export async function saveTaskLink(
+    db: DB,
+    teamId: number,
+    userId: number,
+    teamSubmissionTaskId: number,
+    linkUrl: string | null,
+) {
+    await ensureLeader(db, teamId, userId);
+    const task = await getTeamSubmissionTaskOrThrow(db, teamId, teamSubmissionTaskId);
+    if (task.task_type !== 'link') {
+        throw new BadRequestError('งานนี้ไม่ใช่ประเภทลิงก์');
     }
-}
+    assertTaskSubmissionOpen(task);
 
-// ── Submission Files ──
+    if (linkUrl) {
+        const trimmed = linkUrl.trim();
+        if (!/^https?:\/\//i.test(trimmed)) {
+            throw new BadRequestError('ลิงก์ต้องขึ้นต้นด้วย http:// หรือ https://');
+        }
+        await repo.updateTeamTaskLink(db, teamSubmissionTaskId, trimmed);
+        return;
+    }
+
+    await repo.updateTeamTaskLink(db, teamSubmissionTaskId, null);
+}
 
 export async function uploadSubmissionFile(
     db: DB,
     teamId: number,
     userId: number,
+    teamSubmissionTaskId: number,
     file: { filename: string; mimetype: string; file: NodeJS.ReadableStream }
 ): Promise<{ fileId: number; fileName: string }> {
-    await ensureLeaderAndEditable(db, teamId, userId);
+    await ensureLeader(db, teamId, userId);
+
+    const task = await getTeamSubmissionTaskOrThrow(db, teamId, teamSubmissionTaskId);
+    if (task.task_type !== 'file') {
+        throw new BadRequestError('งานนี้ไม่ใช่ประเภทไฟล์');
+    }
+    assertTaskSubmissionOpen(task);
+    const allowedExtensions = parseAllowedExtensions(task.allowed_extensions);
+    assertTeamFileExtension(file.filename, allowedExtensions);
 
     const team = await repo.getTeamById(db, teamId);
     const teamName = sanitizePathSegment(team?.team_name_th || team?.team_name_en, `team-${teamId}`);
@@ -99,20 +185,20 @@ export async function uploadSubmissionFile(
     const filePath = path.join(dir, storedName);
     const storageKey = path.relative(path.join(process.cwd(), 'public'), filePath).replace(/\\/g, '/');
 
-    // Write stream to disk
     const writeStream = fs.createWriteStream(filePath);
     const stream = file.file as NodeJS.ReadableStream;
     await new Promise<void>((resolve, reject) => {
-        (stream as any).pipe(writeStream);
+        (stream as NodeJS.ReadableStream).pipe(writeStream);
         writeStream.on('finish', resolve);
         writeStream.on('error', reject);
-        (stream as any).on('error', reject);
+        (stream as NodeJS.ReadableStream).on('error', reject);
     });
 
     const stat = fs.statSync(filePath);
 
     const fileId = await repo.insertSubmissionFile(db, {
         teamId,
+        teamSubmissionTaskId,
         fileStorageKey: storageKey,
         fileOriginalName: file.filename,
         fileMimeType: file.mimetype,
@@ -124,10 +210,16 @@ export async function uploadSubmissionFile(
 }
 
 export async function deleteSubmissionFile(db: DB, teamId: number, userId: number, fileId: number) {
-    await ensureLeaderAndEditable(db, teamId, userId);
+    await ensureLeader(db, teamId, userId);
 
     const file = await repo.getSubmissionFileById(db, fileId);
     if (!file || file.team_id !== teamId) throw new NotFoundError('ไม่พบไฟล์');
+
+    const task = await repo.getTeamSubmissionTaskById(db, file.team_submission_task_id);
+    if (!task || task.team_id !== teamId) {
+        throw new NotFoundError('ไม่พบรายการงานของไฟล์นี้');
+    }
+    assertTaskSubmissionOpen(task);
 
     await repo.softDeleteSubmissionFile(db, fileId);
 }
@@ -153,7 +245,7 @@ export async function getSubmissionFileInfo(
     };
 }
 
-// ── Advisors ──
+// -- Advisors --
 
 export async function addAdvisor(
     db: DB,
@@ -173,7 +265,6 @@ export async function addAdvisor(
 ) {
     await ensureLeaderAndEditable(db, teamId, userId);
 
-    // Check email uniqueness
     if (data.email) {
         const existing = await repo.findAdvisorByEmail(db, data.email);
         if (existing) {
@@ -212,7 +303,6 @@ export async function updateAdvisor(
     const advisor = await repo.getAdvisorById(db, advisorId);
     if (!advisor || advisor.team_id !== teamId) throw new NotFoundError('ไม่พบอาจารย์ที่ปรึกษา');
 
-    // Check email uniqueness (exclude self)
     if (data.email) {
         const existing = await repo.findAdvisorByEmail(db, data.email, advisorId);
         if (existing) {

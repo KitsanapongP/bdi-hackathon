@@ -160,3 +160,18 @@ export interface ExportSubmissionFileRow {
     file_original_name: string;
     uploaded_at: Date;
 }
+
+export interface AdminSubmissionTaskRow {
+    submission_task_id: number;
+    task_name: string;
+    task_type: 'link' | 'file';
+    is_required: number;
+    allowed_extensions: string | null;
+    sort_order: number;
+    is_enabled: number;
+    is_default: number;
+    created_by_user_id: number | null;
+    created_at: Date;
+    updated_at: Date;
+    assigned_team_count: number;
+}

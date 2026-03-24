@@ -331,3 +331,18 @@ export async function handleConfirmParticipation(req: FastifyRequest<{ Params: {
         throw err;
     }
 }
+
+export async function handleDeclineParticipation(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const teamId = parseInt(req.params.id, 10);
+    if (isNaN(teamId)) return reply.status(400).send({ ok: false, message: 'Invalid team ID' });
+    const user = req.user as JwtPayload;
+    try {
+        const result = await service.declineParticipation(req.server.ctx.db, teamId, user.userId);
+        return reply.send(ok(result, 'ปฏิเสธการเข้าร่วมสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}

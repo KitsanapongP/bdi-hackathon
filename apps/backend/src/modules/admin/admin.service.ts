@@ -3,6 +3,7 @@ import * as repo from './admin.repo.js';
 import type { AllowlistInput, DashboardQueryInput, UpdateAllowlistInput } from './admin.schema.js';
 import type {
     AllowlistResponse,
+    AdminSubmissionTaskRow,
     DashboardDuplicateMemberRow,
     DashboardTeamStatus,
     ExportMemberDocumentRow,
@@ -708,4 +709,111 @@ export async function setGlobalSelectionDeadline(db: DB, rawDeadline: string): P
     await repo.upsertSysConfigValue(db, GLOBAL_SELECTION_DEADLINE_KEY, deadline);
     await repo.applyGlobalSelectionDeadlineToPassedTeams(db, deadline);
     return { confirmDeadlineAt: deadline };
+}
+
+function normalizeAllowedExtensions(rawValue: string | null | undefined): string | null {
+    if (rawValue == null) return null;
+    const normalized = rawValue
+        .split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean)
+        .map((entry) => (entry.startsWith('.') ? entry : `.${entry}`));
+    if (normalized.length === 0) return null;
+    return Array.from(new Set(normalized)).join(',');
+}
+
+function normalizeOptionalDeadline(rawValue: string | null | undefined): string | null {
+    if (!rawValue) return null;
+    const value = String(rawValue).trim();
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        throw new BadRequestError('รูปแบบ deadline ไม่ถูกต้อง');
+    }
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function toSubmissionTaskResponse(row: AdminSubmissionTaskRow) {
+    return {
+        submissionTaskId: row.submission_task_id,
+        taskName: row.task_name,
+        taskType: row.task_type,
+        isRequired: row.is_required === 1,
+        allowedExtensions: row.allowed_extensions,
+        sortOrder: row.sort_order,
+        isEnabled: row.is_enabled === 1,
+        isDefault: row.is_default === 1,
+        createdByUserId: row.created_by_user_id,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        assignedTeamCount: Number(row.assigned_team_count || 0),
+    };
+}
+
+export async function listSubmissionTasksAdmin(db: DB) {
+    const rows = await repo.listSubmissionTasksAdmin(db);
+    return rows.map(toSubmissionTaskResponse);
+}
+
+export async function createSubmissionTaskAdmin(
+    db: DB,
+    input: {
+        taskName: string;
+        taskType: 'link' | 'file';
+        isRequired?: boolean | undefined;
+        allowedExtensions?: string | null | undefined;
+        sortOrder?: number | undefined;
+        deadlineAt?: string | null | undefined;
+        isSubmissionOpen?: boolean | undefined;
+        teamIds?: number[] | undefined;
+        teamStatuses?: Array<'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined' | 'disbanded'> | undefined;
+    },
+    adminUserId: number,
+) {
+    const teamIdsFromStatus = await repo.listTeamIdsByStatusesAdmin(db, input.teamStatuses ?? []);
+    const explicitTeamIds = (input.teamIds ?? []).filter((teamId) => Number.isFinite(teamId));
+    const mergedTeamIds = Array.from(new Set([...explicitTeamIds, ...teamIdsFromStatus]));
+
+    if (mergedTeamIds.length === 0) {
+        throw new BadRequestError('ไม่พบทีมที่ตรงกับเงื่อนไขสำหรับ assign งาน');
+    }
+
+    const allowedExtensions = input.taskType === 'file'
+        ? normalizeAllowedExtensions(input.allowedExtensions)
+        : null;
+    const normalizedDeadline = normalizeOptionalDeadline(input.deadlineAt);
+
+    const submissionTaskId = await repo.createSubmissionTaskAdmin(db, {
+        taskName: input.taskName.trim(),
+        taskType: input.taskType,
+        isRequired: Boolean(input.isRequired),
+        allowedExtensions,
+        sortOrder: Number.isFinite(Number(input.sortOrder)) ? Math.trunc(Number(input.sortOrder)) : 0,
+        createdByUserId: adminUserId,
+    });
+
+    const existingAssignedTeamIds = await repo.listExistingAssignedTeamIdsAdmin(db, submissionTaskId);
+    const existingAssignedSet = new Set(existingAssignedTeamIds);
+    const teamIdsToAssign = mergedTeamIds.filter((teamId) => !existingAssignedSet.has(teamId));
+
+    const assignedSource = (input.teamStatuses?.length ?? 0) > 0 ? 'admin_status' : 'admin_team';
+    const assignedCount = await repo.bulkAssignSubmissionTaskToTeamsAdmin(db, {
+        submissionTaskId,
+        assignedByUserId: adminUserId,
+        assignedSource,
+        deadlineAt: normalizedDeadline,
+        isSubmissionOpen: input.isSubmissionOpen ?? true,
+        teamIds: teamIdsToAssign,
+    });
+
+    const created = await repo.getSubmissionTaskByIdAdmin(db, submissionTaskId);
+    if (!created) {
+        throw new NotFoundError('ไม่พบงานส่งผลงานที่เพิ่งสร้าง');
+    }
+
+    return {
+        task: toSubmissionTaskResponse(created),
+        assignedCount,
+        assignedTeamIds: teamIdsToAssign,
+    };
 }

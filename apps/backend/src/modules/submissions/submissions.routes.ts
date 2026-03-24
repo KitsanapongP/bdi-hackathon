@@ -14,11 +14,11 @@ export async function submissionsRoutes(app: FastifyInstance) {
     // Get all submission data (video link, files, advisors)
     app.get('/team/:teamId', ctrl.getSubmissionData);
 
-    // Video link
-    app.put('/team/:teamId/video-link', ctrl.saveVideoLink);
+    // Submission tasks
+    app.put('/team/:teamId/tasks/:teamSubmissionTaskId/link', ctrl.saveTaskLink);
+    app.post('/team/:teamId/tasks/:teamSubmissionTaskId/files', ctrl.uploadTaskFiles);
 
-    // Submission files
-    app.post('/team/:teamId/files', ctrl.uploadFiles);
+    // Submission file actions
     app.delete('/team/:teamId/files/:fileId', ctrl.deleteFile);
     app.get('/team/:teamId/files/:fileId/download', ctrl.downloadFile);
 

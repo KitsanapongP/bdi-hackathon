@@ -147,6 +147,11 @@ const adminNavGroups = [
         icon: ListChecks,
       },
       {
+        to: '/admin/submission-tasks',
+        label: 'Submission Tasks',
+        icon: FileText,
+      },
+      {
         to: '/admin/review/queue',
         label: 'Review Queue',
         icon: ClipboardCheck,
@@ -828,6 +833,7 @@ function AdminLayout() {
       '/admin/review/returned': 'Team Review / Returned',
       '/admin/review/approved': 'Team Review / Approved',
       '/admin/selection': 'Team Selection',
+      '/admin/submission-tasks': 'Submission Tasks',
       '/admin/notifications': 'Notification Settings',
       '/admin/privileges': 'Privileges',
       '/admin/audit': 'Audit Logs',
@@ -5416,6 +5422,228 @@ function SelectionPage() {
   )
 }
 
+function SubmissionTasksPage() {
+  const { pushToast } = useAdminToast()
+  const [rows, setRows] = useState([])
+  const [teamOptions, setTeamOptions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    taskName: '',
+    taskType: 'link',
+    isRequired: false,
+    allowedExtensions: '.pdf,.docx,.png,.pptx',
+    sortOrder: 0,
+    deadlineAt: '',
+    isSubmissionOpen: true,
+    teamStatuses: ['submitted'],
+    teamIds: [],
+  })
+
+  const loadTeamOptions = useCallback(async () => {
+    const statuses = ['forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined']
+    const responses = await Promise.all(
+      statuses.map(async (status) => {
+        const res = await fetch(apiUrl(`/api/admin/selection/teams?status=${status}`), { credentials: 'include' })
+        const payload = await res.json()
+        if (!res.ok || !payload?.ok) return []
+        return payload.data || []
+      }),
+    )
+
+    const dedup = new Map()
+    responses.flat().forEach((row) => {
+      if (!row?.team_id || dedup.has(row.team_id)) return
+      dedup.set(row.team_id, {
+        teamId: row.team_id,
+        label: `${row.team_name_th || row.team_name_en} [${row.team_code}]`,
+      })
+    })
+    setTeamOptions(Array.from(dedup.values()).sort((a, b) => a.label.localeCompare(b.label, 'th')))
+  }, [])
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(apiUrl('/api/admin/submission-tasks'), { credentials: 'include' })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'load failed')
+      setRows(payload.data || [])
+      await loadTeamOptions()
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'โหลดรายการงานส่งผลงานไม่สำเร็จ' })
+    } finally {
+      setLoading(false)
+    }
+  }, [loadTeamOptions, pushToast])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const submit = async () => {
+    try {
+      setSaving(true)
+      const payloadBody = {
+        taskName: form.taskName,
+        taskType: form.taskType,
+        isRequired: form.isRequired,
+        allowedExtensions: form.taskType === 'file' ? form.allowedExtensions : null,
+        sortOrder: Number(form.sortOrder) || 0,
+        deadlineAt: form.deadlineAt || null,
+        isSubmissionOpen: Boolean(form.isSubmissionOpen),
+        teamStatuses: form.teamStatuses,
+        teamIds: form.teamIds.map((value) => Number(value)).filter((value) => Number.isFinite(value)),
+      }
+      const res = await fetch(apiUrl('/api/admin/submission-tasks'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payloadBody),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'save failed')
+      pushToast({ title: `สร้างงานสำเร็จ (assign ${payload.data?.assignedCount || 0} ทีม)` })
+      setForm((prev) => ({
+        ...prev,
+        taskName: '',
+        teamIds: [],
+      }))
+      load()
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'สร้างงานไม่สำเร็จ' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const toggleStatus = (status) => {
+    setForm((prev) => {
+      const exists = prev.teamStatuses.includes(status)
+      return {
+        ...prev,
+        teamStatuses: exists ? prev.teamStatuses.filter((item) => item !== status) : [...prev.teamStatuses, status],
+      }
+    })
+  }
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Submission Tasks"
+        description="สร้างรายการงานส่งผลงาน แล้ว assign ให้แต่ละทีม หรือกลุ่มทีมตามสถานะ"
+      />
+
+      <article className="admin-ui-panel">
+        <div className="admin-ui-dashboard-filters">
+          <label>
+            Task name
+            <input value={form.taskName} onChange={(event) => setForm((prev) => ({ ...prev, taskName: event.target.value }))} />
+          </label>
+          <label>
+            Type
+            <select value={form.taskType} onChange={(event) => setForm((prev) => ({ ...prev, taskType: event.target.value }))}>
+              <option value="link">link</option>
+              <option value="file">file</option>
+            </select>
+          </label>
+          <label>
+            Sort order
+            <input type="number" min={0} value={form.sortOrder} onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: event.target.value }))} />
+          </label>
+          <label>
+            Deadline (optional)
+            <input type="datetime-local" value={form.deadlineAt} onChange={(event) => setForm((prev) => ({ ...prev, deadlineAt: event.target.value }))} />
+          </label>
+          <label className="admin-ui-check">
+            <input type="checkbox" checked={form.isRequired} onChange={(event) => setForm((prev) => ({ ...prev, isRequired: event.target.checked }))} />
+            Required
+          </label>
+          <label className="admin-ui-check">
+            <input type="checkbox" checked={form.isSubmissionOpen} onChange={(event) => setForm((prev) => ({ ...prev, isSubmissionOpen: event.target.checked }))} />
+            เปิดให้ส่งได้
+          </label>
+          {form.taskType === 'file' ? (
+            <label>
+              Allowed extensions
+              <input
+                value={form.allowedExtensions}
+                onChange={(event) => setForm((prev) => ({ ...prev, allowedExtensions: event.target.value }))}
+                placeholder=".pdf,.docx,.png,.pptx"
+              />
+            </label>
+          ) : null}
+        </div>
+
+        <div className="admin-ui-chip-row" style={{ marginTop: 10 }}>
+          {['forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined'].map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={`admin-ui-chip-btn ${form.teamStatuses.includes(status) ? 'active' : ''}`}
+              onClick={() => toggleStatus(status)}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+
+        <label style={{ marginTop: 12, display: 'block' }}>
+          Assign specific teams (optional)
+          <select
+            multiple
+            value={form.teamIds}
+            onChange={(event) => {
+              const values = Array.from(event.target.selectedOptions).map((option) => option.value)
+              setForm((prev) => ({ ...prev, teamIds: values }))
+            }}
+            style={{ height: 120 }}
+          >
+            {teamOptions.map((option) => (
+              <option key={option.teamId} value={String(option.teamId)}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+
+        <div className="admin-ui-form-actions" style={{ marginTop: 12 }}>
+          <button
+            type="button"
+            className="admin-ui-btn admin-ui-btn-primary"
+            onClick={submit}
+            disabled={saving || !form.taskName.trim() || (form.teamStatuses.length === 0 && form.teamIds.length === 0)}
+          >
+            {saving ? 'Saving...' : 'Create and assign task'}
+          </button>
+        </div>
+      </article>
+
+      <AdminDataTable
+        rows={rows.map((row) => ({ ...row, id: row.submissionTaskId }))}
+        loading={loading}
+        searchKeys={['taskName', 'taskType']}
+        searchPlaceholder="ค้นหาชื่องาน"
+        columns={[
+          { key: 'taskName', label: 'Task Name' },
+          { key: 'taskType', label: 'Type' },
+          {
+            key: 'isRequired',
+            label: 'Required',
+            render: (row) => (row.isRequired ? 'Yes' : 'Optional'),
+          },
+          { key: 'allowedExtensions', label: 'Extensions' },
+          { key: 'assignedTeamCount', label: 'Assigned Teams' },
+          { key: 'sortOrder', label: 'Sort' },
+          {
+            key: 'createdAt',
+            label: 'Created At',
+            render: (row) => formatDateTime(row.createdAt),
+          },
+        ]}
+      />
+    </div>
+  )
+}
+
 function NotificationSettingsPage() {
   const { pushToast } = useAdminToast()
   const [settings, setSettings] = useState([])
@@ -5924,6 +6152,7 @@ function AdminAppRoutes() {
 
         <Route path="review" element={<Navigate to="queue" replace />} />
         <Route path="selection" element={<SelectionPage />} />
+        <Route path="submission-tasks" element={<SubmissionTasksPage />} />
         <Route path="review/queue" element={<ReviewQueuePage />} />
         <Route path="review/teams/:teamId" element={<TeamReviewDetailPage />} />
         <Route path="review/returned" element={<ReturnedMonitorPage />} />

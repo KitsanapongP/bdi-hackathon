@@ -13,6 +13,7 @@ import type {
     ExportSubmittedTeamRow,
     ExportTeamAdvisorRow,
     ExportTeamMemberRow,
+    AdminSubmissionTaskRow,
     SelectionTeamRow,
 } from './admin.types.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
@@ -631,4 +632,171 @@ export async function applyGlobalSelectionDeadlineToPassedTeams(db: DB, confirma
           AND confirmed_at IS NULL
           AND deleted_at IS NULL
     `, { confirmationDeadlineAt });
+}
+
+export async function listSubmissionTasksAdmin(db: DB): Promise<AdminSubmissionTaskRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT
+            st.submission_task_id,
+            st.task_name,
+            st.task_type,
+            st.is_required,
+            st.allowed_extensions,
+            st.sort_order,
+            st.is_enabled,
+            st.is_default,
+            st.created_by_user_id,
+            st.created_at,
+            st.updated_at,
+            COUNT(tst.team_submission_task_id) AS assigned_team_count
+        FROM submission_tasks st
+        LEFT JOIN team_submission_tasks tst
+          ON tst.submission_task_id = st.submission_task_id
+         AND tst.deleted_at IS NULL
+        WHERE st.deleted_at IS NULL
+        GROUP BY
+            st.submission_task_id,
+            st.task_name,
+            st.task_type,
+            st.is_required,
+            st.allowed_extensions,
+            st.sort_order,
+            st.is_enabled,
+            st.is_default,
+            st.created_by_user_id,
+            st.created_at,
+            st.updated_at
+        ORDER BY st.sort_order ASC, st.submission_task_id ASC
+    `);
+    return rows as AdminSubmissionTaskRow[];
+}
+
+export async function createSubmissionTaskAdmin(
+    db: DB,
+    data: {
+        taskName: string;
+        taskType: 'link' | 'file';
+        isRequired: boolean;
+        allowedExtensions: string | null;
+        sortOrder: number;
+        createdByUserId: number;
+    }
+): Promise<number> {
+    const [result] = await db.query<ResultSetHeader>(
+        `INSERT INTO submission_tasks
+            (task_name, task_type, is_required, allowed_extensions, sort_order, is_enabled, is_default, created_by_user_id)
+         VALUES (:taskName, :taskType, :isRequired, :allowedExtensions, :sortOrder, 1, 0, :createdByUserId)`,
+        {
+            taskName: data.taskName,
+            taskType: data.taskType,
+            isRequired: data.isRequired ? 1 : 0,
+            allowedExtensions: data.allowedExtensions,
+            sortOrder: data.sortOrder,
+            createdByUserId: data.createdByUserId,
+        }
+    );
+    return result.insertId;
+}
+
+export async function getSubmissionTaskByIdAdmin(db: DB, submissionTaskId: number): Promise<AdminSubmissionTaskRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT
+            st.submission_task_id,
+            st.task_name,
+            st.task_type,
+            st.is_required,
+            st.allowed_extensions,
+            st.sort_order,
+            st.is_enabled,
+            st.is_default,
+            st.created_by_user_id,
+            st.created_at,
+            st.updated_at,
+            COUNT(tst.team_submission_task_id) AS assigned_team_count
+        FROM submission_tasks st
+        LEFT JOIN team_submission_tasks tst
+          ON tst.submission_task_id = st.submission_task_id
+         AND tst.deleted_at IS NULL
+        WHERE st.submission_task_id = :submissionTaskId
+          AND st.deleted_at IS NULL
+        GROUP BY
+            st.submission_task_id,
+            st.task_name,
+            st.task_type,
+            st.is_required,
+            st.allowed_extensions,
+            st.sort_order,
+            st.is_enabled,
+            st.is_default,
+            st.created_by_user_id,
+            st.created_at,
+            st.updated_at
+        LIMIT 1
+    `, { submissionTaskId });
+    return (rows[0] as AdminSubmissionTaskRow | undefined) ?? null;
+}
+
+export async function listTeamIdsByStatusesAdmin(
+    db: DB,
+    statuses: Array<'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined' | 'disbanded'>,
+): Promise<number[]> {
+    if (statuses.length === 0) return [];
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT team_id
+         FROM team_teams
+         WHERE deleted_at IS NULL
+           AND status IN (?)`,
+        [statuses]
+    );
+    return rows.map((row) => Number(row.team_id)).filter((id) => Number.isFinite(id));
+}
+
+export async function listExistingAssignedTeamIdsAdmin(db: DB, submissionTaskId: number): Promise<number[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT team_id
+         FROM team_submission_tasks
+         WHERE submission_task_id = :submissionTaskId
+           AND deleted_at IS NULL`,
+        { submissionTaskId }
+    );
+    return rows.map((row) => Number(row.team_id)).filter((id) => Number.isFinite(id));
+}
+
+export async function bulkAssignSubmissionTaskToTeamsAdmin(
+    db: DB,
+    data: {
+        submissionTaskId: number;
+        assignedByUserId: number;
+        assignedSource: 'admin_team' | 'admin_status';
+        deadlineAt: string | null;
+        isSubmissionOpen: boolean;
+        teamIds: number[];
+    }
+): Promise<number> {
+    if (data.teamIds.length === 0) return 0;
+
+    const values = data.teamIds.map((teamId) => [
+        teamId,
+        data.submissionTaskId,
+        data.deadlineAt,
+        data.isSubmissionOpen ? 1 : 0,
+        data.assignedByUserId,
+        data.assignedSource,
+    ]);
+
+    await db.query(
+        `INSERT INTO team_submission_tasks
+            (team_id, submission_task_id, deadline_at, is_submission_open, assigned_by_user_id, assigned_source)
+         VALUES ?
+         ON DUPLICATE KEY UPDATE
+            deleted_at = NULL,
+            updated_at = NOW(),
+            deadline_at = VALUES(deadline_at),
+            is_submission_open = VALUES(is_submission_open),
+            assigned_by_user_id = VALUES(assigned_by_user_id),
+            assigned_source = VALUES(assigned_source)`,
+        [values]
+    );
+
+    return data.teamIds.length;
 }

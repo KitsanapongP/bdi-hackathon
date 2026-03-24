@@ -27,4 +27,5 @@ export async function teamsRoutes(app: FastifyInstance) {
     app.get('/:id/inbox', controller.handleGetTeamInbox);
     app.post('/inbox/:notificationLogId/read', controller.handleMarkTeamInboxRead);
     app.post('/:id/confirm-participation', controller.handleConfirmParticipation);
+    app.post('/:id/decline-participation', controller.handleDeclineParticipation);
 }
