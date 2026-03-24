@@ -220,18 +220,17 @@ export async function insertAdvisor(db: DB, data: {
     email: string | null;
     phone: string | null;
     institutionNameTh: string | null;
-    position: string | null;
     addedByUserId: number;
 }): Promise<number> {
     const [result] = await db.query<ResultSetHeader>(
         `INSERT INTO team_advisors
             (team_id, prefix, first_name_th, last_name_th, first_name_en, last_name_en,
-             email, phone, institution_name_th, position, added_by_user_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             email, phone, institution_name_th, added_by_user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             data.teamId, data.prefix, data.firstNameTh, data.lastNameTh,
             data.firstNameEn, data.lastNameEn, data.email, data.phone,
-            data.institutionNameTh, data.position, data.addedByUserId,
+            data.institutionNameTh, data.addedByUserId,
         ]
     );
     return result.insertId;
@@ -273,18 +272,17 @@ export async function updateAdvisor(db: DB, advisorId: number, data: {
     email: string | null;
     phone: string | null;
     institutionNameTh: string | null;
-    position: string | null;
 }): Promise<void> {
     await db.query(
         `UPDATE team_advisors SET
             prefix = ?, first_name_th = ?, last_name_th = ?,
             first_name_en = ?, last_name_en = ?,
-            email = ?, phone = ?, institution_name_th = ?, position = ?
+            email = ?, phone = ?, institution_name_th = ?
          WHERE advisor_id = ?`,
         [
             data.prefix, data.firstNameTh, data.lastNameTh,
             data.firstNameEn, data.lastNameEn,
-            data.email, data.phone, data.institutionNameTh, data.position,
+            data.email, data.phone, data.institutionNameTh,
             advisorId,
         ]
     );

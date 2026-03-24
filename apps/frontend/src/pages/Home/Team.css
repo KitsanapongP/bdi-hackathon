@@ -4062,6 +4062,27 @@
     cursor: not-allowed;
 }
 
+.gl-icon-btn:disabled,
+.gl-team-name-edit-trigger:disabled,
+.gl-fancy-input:disabled,
+.gl-fancy-btn:disabled,
+.gl-btn-icon-success:disabled,
+.gl-btn-icon-danger:disabled,
+.gl-btn-outline:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.gl-icon-btn:disabled:hover,
+.gl-team-name-edit-trigger:disabled:hover,
+.gl-fancy-btn:disabled:hover,
+.gl-btn-icon-success:disabled:hover,
+.gl-btn-icon-danger:disabled:hover,
+.gl-btn-outline:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
 /* Compact Stats Card */
 .gl-manage-flex-col {
     display: flex;

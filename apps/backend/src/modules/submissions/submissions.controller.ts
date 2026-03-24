@@ -4,6 +4,23 @@ import { ok } from '../../shared/response.js';
 import { AppError } from '../../shared/errors.js';
 import fs from 'node:fs';
 
+function splitAdvisorFullName(fullName: string, requireLastName = true): { firstName: string; lastName: string | null } {
+    const tokens = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) {
+        throw new AppError('กรุณากรอกชื่อ-นามสกุลอาจารย์ที่ปรึกษา', 400);
+    }
+    if (requireLastName && tokens.length < 2) {
+        throw new AppError('กรุณากรอกชื่อ-นามสกุลอาจารย์ที่ปรึกษาให้ครบถ้วน', 400);
+    }
+
+    const firstName = tokens[0]!;
+    const lastNameTokens = tokens.slice(1);
+    return {
+        firstName,
+        lastName: lastNameTokens.length > 0 ? lastNameTokens.join(' ') : null,
+    };
+}
+
 export async function getSubmissionData(req: FastifyRequest, reply: FastifyReply) {
     const { teamId } = req.params as { teamId: string };
     const userId = (req.user as any).userId;
@@ -100,27 +117,25 @@ export async function addAdvisor(req: FastifyRequest, reply: FastifyReply) {
     const db = req.server.ctx.db;
     const body = req.body as {
         prefix?: string;
-        firstNameTh: string;
-        lastNameTh: string;
-        firstNameEn?: string;
-        lastNameEn?: string;
+        fullNameTh: string;
+        fullNameEn?: string;
         email?: string;
         phone?: string;
         institutionNameTh?: string;
-        position?: string;
     };
 
     try {
+        const nameTh = splitAdvisorFullName(body.fullNameTh, true);
+        const nameEn = body.fullNameEn?.trim() ? splitAdvisorFullName(body.fullNameEn, false) : null;
         const result = await service.addAdvisor(db, Number(teamId), userId, {
             prefix: body.prefix || null,
-            firstNameTh: body.firstNameTh,
-            lastNameTh: body.lastNameTh,
-            firstNameEn: body.firstNameEn || null,
-            lastNameEn: body.lastNameEn || null,
+            firstNameTh: nameTh.firstName,
+            lastNameTh: nameTh.lastName || '-',
+            firstNameEn: nameEn?.firstName || null,
+            lastNameEn: nameEn?.lastName || null,
             email: body.email || null,
             phone: body.phone || null,
             institutionNameTh: body.institutionNameTh || null,
-            position: body.position || null,
         });
         return reply.status(201).send(ok(result, 'เพิ่มอาจารย์ที่ปรึกษาสำเร็จ'));
     } catch (err) {
@@ -135,27 +150,25 @@ export async function updateAdvisorHandler(req: FastifyRequest, reply: FastifyRe
     const db = req.server.ctx.db;
     const body = req.body as {
         prefix?: string;
-        firstNameTh: string;
-        lastNameTh: string;
-        firstNameEn?: string;
-        lastNameEn?: string;
+        fullNameTh: string;
+        fullNameEn?: string;
         email?: string;
         phone?: string;
         institutionNameTh?: string;
-        position?: string;
     };
 
     try {
+        const nameTh = splitAdvisorFullName(body.fullNameTh, true);
+        const nameEn = body.fullNameEn?.trim() ? splitAdvisorFullName(body.fullNameEn, false) : null;
         await service.updateAdvisor(db, Number(teamId), userId, Number(advisorId), {
             prefix: body.prefix || null,
-            firstNameTh: body.firstNameTh,
-            lastNameTh: body.lastNameTh,
-            firstNameEn: body.firstNameEn || null,
-            lastNameEn: body.lastNameEn || null,
+            firstNameTh: nameTh.firstName,
+            lastNameTh: nameTh.lastName || '-',
+            firstNameEn: nameEn?.firstName || null,
+            lastNameEn: nameEn?.lastName || null,
             email: body.email || null,
             phone: body.phone || null,
             institutionNameTh: body.institutionNameTh || null,
-            position: body.position || null,
         });
         return reply.send(ok(null, 'แก้ไขข้อมูลอาจารย์ที่ปรึกษาสำเร็จ'));
     } catch (err) {

@@ -14,6 +14,17 @@ function generateRandomCode(length: number = 6): string {
     return crypto.randomBytes(3).toString('hex').toUpperCase().substring(0, length);
 }
 
+async function generateSequentialTeamCode(db: DB): Promise<string> {
+    const nextSeq = await repo.getNextTeamCodeSequence(db);
+    return `TM${String(nextSeq).padStart(4, '0')}`;
+}
+
+function isDuplicateTeamCodeError(err: unknown): boolean {
+    const code = String((err as { code?: string } | null)?.code || '');
+    const message = String((err as { message?: string } | null)?.message || '');
+    return code === 'ER_DUP_ENTRY' && /team_code|uq_team_teams_team_code/i.test(message);
+}
+
 async function applySelectionExpiryIfNeeded(db: DB, teamId: number): Promise<void> {
     const changed = await repo.failTeamIfConfirmationExpired(db, teamId);
     if (!changed) return;
@@ -46,16 +57,30 @@ export async function createTeam(db: DB, userId: number, data: { teamNameTh: str
         throw new AppError('คุณอยู่ในทีมอื่นแล้ว (You are already in a team)', 400);
     }
 
-    const teamCode = 'TM' + generateRandomCode(4);
     const inviteCode = generateRandomCode(6);
+    let teamCode = '';
+    let teamId: number | null = null;
 
-    const teamId = await repo.createTeam(db, {
-        teamCode,
-        teamNameTh: data.teamNameTh,
-        teamNameEn: data.teamNameEn,
-        visibility: data.visibility,
-        leaderUserId: userId,
-    });
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+        teamCode = await generateSequentialTeamCode(db);
+        try {
+            teamId = await repo.createTeam(db, {
+                teamCode,
+                teamNameTh: data.teamNameTh,
+                teamNameEn: data.teamNameEn,
+                visibility: data.visibility,
+                leaderUserId: userId,
+            });
+            break;
+        } catch (err) {
+            if (isDuplicateTeamCodeError(err)) continue;
+            throw err;
+        }
+    }
+
+    if (!teamId) {
+        throw new AppError('ไม่สามารถสร้างรหัสทีมได้ กรุณาลองใหม่อีกครั้ง', 500);
+    }
 
     await repo.addTeamMember(db, {
         teamId,
@@ -111,7 +136,25 @@ export async function leaveTeam(db: DB, teamId: number, userId: number) {
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
     if (team.current_leader_user_id === userId) {
-        throw new AppError('หัวหน้าทีมไม่สามารถออกจากทีมได้ (Leader cannot leave team)', 400);
+        const members = await repo.getTeamMembers(db, teamId);
+        const isOnlyLeader = members.length === 1 && members[0]?.user_id === userId;
+        if (!isOnlyLeader) {
+            throw new AppError('หัวหน้าทีมไม่สามารถออกจากทีมได้ (Leader cannot leave team)', 400);
+        }
+
+        const reason = 'หัวหน้าทีมออกจากทีมและไม่มีสมาชิกคนอื่นในทีม';
+        await repo.disbandTeamFromLeaderLeave(db, teamId, userId, reason);
+        await repo.createTeamAuditLog(db, {
+            teamId,
+            actorUserId: userId,
+            actionCode: 'TEAM_DISBANDED',
+            actionDetail: {
+                source: 'leader_leave_single_member',
+                reason,
+            },
+        });
+
+        return { success: true, disbanded: true };
     }
 
     const member = await repo.getTeamMemberByTeamAndUser(db, teamId, userId);
@@ -244,70 +287,82 @@ export async function getPendingJoinRequests(db: DB, teamId: number, leaderUserI
 }
 
 export async function respondJoinRequest(db: DB, teamId: number, requestId: number, leaderUserId: number, status: 'approved' | 'rejected', reason?: string) {
-    const team = await repo.getTeamById(db, teamId);
-    if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
-    if (team.current_leader_user_id !== leaderUserId) {
-        throw new AppError('เฉพาะหัวหน้าทีมเท่านั้น (Only leader)', 403);
-    }
-    assertTeamEditable(team.status, 'จัดการคำขอเข้าร่วมทีม');
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const txDb = conn as unknown as DB;
 
-    const request = await repo.getJoinRequestById(db, requestId);
-    if (!request || request.team_id !== teamId) {
-        throw new AppError('ไม่พบคำขอเข้าร่วม (Request not found)', 404);
-    }
-    if (request.status !== 'pending') {
-        throw new AppError('คำขอนี้ถูกดำเนินการไปแล้ว (Request already processed)', 400);
-    }
+        const team = await repo.getTeamByIdForUpdate(txDb, teamId);
+        if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
+        if (team.current_leader_user_id !== leaderUserId) {
+            throw new AppError('เฉพาะหัวหน้าทีมเท่านั้น (Only leader)', 403);
+        }
+        assertTeamEditable(team.status, 'จัดการคำขอเข้าร่วมทีม');
 
-    const members = await repo.getTeamMembers(db, teamId);
-
-    if (status === 'approved') {
-        const requesterInAnyTeam = await repo.checkUserInAnyTeam(db, request.requester_user_id);
-        if (requesterInAnyTeam) {
-            throw new AppError('ผู้ใช้นี้อยู่ในทีมอื่นแล้ว', 400);
+        const request = await repo.getJoinRequestByIdForUpdate(txDb, requestId);
+        if (!request || request.team_id !== teamId) {
+            throw new AppError('ไม่พบคำขอเข้าร่วม (Request not found)', 404);
+        }
+        if (request.status !== 'pending') {
+            throw new AppError('คำขอนี้ถูกดำเนินการไปแล้ว (Request already processed)', 400);
         }
 
-        if (members.length >= MAX_TEAM_MEMBERS) {
-            throw new AppError('สมาชิกในทีมเต็มแล้ว (Team is full)', 400);
+        const members = await repo.getTeamMembers(txDb, teamId);
+
+        if (status === 'approved') {
+            await repo.lockUserForTeamAssignment(txDb, request.requester_user_id);
+            const requesterInAnyTeam = await repo.checkUserInAnyTeam(txDb, request.requester_user_id);
+            if (requesterInAnyTeam) {
+                throw new AppError('ผู้ใช้นี้อยู่ในทีมอื่นแล้ว', 400);
+            }
+
+            if (members.length >= MAX_TEAM_MEMBERS) {
+                throw new AppError('สมาชิกในทีมเต็มแล้ว (Team is full)', 400);
+            }
+
+            const previousMembership = await repo.getTeamMemberByTeamAndUser(txDb, teamId, request.requester_user_id);
+
+            await repo.addTeamMember(txDb, {
+                teamId,
+                userId: request.requester_user_id,
+                role: 'member'
+            });
+            await repo.createTeamAuditLog(txDb, {
+                teamId,
+                actorUserId: leaderUserId,
+                actionCode: previousMembership && previousMembership.member_status !== 'active' ? 'MEMBER_REJOINED' : 'MEMBER_JOINED',
+                actionDetail: { requester_user_id: request.requester_user_id, join_request_id: requestId },
+            });
+            await repo.cancelOtherPendingJoinRequestsByUser(txDb, request.requester_user_id, requestId);
+            await repo.cancelOtherPendingInvitationsByUser(txDb, request.requester_user_id, -1);
         }
 
-        const previousMembership = await repo.getTeamMemberByTeamAndUser(db, teamId, request.requester_user_id);
-
-        // Add member
-        await repo.addTeamMember(db, {
-            teamId,
-            userId: request.requester_user_id,
-            role: 'member'
+        await repo.updateJoinRequestStatus(txDb, {
+            requestId,
+            status,
+            leaderId: leaderUserId,
+            reason: reason ?? null
         });
-        await repo.createTeamAuditLog(db, {
+
+        await repo.createTeamAuditLog(txDb, {
             teamId,
             actorUserId: leaderUserId,
-            actionCode: previousMembership && previousMembership.member_status !== 'active' ? 'MEMBER_REJOINED' : 'MEMBER_JOINED',
-            actionDetail: { requester_user_id: request.requester_user_id, join_request_id: requestId },
+            actionCode: status === 'approved' ? 'JOIN_REQUEST_APPROVED' : 'JOIN_REQUEST_REJECTED',
+            actionDetail: {
+                join_request_id: requestId,
+                requester_user_id: request.requester_user_id,
+                reason: reason ?? null,
+            },
         });
-        await repo.cancelOtherPendingJoinRequestsByUser(db, request.requester_user_id, requestId);
-        await repo.cancelOtherPendingInvitationsByUser(db, request.requester_user_id, -1);
+
+        await conn.commit();
+        return { success: true, status };
+    } catch (err) {
+        await conn.rollback();
+        throw err;
+    } finally {
+        conn.release();
     }
-
-    await repo.updateJoinRequestStatus(db, {
-        requestId,
-        status,
-        leaderId: leaderUserId,
-        reason: reason ?? null
-    });
-
-    await repo.createTeamAuditLog(db, {
-        teamId,
-        actorUserId: leaderUserId,
-        actionCode: status === 'approved' ? 'JOIN_REQUEST_APPROVED' : 'JOIN_REQUEST_REJECTED',
-        actionDetail: {
-            join_request_id: requestId,
-            requester_user_id: request.requester_user_id,
-            reason: reason ?? null,
-        },
-    });
-
-    return { success: true, status };
 }
 
 export async function getTeamDetails(db: DB, teamId: number) {
@@ -454,58 +509,71 @@ export async function getMyInvitations(db: DB, userId: number) {
 }
 
 export async function respondToInvitation(db: DB, invitationId: number, userId: number, status: 'accepted' | 'declined') {
-    const invitation = await repo.getInvitationById(db, invitationId);
-    if (!invitation || invitation.invitee_user_id !== userId) {
-        throw new AppError('ไม่พบคำเชิญ (Invitation not found)', 404);
-    }
-    if (invitation.status !== 'pending') {
-        throw new AppError('คำเชิญนี้ถูกดำเนินการไปแล้ว (Invitation already processed)', 400);
-    }
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+        const txDb = conn as unknown as DB;
 
-    const team = await repo.getTeamById(db, invitation.team_id);
-    if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
-
-    if (status === 'accepted') {
-        assertTeamEditable(team.status, 'รับคำเชิญเข้าร่วมทีม');
-        const inTeam = await repo.checkUserInAnyTeam(db, userId);
-        if (inTeam) {
-            throw new AppError('คุณอยู่ในทีมอื่นแล้ว (You are already in a team)', 400);
+        const invitation = await repo.getInvitationByIdForUpdate(txDb, invitationId);
+        if (!invitation || invitation.invitee_user_id !== userId) {
+            throw new AppError('ไม่พบคำเชิญ (Invitation not found)', 404);
+        }
+        if (invitation.status !== 'pending') {
+            throw new AppError('คำเชิญนี้ถูกดำเนินการไปแล้ว (Invitation already processed)', 400);
         }
 
-        const members = await repo.getTeamMembers(db, invitation.team_id);
-        if (members.length >= MAX_TEAM_MEMBERS) {
-            throw new AppError('ทีมเต็มแล้ว ไม่สามารถรับคำเชิญเข้าร่วมได้', 400);
+        const team = await repo.getTeamByIdForUpdate(txDb, invitation.team_id);
+        if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
+
+        if (status === 'accepted') {
+            assertTeamEditable(team.status, 'รับคำเชิญเข้าร่วมทีม');
+            await repo.lockUserForTeamAssignment(txDb, userId);
+            const inTeam = await repo.checkUserInAnyTeam(txDb, userId);
+            if (inTeam) {
+                throw new AppError('คุณอยู่ในทีมอื่นแล้ว (You are already in a team)', 400);
+            }
+
+            const members = await repo.getTeamMembers(txDb, invitation.team_id);
+            if (members.length >= MAX_TEAM_MEMBERS) {
+                throw new AppError('ทีมเต็มแล้ว ไม่สามารถรับคำเชิญเข้าร่วมได้', 400);
+            }
+
+            const previousMembership = await repo.getTeamMemberByTeamAndUser(txDb, invitation.team_id, userId);
+
+            await repo.addTeamMember(txDb, {
+                teamId: invitation.team_id,
+                userId,
+                role: 'member'
+            });
+
+            await repo.createTeamAuditLog(txDb, {
+                teamId: invitation.team_id,
+                actorUserId: userId,
+                actionCode: previousMembership && previousMembership.member_status !== 'active' ? 'MEMBER_REJOINED' : 'MEMBER_JOINED',
+                actionDetail: { invitation_id: invitationId, user_id: userId },
+            });
+
+            await repo.cancelOtherPendingJoinRequestsByUser(txDb, userId, -1);
+            await repo.cancelOtherPendingInvitationsByUser(txDb, userId, invitationId);
         }
 
-        const previousMembership = await repo.getTeamMemberByTeamAndUser(db, invitation.team_id, userId);
+        await repo.updateInvitationStatus(txDb, invitationId, status);
 
-        await repo.addTeamMember(db, {
-            teamId: invitation.team_id,
-            userId,
-            role: 'member'
-        });
-
-        await repo.createTeamAuditLog(db, {
+        await repo.createTeamAuditLog(txDb, {
             teamId: invitation.team_id,
             actorUserId: userId,
-            actionCode: previousMembership && previousMembership.member_status !== 'active' ? 'MEMBER_REJOINED' : 'MEMBER_JOINED',
-            actionDetail: { invitation_id: invitationId, user_id: userId },
+            actionCode: status === 'accepted' ? 'INVITE_ACCEPTED' : 'INVITE_DECLINED',
+            actionDetail: { invitation_id: invitationId, invited_user_id: userId },
         });
 
-        await repo.cancelOtherPendingJoinRequestsByUser(db, userId, -1);
-        await repo.cancelOtherPendingInvitationsByUser(db, userId, invitationId);
+        await conn.commit();
+        return { success: true, status };
+    } catch (err) {
+        await conn.rollback();
+        throw err;
+    } finally {
+        conn.release();
     }
-
-    await repo.updateInvitationStatus(db, invitationId, status);
-
-    await repo.createTeamAuditLog(db, {
-        teamId: invitation.team_id,
-        actorUserId: userId,
-        actionCode: status === 'accepted' ? 'INVITE_ACCEPTED' : 'INVITE_DECLINED',
-        actionDetail: { invitation_id: invitationId, invited_user_id: userId },
-    });
-
-    return { success: true, status };
 }
 
 export async function getTeamInbox(db: DB, teamId: number, userId: number, limit = 50) {

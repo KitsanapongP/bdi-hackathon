@@ -65,7 +65,6 @@ export interface TeamAdvisorRow extends RowDataPacket {
     email: string | null;
     phone: string | null;
     institution_name_th: string | null;
-    position: string | null;
     added_by_user_id: number;
     created_at: Date;
     updated_at: Date;

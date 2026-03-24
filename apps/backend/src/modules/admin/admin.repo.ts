@@ -364,8 +364,7 @@ export async function getTeamAdvisorsForExport(db: DB, teamIds: number[]): Promi
             a.last_name_en,
             a.email,
             a.phone,
-            a.institution_name_th,
-            a.position
+            a.institution_name_th
         FROM team_advisors a
         WHERE a.team_id IN (${tokens.join(', ')})
         ORDER BY a.team_id ASC, a.created_at ASC

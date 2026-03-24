@@ -260,7 +260,6 @@ export async function addAdvisor(
         email: string | null;
         phone: string | null;
         institutionNameTh: string | null;
-        position: string | null;
     }
 ) {
     await ensureLeaderAndEditable(db, teamId, userId);
@@ -295,7 +294,6 @@ export async function updateAdvisor(
         email: string | null;
         phone: string | null;
         institutionNameTh: string | null;
-        position: string | null;
     }
 ) {
     await ensureLeaderAndEditable(db, teamId, userId);

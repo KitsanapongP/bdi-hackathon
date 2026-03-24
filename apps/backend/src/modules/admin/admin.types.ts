@@ -89,7 +89,6 @@ export interface ExportTeamAdvisorRow {
     email: string | null;
     phone: string | null;
     institution_name_th: string | null;
-    position: string | null;
 }
 
 export interface ExportTeamMemberRow {

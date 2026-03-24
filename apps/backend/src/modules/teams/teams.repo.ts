@@ -77,6 +77,14 @@ export async function getTeamById(db: DB, teamId: number): Promise<TeamRow | nul
     return (rows[0] as TeamRow | undefined) ?? null;
 }
 
+export async function getTeamByIdForUpdate(db: DB, teamId: number): Promise<TeamRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT * FROM team_teams WHERE team_id = :teamId AND deleted_at IS NULL LIMIT 1 FOR UPDATE`,
+        { teamId }
+    );
+    return (rows[0] as TeamRow | undefined) ?? null;
+}
+
 export async function getTeamMembers(db: DB, teamId: number): Promise<any[]> {
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT m.*, u.user_name, u.avatar_url, u.first_name_th, u.last_name_th, IFNULL(p.show_real_name, 0) as show_real_name 
@@ -146,8 +154,23 @@ export async function getPublicTeams(db: DB, visibility?: string): Promise<TeamR
     } else {
         sql += ` AND visibility = 'public'`;
     }
+    sql += `
+        AND t.status NOT IN ('submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded')
+        AND NOT EXISTS (
+            SELECT 1
+            FROM verify_review_rounds v
+            WHERE v.team_id = t.team_id
+              AND v.status IN ('submitted', 'completed')
+        )
+    `;
     const [rows] = await db.query<RowDataPacket[]>(sql, params);
     return rows as TeamRow[];
+}
+
+export async function lockUserForTeamAssignment(db: DB, userId: number): Promise<void> {
+    await db.query<RowDataPacket[]>(`
+        SELECT user_id FROM user_users WHERE user_id = :userId LIMIT 1 FOR UPDATE
+    `, { userId });
 }
 
 export async function checkUserInAnyTeam(db: DB, userId: number): Promise<boolean> {
@@ -164,6 +187,44 @@ export async function removeTeamMember(db: DB, teamId: number, userId: number): 
         UPDATE team_members SET member_status = 'left', left_at = NOW() 
         WHERE team_id = :teamId AND user_id = :userId AND member_status = 'active'
         `, { teamId, userId });
+}
+
+export async function disbandTeamFromLeaderLeave(db: DB, teamId: number, leaderUserId: number, reason: string): Promise<void> {
+    await db.query(`
+        UPDATE team_teams
+        SET status = 'disbanded',
+            disbanded_at = NOW(),
+            disbanded_by_user_id = :leaderUserId,
+            disband_reason = :reason,
+            updated_at = NOW()
+        WHERE team_id = :teamId
+          AND deleted_at IS NULL
+    `, { teamId, leaderUserId, reason });
+
+    await db.query(`
+        UPDATE team_members
+        SET member_status = 'removed',
+            left_at = NOW()
+        WHERE team_id = :teamId
+          AND member_status = 'active'
+    `, { teamId });
+
+    await db.query(`
+        UPDATE team_join_requests
+        SET status = 'cancelled',
+            leader_reason = 'Auto-cancelled: team disbanded',
+            updated_at = NOW()
+        WHERE team_id = :teamId
+          AND status = 'pending'
+    `, { teamId });
+
+    await db.query(`
+        UPDATE team_invitations
+        SET status = 'cancelled',
+            updated_at = NOW()
+        WHERE team_id = :teamId
+          AND status = 'pending'
+    `, { teamId });
 }
 
 export async function getActiveTeamCode(db: DB, teamId: number): Promise<TeamCodeRow | null> {
@@ -225,6 +286,13 @@ export async function getJoinRequestById(db: DB, requestId: number): Promise<Tea
     return (rows[0] as TeamJoinRequestRow | undefined) ?? null;
 }
 
+export async function getJoinRequestByIdForUpdate(db: DB, requestId: number): Promise<TeamJoinRequestRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT * FROM team_join_requests WHERE join_request_id = :requestId LIMIT 1 FOR UPDATE
+    `, { requestId });
+    return (rows[0] as TeamJoinRequestRow | undefined) ?? null;
+}
+
 export async function getJoinRequestByUserAndTeam(db: DB, userId: number, teamId: number): Promise<TeamJoinRequestRow | null> {
     const [rows] = await db.query<RowDataPacket[]>(`
         SELECT * FROM team_join_requests 
@@ -282,6 +350,25 @@ export async function getInvitationById(db: DB, invitationId: number): Promise<T
         WHERE invitation_id = :invitationId LIMIT 1
     `, { invitationId });
     return (rows[0] as TeamInvitationRow | undefined) ?? null;
+}
+
+export async function getInvitationByIdForUpdate(db: DB, invitationId: number): Promise<TeamInvitationRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT invitation_id, team_id, invited_user_id as invitee_user_id, status, created_at, updated_at, invited_by_user_id as created_by_user_id
+        FROM team_invitations
+        WHERE invitation_id = :invitationId LIMIT 1 FOR UPDATE
+    `, { invitationId });
+    return (rows[0] as TeamInvitationRow | undefined) ?? null;
+}
+
+export async function getNextTeamCodeSequence(db: DB): Promise<number> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT COALESCE(MAX(CAST(SUBSTRING(team_code, 3) AS UNSIGNED)), 0) AS max_seq
+        FROM team_teams
+        WHERE team_code REGEXP '^TM[0-9]+$'
+    `);
+    const raw = rows[0] as { max_seq?: number | string } | undefined;
+    return Number(raw?.max_seq ?? 0) + 1;
 }
 
 export async function getPendingInvitationsByUser(db: DB, userId: number): Promise<TeamInvitationRow[]> {

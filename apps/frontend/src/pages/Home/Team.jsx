@@ -229,8 +229,8 @@ export default function TeamContent({ user }) {
     const [savingTaskLinkId, setSavingTaskLinkId] = useState(null);
 
     // ── Advisor state ──
-    const [advisorForm, setAdvisorForm] = useState({ open: false, editId: null, prefix: '', firstNameTh: '', lastNameTh: '', firstNameEn: '', lastNameEn: '', email: '', phone: '', institutionNameTh: '', position: '' });
-    const resetAdvisorForm = () => setAdvisorForm({ open: false, editId: null, prefix: '', firstNameTh: '', lastNameTh: '', firstNameEn: '', lastNameEn: '', email: '', phone: '', institutionNameTh: '', position: '' });
+    const [advisorForm, setAdvisorForm] = useState({ open: false, editId: null, prefix: '', fullNameTh: '', fullNameEn: '', email: '', phone: '', institutionNameTh: '' });
+    const resetAdvisorForm = () => setAdvisorForm({ open: false, editId: null, prefix: '', fullNameTh: '', fullNameEn: '', email: '', phone: '', institutionNameTh: '' });
 
     // โ”€โ”€ Verification fetch (hook must be before ANY conditional returns) โ”€โ”€
     const fetchVerifyStatus = useCallback(async () => {
@@ -377,6 +377,7 @@ export default function TeamContent({ user }) {
     const memberProfileReqIdRef = useRef(0);
 
     const isLeader = useMemo(() => team?.leaderUserId === user?.userId, [team, user]);
+    const isSingleLeaderTeam = isLeader && (team?.members?.length || 0) === 1;
     const hasPendingJoinRequests = pendingJoinRequests.length > 0;
     const sortedMembers = useMemo(() => {
         if (!team?.members) return [];
@@ -672,7 +673,10 @@ export default function TeamContent({ user }) {
             showToast('ทีมถูกล็อกแล้ว ไม่สามารถออกจากทีมในตอนนี้ได้', 'error');
             return;
         }
-        openConfirm('ออกจากทีม', 'คุณแน่ใจหรือไม่ว่าต้องการออกจากทีมนี้?', () => {
+        const leaveMessage = isSingleLeaderTeam
+            ? 'คุณเป็นสมาชิกเพียงคนเดียวของทีม ระบบจะยุบทีมอัตโนมัติเมื่อออกจากทีมนี้'
+            : 'คุณแน่ใจหรือไม่ว่าต้องการออกจากทีมนี้?';
+        openConfirm('ออกจากทีม', leaveMessage, () => {
             closeConfirm();
             withAction(async () => {
                 if (!team?.id || !user?.userId) return;
@@ -797,7 +801,7 @@ export default function TeamContent({ user }) {
                             <div className="gl-inner-form">
                                 <div className="gl-form-field">
                                     <label className="gl-form-label">ชื่อทีม</label>
-                                    <input className="gl-form-input" value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="ตั้งชื่อทีมของคุณ" />
+                                    <input className="gl-form-input" value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="กรอกชื่อทีม" />
                                 </div>
                                 <div className="gl-form-toggle-row">
                                     <div className="gl-form-toggle-info">
@@ -850,7 +854,7 @@ export default function TeamContent({ user }) {
                             <div className="gl-inner-form">
                                 <div className="gl-search-wrap">
                                     <Search size={18} className="gl-search-icon" />
-                                    <input className="gl-form-input gl-search-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="ค้นหาทีม..." />
+                                    <input className="gl-form-input gl-search-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="ค้นหาชื่อทีม" />
                                 </div>
                                 <div className="gl-browse-list">
                                     {filteredTeams.length === 0 && (
@@ -1384,6 +1388,7 @@ export default function TeamContent({ user }) {
                                     <input
                                         className="gr-input gl-team-name-input"
                                         value={newTeamNameInput}
+                                        disabled={actionLoading || isTeamEditLocked}
                                         onChange={e => setNewTeamNameInput(e.target.value)}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' && newTeamNameInput.trim() && !actionLoading) {
@@ -1394,7 +1399,7 @@ export default function TeamContent({ user }) {
                                                 setNewTeamNameInput(team.name);
                                             }
                                         }}
-                                        placeholder="ระบุชื่อทีมใหม่"
+                                        placeholder="กรอกชื่อทีม"
                                         autoFocus
                                     />
 
@@ -1489,8 +1494,9 @@ export default function TeamContent({ user }) {
                                         <input
                                             className="gr-input gl-fancy-input"
                                             value={inviteUserNameInput}
+                                            disabled={isTeamEditLocked}
                                             onChange={(e) => setInviteUserNameInput(e.target.value)}
-                                            placeholder="กรอก Username เพื่อเชิญ"
+                                            placeholder="กรอก Username"
                                         />
                                     </div>
                                     <button className="gt-btn gt-btn-primary gl-fancy-btn" disabled={actionLoading || isTeamEditLocked || !inviteUserNameInput.trim()} onClick={handleInviteMember}>
@@ -1586,9 +1592,10 @@ export default function TeamContent({ user }) {
                         <div className="gl-danger-text">
                             <span className="gl-team-info-label"><LogOut size={16} /> ออกจากทีม</span>
                             <p className="gl-card-desc">หากคุณออกจากทีมแล้ว จะหมดสิทธิ์ในทีมนี้และต้องขอเข้าร่วมใหม่</p>
-                            {isLeader && <p className="vf-hint text-warning mt-1">หัวหน้าทีมต้องโอนสิทธิ์ให้สมาชิกคนอื่นก่อน ถึงจะออกจากทีมได้</p>}
+                            {isLeader && !isSingleLeaderTeam && <p className="vf-hint text-warning mt-1">หัวหน้าทีมต้องโอนสิทธิ์ให้สมาชิกคนอื่นก่อน ถึงจะออกจากทีมได้</p>}
+                            {isSingleLeaderTeam && <p className="vf-hint text-warning mt-1">หากหัวหน้าทีมออก ระบบจะยุบทีมอัตโนมัติ</p>}
                         </div>
-                        <button className="gl-btn-danger gl-btn-lg" disabled={actionLoading || isLeader || isTeamEditLocked} onClick={handleLeaveCurrentTeam}>
+                        <button className="gl-btn-danger gl-btn-lg" disabled={actionLoading || (isLeader && !isSingleLeaderTeam) || isTeamEditLocked} onClick={handleLeaveCurrentTeam}>
                             <LogOut size={16} /> ออกจากทีม
                         </button>
                     </div>
@@ -2037,7 +2044,7 @@ export default function TeamContent({ user }) {
                                     <div className="pf-form-grid" style={{ marginTop: 12 }}>
                                         <div className="pf-field">
                                             <span className="pf-label">Username</span>
-                                            <input className="pf-input" value={profileData.userName || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, userName: e.target.value }))} placeholder="username" />
+                                            <input className="pf-input" value={profileData.userName || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, userName: e.target.value }))} placeholder="กรอก Username" />
                                         </div>
                                         <div className="pf-field">
                                             <span className="pf-label">Email</span>
@@ -2059,11 +2066,11 @@ export default function TeamContent({ user }) {
                                         </div>
                                         <div className="pf-field">
                                             <span className="pf-label">First Name (EN)</span>
-                                            <input className="pf-input" value={profileData.firstNameEn || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, firstNameEn: e.target.value }))} placeholder="First name" />
+                                            <input className="pf-input" value={profileData.firstNameEn || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, firstNameEn: e.target.value }))} placeholder="ชื่อภาษาอังกฤษ" />
                                         </div>
                                         <div className="pf-field">
                                             <span className="pf-label">Last Name (EN)</span>
-                                            <input className="pf-input" value={profileData.lastNameEn || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, lastNameEn: e.target.value }))} placeholder="Last name" />
+                                            <input className="pf-input" value={profileData.lastNameEn || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, lastNameEn: e.target.value }))} placeholder="นามสกุลภาษาอังกฤษ" />
                                         </div>
                                         <div className="pf-field">
                                             <span className="pf-label">วันเดือนปีเกิด</span>
@@ -2086,7 +2093,7 @@ export default function TeamContent({ user }) {
                                             <input className="pf-input" value={profileData.phone || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => {
                                                 const value = e.target.value.replace(/\D/g, '').slice(0, 10);
                                                 setProfileData((d) => ({ ...d, phone: value }));
-                                            }} placeholder="08x-xxx-xxxx" maxLength={10} />
+                                            }} placeholder="เช่น 0812345678" maxLength={10} />
                                         </div>
                                     </div>
                                 </div>
@@ -2240,7 +2247,7 @@ export default function TeamContent({ user }) {
                             </div>
                             <div className="gl-form-field" style={{ marginBottom: 12 }}>
                                 <label className="gl-form-label">เหตุผลในการยุบทีม</label>
-                                <input className="gl-form-input" value={disbandReason} onChange={e => setDisbandReason(e.target.value)} placeholder="ระบุเหตุผล..." />
+                                <input className="gl-form-input" value={disbandReason} onChange={e => setDisbandReason(e.target.value)} placeholder="กรอกเหตุผลการยุบทีม" />
                             </div>
                             <button className="vf-action-btn vf-btn-disband" disabled={actionLoading || !disbandReason.trim()} onClick={handleDisbandTeam}>
                                 <AlertTriangle size={16} /> ยุบทีม
@@ -2265,17 +2272,14 @@ export default function TeamContent({ user }) {
                 }
                 const body = {
                     prefix: advisorForm.prefix || undefined,
-                    firstNameTh: advisorForm.firstNameTh,
-                    lastNameTh: advisorForm.lastNameTh,
-                    firstNameEn: advisorForm.firstNameEn || undefined,
-                    lastNameEn: advisorForm.lastNameEn || undefined,
+                    fullNameTh: advisorForm.fullNameTh,
+                    fullNameEn: advisorForm.fullNameEn || undefined,
                     email: advisorForm.email || undefined,
                     phone: advisorForm.phone || undefined,
                     institutionNameTh: advisorForm.institutionNameTh || undefined,
-                    position: advisorForm.position || undefined,
                 };
-                if (!body.firstNameTh || !body.lastNameTh) {
-                    showToast('กรุณากรอกชื่อและนามสกุล (ภาษาไทย)', 'error');
+                if (!body.fullNameTh?.trim()) {
+                    showToast('กรุณากรอกชื่อ-นามสกุล (ภาษาไทย)', 'error');
                     return;
                 }
                 await withAction(async () => {
@@ -2323,10 +2327,11 @@ export default function TeamContent({ user }) {
                 }
                 setAdvisorForm({
                     open: true, editId: adv.advisor_id,
-                    prefix: adv.prefix || '', firstNameTh: adv.first_name_th || '', lastNameTh: adv.last_name_th || '',
-                    firstNameEn: adv.first_name_en || '', lastNameEn: adv.last_name_en || '',
+                    prefix: adv.prefix || '',
+                    fullNameTh: [adv.first_name_th, adv.last_name_th].filter(Boolean).join(' ').trim(),
+                    fullNameEn: [adv.first_name_en, adv.last_name_en].filter(Boolean).join(' ').trim(),
                     email: adv.email || '', phone: adv.phone || '',
-                    institutionNameTh: adv.institution_name_th || '', position: adv.position || '',
+                    institutionNameTh: adv.institution_name_th || '',
                 });
             };
 
@@ -2362,7 +2367,6 @@ export default function TeamContent({ user }) {
                                         {adv.first_name_th} {adv.last_name_th}
                                         {adv.first_name_en && <span className="sub-advisor-en"> ({adv.first_name_en} {adv.last_name_en})</span>}
                                     </div>
-                                    {adv.position && <div className="sub-advisor-detail">ตำแหน่ง: {adv.position}</div>}
                                     {adv.institution_name_th && <div className="sub-advisor-detail">สถาบัน: {adv.institution_name_th}</div>}
                                     {adv.email && <div className="sub-advisor-detail">Email: {adv.email}</div>}
                                     {adv.phone && <div className="sub-advisor-detail">โทร: {adv.phone}</div>}
@@ -2389,36 +2393,24 @@ export default function TeamContent({ user }) {
                                     <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.prefix} onChange={e => setAdvisorForm(f => ({ ...f, prefix: e.target.value }))} placeholder="เช่น ผศ.ดร." />
                                 </div>
                                 <div className="pf-field">
-                                    <span className="pf-label">ชื่อ (TH) *</span>
-                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.firstNameTh} onChange={e => setAdvisorForm(f => ({ ...f, firstNameTh: e.target.value }))} placeholder="ชื่อภาษาไทย" />
+                                    <span className="pf-label">ชื่อ-นามสกุล (TH) *</span>
+                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.fullNameTh} onChange={e => setAdvisorForm(f => ({ ...f, fullNameTh: e.target.value }))} placeholder="เช่น สมชาย ใจดี" />
                                 </div>
                                 <div className="pf-field">
-                                    <span className="pf-label">นามสกุล (TH) *</span>
-                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.lastNameTh} onChange={e => setAdvisorForm(f => ({ ...f, lastNameTh: e.target.value }))} placeholder="นามสกุลภาษาไทย" />
-                                </div>
-                                <div className="pf-field">
-                                    <span className="pf-label">First Name (EN)</span>
-                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.firstNameEn} onChange={e => setAdvisorForm(f => ({ ...f, firstNameEn: e.target.value }))} placeholder="First name" />
-                                </div>
-                                <div className="pf-field">
-                                    <span className="pf-label">Last Name (EN)</span>
-                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.lastNameEn} onChange={e => setAdvisorForm(f => ({ ...f, lastNameEn: e.target.value }))} placeholder="Last name" />
+                                    <span className="pf-label">ชื่อ-นามสกุล (EN)</span>
+                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.fullNameEn} onChange={e => setAdvisorForm(f => ({ ...f, fullNameEn: e.target.value }))} placeholder="e.g. Somchai Jaidee" />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">Email</span>
-                                    <input className="pf-input" type="email" disabled={isAdvisorLocked} value={advisorForm.email} onChange={e => setAdvisorForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" />
+                                    <input className="pf-input" type="email" disabled={isAdvisorLocked} value={advisorForm.email} onChange={e => setAdvisorForm(f => ({ ...f, email: e.target.value }))} placeholder="เช่น advisor@example.com" />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">เบอร์โทร</span>
-                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.phone} onChange={e => setAdvisorForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="08x-xxx-xxxx" maxLength={10} />
+                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.phone} onChange={e => setAdvisorForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="เช่น 0812345678" maxLength={10} />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">สถาบัน</span>
                                     <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.institutionNameTh} onChange={e => setAdvisorForm(f => ({ ...f, institutionNameTh: e.target.value }))} placeholder="เช่น มหาวิทยาลัยขอนแก่น" />
-                                </div>
-                                <div className="pf-field full">
-                                    <span className="pf-label">ตำแหน่งทางวิชาการ</span>
-                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.position} onChange={e => setAdvisorForm(f => ({ ...f, position: e.target.value }))} placeholder="เช่น ผู้ช่วยศาสตราจารย์" />
                                 </div>
                             </div>
                             <div className="pf-actions" style={{ marginTop: 12, display: 'flex', gap: 8 }}>

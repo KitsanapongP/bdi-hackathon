@@ -386,7 +386,6 @@ async function buildTeamWorkbookBuffer(bundle: TeamExportBundle): Promise<Buffer
         { header: 'advisor_email', key: 'advisor_email' },
         { header: 'advisor_phone', key: 'advisor_phone' },
         { header: 'advisor_institution_name_th', key: 'advisor_institution_name_th' },
-        { header: 'advisor_position', key: 'advisor_position' },
         { header: 'confirmation_deadline_at', key: 'confirmation_deadline_at' },
         { header: 'confirmed_at', key: 'confirmed_at' },
         { header: 'confirmed_by_user_id', key: 'confirmed_by_user_id' },
@@ -433,7 +432,6 @@ async function buildTeamWorkbookBuffer(bundle: TeamExportBundle): Promise<Buffer
     const advisorEmails = bundle.advisors.map((advisor) => advisor.email).filter(Boolean).join('; ');
     const advisorPhones = bundle.advisors.map((advisor) => advisor.phone).filter(Boolean).join('; ');
     const advisorInstitutions = bundle.advisors.map((advisor) => advisor.institution_name_th).filter(Boolean).join('; ');
-    const advisorPositions = bundle.advisors.map((advisor) => advisor.position).filter(Boolean).join('; ');
 
     teamSheet.addRow({
         team_id: bundle.team.team_id,
@@ -449,7 +447,6 @@ async function buildTeamWorkbookBuffer(bundle: TeamExportBundle): Promise<Buffer
         advisor_email: advisorEmails,
         advisor_phone: advisorPhones,
         advisor_institution_name_th: advisorInstitutions,
-        advisor_position: advisorPositions,
         confirmation_deadline_at: formatDateTime(bundle.team.confirmation_deadline_at),
         confirmed_at: formatDateTime(bundle.team.confirmed_at),
         confirmed_by_user_id: bundle.team.confirmed_by_user_id ?? '',
