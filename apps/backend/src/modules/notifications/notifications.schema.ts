@@ -5,17 +5,16 @@ export const eventCodeSchema = z.enum([
   'SELECTION_PASSED',
   'SELECTION_FAILED',
   'TEAM_CONFIRMED',
+  'TEAM_DISBANDED',
 ]);
 
 export const updateNotificationSettingSchema = z.object({
-  isInAppEnabled: z.boolean().optional(),
   isEmailEnabled: z.boolean().optional(),
   customSubject: z.string().trim().max(255).nullable().optional(),
   customMessage: z.string().trim().nullable().optional(),
 }).refine(
   (v) => (
-    v.isInAppEnabled !== undefined
-    || v.isEmailEnabled !== undefined
+    v.isEmailEnabled !== undefined
     || v.customSubject !== undefined
     || v.customMessage !== undefined
   ),

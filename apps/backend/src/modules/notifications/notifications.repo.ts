@@ -29,7 +29,6 @@ export async function upsertNotificationSetting(
   db: DB,
   data: {
     eventCode: NotificationEventCode;
-    isInAppEnabled: boolean;
     isEmailEnabled: boolean;
     customSubject: string | null;
     customMessage: string | null;
@@ -38,11 +37,10 @@ export async function upsertNotificationSetting(
 ): Promise<void> {
   await db.query(`
     INSERT INTO admin_notification_settings (
-      event_code, is_in_app_enabled, is_email_enabled, custom_subject, custom_message, updated_by_user_id, updated_at
+      event_code, is_email_enabled, custom_subject, custom_message, updated_by_user_id, updated_at
     )
-    VALUES (:eventCode, :isInAppEnabled, :isEmailEnabled, :customSubject, :customMessage, :updatedByUserId, NOW())
+    VALUES (:eventCode, :isEmailEnabled, :customSubject, :customMessage, :updatedByUserId, NOW())
     ON DUPLICATE KEY UPDATE
-      is_in_app_enabled = VALUES(is_in_app_enabled),
       is_email_enabled = VALUES(is_email_enabled),
       custom_subject = VALUES(custom_subject),
       custom_message = VALUES(custom_message),
@@ -50,7 +48,6 @@ export async function upsertNotificationSetting(
       updated_at = NOW()
   `, {
     eventCode: data.eventCode,
-    isInAppEnabled: data.isInAppEnabled ? 1 : 0,
     isEmailEnabled: data.isEmailEnabled ? 1 : 0,
     customSubject: data.customSubject,
     customMessage: data.customMessage,

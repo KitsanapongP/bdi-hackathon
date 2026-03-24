@@ -5839,11 +5839,6 @@ function NotificationSettingsPage() {
         columns={[
           { key: 'eventCode', label: 'Event' },
           {
-            key: 'isInAppEnabled',
-            label: 'In-App',
-            render: (row) => String(row.isInAppEnabled),
-          },
-          {
             key: 'isEmailEnabled',
             label: 'Email',
             render: (row) => String(row.isEmailEnabled),
@@ -5858,9 +5853,6 @@ function NotificationSettingsPage() {
             label: 'Actions',
             render: (row) => (
               <div className="admin-ui-inline-actions">
-                <button type="button" className="admin-ui-mini-btn" onClick={() => updateSetting(row.eventCode, { isInAppEnabled: !row.isInAppEnabled })}>
-                  Toggle In-App
-                </button>
                 <button type="button" className="admin-ui-mini-btn" onClick={() => updateSetting(row.eventCode, { isEmailEnabled: !row.isEmailEnabled })}>
                   Toggle Email
                 </button>

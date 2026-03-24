@@ -172,6 +172,25 @@ function getTransporter() {
     return { transporter, reason: null };
 }
 
+function buildAuthEmailHtml(input: { eventTitle: string; headline: string; body: string; code: string; footer: string }): string {
+    return `
+        <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; color: #0f172a; line-height: 1.6;">
+            <div style="padding: 18px 20px; background: #0b2545; color: #ffffff; border-radius: 12px 12px 0 0;">
+                <div style="font-size: 12px; letter-spacing: 0.08em; opacity: 0.9; text-transform: uppercase;">Intelligent Living Hackathon 2026</div>
+                <h2 style="margin: 8px 0 0 0; font-size: 20px;">${input.eventTitle}</h2>
+            </div>
+            <div style="padding: 20px; border: 1px solid #dbe3ef; border-top: 0; border-radius: 0 0 12px 12px; background: #ffffff;">
+                <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #102a43;">${input.headline}</h3>
+                <p style="margin: 0 0 16px 0; color: #243b53;">${input.body}</p>
+                <div style="font-size: 32px; font-weight: 700; letter-spacing: 6px; text-align: center; background: #f8fafc; border: 1px solid #dbe3ef; border-radius: 10px; padding: 16px; margin: 12px 0 18px;">
+                    ${input.code}
+                </div>
+                <p style="margin: 0; font-size: 13px; color: #627d98;">${input.footer}</p>
+            </div>
+        </div>
+    `;
+}
+
 async function sendRegistrationVerificationEmail(email: string, code: string): Promise<void> {
     const { transporter, reason } = getTransporter();
     if (!transporter) {
@@ -180,16 +199,13 @@ async function sendRegistrationVerificationEmail(email: string, code: string): P
 
     const fromEmail = process.env['SMTP_FROM']?.trim() || process.env['SMTP_USER']?.trim() || 'noreply@hackathon.local';
     const subject = 'รหัสยืนยันการสมัครสมาชิก';
-    const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #0f172a;">
-            <h2 style="margin: 0 0 12px;">ยืนยันการสมัครสมาชิก</h2>
-            <p style="margin: 0 0 16px;">กรุณาใช้รหัสด้านล่างเพื่อยืนยันการสมัครสมาชิกภายใน <strong>5 นาที</strong></p>
-            <div style="font-size: 32px; font-weight: 700; letter-spacing: 6px; text-align: center; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 16px; margin: 12px 0 18px;">
-                ${code}
-            </div>
-            <p style="margin: 0; color: #475569;">หากคุณไม่ได้เป็นผู้สมัคร กรุณาเพิกเฉยอีเมลฉบับนี้</p>
-        </div>
-    `;
+    const html = buildAuthEmailHtml({
+        eventTitle: 'ยืนยันการสมัครสมาชิก',
+        headline: 'รหัสยืนยันสำหรับลงทะเบียน',
+        body: 'กรุณาใช้รหัสด้านล่างเพื่อยืนยันการสมัครสมาชิกภายใน 5 นาที',
+        code,
+        footer: 'หากคุณไม่ได้เป็นผู้สมัคร กรุณาเพิกเฉยอีเมลฉบับนี้',
+    });
 
     await transporter.sendMail({
         from: fromEmail,

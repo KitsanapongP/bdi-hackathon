@@ -4,11 +4,11 @@ export type NotificationEventCode =
   | 'IDENTITY_SUBMITTED'
   | 'SELECTION_PASSED'
   | 'SELECTION_FAILED'
-  | 'TEAM_CONFIRMED';
+  | 'TEAM_CONFIRMED'
+  | 'TEAM_DISBANDED';
 
 export interface AdminNotificationSettingRow extends RowDataPacket {
   event_code: NotificationEventCode;
-  is_in_app_enabled: number;
   is_email_enabled: number;
   custom_subject: string | null;
   custom_message: string | null;

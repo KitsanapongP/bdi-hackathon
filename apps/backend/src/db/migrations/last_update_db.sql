@@ -54,7 +54,6 @@ INSERT INTO `access_allowlist` (`allow_id`, `user_id`, `access_role`, `is_active
 
 CREATE TABLE `admin_notification_settings` (
   `event_code` varchar(100) NOT NULL COMMENT 'Event code',
-  `is_in_app_enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Enable in-app inbox delivery',
   `is_email_enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Enable email delivery',
   `custom_subject` varchar(255) DEFAULT NULL COMMENT 'Optional per-event email subject override',
   `custom_message` text DEFAULT NULL COMMENT 'Optional per-event email body override',
@@ -66,11 +65,12 @@ CREATE TABLE `admin_notification_settings` (
 -- Dumping data for table `admin_notification_settings`
 --
 
-INSERT INTO `admin_notification_settings` (`event_code`, `is_in_app_enabled`, `is_email_enabled`, `custom_subject`, `custom_message`, `updated_by_user_id`, `updated_at`) VALUES
-('IDENTITY_SUBMITTED', 0, 1, 'ทีมส่งเอกสารยืนยันตัวตนแล้ว', 'ทีม {{team_name}} ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว', 1001, '2026-03-10 22:05:12'),
-('SELECTION_FAILED', 0, 1, 'ประกาศผลคัดเลือก: ไม่ผ่าน', 'ทีม {{team_name}} ไม่ผ่านการคัดเลือกในรอบนี้', 1001, '2026-03-10 17:50:20'),
-('SELECTION_PASSED', 0, 1, 'ประกาศผลคัดเลือก: ผ่าน', 'ทีม {{team_name}} ผ่านการคัดเลือก กรุณายืนยันเข้าร่วมภายในกำหนดเวลา', 1001, '2026-03-10 17:50:20'),
-('TEAM_CONFIRMED', 0, 1, 'ทีมยืนยันเข้าร่วมโครงการแล้ว', 'ทีม {{team_name}} ยืนยันเข้าร่วมโครงการเรียบร้อยแล้ว โดย {{actor_name}}', 1001, '2026-03-10 17:50:20');
+INSERT INTO `admin_notification_settings` (`event_code`, `is_email_enabled`, `custom_subject`, `custom_message`, `updated_by_user_id`, `updated_at`) VALUES
+('IDENTITY_SUBMITTED', 1, 'แจ้งการส่งเอกสารยืนยันตัวตนของทีม', 'ทีม {{team_name}} [{{team_code}}] ได้ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว กรุณาตรวจสอบข้อมูลในระบบผู้ดูแล', 1001, '2026-03-24 00:00:00'),
+('SELECTION_FAILED', 1, 'แจ้งผลการคัดเลือกทีม: ไม่ผ่านการคัดเลือก', 'ทีม {{team_name}} [{{team_code}}] ไม่ผ่านการคัดเลือกในรอบนี้ ขอขอบคุณที่เข้าร่วมโครงการ', 1001, '2026-03-24 00:00:00'),
+('SELECTION_PASSED', 1, 'แจ้งผลการคัดเลือกทีม: ผ่านการคัดเลือก', 'ทีม {{team_name}} [{{team_code}}] ผ่านการคัดเลือกแล้ว กรุณาดำเนินการยืนยันสิทธิ์เข้าร่วมภายในกำหนดเวลา {{confirmation_deadline_at}}', 1001, '2026-03-24 00:00:00'),
+('TEAM_CONFIRMED', 1, 'แจ้งการยืนยันเข้าร่วมโครงการจากทีม', 'ทีม {{team_name}} [{{team_code}}] ได้ยืนยันเข้าร่วมโครงการเรียบร้อยแล้ว โดย {{actor_name}}', 1001, '2026-03-24 00:00:00'),
+('TEAM_DISBANDED', 1, 'แจ้งการยุบทีม', 'ทีม {{team_name}} [{{team_code}}] ถูกยุบทีมเรียบร้อยแล้ว โดย {{actor_name}} เหตุผล: {{disband_reason}}', 1001, '2026-03-24 00:00:00');
 
 -- --------------------------------------------------------
 

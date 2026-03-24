@@ -143,6 +143,16 @@ export async function leaveTeam(db: DB, teamId: number, userId: number) {
         }
 
         const reason = 'หัวหน้าทีมออกจากทีมและไม่มีสมาชิกคนอื่นในทีม';
+
+        await notificationService.triggerNotificationEvent(db, {
+            eventCode: 'TEAM_DISBANDED',
+            teamId,
+            actorUserId: userId,
+            extra: {
+                disband_reason: reason,
+            },
+        });
+
         await repo.disbandTeamFromLeaderLeave(db, teamId, userId, reason);
         await repo.createTeamAuditLog(db, {
             teamId,

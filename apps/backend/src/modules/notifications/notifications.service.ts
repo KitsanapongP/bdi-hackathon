@@ -5,18 +5,12 @@ import type { NotificationEventCode } from './notifications.types.js';
 import { NotFoundError } from '../../shared/errors.js';
 import { createTeamAuditLog } from '../teams/teams.repo.js';
 
-const DEFAULT_EVENT_CHANNELS: Record<NotificationEventCode, { inApp: boolean; email: boolean }> = {
-  IDENTITY_SUBMITTED: { inApp: true, email: true },
-  SELECTION_PASSED: { inApp: true, email: true },
-  SELECTION_FAILED: { inApp: true, email: true },
-  TEAM_CONFIRMED: { inApp: true, email: true },
-};
-
 const EVENT_TITLES: Record<NotificationEventCode, string> = {
   IDENTITY_SUBMITTED: 'แจ้งการส่งเอกสารยืนยันตัวตน',
   SELECTION_PASSED: 'แจ้งผลการคัดเลือก: ผ่าน',
   SELECTION_FAILED: 'แจ้งผลการคัดเลือก: ไม่ผ่าน',
   TEAM_CONFIRMED: 'แจ้งการยืนยันเข้าร่วมโครงการ',
+  TEAM_DISBANDED: 'แจ้งการยุบทีม',
 };
 
 const DEFAULT_EVENT_SUBJECTS: Record<NotificationEventCode, string> = {
@@ -24,13 +18,15 @@ const DEFAULT_EVENT_SUBJECTS: Record<NotificationEventCode, string> = {
   SELECTION_PASSED: 'แจ้งผลการคัดเลือกทีม: ผ่านการคัดเลือก',
   SELECTION_FAILED: 'แจ้งผลการคัดเลือกทีม: ไม่ผ่านการคัดเลือก',
   TEAM_CONFIRMED: 'แจ้งการยืนยันเข้าร่วมโครงการจากทีม',
+  TEAM_DISBANDED: 'แจ้งการยุบทีม',
 };
 
 const DEFAULT_EVENT_MESSAGES: Record<NotificationEventCode, string> = {
-  IDENTITY_SUBMITTED: 'ทีม {{team_name}} ({{team_code}}) ได้ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว กรุณาตรวจสอบข้อมูลในระบบผู้ดูแล',
-  SELECTION_PASSED: 'ทีม {{team_name}} ({{team_code}}) ผ่านการคัดเลือกแล้ว กรุณาดำเนินการยืนยันสิทธิ์เข้าร่วมภายในกำหนดเวลา {{confirmation_deadline_at}}',
-  SELECTION_FAILED: 'ทีม {{team_name}} ({{team_code}}) ไม่ผ่านการคัดเลือกในรอบนี้ ขอขอบคุณที่เข้าร่วมโครงการ',
-  TEAM_CONFIRMED: 'ทีม {{team_name}} ({{team_code}}) ได้ยืนยันเข้าร่วมโครงการเรียบร้อยแล้ว โดย {{actor_name}}',
+  IDENTITY_SUBMITTED: 'ทีม {{team_name}} [{{team_code}}] ได้ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว กรุณาตรวจสอบข้อมูลในระบบผู้ดูแล',
+  SELECTION_PASSED: 'ทีม {{team_name}} [{{team_code}}] ผ่านการคัดเลือกแล้ว กรุณาดำเนินการยืนยันสิทธิ์เข้าร่วมภายในกำหนดเวลา {{confirmation_deadline_at}}',
+  SELECTION_FAILED: 'ทีม {{team_name}} [{{team_code}}] ไม่ผ่านการคัดเลือกในรอบนี้ ขอขอบคุณที่เข้าร่วมโครงการ',
+  TEAM_CONFIRMED: 'ทีม {{team_name}} [{{team_code}}] ได้ยืนยันเข้าร่วมโครงการเรียบร้อยแล้ว โดย {{actor_name}}',
+  TEAM_DISBANDED: 'ทีม {{team_name}} [{{team_code}}] ถูกยุบทีมเรียบร้อยแล้ว โดย {{actor_name}} เหตุผล: {{disband_reason}}',
 };
 
 const requireModule = createRequire(import.meta.url);
@@ -43,7 +39,6 @@ type TriggerEventInput = {
 };
 
 type EventSetting = {
-  inApp: boolean;
   email: boolean;
   customSubject: string | null;
   customMessage: string | null;
@@ -165,13 +160,12 @@ async function resolveEventSetting(db: DB, eventCode: NotificationEventCode): Pr
   const row = await repo.getNotificationSettingByEvent(db, eventCode);
   if (!row) {
     return {
-      ...DEFAULT_EVENT_CHANNELS[eventCode],
+      email: true,
       customSubject: null,
       customMessage: null,
     };
   }
   return {
-    inApp: row.is_in_app_enabled === 1,
     email: row.is_email_enabled === 1,
     customSubject: row.custom_subject,
     customMessage: row.custom_message,
@@ -234,7 +228,7 @@ async function resolveTemplateAndVariables(
   variables.action_at = actionAtRaw;
   variables.action_at_formatted = actionAtFormatted;
 
-  const teamLabel = `${team.team_name_th || team.team_name_en}[${team.team_code}]`;
+  const teamLabel = `${team.team_name_th || team.team_name_en} [${team.team_code}]`;
   const resolvedSubject = renderTemplate(DEFAULT_EVENT_SUBJECTS[eventCode], variables) || DEFAULT_EVENT_SUBJECTS[eventCode];
   const subjectFromSetting = renderTemplate(setting.customSubject, variables).trim();
   const baseSubject = subjectFromSetting || resolvedSubject;
@@ -248,6 +242,7 @@ async function resolveTemplateAndVariables(
     formatDetailLine('ชื่อทีม', team.team_name_th || team.team_name_en),
     formatDetailLine('รหัสทีม', team.team_code || '-'),
     formatDetailLine('ผู้ดำเนินการ', actorName),
+    ...(variables.disband_reason ? [formatDetailLine('เหตุผล', variables.disband_reason)] : []),
     formatDetailLine('สมาชิกในทีม', memberNames.length > 0 ? memberNames.join(', ') : '-'),
     formatDetailLine('จำนวนสมาชิก', String(memberNames.length)),
     formatDetailLine('เวลาที่ดำเนินการ', actionAtFormatted),
@@ -400,7 +395,6 @@ export async function getAdminNotificationSettings(db: DB) {
   const rows = await repo.getNotificationSettings(db);
   return rows.map((row) => ({
     eventCode: row.event_code,
-    isInAppEnabled: row.is_in_app_enabled === 1,
     isEmailEnabled: row.is_email_enabled === 1,
     customSubject: row.custom_subject,
     customMessage: row.custom_message,
@@ -413,7 +407,6 @@ export async function updateAdminNotificationSetting(
   db: DB,
   eventCode: NotificationEventCode,
   patch: {
-    isInAppEnabled?: boolean | undefined;
     isEmailEnabled?: boolean | undefined;
     customSubject?: string | null | undefined;
     customMessage?: string | null | undefined;
@@ -421,14 +414,12 @@ export async function updateAdminNotificationSetting(
   updatedByUserId: number,
 ) {
   const current = await resolveEventSetting(db, eventCode);
-  const nextInApp = patch.isInAppEnabled ?? current.inApp;
   const nextEmail = patch.isEmailEnabled ?? current.email;
   const nextCustomSubject = patch.customSubject === undefined ? current.customSubject : patch.customSubject;
   const nextCustomMessage = patch.customMessage === undefined ? current.customMessage : patch.customMessage;
 
   await repo.upsertNotificationSetting(db, {
     eventCode,
-    isInAppEnabled: nextInApp,
     isEmailEnabled: nextEmail,
     customSubject: nextCustomSubject,
     customMessage: nextCustomMessage,
@@ -437,7 +428,6 @@ export async function updateAdminNotificationSetting(
 
   return {
     eventCode,
-    isInAppEnabled: nextInApp,
     isEmailEnabled: nextEmail,
     customSubject: nextCustomSubject,
     customMessage: nextCustomMessage,

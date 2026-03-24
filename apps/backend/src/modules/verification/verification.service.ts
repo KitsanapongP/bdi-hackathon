@@ -393,7 +393,18 @@ export async function disbandTeamAction(
         throw new BadRequestError('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e23\u0e30\u0e1a\u0e38\u0e40\u0e2b\u0e15\u0e38\u0e1c\u0e25\u0e43\u0e19\u0e01\u0e32\u0e23\u0e22\u0e38\u0e1a\u0e17\u0e35\u0e21');
     }
 
-    await repo.disbandTeam(db, teamId, leaderUserId, reason.trim());
+    const disbandReason = reason.trim();
+
+    await notificationService.triggerNotificationEvent(db, {
+        eventCode: 'TEAM_DISBANDED',
+        teamId,
+        actorUserId: leaderUserId,
+        extra: {
+            disband_reason: disbandReason,
+        },
+    });
+
+    await repo.disbandTeam(db, teamId, leaderUserId, disbandReason);
 
     const round = await repo.getLatestVerifyRound(db, teamId);
     await repo.createVerifyAuditLog(db, {
@@ -401,6 +412,6 @@ export async function disbandTeamAction(
         teamId,
         actorUserId: leaderUserId,
         actionCode: 'TEAM_DISBANDED',
-        actionDetail: JSON.stringify({ reason: reason.trim() }),
+        actionDetail: JSON.stringify({ reason: disbandReason }),
     });
 }
