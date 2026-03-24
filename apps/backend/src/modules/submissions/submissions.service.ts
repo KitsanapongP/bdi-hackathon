@@ -9,8 +9,14 @@ const UPLOADS_BASE_DIR = path.join(process.cwd(), 'public', 'uploads', 'verifica
 const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
 
 function sanitizePathSegment(value: string | null | undefined, fallback: string): string {
-    if (!value) return fallback;
-    return value.replace(/[^a-zA-Z0-9\u0E00-\u0E7F._-]/g, '_').substring(0, 100) || fallback;
+    const raw = String(value || '').trim();
+    if (!raw) return fallback;
+    const cleaned = raw
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+        .replace(/\s+/g, ' ')
+        .replace(/\.+/g, '.')
+        .trim();
+    return cleaned || fallback;
 }
 
 async function ensureLeader(db: DB, teamId: number, userId: number): Promise<void> {
@@ -84,7 +90,7 @@ export async function uploadSubmissionFile(
     await ensureLeaderAndEditable(db, teamId, userId);
 
     const team = await repo.getTeamById(db, teamId);
-    const teamName = sanitizePathSegment(team?.team_name_en || team?.team_name_th, `team_${teamId}`);
+    const teamName = sanitizePathSegment(team?.team_name_th || team?.team_name_en, `team-${teamId}`);
     const dir = path.join(UPLOADS_BASE_DIR, teamName, 'submission_files');
     fs.mkdirSync(dir, { recursive: true });
 

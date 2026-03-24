@@ -9,6 +9,7 @@ import type {
     DashboardTeamStatus,
     DashboardTrendRow,
     ExportMemberDocumentRow,
+    ExportSubmissionFileRow,
     ExportSubmittedTeamRow,
     ExportTeamAdvisorRow,
     ExportTeamMemberRow,
@@ -484,6 +485,31 @@ export async function getMemberDocumentsForExport(db: DB, teamIds: number[]): Pr
     `, params);
 
     return rows as ExportMemberDocumentRow[];
+}
+
+export async function getSubmissionFilesForExport(db: DB, teamIds: number[]): Promise<ExportSubmissionFileRow[]> {
+    if (teamIds.length === 0) return [];
+
+    const params: Record<string, number> = {};
+    const tokens = teamIds.map((teamId, idx) => {
+        const key = `teamId${idx}`;
+        params[key] = teamId;
+        return `:${key}`;
+    });
+
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT
+            f.team_id,
+            f.file_storage_key,
+            f.file_original_name,
+            f.uploaded_at
+        FROM team_submission_files f
+        WHERE f.team_id IN (${tokens.join(', ')})
+          AND f.deleted_at IS NULL
+        ORDER BY f.team_id ASC, f.uploaded_at ASC, f.file_id ASC
+    `, params);
+
+    return rows as ExportSubmissionFileRow[];
 }
 
 export async function listSelectionTeams(

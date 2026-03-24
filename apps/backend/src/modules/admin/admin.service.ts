@@ -6,6 +6,7 @@ import type {
     DashboardDuplicateMemberRow,
     DashboardTeamStatus,
     ExportMemberDocumentRow,
+    ExportSubmissionFileRow,
     ExportSubmittedTeamRow,
     ExportTeamAdvisorRow,
     ExportTeamMemberRow,
@@ -248,17 +249,6 @@ export async function getDashboardOverview(db: DB, input: DashboardQueryInput) {
 
 const VERIFICATION_UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads', 'verification');
 
-function sanitizePathSegment(value: string | null | undefined, fallback: string): string {
-    const raw = String(value || '').trim();
-    if (!raw) return fallback;
-    const cleaned = raw
-        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
-        .replace(/\s+/g, ' ')
-        .replace(/\.+/g, '.')
-        .trim();
-    return cleaned || fallback;
-}
-
 function sanitizeFileSegment(value: string, fallback: string): string {
     const cleaned = String(value || '')
         .trim()
@@ -311,11 +301,13 @@ function pickMemberName(document: ExportMemberDocumentRow): { firstName: string;
     return { firstName, lastName };
 }
 
-function resolveDocumentAbsolutePath(storageKey: string): string | null {
+function resolveAbsolutePathFromStorageKey(storageKey: string): string | null {
     const normalizedStorageKey = String(storageKey || '').replace(/\\/g, '/');
     const candidates = [
+        path.join(process.cwd(), 'public', normalizedStorageKey.replace(/^\/+/, '')),
         path.join(process.cwd(), 'public', normalizedStorageKey),
         path.join(VERIFICATION_UPLOADS_DIR, normalizedStorageKey.replace(/^verification\//, '')),
+        path.join(VERIFICATION_UPLOADS_DIR, normalizedStorageKey.replace(/^uploads\/verification\//, '')),
     ];
 
     for (const candidate of candidates) {
@@ -334,7 +326,7 @@ async function mergeMemberDocumentsToPdf(documents: ExportMemberDocumentRow[]): 
     let copiedPageCount = 0;
 
     for (const document of documents) {
-        const absolutePath = resolveDocumentAbsolutePath(document.file_storage_key);
+        const absolutePath = resolveAbsolutePathFromStorageKey(document.file_storage_key);
         if (!absolutePath) continue;
 
         const bytes = fs.readFileSync(absolutePath);
@@ -351,32 +343,27 @@ async function mergeMemberDocumentsToPdf(documents: ExportMemberDocumentRow[]): 
     return Buffer.from(mergedBytes);
 }
 
+function buildUniqueZipFileName(fileName: string, usedNames: Set<string>): string {
+    const parsed = path.parse(fileName);
+    const base = sanitizeFileSegment(parsed.name || 'file', 'file') || 'file';
+    const ext = sanitizeFileSegment(parsed.ext || '', '').replace(/_/g, '') || '.bin';
+
+    let candidate = `${base}${ext}`;
+    let counter = 2;
+    while (usedNames.has(candidate.toLowerCase())) {
+        candidate = `${base}_${counter}${ext}`;
+        counter += 1;
+    }
+    usedNames.add(candidate.toLowerCase());
+    return candidate;
+}
+
 function buildAdvisorDisplayNameTh(advisor: ExportTeamAdvisorRow): string {
     return [advisor.prefix, advisor.first_name_th, advisor.last_name_th].filter(Boolean).join(' ').trim();
 }
 
 function buildAdvisorDisplayNameEn(advisor: ExportTeamAdvisorRow): string {
     return [advisor.first_name_en, advisor.last_name_en].filter(Boolean).join(' ').trim();
-}
-
-function resolveTeamSourceFolder(team: ExportSubmittedTeamRow): string | null {
-    const preferred = team.team_name_th || team.team_name_en;
-    const fallback = `team-${team.team_id}`;
-    const candidateNames = [
-        sanitizePathSegment(preferred, fallback),
-        sanitizePathSegment(team.team_name_en || team.team_name_th, fallback),
-        `team-${team.team_id}`,
-        `team_${team.team_id}`,
-    ];
-
-    for (const name of candidateNames) {
-        const absolutePath = path.join(VERIFICATION_UPLOADS_DIR, name);
-        if (fs.existsSync(absolutePath) && fs.statSync(absolutePath).isDirectory()) {
-            return absolutePath;
-        }
-    }
-
-    return null;
 }
 
 async function buildTeamWorkbookBuffer(bundle: TeamExportBundle): Promise<Buffer> {
@@ -516,15 +503,17 @@ export async function exportSubmittedVerificationBundle(db: DB): Promise<{ fileN
     }
 
     const teamIds = teams.map((team) => team.team_id);
-    const [advisors, members, memberDocuments] = await Promise.all([
+    const [advisors, members, memberDocuments, submissionFiles] = await Promise.all([
         repo.getTeamAdvisorsForExport(db, teamIds),
         repo.getTeamMembersForExport(db, teamIds),
         repo.getMemberDocumentsForExport(db, teamIds),
+        repo.getSubmissionFilesForExport(db, teamIds),
     ]);
 
     const advisorsByTeam = new Map<number, ExportTeamAdvisorRow[]>();
     const membersByTeam = new Map<number, ExportTeamMemberRow[]>();
     const documentsByTeamAndUser = new Map<string, ExportMemberDocumentRow[]>();
+    const submissionFilesByTeam = new Map<number, ExportSubmissionFileRow[]>();
 
     for (const advisor of advisors) {
         const bucket = advisorsByTeam.get(advisor.team_id) ?? [];
@@ -543,6 +532,12 @@ export async function exportSubmittedVerificationBundle(db: DB): Promise<{ fileN
         const bucket = documentsByTeamAndUser.get(key) ?? [];
         bucket.push(document);
         documentsByTeamAndUser.set(key, bucket);
+    }
+
+    for (const submissionFile of submissionFiles) {
+        const bucket = submissionFilesByTeam.get(submissionFile.team_id) ?? [];
+        bucket.push(submissionFile);
+        submissionFilesByTeam.set(submissionFile.team_id, bucket);
     }
 
     const output = new PassThrough();
@@ -567,12 +562,16 @@ export async function exportSubmittedVerificationBundle(db: DB): Promise<{ fileN
             members: membersByTeam.get(team.team_id) ?? [],
         };
 
-        const sourceFolder = resolveTeamSourceFolder(team);
-        if (sourceFolder) {
-            const submissionFilesPath = path.join(sourceFolder, 'submission_files');
-            if (fs.existsSync(submissionFilesPath) && fs.statSync(submissionFilesPath).isDirectory()) {
-                archive.directory(submissionFilesPath, `${exportFolderName}/submission_files/`);
-            }
+        const submissionFiles = submissionFilesByTeam.get(team.team_id) ?? [];
+        const usedSubmissionFileNames = new Set<string>();
+        for (const submissionFile of submissionFiles) {
+            const absolutePath = resolveAbsolutePathFromStorageKey(submissionFile.file_storage_key);
+            if (!absolutePath) continue;
+            const desiredName = submissionFile.file_original_name || path.basename(absolutePath);
+            const uniqueName = buildUniqueZipFileName(desiredName, usedSubmissionFileNames);
+            archive.file(absolutePath, {
+                name: `${exportFolderName}/submission_files/${uniqueName}`,
+            });
         }
 
         const teamMembers = membersByTeam.get(team.team_id) ?? [];

@@ -153,3 +153,10 @@ export interface ExportMemberDocumentRow {
     file_original_name: string;
     uploaded_at: Date;
 }
+
+export interface ExportSubmissionFileRow {
+    team_id: number;
+    file_storage_key: string;
+    file_original_name: string;
+    uploaded_at: Date;
+}
