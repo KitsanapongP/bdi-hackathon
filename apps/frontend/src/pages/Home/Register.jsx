@@ -258,12 +258,12 @@ function RegisterPage() {
             return;
         }
         if (consentDocs.length === 0) {
-            setErrorMsg('ไม่พบเอกสารข้อตกลงสำหรับการสมัครสมาชิก');
+            setErrorMsg('ไม่พบเอกสารข้อตกลงสำหรับการลงทะเบียน');
             return;
         }
 
         if (!termsDoc || !privacyDoc) {
-            setErrorMsg('ไม่พบเอกสารข้อตกลงที่จำเป็นสำหรับการสมัครสมาชิก');
+            setErrorMsg('ไม่พบเอกสารข้อตกลงที่จำเป็นสำหรับการลงทะเบียน');
             return;
         }
 
@@ -301,7 +301,7 @@ function RegisterPage() {
             const data = await res.json();
 
             if (!res.ok || !data.ok) {
-                setErrorMsg(data.message || 'ไม่สามารถสมัครสมาชิกได้');
+                setErrorMsg(data.message || 'ไม่สามารถลงทะเบียนได้');
                 return;
             }
 
@@ -401,7 +401,7 @@ function RegisterPage() {
                         <Rocket size={16} /> Hackathon 2026
                     </div>
                     <h2 style={{ color: 'var(--gt-text)' }}>
-                        {isRegisterMode ? (registerStep === 'verify' ? 'ยืนยันอีเมล' : 'สมัครสมาชิก') : 'เข้าสู่ระบบ'}
+                        {isRegisterMode ? (registerStep === 'verify' ? 'ยืนยันอีเมล' : 'ลงทะเบียน') : 'เข้าสู่ระบบ'}
                     </h2>
 
                     {errorMsg && <div style={{ color: '#ef4444', textAlign: 'center', marginBottom: 16, fontSize: '0.9rem', background: '#fee2e2', padding: 8, borderRadius: 8 }}>{errorMsg}</div>}
@@ -550,14 +550,14 @@ function RegisterPage() {
                                 </div>
                             )}
 
-                            <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%'}} disabled={isLoading}>{isLoading ? <><Loader2 size={18} className="spin" /> กำลังสมัครสมาชิก...</> : 'สมัครสมาชิก'}</button>
+                            <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%'}} disabled={isLoading}>{isLoading ? <><Loader2 size={18} className="spin" /> กำลังลงทะเบียน...</> : 'ลงทะเบียน'}</button>
                         </form>
                     )}
 
                     <p style={{ textAlign: 'center', marginTop: 16, fontSize: '0.85rem', color: 'var(--gt-text-muted)' }}>
                         {isRegisterMode
                             ? <>มีบัญชีแล้ว? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); resetVerificationState(); setIsRegisterMode(false); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>เข้าสู่ระบบ</a></>
-                            : <>ยังไม่มีบัญชี? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); resetVerificationState(); setIsRegisterMode(true); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>สมัครสมาชิก</a></>}
+                            : <>ยังไม่มีบัญชี? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); resetVerificationState(); setIsRegisterMode(true); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>ลงทะเบียน</a></>}
                     </p>
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}><ThemeToggle /></div>
                 </div>
