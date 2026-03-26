@@ -42,7 +42,7 @@ const config = {
         primary: '#7c3aed',
     },
     locale: {
-        nav: ['หน้าแรก', 'เกี่ยวกับ', 'กำหนดการกิจกรรม', 'ลงทะเบียน'],
+        nav: ['หน้าแรก', 'เกี่ยวกับ', 'ผู้สนับสนุน', 'กำหนดการกิจกรรม', 'ลงทะเบียน'],
         heroBadge: '🏆 Hackathon 2026',
         heroTitle: 'สถาบันข้อมูลขนาดใหญ่ ร่วมกับ วิทยาลัยการคอมพิวเตอร์\nมหาวิทยาลัยขอนแก่น เชิญชวน นักเรียน นิสิต นักศึกษา\nร่วมแข่งขันพัฒนานวัตกรรม',
         ctaPrimary: 'ลงทะเบียนเลย',
@@ -191,6 +191,14 @@ function formatTrendPeriodLabel(periodStart, mode, chartStartDate, chartEndDate)
     const effectiveEnd = chartEndDate && naturalRangeEnd > chartEndDate ? chartEndDate : naturalRangeEnd;
 
     return formatThaiDateRange(effectiveStart, effectiveEnd);
+}
+
+function normalizeWebsiteUrl(url) {
+    if (typeof url !== 'string') return null;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
 }
 
 function buildBarGeometry(values, width, height, paddingX, paddingY, maxValue, offsetX, barWidth, stepX) {
@@ -787,7 +795,7 @@ function HomePage() {
         return () => clearTimeout(timer);
     }, [location.state?.scrollTo]);
 
-    const sectionIds = ['hero', 'about', 'schedule', 'register'];
+    const sectionIds = ['hero', 'about', null, 'schedule', 'register'];
 
     return (
         <div className="gt-page">
@@ -804,9 +812,32 @@ function HomePage() {
             {/* Co-Organizer Banner */}
             <div className={`gt-banner ${bannerMarquee ? 'gt-banner-marquee' : ''}`} ref={bannerRef}>
                 <div className="gt-banner-track" ref={bannerTrackRef}>
-                    {(bannerMarquee ? [...coOrganizerSponsors, ...coOrganizerSponsors] : coOrganizerSponsors).map((item, i) => (
-                        <img key={`${item.id}-${i}`} src={apiUrl(item.logoUrl)} alt={item.nameEn || item.nameTh || `Co-Org ${i + 1}`} />
-                    ))}
+                    {(bannerMarquee ? [...coOrganizerSponsors, ...coOrganizerSponsors] : coOrganizerSponsors).map((item, i) => {
+                        const websiteUrl = normalizeWebsiteUrl(item.websiteUrl);
+                        const logo = (
+                            <img src={apiUrl(item.logoUrl)} alt={item.nameEn || item.nameTh || `Co-Org ${i + 1}`} />
+                        );
+
+                        if (!websiteUrl) {
+                            return (
+                                <span key={`${item.id}-${i}`} className="gt-banner-logo-link">
+                                    {logo}
+                                </span>
+                            );
+                        }
+
+                        return (
+                            <a
+                                key={`${item.id}-${i}`}
+                                href={websiteUrl}
+                                className="gt-banner-logo-link gt-banner-logo-link-clickable"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                {logo}
+                            </a>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -818,11 +849,16 @@ function HomePage() {
                     </a>
                     <div className="gt-pill-links">
                         {config.locale.nav.map((label, i) => {
-                            if (i === 3 && user) return null; // hide ลงทะเบียน when logged in
+                            if (i === 4 && user) return null; // hide ลงทะเบียน when logged in
 
                             const handleNavClick = () => {
                                 if (i === 1) {
                                     navigate('/home/about');
+                                    return;
+                                }
+
+                                if (i === 2) {
+                                    navigate('/home/sponsors');
                                     return;
                                 }
 
@@ -874,7 +910,7 @@ function HomePage() {
                 <div className={`gt-pill-collapse ${mobileOpen ? 'open' : ''}`}>
                     <div className="gt-pill-collapse-inner">
                         {config.locale.nav.map((label, i) => {
-                            const isRegister = i === 3;
+                            const isRegister = i === 4;
                             if (isRegister && user) {
                                 return (
                                     <button key={i} className="gt-collapse-link" onClick={() => { setShowLobby(true); setShowProfile(false); setMobileOpen(false); window.scrollTo(0, 0); }}>
@@ -886,6 +922,12 @@ function HomePage() {
                             const handleNavClick = () => {
                                 if (i === 1) {
                                     navigate('/home/about');
+                                    setMobileOpen(false);
+                                    return;
+                                }
+
+                                if (i === 2) {
+                                    navigate('/home/sponsors');
                                     setMobileOpen(false);
                                     return;
                                 }

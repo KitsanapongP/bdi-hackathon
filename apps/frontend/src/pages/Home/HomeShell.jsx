@@ -19,6 +19,14 @@ import { apiUrl } from '../../lib/api';
 import { getCachedCoOrganizerSponsors, setCachedCoOrganizerSponsors } from '../../lib/contentCache';
 import './Home.css';
 
+function normalizeWebsiteUrl(url) {
+    if (typeof url !== 'string') return null;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+}
+
 function HomeShell({ children }) {
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -28,7 +36,7 @@ function HomeShell({ children }) {
     const bannerRef = useRef(null);
     const bannerTrackRef = useRef(null);
 
-    const navItems = ['หน้าแรก', 'เกี่ยวกับ', 'กำหนดการกิจกรรม', 'ลงทะเบียน'];
+    const navItems = ['หน้าแรก', 'เกี่ยวกับ', 'ผู้สนับสนุน', 'กำหนดการกิจกรรม', 'ลงทะเบียน'];
 
     const handleNavClick = (index) => {
         setMobileOpen(false);
@@ -44,6 +52,11 @@ function HomeShell({ children }) {
         }
 
         if (index === 2) {
+            navigate('/home/sponsors');
+            return;
+        }
+
+        if (index === 3) {
             navigate('/home', { state: { scrollTo: 'schedule' } });
             return;
         }
@@ -168,9 +181,32 @@ function HomeShell({ children }) {
 
             <div className={`gt-banner ${bannerMarquee ? 'gt-banner-marquee' : ''}`} ref={bannerRef}>
                 <div className="gt-banner-track" ref={bannerTrackRef}>
-                    {(bannerMarquee ? [...coOrganizerSponsors, ...coOrganizerSponsors] : coOrganizerSponsors).map((item, i) => (
-                        <img key={`${item.id}-${i}`} src={apiUrl(item.logoUrl)} alt={item.nameEn || item.nameTh || `Co-Org ${i + 1}`} />
-                    ))}
+                    {(bannerMarquee ? [...coOrganizerSponsors, ...coOrganizerSponsors] : coOrganizerSponsors).map((item, i) => {
+                        const websiteUrl = normalizeWebsiteUrl(item.websiteUrl);
+                        const logo = (
+                            <img src={apiUrl(item.logoUrl)} alt={item.nameEn || item.nameTh || `Co-Org ${i + 1}`} />
+                        );
+
+                        if (!websiteUrl) {
+                            return (
+                                <span key={`${item.id}-${i}`} className="gt-banner-logo-link">
+                                    {logo}
+                                </span>
+                            );
+                        }
+
+                        return (
+                            <a
+                                key={`${item.id}-${i}`}
+                                href={websiteUrl}
+                                className="gt-banner-logo-link gt-banner-logo-link-clickable"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                {logo}
+                            </a>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -181,7 +217,7 @@ function HomeShell({ children }) {
                     </a>
                     <div className="gt-pill-links">
                         {navItems.map((label, i) => {
-                            if (i === 3 && user) return null;
+                            if (i === 4 && user) return null;
                             return (
                                 <button key={label} className="gt-pill-link" onClick={() => handleNavClick(i)}>
                                     {label}
@@ -217,7 +253,7 @@ function HomeShell({ children }) {
                 <div className={`gt-pill-collapse ${mobileOpen ? 'open' : ''}`}>
                     <div className="gt-pill-collapse-inner">
                         {navItems.map((label, i) => {
-                            const isRegister = i === 3;
+                            const isRegister = i === 4;
                             if (isRegister && user) {
                                 return (
                                     <button key={label} className="gt-collapse-link" onClick={() => { setMobileOpen(false); navigate('/home', { state: { open: 'team' } }); }}>

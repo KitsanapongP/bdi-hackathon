@@ -3,6 +3,14 @@ import HomeShell from './HomeShell';
 import { apiUrl } from '../../lib/api';
 import './InfoPages.css';
 
+function normalizeWebsiteUrl(url) {
+    if (typeof url !== 'string') return null;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+}
+
 function SponsorsPage() {
     const [sponsors, setSponsors] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -62,20 +70,49 @@ function SponsorsPage() {
                         <p className="gt-info-status">ยังไม่มีข้อมูลผู้สนับสนุน</p>
                     ) : (
                         <div className="gt-sponsors-page-grid">
-                            {sponsors.map((sponsor) => (
-                                <article key={sponsor.id} className="gt-sponsor-page-card">
-                                    <div className="gt-sponsor-page-logo-wrap">
-                                        <img
-                                            src={apiUrl(sponsor.logoUrl)}
-                                            alt={sponsor.nameEn || sponsor.nameTh || 'Sponsor'}
-                                            className="gt-sponsor-page-logo"
-                                            loading="lazy"
-                                            decoding="async"
-                                        />
-                                    </div>
-                                    <p className="gt-sponsor-page-name">{sponsor.nameTh || sponsor.nameEn || '-'}</p>
-                                </article>
-                            ))}
+                            {sponsors.map((sponsor) => {
+                                const websiteUrl = normalizeWebsiteUrl(sponsor.websiteUrl);
+
+                                if (!websiteUrl) {
+                                    return (
+                                        <article key={sponsor.id} className="gt-sponsor-page-card">
+                                            <div className="gt-sponsor-page-logo-wrap">
+                                                <img
+                                                    src={apiUrl(sponsor.logoUrl)}
+                                                    alt={sponsor.nameEn || sponsor.nameTh || 'Sponsor'}
+                                                    className="gt-sponsor-page-logo"
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                />
+                                            </div>
+                                            <p className="gt-sponsor-page-name">{sponsor.nameTh || sponsor.nameEn || '-'}</p>
+                                        </article>
+                                    );
+                                }
+
+                                return (
+                                    <a
+                                        key={sponsor.id}
+                                        href={websiteUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="gt-sponsor-page-link"
+                                    >
+                                        <article className="gt-sponsor-page-card">
+                                            <div className="gt-sponsor-page-logo-wrap">
+                                                <img
+                                                    src={apiUrl(sponsor.logoUrl)}
+                                                    alt={sponsor.nameEn || sponsor.nameTh || 'Sponsor'}
+                                                    className="gt-sponsor-page-logo"
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                />
+                                            </div>
+                                            <p className="gt-sponsor-page-name">{sponsor.nameTh || sponsor.nameEn || '-'}</p>
+                                        </article>
+                                    </a>
+                                );
+                            })}
                         </div>
                     )}
                 </section>
