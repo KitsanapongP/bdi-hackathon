@@ -113,6 +113,20 @@ const competitionSteps = [
 const REGISTRATION_PERIOD_START = '2026-04-01';
 const REGISTRATION_PERIOD_END = '2026-05-31';
 
+const THAI_DATE_IN_TEXT_PATTERN = /(\d{1,2}(?:\s*-\s*\d{1,2})?\s+[ก-๙]+\s+25\d{2})/g;
+
+function emphasizeThaiDateInText(text) {
+    if (typeof text !== 'string') return text;
+    const parts = text.split(THAI_DATE_IN_TEXT_PATTERN);
+    if (parts.length === 1) return text;
+
+    return parts.map((part, index) =>
+        index % 2 === 1
+            ? <strong key={`date-${index}`}>{part}</strong>
+            : <React.Fragment key={`text-${index}`}>{part}</React.Fragment>
+    );
+}
+
 function parseThaiDateOnly(raw) {
     if (!raw) return null;
     const parsed = new Date(`${raw}T00:00:00+07:00`);
@@ -1106,8 +1120,8 @@ function HomePage() {
                                         <div className="gt-step-body">
                                             <h3>{step.title}</h3>
                                             <ul className="gt-step-list">
-                                                {step.items.map((item) => (
-                                                    <li key={item}>{item}</li>
+                                                {step.items.map((item, itemIndex) => (
+                                                    <li key={`${step.number}-${itemIndex}`}>{emphasizeThaiDateInText(item)}</li>
                                                 ))}
                                             </ul>
                                         </div>
