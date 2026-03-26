@@ -113,7 +113,57 @@ const competitionSteps = [
 const REGISTRATION_PERIOD_START = '2026-04-01';
 const REGISTRATION_PERIOD_END = '2026-05-31';
 
+// ปรับวัน/เวลาสิ้นสุดของ Countdown ได้ที่ค่านี้ (รูปแบบ ISO 8601 + เวลาไทย)
+const HERO_COUNTDOWN_TARGET_ISO = '2026-07-03T23:59:59+07:00';
+const HERO_COUNTDOWN_TARGET_LABEL = '3 กรกฎาคม 2569';
+const HERO_COUNTDOWN_TARGET_DATE = new Date(HERO_COUNTDOWN_TARGET_ISO);
+const HERO_COUNTDOWN_UNITS = [
+    { key: 'days', label: 'วัน' },
+    { key: 'hours', label: 'ชั่วโมง' },
+    { key: 'minutes', label: 'นาที' },
+    { key: 'seconds', label: 'วินาที' },
+];
+
 const THAI_DATE_IN_TEXT_PATTERN = /(\d{1,2}(?:\s*-\s*\d{1,2})?\s+[ก-๙]+\s+25\d{2})/g;
+
+function getHeroCountdown(targetDate, nowMs = Date.now()) {
+    if (!(targetDate instanceof Date) || Number.isNaN(targetDate.getTime())) {
+        return {
+            days: 0,
+            hours: 0,
+            minutes: 0,
+            seconds: 0,
+            expired: true,
+        };
+    }
+
+    const diffMs = targetDate.getTime() - nowMs;
+    if (diffMs <= 0) {
+        return {
+            days: 0,
+            hours: 0,
+            minutes: 0,
+            seconds: 0,
+            expired: true,
+        };
+    }
+
+    const totalSeconds = Math.floor(diffMs / 1000);
+
+    return {
+        days: Math.floor(totalSeconds / 86400),
+        hours: Math.floor((totalSeconds % 86400) / 3600),
+        minutes: Math.floor((totalSeconds % 3600) / 60),
+        seconds: totalSeconds % 60,
+        expired: false,
+    };
+}
+
+function formatHeroCountdownValue(unit, value) {
+    const numeric = Math.max(0, Number(value) || 0);
+    if (unit === 'days') return numeric.toLocaleString('th-TH');
+    return String(numeric).padStart(2, '0');
+}
 
 function emphasizeThaiDateInText(text) {
     if (typeof text !== 'string') return text;
@@ -359,6 +409,7 @@ function HomePage() {
         return window.matchMedia('(max-width: 768px)').matches;
     });
     const [openScheduleDay, setOpenScheduleDay] = useState(-1);
+    const [heroCountdown, setHeroCountdown] = useState(() => getHeroCountdown(HERO_COUNTDOWN_TARGET_DATE));
 
     const processHighlightPhase = useMemo(() => {
         const step4Start = new Date(`${config.process.step4HighlightStartDate}T00:00:00+07:00`);
@@ -372,6 +423,17 @@ function HomePage() {
         if (hasStep5Date && now >= step5Start) return 'final';
         if (now >= step4Start) return 'review';
         return 'early';
+    }, []);
+
+    useEffect(() => {
+        const tick = () => {
+            setHeroCountdown(getHeroCountdown(HERO_COUNTDOWN_TARGET_DATE));
+        };
+
+        tick();
+        const intervalId = window.setInterval(tick, 1000);
+
+        return () => window.clearInterval(intervalId);
     }, []);
 
     useEffect(() => {
@@ -974,7 +1036,21 @@ function HomePage() {
                     {/* Hero */}
                     <section id="hero" className="gt-section gt-hero gt-container gt-reveal">
                         <h1 className="gt-hero-title" style={{ whiteSpace: 'pre-line' }}>{config.locale.heroTitle}</h1>
-                        <HeroCarousel slides={carouselSlides} />
+                        <div className={`gt-hero-countdown ${heroCountdown.expired ? 'is-expired' : ''}`} role="timer" aria-label={`นับถอยหลังสู่วันที่ ${HERO_COUNTDOWN_TARGET_LABEL}`}>
+                            <div className="gt-hero-countdown-grid">
+                                {HERO_COUNTDOWN_UNITS.map((unit) => (
+                                    <div key={unit.key} className="gt-hero-countdown-item">
+                                        <span className="gt-hero-countdown-value">{formatHeroCountdownValue(unit.key, heroCountdown[unit.key])}</span>
+                                        <span className="gt-hero-countdown-unit">{unit.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="gt-hero-countdown-label">
+                                <Calendar size={16} />
+                                นับถอยหลังสู่วันที่ {HERO_COUNTDOWN_TARGET_LABEL}
+                            </p>
+                            {heroCountdown.expired ? <p className="gt-hero-countdown-status">ถึงวันสุดท้ายของกิจกรรมแล้ว</p> : null}
+                        </div>
                         <div className="gt-hero-actions">
                             <button type="button" className="gt-btn gt-btn-primary" onClick={handlePrimaryCta}>
                                 {user ? 'ไปยังทีมของฉัน' : config.locale.ctaPrimary} <ArrowRight size={18} />
@@ -983,6 +1059,7 @@ function HomePage() {
                                 {config.locale.ctaSecondary}
                             </button>
                         </div>
+                        <HeroCarousel slides={carouselSlides} />
                     </section>
 
                     {/* Participation Overview */}
