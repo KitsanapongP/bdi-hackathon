@@ -865,10 +865,10 @@ section.gt-hero {
     text-shadow: 0 2px 8px rgba(2, 6, 23, 0.92);
 }
 
-.gt-hero h1 {
-    font-size: 3.2rem;
+.gt-hero-title {
+    font-size: clamp(1.3rem, 2.9vw, 2.05rem);
     font-weight: 800;
-    line-height: 1.22;
+    line-height: 1.35;
     margin: 0 0 52px;
     padding-bottom: 0.08em;
     background: var(--gt-gradient);
@@ -880,6 +880,8 @@ section.gt-hero {
     max-width: 900px;
     position: relative;
     z-index: 1;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
 }
 
 @keyframes gt-grad {
@@ -959,7 +961,17 @@ section.gt-hero {
 }
 
 #about .gt-section-header {
-    max-width: 900px;
+    max-width: 1200px;
+}
+
+#about.gt-container {
+    max-width: 1560px;
+    padding-inline: clamp(12px, 2.2vw, 28px);
+}
+
+#about .gt-section-header h2 {
+    font-size: clamp(1.5rem, 2.7vw, 2.3rem);
+    white-space: nowrap;
 }
 
 .gt-section-header h2 {
@@ -975,6 +987,12 @@ section.gt-hero {
     margin: 0;
 }
 
+@media (max-width: 1024px) {
+    #about .gt-section-header h2 {
+        white-space: normal;
+    }
+}
+
 /* --- 8. Bento Grid --- */
 .gt-bento {
     display: grid;
@@ -982,6 +1000,29 @@ section.gt-hero {
     gap: 20px;
     max-width: 1080px;
     margin: 0 auto;
+}
+
+#about .gt-bento {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    max-width: none;
+    align-items: stretch;
+    gap: 16px;
+}
+
+#about .gt-bento>.gt-bento-card {
+    grid-column: span 2;
+    padding: 22px 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+#about .gt-bento>.gt-bento-card:nth-child(4) {
+    grid-column: 1 / span 3;
+}
+
+#about .gt-bento>.gt-bento-card:nth-child(5) {
+    grid-column: 4 / span 3;
 }
 
 .gt-bento-card {
@@ -1043,11 +1084,47 @@ section.gt-hero {
     color: var(--gt-text);
 }
 
+#about .gt-bento-card h3 {
+    font-size: clamp(0.98rem, 1.15vw, 1.14rem);
+    line-height: 1.36;
+}
+
 .gt-bento-card p {
     color: var(--gt-text-muted);
     font-size: 0.95rem;
     margin: 0;
     line-height: 1.6;
+}
+
+#about .gt-bento-card p {
+    font-size: clamp(0.84rem, 0.9vw, 0.92rem);
+    line-height: 1.6;
+}
+
+@media (max-width: 1240px) {
+    #about .gt-bento {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #about .gt-bento>.gt-bento-card {
+        grid-column: span 1;
+    }
+
+    #about .gt-bento>.gt-bento-card:nth-child(4),
+    #about .gt-bento>.gt-bento-card:nth-child(5) {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    #about.gt-container {
+        max-width: var(--gt-max-w);
+        padding-inline: clamp(16px, 5vw, 24px);
+    }
+
+    #about .gt-bento {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* --- 9. Schedule --- */
@@ -1973,8 +2050,9 @@ section.gt-hero {
         padding-bottom: 40px;
     }
 
-    .gt-hero h1 {
-        font-size: 2rem;
+    .gt-hero-title {
+        font-size: clamp(1.1rem, 4.6vw, 1.45rem);
+        line-height: 1.4;
         margin-bottom: 32px;
     }
 

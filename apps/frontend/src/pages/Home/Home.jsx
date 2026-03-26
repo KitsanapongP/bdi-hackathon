@@ -44,11 +44,11 @@ const config = {
     locale: {
         nav: ['หน้าแรก', 'เกี่ยวกับ', 'กำหนดการกิจกรรม', 'ลงทะเบียน'],
         heroBadge: '🏆 Hackathon 2026',
-        heroTitle: 'Intelligent Living Hackathon 2026',
+        heroTitle: 'สถาบันข้อมูลขนาดใหญ่ ร่วมกับ วิทยาลัยการคอมพิวเตอร์\nมหาวิทยาลัยขอนแก่น เชิญชวน นักเรียน นิสิต นักศึกษา\nร่วมแข่งขันพัฒนานวัตกรรม',
         ctaPrimary: 'ลงทะเบียนเลย',
         ctaSecondary: 'ดูกำหนดการ',
-        aboutTitle: 'ทำไมต้องร่วมกิจกรรมนี้?',
-        aboutDesc: 'Intelligent Living คือเวที Hackathon ที่ผสาน AI และ Big Data เพื่อส่งเสริมสุขภาพและคุณภาพชีวิตอย่างยั่งยืน',
+        aboutTitle: 'ทำไมคุณถึงไม่ควรพลาด "Intelligent Living Hackathon"',
+        aboutDesc: 'นี่ไม่ใช่แค่การแข่งขัน แต่คือโอกาสครั้งสำคัญในการใช้เทคโนโลยีเปลี่ยนโลก!',
         scheduleTitle: 'กำหนดการกิจกรรม',
         scheduleDesc: 'ตารางเวลาของกิจกรรมทั้งหมดตลอดทั้งงาน',
         footer: '© 2026 Intelligent Living Hackathon 2026',
@@ -917,7 +917,7 @@ function HomePage() {
                 <>
                     {/* Hero */}
                     <section id="hero" className="gt-section gt-hero gt-container gt-reveal">
-                        <h1 style={{ whiteSpace: 'pre-line' }}>{config.locale.heroTitle}</h1>
+                        <h1 className="gt-hero-title" style={{ whiteSpace: 'pre-line' }}>{config.locale.heroTitle}</h1>
                         <HeroCarousel slides={carouselSlides} />
                         <div className="gt-hero-actions">
                             <button type="button" className="gt-btn gt-btn-primary" onClick={handlePrimaryCta}>
@@ -1050,31 +1050,28 @@ function HomePage() {
                         <div className="gt-bento">
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-purple"><Sparkles color="#fff" size={24} /></div>
-                                <h3>AI &amp; Big Data เพื่อ Smart Life</h3>
-                                <p>ฝึกใช้ข้อมูลขนาดใหญ่และปัญญาประดิษฐ์เพื่อวิเคราะห์ วางแผน และออกแบบโซลูชันที่ตอบโจทย์การใช้ชีวิตจริง</p>
+                                <h3>เวทีเกียรติยศระดับประเทศ ชิงถ้วยพระราชทาน</h3>
+                                <p>ก้าวสู่เวที Hackathon ที่ทรงคุณค่า พิสูจน์ความสามารถในการพัฒนาโซลูชัน AI และ Big Data ที่แก้ปัญหาสุขภาพและยกระดับคุณภาพชีวิตของคนในสังคมได้จริง พร้อมรับความภาคภูมิใจสูงสุดจากรางวัลถ้วยพระราชทาน</p>
                             </div>
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-pink"><Users color="#fff" size={24} /></div>
-                                <h3>เครือข่ายข้ามศาสตร์</h3>
-                                <p>ร่วมทีมกับนักเรียน นักศึกษา อาจารย์ และผู้เชี่ยวชาญจากหลายสาขา เช่น คอมพิวเตอร์ แพทย์ พยาบาล สาธารณสุข และท้องถิ่น</p>
+                                <h3>ลงมือทำจริง แก้ปัญหาจาก "ข้อมูลจริง" (Real Data, Real Impact)</h3>
+                                <p>เปลี่ยนไอเดียให้เป็นนวัตกรรมต้นแบบที่จับต้องได้! คุณจะได้ท้าทายฝีมือด้วย Dataset สำหรับการแข่งขันจากเจ้าของข้อมูลโดยตรงทั้ง 3 Track พร้อมรับฟังและวิเคราะห์ Pain Points เชิงลึกจากผู้เชี่ยวชาญถึง 3 สาย เพื่อออกแบบโซลูชันที่สามารถนำไปใช้และวัดผลกระทบได้จริง</p>
                             </div>
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-blue"><Rocket color="#fff" size={24} /></div>
-                                <h3>อบรมเข้มข้น + Mentoring</h3>
-                                <p>เสริมพื้นฐานถึงขั้นสูงด้าน AI, Machine Learning และ Data Analytics พร้อมพี่เลี้ยงช่วยพัฒนาแนวคิดจนพร้อมนำเสนอ</p>
+                                <h3>สานพลังข้ามศาสตร์ (Cross-disciplinary Synergy)</h3>
+                                <p>เปิดรับประสบการณ์ใหม่ในการสร้างทีมแบบผสมผสาน (5 คน/ทีม) ทลายกรอบการทำงานแบบเดิมๆ ด้วยการรวมคนเก่งจากหลากสายวิชาชีพ ไม่ว่าจะเป็น สาย Tech (คอมพิวเตอร์, Data) สาย Health (แพทย์, พยาบาล, สาธารณสุข) และ คนในพื้นที่ (การบริหารกิจการสาธารณะ) เพื่อสร้างสรรค์มุมมองที่รอบด้าน</p>
                             </div>
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-orange"><Trophy color="#fff" size={24} /></div>
-                                <h3>ต่อยอดสู่นวัตกรรมใช้งานจริง</h3>
-                                <p>พัฒนาผลงานต้นแบบที่วัดผลกระทบต่อสุขภาพและคุณภาพชีวิตได้ และมีโอกาสต่อยอดเป็นโครงการวิจัยหรือขยายผลเชิงพื้นที่</p>
+                                <h3>อัปสกิลขั้นสุดแบบ Fast-Track (Exclusive Training &amp; Mentoring)</h3>
+                                <p>หากคุณคือ 1 ใน 14 ทีมสุดยอด ที่ผ่านเข้าสู่รอบ Hackathon คุณจะได้รับการอบรมเข้มข้นตั้งแต่ Data Science, Big Learning ไปจนถึง Deep Tech จากวิทยากรผู้เชี่ยวชาญ พร้อมมีทีม Mentor ระดับท็อปคอยประกบในรอบ Walk-in Session เพื่อให้คำปรึกษาและ Feedback อย่างใกล้ชิดทั้งด้าน Technical, Domain และ Business ตลอดการแข่งขัน</p>
                             </div>
-                            <div className="gt-bento-card large gt-reveal">
+                            <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-teal"><Target color="#fff" size={24} /></div>
-                                <h3>Theme: Intelligent Living</h3>
-                                <p>
-                                    ขับเคลื่อนแนวคิด Smart Life Ecosystem ผ่าน Health Promotion, Preventive Approach,
-                                    การพัฒนาทุนมนุษย์ดิจิทัล และการลดความเหลื่อมล้ำด้านคุณภาพชีวิต
-                                </p>
+                                <h3>ร่วมขับเคลื่อน Intelligent Life Ecosystem</h3>
+                                <p>โอกาสในการเป็นส่วนหนึ่งของผู้สร้างระบบนิเวศอัจฉริยะ นำขุมพลังแห่งปัญญาประดิษฐ์ (AI) มายกระดับการใช้ชีวิตให้สมาร์ท สุขภาพดี และยั่งยืนสำหรับทุกคน</p>
                             </div>
                         </div>
                     </section>
