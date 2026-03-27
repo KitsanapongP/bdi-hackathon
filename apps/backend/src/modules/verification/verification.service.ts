@@ -10,7 +10,7 @@ import crypto from 'node:crypto';
 
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads', 'verification');
 const DEFAULT_REQUIREMENT_ID = 5002; // STUDENT_ID requirement
-const MIN_SUBMIT_MEMBERS = 3;
+const MIN_SUBMIT_MEMBERS = 5;
 const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
 
 function assertTeamEditable(status: string): void {
@@ -338,11 +338,6 @@ export async function submitTeam(
     const members = await getTeamMembers(db, teamId);
     if (members.length < MIN_SUBMIT_MEMBERS) {
         throw new BadRequestError(`ทีมต้องมีสมาชิกอย่างน้อย ${MIN_SUBMIT_MEMBERS} คนก่อนยืนยันเข้าร่วมการคัดเลือก`);
-    }
-
-    const advisorCount = await repo.countTeamAdvisors(db, teamId);
-    if (advisorCount < 1) {
-        throw new BadRequestError('ทีมต้องมีอาจารย์ที่ปรึกษาอย่างน้อย 1 คนก่อนยืนยันเข้าร่วมการคัดเลือก');
     }
 
     const missingRequiredSubmissionTasks = await repo.countMissingRequiredSubmissionTasks(db, teamId);

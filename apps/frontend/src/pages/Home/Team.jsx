@@ -45,7 +45,7 @@ import './Register.css';
 import './Profile.css';
 
 const MAX_MEMBERS = 5;
-const MIN_SUBMIT_MEMBERS = 3;
+const MIN_SUBMIT_MEMBERS = 5;
 
 const CARDS = [
     { id: 'verify', icon: <ShieldCheck />, label: 'ยืนยันตัวตน', color: '#14b8a6' },
@@ -991,7 +991,6 @@ export default function TeamContent({ user }) {
 
     const submitReadinessRules = [
         { id: 'members-confirmed', ok: allMembersConfirmed, label: 'สมาชิกทุกคนต้องยืนยันเอกสารยืนยันตัวตนให้ครบ' },
-        { id: 'advisor', ok: hasAdvisor, label: 'ทีมต้องมีอาจารย์ที่ปรึกษาอย่างน้อย 1 คน' },
         { id: 'min-members', ok: isMinMembersReady, label: `ทีมต้องมีสมาชิกอย่างน้อย ${MIN_SUBMIT_MEMBERS} คน (ปัจจุบัน ${memberCountForSubmit} คน)` },
         { id: 'required-submission-tasks', ok: !hasMissingRequiredTaskForReadiness, label: 'กรุณาส่งข้อมูลงานที่บังคับให้ครบก่อนยืนยันเข้าร่วมการคัดเลือก' },
     ];
@@ -1007,7 +1006,7 @@ export default function TeamContent({ user }) {
     const verifyNotify = isLeader
         ? (allMembersConfirmed ? 'success' : 'danger')
         : (isMyVerificationConfirmed ? 'success' : 'danger');
-    const advisorNotify = hasAdvisor ? 'success' : 'danger';
+    const advisorNotify = hasAdvisor ? 'success' : 'optional';
     const workNotify = hasRequiredSubmissionTaskForCard
         ? (hasMissingRequiredTaskForCard ? 'danger' : 'success')
         : 'optional';
@@ -1215,10 +1214,6 @@ export default function TeamContent({ user }) {
                 const submissionPayload = await submissionRes.json();
                 if (!submissionPayload.ok) throw new Error(submissionPayload.message || 'ไม่สามารถตรวจสอบข้อมูลส่งผลงานได้');
                 const latestSubmission = submissionPayload?.data || {};
-                const hasAdvisor = Array.isArray(latestSubmission.advisors) && latestSubmission.advisors.length > 0;
-                if (!hasAdvisor) {
-                    throw new Error('ทีมต้องมีอาจารย์ที่ปรึกษาอย่างน้อย 1 คนก่อนยืนยันเข้าร่วมการคัดเลือก');
-                }
                 const requiredTasks = Array.isArray(latestSubmission.tasks)
                     ? latestSubmission.tasks.filter((task) => task.isRequired && task.isDefault)
                     : [];
@@ -2575,7 +2570,7 @@ export default function TeamContent({ user }) {
                                 const notify = cardNotifyById[card.id];
                                 const notifyConfig = {
                                     verify: { require: true, label: 'บังคับ' },
-                                    advisor: { require: true, label: 'บังคับ' },
+                                    advisor: { require: false, label: 'ไม่บังคับ' },
                                     works: { require: hasRequiredSubmissionTaskForCard, label: hasRequiredSubmissionTaskForCard ? 'บังคับ' : 'ไม่บังคับ' },
                                 };
                                 const cfg = notifyConfig[card.id];
