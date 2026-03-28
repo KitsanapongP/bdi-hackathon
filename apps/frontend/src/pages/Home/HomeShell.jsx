@@ -31,6 +31,7 @@ function HomeShell({ children }) {
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [user, setUser] = useState(null);
+    const [navScrolled, setNavScrolled] = useState(false);
     const [coOrganizerSponsors, setCoOrganizerSponsors] = useState(() => getCachedCoOrganizerSponsors() || []);
     const [bannerMarquee, setBannerMarquee] = useState(false);
     const bannerRef = useRef(null);
@@ -146,6 +147,19 @@ function HomeShell({ children }) {
         const banner = bannerRef.current;
         if (!banner) return;
 
+        const observer = new IntersectionObserver(
+            ([entry]) => setNavScrolled(!entry.isIntersecting),
+            { threshold: 0, rootMargin: '-44px 0px 0px 0px' },
+        );
+
+        observer.observe(banner);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const banner = bannerRef.current;
+        if (!banner) return;
+
         const check = () => {
             const track = bannerTrackRef.current;
             if (!track) return;
@@ -210,7 +224,7 @@ function HomeShell({ children }) {
                 </div>
             </div>
 
-            <nav className="gt-pill-nav">
+            <nav className={`gt-pill-nav ${navScrolled ? 'scrolled' : ''}`}>
                 <div className="gt-pill-bar">
                     <a href="#" className="gt-pill-icon" onClick={(e) => { e.preventDefault(); navigate('/home'); }} aria-label="Home">
                         <Rocket size={20} />

@@ -1,6 +1,11 @@
 .gt-info-main {
-    padding-top: 180px;
-    padding-bottom: 80px;
+    padding-top: 76px;
+}
+
+@media (max-width: 768px) {
+    .gt-info-main {
+        padding-top: 76px;
+    }
 }
 
 .gt-info-panel {
