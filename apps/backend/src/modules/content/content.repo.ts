@@ -1,6 +1,7 @@
 import type { RowDataPacket } from 'mysql2/promise';
 import type { DB } from '../../config/db.js';
 import type {
+    ContentDatasetRow,
     ContentCarouselSlideRow,
     ContentContactChannelRow,
     ContentContactRow,
@@ -148,6 +149,17 @@ export async function getEnabledSponsors(db: DB, tierCode?: string): Promise<Con
     const [rows] = await db.query<RowDataPacket[]>(query, params);
 
     return rows as ContentSponsorRow[];
+}
+
+export async function getEnabledDatasets(db: DB): Promise<ContentDatasetRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_datasets
+         WHERE is_enabled = 1
+         ORDER BY FIELD(domain_code, 'Phenome', 'Health', 'City'), sort_order ASC, dataset_id ASC`
+    );
+
+    return rows as ContentDatasetRow[];
 }
 
 export async function getAllSponsors(db: DB): Promise<ContentSponsorRow[]> {

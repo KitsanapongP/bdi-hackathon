@@ -36,6 +36,11 @@ export async function handleGetParticipationOverview(req: FastifyRequest, reply:
     return reply.send(ok(overview));
 }
 
+export async function handleGetDatasets(req: FastifyRequest, reply: FastifyReply) {
+    const datasets = await service.getDatasets(req.server.ctx.db);
+    return reply.send(ok(datasets));
+}
+
 export async function handleGetAllRewardsAdmin(req: FastifyRequest, reply: FastifyReply) {
     const rewards = await service.getAllRewardsAdmin(req.server.ctx.db);
     return reply.send(ok(rewards));

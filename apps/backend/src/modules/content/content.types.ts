@@ -86,6 +86,30 @@ export type ContentSponsorAdmin = {
     tierNameEn: string | null;
 };
 
+export type ContentDatasetRow = {
+    dataset_id: number;
+    dataset_name: string;
+    owner_name: string;
+    attribute_number: number;
+    dataset_link: string | null;
+    domain_code: 'Phenome' | 'Health' | 'City';
+    record_count: number | null;
+    sort_order: number;
+    is_enabled: number;
+    created_at: string;
+    updated_at: string;
+};
+
+export type ContentDataset = {
+    id: number;
+    datasetName: string;
+    owner: string;
+    attributeNumber: number;
+    link: string | null;
+    domain: 'Phenome' | 'Health' | 'City';
+    recordCount: number | null;
+};
+
 export type ContentCarouselSlideRow = {
     slide_id: number;
     title_th: string | null;

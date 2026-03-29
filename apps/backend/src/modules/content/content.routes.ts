@@ -8,4 +8,5 @@ export const contentRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get('/pages/:pageCode', controller.handleGetPageByCode);
     fastify.get('/contacts', controller.handleGetContacts);
     fastify.get('/participation-overview', controller.handleGetParticipationOverview);
+    fastify.get('/datasets', controller.handleGetDatasets);
 };

@@ -5,6 +5,7 @@ import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import * as repo from './content.repo.js';
 import type {
+    ContentDataset,
     ContentCarouselSlide,
     ContentCarouselSlideAdmin,
     ContentContact,
@@ -1512,5 +1513,19 @@ export async function getContacts(db: DB): Promise<ContentContact[]> {
         isFeatured: contact.is_featured === 1,
         sortOrder: contact.sort_order,
         channels: channelsByContact.get(contact.contact_id) ?? [],
+    }));
+}
+
+export async function getDatasets(db: DB): Promise<ContentDataset[]> {
+    const rows = await repo.getEnabledDatasets(db);
+
+    return rows.map((row) => ({
+        id: row.dataset_id,
+        datasetName: row.dataset_name,
+        owner: row.owner_name,
+        attributeNumber: row.attribute_number,
+        link: row.dataset_link,
+        domain: row.domain_code,
+        recordCount: row.record_count === null ? null : Number(row.record_count),
     }));
 }

@@ -37,7 +37,7 @@ function HomeShell({ children }) {
     const bannerRef = useRef(null);
     const bannerTrackRef = useRef(null);
 
-    const navItems = ['หน้าแรก', 'เกี่ยวกับ', 'ผู้สนับสนุน', 'กำหนดการกิจกรรม', 'ลงทะเบียน'];
+    const navItems = ['หน้าแรก', 'เกี่ยวกับ', 'ผู้สนับสนุน', 'กำหนดการกิจกรรม', 'ตัวอย่างชุดข้อมูล', 'ลงทะเบียน'];
 
     const handleNavClick = (index) => {
         setMobileOpen(false);
@@ -59,6 +59,11 @@ function HomeShell({ children }) {
 
         if (index === 3) {
             navigate('/home', { state: { scrollTo: 'schedule' } });
+            return;
+        }
+
+        if (index === 4) {
+            navigate('/home/datasets');
             return;
         }
 
@@ -231,7 +236,7 @@ function HomeShell({ children }) {
                     </a>
                     <div className="gt-pill-links">
                         {navItems.map((label, i) => {
-                            if (i === 4 && user) return null;
+                            if (i === 5 && user) return null;
                             return (
                                 <button key={label} className="gt-pill-link" onClick={() => handleNavClick(i)}>
                                     {label}
@@ -267,7 +272,7 @@ function HomeShell({ children }) {
                 <div className={`gt-pill-collapse ${mobileOpen ? 'open' : ''}`}>
                     <div className="gt-pill-collapse-inner">
                         {navItems.map((label, i) => {
-                            const isRegister = i === 4;
+                            const isRegister = i === 5;
                             if (isRegister && user) {
                                 return (
                                     <button key={label} className="gt-collapse-link" onClick={() => { setMobileOpen(false); navigate('/home', { state: { open: 'team' } }); }}>

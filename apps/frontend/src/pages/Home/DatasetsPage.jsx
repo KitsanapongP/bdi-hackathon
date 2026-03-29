@@ -1,0 +1,137 @@
+import React, { useEffect, useState } from 'react';
+import HomeShell from './HomeShell';
+import { apiUrl } from '../../lib/api';
+import './InfoPages.css';
+
+const DOMAIN_GROUPS = [
+    { key: 'Phenome', title: 'Phenome (ฟีโนม)' },
+    { key: 'Health', title: 'Health (สุขภาพ)' },
+    { key: 'City', title: 'City (เมือง)' },
+];
+
+function formatRecordCount(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) return '-';
+    return numeric.toLocaleString('th-TH');
+}
+
+function DatasetsPage() {
+    const [datasets, setDatasets] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchDatasets = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const response = await fetch(apiUrl('/api/content/datasets'), {
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch datasets: ${response.status}`);
+                }
+
+                const payload = await response.json();
+                if (!payload?.ok || !Array.isArray(payload.data)) {
+                    throw new Error(payload?.message || 'Failed to fetch datasets');
+                }
+
+                if (isMounted) {
+                    setDatasets(payload.data);
+                    setLoading(false);
+                }
+            } catch {
+                if (!isMounted) return;
+                setError('เกิดข้อผิดพลาดในการโหลดข้อมูลชุดตัวอย่าง');
+                setDatasets([]);
+                setLoading(false);
+            }
+        };
+
+        fetchDatasets();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const datasetGroups = DOMAIN_GROUPS.map((group) => ({
+        ...group,
+        rows: datasets.filter((item) => item.domain === group.key),
+    }));
+
+    return (
+        <HomeShell>
+            <main className="gt-info-main gt-container">
+                <section className="gt-info-panel">
+                    <h1>ตัวอย่างชุดข้อมูล</h1>
+                    {loading ? <p className="gt-info-status">กำลังโหลดข้อมูล...</p> : null}
+                    {error ? <p className="gt-info-status gt-info-status-error">{error}</p> : null}
+                    <ul className="gt-dataset-bullets">
+                        {datasetGroups.map((group) => (
+                            <li key={group.key} className="gt-dataset-item">
+                                <h2>{group.title}</h2>
+                                {!loading && !error && (!group.rows || group.rows.length === 0) ? (
+                                    <p className="gt-info-status">Coming Soon...</p>
+                                ) : group.rows.length > 0 ? (
+                                    <div className="gt-dataset-table-wrap">
+                                        <table className="gt-dataset-table">
+                                            <colgroup>
+                                                <col className="gt-col-dataset-name" />
+                                                <col className="gt-col-owner" />
+                                                <col className="gt-col-attribute-number" />
+                                                <col className="gt-col-link" />
+                                                <col className="gt-col-domain" />
+                                                <col className="gt-col-record-count" />
+                                            </colgroup>
+                                            <thead>
+                                                <tr>
+                                                    <th>dataset_name</th>
+                                                    <th>owner</th>
+                                                    <th>attribute_number</th>
+                                                    <th>link</th>
+                                                    <th>domain</th>
+                                                    <th>record_count</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {group.rows.map((row) => (
+                                                    <tr key={row.id}>
+                                                        <td data-label="dataset_name">{row.datasetName}</td>
+                                                        <td data-label="owner">{row.owner}</td>
+                                                        <td data-label="attribute_number">{row.attributeNumber}</td>
+                                                        <td data-label="link">
+                                                            {row.link ? (
+                                                                <a
+                                                                    href={row.link}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    title={row.link}
+                                                                >
+                                                                    {row.link}
+                                                                </a>
+                                                            ) : '-'}
+                                                        </td>
+                                                        <td data-label="domain">{row.domain}</td>
+                                                        <td data-label="record_count">{formatRecordCount(row.recordCount)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : null}
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            </main>
+        </HomeShell>
+    );
+}
+
+export default DatasetsPage;
