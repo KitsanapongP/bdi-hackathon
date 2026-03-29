@@ -1962,7 +1962,7 @@ export default function TeamContent({ user }) {
                             <div key={task.teamSubmissionTaskId} className="gl-team-info-card">
                                 <div className="sub-task-card-header">
                                     <span className="gl-team-info-label">
-                                        {task.taskType === 'link' ? <Link size={13} /> : <Paperclip size={13} />} {task.taskName}
+                                        {task.taskType === 'link' ? <Link size={13} /> : <Paperclip size={13} />} <span className="sub-task-name">{task.taskName}</span>
                                     </span>
                                     <div className="sub-task-header-badges">
                                         <span className={`sub-task-required ${requiredClass}`}>{requiredLabel}</span>
@@ -2008,7 +2008,7 @@ export default function TeamContent({ user }) {
                                 ) : (
                                     <>
                                         <p className="vf-hint" style={{ marginBottom: 8 }}>
-                                            รองรับไฟล์ {Array.isArray(task.allowedExtensions) && task.allowedExtensions.length > 0 ? task.allowedExtensions.join(', ') : '.pdf,.docx,.png,.pptx'}
+                                            รองรับไฟล์ {Array.isArray(task.allowedExtensions) && task.allowedExtensions.length > 0 ? task.allowedExtensions.join(', ') : '.pdf,.csv'}
                                         </p>
                                         {files.length === 0 && <p className="vf-hint">ยังไม่มีไฟล์แนบ</p>}
                                         {files.map((f) => (
@@ -2040,7 +2040,7 @@ export default function TeamContent({ user }) {
                                                     type="file"
                                                     accept={(Array.isArray(task.allowedExtensions) && task.allowedExtensions.length > 0)
                                                         ? task.allowedExtensions.join(',')
-                                                        : '.pdf,.docx,.png,.pptx'}
+                                                        : '.pdf,.csv'}
                                                     multiple
                                                     hidden
                                                     onChange={(e) => {

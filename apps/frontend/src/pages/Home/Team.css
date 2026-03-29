@@ -3769,6 +3769,8 @@
 
 .sub-task-name {
     font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0;
 }
 
 .sub-task-card-header {

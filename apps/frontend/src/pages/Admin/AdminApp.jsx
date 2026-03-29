@@ -5432,7 +5432,7 @@ function SubmissionTasksPage() {
     taskName: '',
     taskType: 'link',
     isRequired: false,
-    allowedExtensions: '.pdf,.docx,.png,.pptx',
+    allowedExtensions: '.pdf,.csv',
     sortOrder: 0,
     deadlineAt: '',
     isSubmissionOpen: true,
@@ -5569,7 +5569,7 @@ function SubmissionTasksPage() {
               <input
                 value={form.allowedExtensions}
                 onChange={(event) => setForm((prev) => ({ ...prev, allowedExtensions: event.target.value }))}
-                placeholder=".pdf,.docx,.png,.pptx"
+                placeholder=".pdf,.csv"
               />
             </label>
           ) : null}
