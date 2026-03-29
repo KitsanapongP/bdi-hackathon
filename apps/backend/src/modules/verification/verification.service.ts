@@ -4,13 +4,13 @@ import * as repo from './verification.repo.js';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../../shared/errors.js';
 import { failTeamIfConfirmationExpired, getTeamById, getTeamMembers } from '../teams/teams.repo.js';
 import * as notificationService from '../notifications/notifications.service.js';
+import { getTeamMemberMin } from '../sys-config/sys-config-window.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads', 'verification');
 const DEFAULT_REQUIREMENT_ID = 5002; // STUDENT_ID requirement
-const MIN_SUBMIT_MEMBERS = 5;
 const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
 
 function assertTeamEditable(status: string): void {
@@ -336,8 +336,9 @@ export async function submitTeam(
 
     const round = await repo.getOrCreateVerifyRound(db, teamId, leaderUserId);
     const members = await getTeamMembers(db, teamId);
-    if (members.length < MIN_SUBMIT_MEMBERS) {
-        throw new BadRequestError(`ทีมต้องมีสมาชิกอย่างน้อย ${MIN_SUBMIT_MEMBERS} คนก่อนยืนยันเข้าร่วมการคัดเลือก`);
+    const minSubmitMembers = await getTeamMemberMin(db);
+    if (members.length < minSubmitMembers) {
+        throw new BadRequestError(`ทีมต้องมีสมาชิกอย่างน้อย ${minSubmitMembers} คนก่อนยืนยันเข้าร่วมการคัดเลือก`);
     }
 
     const missingRequiredSubmissionTasks = await repo.countMissingRequiredSubmissionTasks(db, teamId);

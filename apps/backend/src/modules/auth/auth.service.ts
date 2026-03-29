@@ -11,6 +11,10 @@ import type {
 } from './auth.types.js';
 import { AppError, BadRequestError, ConflictError, UnauthorizedError } from '../../shared/errors.js';
 import * as repo from './auth.repo.js';
+import {
+    evaluateWindowStatus,
+    getRegistrationWindow,
+} from '../sys-config/sys-config-window.js';
 
 const SALT_ROUNDS = 10;
 const VERIFICATION_CODE_EXPIRES_IN_SECONDS = 5 * 60;
@@ -282,6 +286,15 @@ export async function requestRegistrationVerification(
     db: DB,
     input: RegisterInput,
 ): Promise<{ email: string; expiresAt: string; expiresInSeconds: number }> {
+    const registrationWindow = await getRegistrationWindow(db);
+    const registrationStatus = evaluateWindowStatus(registrationWindow);
+    if (registrationStatus === 'not_open') {
+        throw new AppError('ยังไม่ถึงเวลาที่เปิดลงทะเบียน', 400);
+    }
+    if (registrationStatus === 'closed') {
+        throw new AppError('หมดเขตการลงทะเบียน', 400);
+    }
+
     const normalizedEmail = normalizeEmail(input.email);
     await ensureUniqueIdentity(db, normalizedEmail, input.userName);
 
@@ -323,6 +336,15 @@ export async function resendRegistrationVerification(
     db: DB,
     input: RegisterResendInput,
 ): Promise<{ email: string; expiresAt: string; expiresInSeconds: number }> {
+    const registrationWindow = await getRegistrationWindow(db);
+    const registrationStatus = evaluateWindowStatus(registrationWindow);
+    if (registrationStatus === 'not_open') {
+        throw new AppError('ยังไม่ถึงเวลาที่เปิดลงทะเบียน', 400);
+    }
+    if (registrationStatus === 'closed') {
+        throw new AppError('หมดเขตการลงทะเบียน', 400);
+    }
+
     const normalizedEmail = normalizeEmail(input.email);
     const pending = await repo.findPendingRegistrationByEmail(db, normalizedEmail);
 
@@ -362,6 +384,15 @@ export async function verifyRegistrationCode(
     input: RegisterVerifyInput,
     meta: { acceptIp: string; userAgent: string },
 ): Promise<UserSafe> {
+    const registrationWindow = await getRegistrationWindow(db);
+    const registrationStatus = evaluateWindowStatus(registrationWindow);
+    if (registrationStatus === 'not_open') {
+        throw new AppError('ยังไม่ถึงเวลาที่เปิดลงทะเบียน', 400);
+    }
+    if (registrationStatus === 'closed') {
+        throw new AppError('หมดเขตการลงทะเบียน', 400);
+    }
+
     const normalizedEmail = normalizeEmail(input.email);
     const pending = await repo.findPendingRegistrationByEmail(db, normalizedEmail);
 

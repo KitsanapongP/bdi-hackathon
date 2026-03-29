@@ -39,13 +39,19 @@ import {
     ExternalLink,
 } from 'lucide-react';
 import { apiUrl } from '../../lib/api';
+import {
+    fetchSysConfigValue,
+    fetchTeamRecruitmentWindowStatus,
+    formatThaiDate,
+    SYSTEM_WINDOW_STATUS,
+} from '../../lib/systemWindow';
 import ConfirmModal from '../../components/ConfirmModal';
 import './Team.css';
 import './Register.css';
 import './Profile.css';
 
-const MAX_MEMBERS = 5;
-const MIN_SUBMIT_MEMBERS = 5;
+const TEAM_MEMBER_MAX_DEFAULT = 5;
+const TEAM_MEMBER_MIN_DEFAULT = 3;
 
 const CARDS = [
     { id: 'verify', icon: <ShieldCheck />, label: 'ยืนยันตัวตน', color: '#14b8a6' },
@@ -371,6 +377,15 @@ export default function TeamContent({ user }) {
     const [readinessLoading, setReadinessLoading] = useState(false);
     const [readinessLoaded, setReadinessLoaded] = useState(false);
     const [nowMs, setNowMs] = useState(Date.now());
+    const [teamRecruitmentWindow, setTeamRecruitmentWindow] = useState({
+        status: SYSTEM_WINDOW_STATUS.UNKNOWN,
+        openAtMs: null,
+        closeAtMs: null,
+    });
+    const [teamMemberLimits, setTeamMemberLimits] = useState({
+        max: TEAM_MEMBER_MAX_DEFAULT,
+        min: TEAM_MEMBER_MIN_DEFAULT,
+    });
     const [memberProfileLoading, setMemberProfileLoading] = useState(false);
     const [memberProfileData, setMemberProfileData] = useState(null);
     const [selectedMember, setSelectedMember] = useState(null);
@@ -378,6 +393,12 @@ export default function TeamContent({ user }) {
 
     const isLeader = useMemo(() => team?.leaderUserId === user?.userId, [team, user]);
     const isSingleLeaderTeam = isLeader && (team?.members?.length || 0) === 1;
+    const maxMembers = Math.max(1, Number(teamMemberLimits.max) || TEAM_MEMBER_MAX_DEFAULT);
+    const minSubmitMembers = Math.max(1, Number(teamMemberLimits.min) || TEAM_MEMBER_MIN_DEFAULT);
+    const isTeamRecruitmentOpen = teamRecruitmentWindow.status === SYSTEM_WINDOW_STATUS.OPEN;
+    const teamRecruitmentMessage = teamRecruitmentWindow.status === SYSTEM_WINDOW_STATUS.NOT_OPEN
+        ? `การสร้างทีมจะเปิดในวันที่ ${formatThaiDate(teamRecruitmentWindow.openAtMs)}`
+        : (teamRecruitmentWindow.status === SYSTEM_WINDOW_STATUS.CLOSED ? 'หมดเขตการรับสมัคร' : '');
     const hasPendingJoinRequests = pendingJoinRequests.length > 0;
     const sortedMembers = useMemo(() => {
         if (!team?.members) return [];
@@ -387,6 +408,53 @@ export default function TeamContent({ user }) {
             return a.id - b.id;
         });
     }, [team]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadTeamRecruitmentWindow = async () => {
+            try {
+                const [nextWindow, maxRaw, minRaw] = await Promise.all([
+                    fetchTeamRecruitmentWindowStatus(),
+                    fetchSysConfigValue('TEAM_MEMBER_MAX'),
+                    fetchSysConfigValue('TEAM_MEMBER_MIN'),
+                ]);
+                if (!cancelled) setTeamRecruitmentWindow(nextWindow);
+                if (!cancelled) {
+                    const parsedMax = Number.parseInt(String(maxRaw || ''), 10);
+                    const parsedMin = Number.parseInt(String(minRaw || ''), 10);
+                    const safeMax = Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : TEAM_MEMBER_MAX_DEFAULT;
+                    const safeMinBase = Number.isFinite(parsedMin) && parsedMin > 0 ? parsedMin : TEAM_MEMBER_MIN_DEFAULT;
+                    const safeMin = Math.min(safeMinBase, safeMax);
+                    setTeamMemberLimits({
+                        max: safeMax,
+                        min: safeMin,
+                    });
+                }
+            } catch {
+                if (!cancelled) {
+                    setTeamRecruitmentWindow((prev) => ({
+                        ...prev,
+                        status: SYSTEM_WINDOW_STATUS.UNKNOWN,
+                    }));
+                    setTeamMemberLimits({
+                        max: TEAM_MEMBER_MAX_DEFAULT,
+                        min: TEAM_MEMBER_MIN_DEFAULT,
+                    });
+                }
+            }
+        };
+
+        loadTeamRecruitmentWindow();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (isTeamRecruitmentOpen) return;
+        setActiveView(null);
+    }, [isTeamRecruitmentOpen]);
 
     useEffect(() => {
         if (!user?.hasTeam || !user?.teamId) return;
@@ -554,6 +622,9 @@ export default function TeamContent({ user }) {
     }, [team?.id, showToast, getReadableErrorMessage]);
 
     const handleCreateTeam = () => withAction(async () => {
+        if (!isTeamRecruitmentOpen) {
+            throw new Error(teamRecruitmentMessage || 'หมดเขตการรับสมัคร');
+        }
         if (!createName.trim()) return;
         const res = await fetch(apiUrl('/api/teams'), {
             method: 'POST',
@@ -571,6 +642,9 @@ export default function TeamContent({ user }) {
     });
 
     const handleJoinByCode = () => withAction(async () => {
+        if (!isTeamRecruitmentOpen) {
+            throw new Error(teamRecruitmentMessage || 'หมดเขตการรับสมัคร');
+        }
         if (!joinCode.trim()) return;
         const res = await fetch(apiUrl('/api/teams/join-by-code'), {
             method: 'POST',
@@ -585,6 +659,9 @@ export default function TeamContent({ user }) {
     });
 
     const handleRequestPublicTeam = (teamId) => withAction(async () => {
+        if (!isTeamRecruitmentOpen) {
+            throw new Error(teamRecruitmentMessage || 'หมดเขตการรับสมัคร');
+        }
         const res = await fetch(apiUrl(`/api/teams/${teamId}/join-requests`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -598,6 +675,9 @@ export default function TeamContent({ user }) {
     });
 
     const handleRespondInvitation = (invitationId, status) => withAction(async () => {
+        if (!isTeamRecruitmentOpen) {
+            throw new Error(teamRecruitmentMessage || 'หมดเขตการรับสมัคร');
+        }
         const res = await fetch(apiUrl(`/api/teams/invitations/${invitationId}`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -751,29 +831,35 @@ export default function TeamContent({ user }) {
                                 <h2>ค้นหาทีมของคุณ</h2>
                                 <p>เริ่มต้นการแข่งขันโดยสร้างทีมใหม่ หรือเข้าร่วมทีมที่มีอยู่แล้ว</p>
                             </div>
+                            {teamRecruitmentMessage && (
+                                <div className="gl-team-window-info">
+                                    <Info size={18} />
+                                    <span>{teamRecruitmentMessage}</span>
+                                </div>
+                            )}
                             <div className="gl-lobby-cards gl-lobby-2x2">
-                                <div className="gl-lobby-card create-card" onClick={() => setActiveView('create')}>
+                                <div className={`gl-lobby-card create-card ${!isTeamRecruitmentOpen ? 'is-disabled' : ''}`} onClick={() => { if (isTeamRecruitmentOpen) setActiveView('create'); }}>
                                     <div className="gl-lobby-card-icon"><Plus size={28} /></div>
                                     <div className="gl-lobby-card-text">
                                         <h4>สร้างทีม</h4>
                                         <p>สร้างทีมใหม่และเชิญเพื่อนเข้าร่วม</p>
                                     </div>
                                 </div>
-                                <div className="gl-lobby-card join-card" onClick={() => setActiveView('join')}>
+                                <div className={`gl-lobby-card join-card ${!isTeamRecruitmentOpen ? 'is-disabled' : ''}`} onClick={() => { if (isTeamRecruitmentOpen) setActiveView('join'); }}>
                                     <div className="gl-lobby-card-icon"><Lock size={28} /></div>
                                     <div className="gl-lobby-card-text">
                                         <h4>เข้าทีมด้วยโค้ด</h4>
                                         <p>ใช้รหัสเชิญเพื่อเข้าร่วมทีมส่วนตัว</p>
                                     </div>
                                 </div>
-                                <div className="gl-lobby-card browse-card" onClick={() => setActiveView('browse')}>
+                                <div className={`gl-lobby-card browse-card ${!isTeamRecruitmentOpen ? 'is-disabled' : ''}`} onClick={() => { if (isTeamRecruitmentOpen) setActiveView('browse'); }}>
                                     <div className="gl-lobby-card-icon"><Globe size={28} /></div>
                                     <div className="gl-lobby-card-text">
                                         <h4>ค้นหาทีมสาธารณะ</h4>
                                         <p>ดูรายชื่อทีมที่เปิดรับสมาชิก</p>
                                     </div>
                                 </div>
-                                <div className="gl-lobby-card invite-card" onClick={() => setActiveView('invitations')}>
+                                <div className={`gl-lobby-card invite-card ${!isTeamRecruitmentOpen ? 'is-disabled' : ''}`} onClick={() => { if (isTeamRecruitmentOpen) setActiveView('invitations'); }}>
                                     {myInvitations.length > 0 && (
                                         <span className="gl-lobby-card-badge">{myInvitations.length}</span>
                                     )}
@@ -810,7 +896,7 @@ export default function TeamContent({ user }) {
                                     </div>
                                     <button type="button" className={`gl-form-toggle ${createPublic ? 'on' : ''}`} onClick={() => setCreatePublic((v) => !v)} />
                                 </div>
-                                <button className="gl-form-submit gl-btn-pink" disabled={actionLoading || !createName.trim()} onClick={handleCreateTeam}>
+                                <button className="gl-form-submit gl-btn-pink" disabled={!isTeamRecruitmentOpen || actionLoading || !createName.trim()} onClick={handleCreateTeam}>
                                     <Plus size={18} /> สร้างทีม
                                 </button>
                             </div>
@@ -833,7 +919,7 @@ export default function TeamContent({ user }) {
                                     <label className="gl-form-label">รหัสเชิญ</label>
                                     <input className="gl-form-input gl-form-code-input" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="เช่น ABC123" />
                                 </div>
-                                <button className="gl-form-submit gl-btn-blue" disabled={actionLoading || !joinCode.trim()} onClick={handleJoinByCode}>
+                                <button className="gl-form-submit gl-btn-blue" disabled={!isTeamRecruitmentOpen || actionLoading || !joinCode.trim()} onClick={handleJoinByCode}>
                                     <UserPlus size={18} /> ส่งคำขอเข้าร่วม
                                 </button>
                             </div>
@@ -869,12 +955,12 @@ export default function TeamContent({ user }) {
                                                 <div className="gl-browse-team-avatar">{t.name.charAt(0)}</div>
                                                 <div className="gl-browse-team-info">
                                                     <span className="gl-browse-team-name">{t.name}</span>
-                                                    <span className="gl-browse-team-meta"><Users size={13} /> {t.memberCount}/{MAX_MEMBERS} คน</span>
+                                                    <span className="gl-browse-team-meta"><Users size={13} /> {t.memberCount}/{maxMembers} คน</span>
                                                 </div>
                                             </div>
-                                            <button className="gl-browse-join-btn gl-btn-green" disabled={actionLoading} onClick={() => handleRequestPublicTeam(t.id)}>
-                                                <UserPlus size={15} /> ขอเข้าร่วม
-                                            </button>
+                                             <button className="gl-browse-join-btn gl-btn-green" disabled={!isTeamRecruitmentOpen || actionLoading} onClick={() => handleRequestPublicTeam(t.id)}>
+                                                 <UserPlus size={15} /> ขอเข้าร่วม
+                                             </button>
                                         </div>
                                     ))}
                                 </div>
@@ -914,10 +1000,10 @@ export default function TeamContent({ user }) {
                                                 </div>
                                             </div>
                                             <div className="gl-inv-actions">
-                                                <button className="gl-inv-btn gl-inv-accept" disabled={actionLoading} onClick={() => handleRespondInvitation(inv.invitation_id, 'accepted')}>
+                                                <button className="gl-inv-btn gl-inv-accept" disabled={!isTeamRecruitmentOpen || actionLoading} onClick={() => handleRespondInvitation(inv.invitation_id, 'accepted')}>
                                                     <CheckCircle size={15} /> ยอมรับ
                                                 </button>
-                                                <button className="gl-inv-btn gl-inv-decline" disabled={actionLoading} onClick={() => handleRespondInvitation(inv.invitation_id, 'declined')}>
+                                                <button className="gl-inv-btn gl-inv-decline" disabled={!isTeamRecruitmentOpen || actionLoading} onClick={() => handleRespondInvitation(inv.invitation_id, 'declined')}>
                                                     <X size={15} /> ปฏิเสธ
                                                 </button>
                                             </div>
@@ -955,7 +1041,7 @@ export default function TeamContent({ user }) {
     const statusInfo = team.status === 'confirmed'
         ? { label: 'ยืนยันการเข้าร่วมแล้ว', color: 'bg-emerald-100 text-emerald-800' }
         : (TEAM_STATUS_CONFIG[team.status] || TEAM_STATUS_CONFIG.forming);
-    const emptySlots = Math.max(0, MAX_MEMBERS - team.members.length);
+    const emptySlots = Math.max(0, maxMembers - team.members.length);
     const teamInviteCode = team.inviteCode || '------';
     const deadlineMs = toDateMs(team?.confirmationDeadlineAt);
     const countdownText = deadlineMs ? formatCountdown(deadlineMs - nowMs) : '-';
@@ -987,11 +1073,11 @@ export default function TeamContent({ user }) {
         if (task.taskType === 'file') return !Array.isArray(task.files) || task.files.length === 0;
         return false;
     });
-    const isMinMembersReady = memberCountForSubmit >= MIN_SUBMIT_MEMBERS;
+    const isMinMembersReady = memberCountForSubmit >= minSubmitMembers;
 
     const submitReadinessRules = [
         { id: 'members-confirmed', ok: allMembersConfirmed, label: 'สมาชิกทุกคนต้องยืนยันเอกสารยืนยันตัวตนให้ครบ' },
-        { id: 'min-members', ok: isMinMembersReady, label: `ทีมต้องมีสมาชิกอย่างน้อย ${MIN_SUBMIT_MEMBERS} คน (ปัจจุบัน ${memberCountForSubmit} คน)` },
+        { id: 'min-members', ok: isMinMembersReady, label: `ทีมจะต้องมีสมาชิก ${minSubmitMembers} คนในทีม (ปัจจุบัน ${memberCountForSubmit} คน)` },
         { id: 'required-submission-tasks', ok: !hasMissingRequiredTaskForReadiness, label: 'กรุณาส่งข้อมูลงานที่บังคับให้ครบก่อนยืนยันเข้าร่วมการคัดเลือก' },
     ];
     const submitMissing = readinessLoaded
@@ -1198,8 +1284,8 @@ export default function TeamContent({ user }) {
                 const statusPayload = await statusRes.json();
                 if (!statusPayload.ok) throw new Error(statusPayload.message || 'ไม่สามารถตรวจสอบสถานะทีมได้');
                 const latestMembers = statusPayload?.data?.members || [];
-                if (latestMembers.length < MIN_SUBMIT_MEMBERS) {
-                    throw new Error(`ทีมต้องมีสมาชิกอย่างน้อย ${MIN_SUBMIT_MEMBERS} คน (ตอนนี้ ${latestMembers.length} คน)`);
+                if (latestMembers.length < minSubmitMembers) {
+                    throw new Error(`ทีมต้องมีสมาชิกครบ ${minSubmitMembers} คนในทีม (ตอนนี้ ${latestMembers.length} คน)`);
                 }
                 const pendingMembers = latestMembers.filter((m) => !m.is_member_confirmed);
                 if (pendingMembers.length > 0) {
@@ -1455,9 +1541,9 @@ export default function TeamContent({ user }) {
                     {/* 3. Member Count */}
                     <div className="gl-team-info-card gl-manage-glass-card gl-compact-card">
                         <span className="gl-team-info-label" style={{ marginBottom: 0 }}><Users size={16} /> จำนวนสมาชิก</span>
-                        <div className="gl-bold-value" style={{ marginTop: 'auto' }}>{team.members.length} <span className="gl-sub-value">/ {MAX_MEMBERS} คน</span></div>
+                        <div className="gl-bold-value" style={{ marginTop: 'auto' }}>{team.members.length} <span className="gl-sub-value">/ {maxMembers} คน</span></div>
                         <div className="gl-progress-mini">
-                            <div className="gl-progress-mini-fill" style={{ width: `${(team.members.length / MAX_MEMBERS) * 100}%` }}></div>
+                            <div className="gl-progress-mini-fill" style={{ width: `${(team.members.length / maxMembers) * 100}%` }}></div>
                         </div>
                     </div>
 
@@ -2428,7 +2514,7 @@ export default function TeamContent({ user }) {
         <div className="gl-page-container">
             <div className="gl-frame">
                 <aside className="gl-members-panel">
-                    <div className="gl-members-header"><h3>สมาชิก {team.members.length}/{MAX_MEMBERS}</h3></div>
+                    <div className="gl-members-header"><h3>สมาชิก {team.members.length}/{maxMembers}</h3></div>
                     <div className="gl-member-list">
                         {sortedMembers.map((m) => {
                             const vm = verifyData?.members?.find(v => v.user_id === m.id);

@@ -6,8 +6,13 @@ import * as notificationService from '../notifications/notifications.service.js'
 import * as privilegesService from '../privileges/privileges.service.js';
 import * as submissionsRepo from '../submissions/submissions.repo.js';
 import type { TeamMemberProfileSafe } from './teams.types.js';
+import {
+    evaluateWindowStatus,
+    formatThaiDate,
+    getTeamMemberMax,
+    getTeamRecruitmentWindow,
+} from '../sys-config/sys-config-window.js';
 
-const MAX_TEAM_MEMBERS = 5;
 const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
 
 function generateRandomCode(length: number = 6): string {
@@ -50,7 +55,19 @@ function assertTeamEditable(status: string, actionLabel: string): void {
     throw new AppError(`ไม่สามารถ${actionLabel}ได้ เนื่องจากทีมถูกล็อกหลังส่งเอกสารยืนยันตัวตนแล้ว`, 400);
 }
 
+async function assertTeamRecruitmentOpen(db: DB): Promise<void> {
+    const windowConfig = await getTeamRecruitmentWindow(db);
+    const status = evaluateWindowStatus(windowConfig);
+    if (status === 'open') return;
+    if (status === 'not_open') {
+        throw new AppError(`การสร้างทีมจะเปิดในวันที่ ${formatThaiDate(windowConfig.openAtMs)}`, 400);
+    }
+    throw new AppError('หมดเขตการรับสมัคร', 400);
+}
+
 export async function createTeam(db: DB, userId: number, data: { teamNameTh: string; teamNameEn: string; visibility: 'public' | 'private' }) {
+    await assertTeamRecruitmentOpen(db);
+
     // Check if user is already in a team
     const inTeam = await repo.checkUserInAnyTeam(db, userId);
     if (inTeam) {
@@ -107,6 +124,8 @@ export async function createTeam(db: DB, userId: number, data: { teamNameTh: str
 }
 
 export async function rotateTeamCode(db: DB, teamId: number, userId: number) {
+    await assertTeamRecruitmentOpen(db);
+
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
     if (team.current_leader_user_id !== userId) {
@@ -242,6 +261,8 @@ export async function transferLeader(db: DB, teamId: number, currentLeaderUserId
 }
 
 export async function submitJoinRequest(db: DB, teamId: number, userId: number, inviteCode?: string) {
+    await assertTeamRecruitmentOpen(db);
+
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
     assertTeamEditable(team.status, 'ขอเข้าร่วมทีม');
@@ -253,7 +274,8 @@ export async function submitJoinRequest(db: DB, teamId: number, userId: number, 
     if (existingRequest) throw new AppError('คุณได้ส่งคำขอเข้าร่วมทีมนี้ไปแล้ว (Request already pending)', 400);
 
     const members = await repo.getTeamMembers(db, teamId);
-    if (members.length >= MAX_TEAM_MEMBERS) {
+    const maxTeamMembers = await getTeamMemberMax(db);
+    if (members.length >= maxTeamMembers) {
         throw new AppError('ทีมเต็มแล้ว ไม่สามารถเข้าร่วมได้', 400);
     }
 
@@ -297,6 +319,10 @@ export async function getPendingJoinRequests(db: DB, teamId: number, leaderUserI
 }
 
 export async function respondJoinRequest(db: DB, teamId: number, requestId: number, leaderUserId: number, status: 'approved' | 'rejected', reason?: string) {
+    if (status === 'approved') {
+        await assertTeamRecruitmentOpen(db);
+    }
+
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
@@ -318,6 +344,7 @@ export async function respondJoinRequest(db: DB, teamId: number, requestId: numb
         }
 
         const members = await repo.getTeamMembers(txDb, teamId);
+        const maxTeamMembers = await getTeamMemberMax(txDb);
 
         if (status === 'approved') {
             await repo.lockUserForTeamAssignment(txDb, request.requester_user_id);
@@ -326,7 +353,7 @@ export async function respondJoinRequest(db: DB, teamId: number, requestId: numb
                 throw new AppError('ผู้ใช้นี้อยู่ในทีมอื่นแล้ว', 400);
             }
 
-            if (members.length >= MAX_TEAM_MEMBERS) {
+            if (members.length >= maxTeamMembers) {
                 throw new AppError('สมาชิกในทีมเต็มแล้ว (Team is full)', 400);
             }
 
@@ -469,6 +496,8 @@ export async function sendInvitation(
     leaderUserId: number,
     input: { inviteeUserId?: number; inviteeUserName?: string }
 ) {
+    await assertTeamRecruitmentOpen(db);
+
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
     if (team.current_leader_user_id !== leaderUserId) {
@@ -477,7 +506,8 @@ export async function sendInvitation(
     assertTeamEditable(team.status, 'เชิญสมาชิกเข้าทีม');
 
     const members = await repo.getTeamMembers(db, teamId);
-    if (members.length >= MAX_TEAM_MEMBERS) {
+    const maxTeamMembers = await getTeamMemberMax(db);
+    if (members.length >= maxTeamMembers) {
         throw new AppError('ทีมเต็มแล้ว ไม่สามารถเชิญสมาชิกเพิ่มได้', 400);
     }
 
@@ -519,6 +549,10 @@ export async function getMyInvitations(db: DB, userId: number) {
 }
 
 export async function respondToInvitation(db: DB, invitationId: number, userId: number, status: 'accepted' | 'declined') {
+    if (status === 'accepted') {
+        await assertTeamRecruitmentOpen(db);
+    }
+
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
@@ -544,7 +578,8 @@ export async function respondToInvitation(db: DB, invitationId: number, userId: 
             }
 
             const members = await repo.getTeamMembers(txDb, invitation.team_id);
-            if (members.length >= MAX_TEAM_MEMBERS) {
+            const maxTeamMembers = await getTeamMemberMax(txDb);
+            if (members.length >= maxTeamMembers) {
                 throw new AppError('ทีมเต็มแล้ว ไม่สามารถรับคำเชิญเข้าร่วมได้', 400);
             }
 

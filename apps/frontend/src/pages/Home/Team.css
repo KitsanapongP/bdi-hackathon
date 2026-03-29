@@ -2015,6 +2015,26 @@
     box-shadow: 0 2px 0 rgba(0, 0, 0, 0.1);
 }
 
+.gl-lobby-card.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+    transform: none;
+    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.08);
+}
+
+.gl-lobby-card.is-disabled:hover,
+.gl-lobby-card.is-disabled:active {
+    transform: none;
+    border-color: var(--gl-border);
+    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.08);
+}
+
+.gl-lobby-card.is-disabled:hover .gl-lobby-card-icon {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--gl-text);
+    transform: none;
+}
+
 .gl-lobby-card-icon {
     width: 72px;
     height: 72px;
@@ -2348,6 +2368,22 @@
     color: var(--gl-text-dim);
     max-width: 420px;
     line-height: 1.6;
+}
+
+.gl-team-window-info {
+    width: 100%;
+    max-width: 640px;
+    margin: 0 0 20px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(251, 191, 36, 0.5);
+    background: rgba(254, 243, 199, 0.95);
+    color: #854d0e;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
 }
 
 /* ═══════════════════════════════════════════════════════════

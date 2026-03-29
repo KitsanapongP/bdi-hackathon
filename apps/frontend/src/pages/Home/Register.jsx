@@ -15,6 +15,10 @@ import GameShapes from '../../components/GameShapes';
 import './Home.css';
 import './Register.css';
 import { apiUrl } from '../../lib/api';
+import {
+    fetchRegistrationWindowStatus,
+    SYSTEM_WINDOW_STATUS,
+} from '../../lib/systemWindow';
 
 const EDUCATION_OPTIONS = [
     { value: 'secondary', label: 'มัธยมศึกษาตอนต้น' },
@@ -61,6 +65,11 @@ function RegisterPage() {
 
     const [errorMsg, setErrorMsg] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [registrationWindow, setRegistrationWindow] = useState({
+        status: SYSTEM_WINDOW_STATUS.UNKNOWN,
+        openAtMs: null,
+        closeAtMs: null,
+    });
 
     const [showLoginPass, setShowLoginPass] = useState(false);
     const [showRegPass, setShowRegPass] = useState(false);
@@ -131,6 +140,35 @@ function RegisterPage() {
         const timer = window.setInterval(updateCountdown, 1000);
         return () => window.clearInterval(timer);
     }, [isRegisterMode, registerStep, verificationExpiresAt]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadRegistrationWindow = async () => {
+            try {
+                const next = await fetchRegistrationWindowStatus();
+                if (!cancelled) setRegistrationWindow(next);
+            } catch {
+                if (!cancelled) {
+                    setRegistrationWindow((prev) => ({
+                        ...prev,
+                        status: SYSTEM_WINDOW_STATUS.UNKNOWN,
+                    }));
+                }
+            }
+        };
+
+        loadRegistrationWindow();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const isRegistrationOpen = registrationWindow.status === SYSTEM_WINDOW_STATUS.OPEN;
+    const registerUnavailableMessage = registrationWindow.status === SYSTEM_WINDOW_STATUS.NOT_OPEN
+        ? 'ยังไม่ถึงเวลาที่เปิดลงทะเบียน'
+        : (registrationWindow.status === SYSTEM_WINDOW_STATUS.CLOSED ? 'หมดเขตการลงทะเบียน' : '');
+    const registerActionDisabled = isLoading || !isRegistrationOpen;
 
     const resetVerificationState = () => {
         setRegisterStep('form');
@@ -229,6 +267,11 @@ function RegisterPage() {
         e.preventDefault();
         setErrorMsg('');
 
+        if (!isRegistrationOpen) {
+            setErrorMsg(registerUnavailableMessage || 'ไม่สามารถลงทะเบียนได้ในขณะนี้');
+            return;
+        }
+
         if (!regFullNameTh.trim().includes(' ')) {
             setErrorMsg('กรุณากรอกชื่อและนามสกุล (ภาษาไทย) โดยเว้นวรรคระหว่างชื่อกับนามสกุล');
             return;
@@ -323,6 +366,11 @@ function RegisterPage() {
         e.preventDefault();
         setErrorMsg('');
 
+        if (!isRegistrationOpen) {
+            setErrorMsg(registerUnavailableMessage || 'ไม่สามารถลงทะเบียนได้ในขณะนี้');
+            return;
+        }
+
         const normalizedCode = verificationCode.replace(/\D/g, '').slice(0, 6);
         if (!pendingVerificationEmail) {
             setErrorMsg('ไม่พบอีเมลสำหรับยืนยัน กรุณาสมัครใหม่อีกครั้ง');
@@ -360,6 +408,11 @@ function RegisterPage() {
 
     const handleResendVerification = async () => {
         setErrorMsg('');
+
+        if (!isRegistrationOpen) {
+            setErrorMsg(registerUnavailableMessage || 'ไม่สามารถลงทะเบียนได้ในขณะนี้');
+            return;
+        }
 
         if (!pendingVerificationEmail) {
             setErrorMsg('ไม่พบอีเมลสำหรับยืนยัน กรุณาสมัครใหม่อีกครั้ง');
@@ -404,6 +457,12 @@ function RegisterPage() {
                         {isRegisterMode ? (registerStep === 'verify' ? 'ยืนยันอีเมล' : 'ลงทะเบียน') : 'เข้าสู่ระบบ'}
                     </h2>
 
+                    {isRegisterMode && registerUnavailableMessage && (
+                        <div style={{ color: '#92400e', textAlign: 'center', marginBottom: 12, fontSize: '0.9rem', background: '#fef3c7', padding: 10, borderRadius: 8 }}>
+                            {registerUnavailableMessage}
+                        </div>
+                    )}
+
                     {errorMsg && <div style={{ color: '#ef4444', textAlign: 'center', marginBottom: 16, fontSize: '0.9rem', background: '#fee2e2', padding: 8, borderRadius: 8 }}>{errorMsg}</div>}
 
                     {!isRegisterMode ? (
@@ -438,10 +497,10 @@ function RegisterPage() {
                                             setVerificationCode(value);
                                         }}
                                         required
-                                        disabled={isLoading}
+                                        disabled={registerActionDisabled}
                                     />
                                 </div>
-                                <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%' }} disabled={isLoading}>
+                                <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%' }} disabled={registerActionDisabled}>
                                     {isLoading ? <><Loader2 size={18} className="spin" /> กำลังยืนยัน...</> : 'ยืนยันรหัส'}
                                 </button>
                                 <div className="gr-verify-actions">
@@ -449,7 +508,7 @@ function RegisterPage() {
                                         type="button"
                                         className="gt-btn gt-btn-secondary"
                                         onClick={handleResendVerification}
-                                        disabled={isLoading}
+                                        disabled={registerActionDisabled}
                                         style={{ width: '100%' }}
                                     >
                                         ส่งรหัสใหม่
@@ -458,7 +517,7 @@ function RegisterPage() {
                                         type="button"
                                         className="gt-btn"
                                         onClick={resetVerificationState}
-                                        disabled={isLoading}
+                                        disabled={registerActionDisabled}
                                         style={{ width: '100%' }}
                                     >
                                         กลับไปแก้ข้อมูล
@@ -474,9 +533,9 @@ function RegisterPage() {
                                 <section className="gr-form-section">
                                     <h3>ข้อมูลส่วนตัว</h3>
                                     <div className="gr-form-grid gr-form-grid-2">
-                                        <div className="gr-input-group"><label>ชื่อ-นามสกุล (ภาษาไทย)</label><input type="text" name="registerFullNameTh" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="เช่น สมชาย ใจดี" value={regFullNameTh} onChange={(e) => setRegFullNameTh(e.target.value)} required disabled={isLoading} /></div>
-                                        <div className="gr-input-group"><label>ชื่อ-นามสกุล (ภาษาอังกฤษ)</label><input type="text" name="registerFullNameEn" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="e.g. Somchai Jaidee" value={regFullNameEn} onChange={(e) => setRegFullNameEn(e.target.value)} required disabled={isLoading} /></div>
-                                        <div className="gr-input-group"><label>เพศ (Gender)</label><select className="gr-input" autoComplete="off" data-lpignore="true" value={regGender} onChange={(e) => setRegGender(e.target.value)} disabled={isLoading}>{GENDER_OPTIONS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}</select></div>
+                                        <div className="gr-input-group"><label>ชื่อ-นามสกุล (ภาษาไทย)</label><input type="text" name="registerFullNameTh" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="เช่น สมชาย ใจดี" value={regFullNameTh} onChange={(e) => setRegFullNameTh(e.target.value)} required disabled={registerActionDisabled} /></div>
+                                        <div className="gr-input-group"><label>ชื่อ-นามสกุล (ภาษาอังกฤษ)</label><input type="text" name="registerFullNameEn" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="e.g. Somchai Jaidee" value={regFullNameEn} onChange={(e) => setRegFullNameEn(e.target.value)} required disabled={registerActionDisabled} /></div>
+                                        <div className="gr-input-group"><label>เพศ (Gender)</label><select className="gr-input" autoComplete="off" data-lpignore="true" value={regGender} onChange={(e) => setRegGender(e.target.value)} disabled={registerActionDisabled}>{GENDER_OPTIONS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}</select></div>
                                         <div className="gr-input-group">
                                             <label>วันเดือนปีเกิด (Date of Birth)</label>
                                             <DatePicker
@@ -487,7 +546,7 @@ function RegisterPage() {
                                                 onChange={(value) => setRegBirthDate(value ? value.format('YYYY-MM-DD') : '')}
                                                 allowClear={false}
                                                 inputReadOnly
-                                                disabled={isLoading}
+                                                disabled={registerActionDisabled}
                                                 disabledDate={(current) => current && current > dayjs().endOf('day')}
                                             />
                                         </div>
@@ -497,24 +556,24 @@ function RegisterPage() {
                                 <section className="gr-form-section">
                                     <h3>ข้อมูลการศึกษา</h3>
                                     <div className="gr-form-grid gr-form-grid-2">
-                                        <div className="gr-input-group"><label>ระดับการศึกษา (Education Level)</label><select className="gr-input" autoComplete="off" data-lpignore="true" value={regEducationLevel} onChange={(e) => setRegEducationLevel(e.target.value)} disabled={isLoading}>{EDUCATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
-                                        <div className="gr-input-group"><label>ภูมิลำเนา (Province)</label><input type="text" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="เช่น ขอนแก่น" value={regHomeProvince} onChange={(e) => setRegHomeProvince(e.target.value)} required disabled={isLoading} /></div>
-                                        <div className="gr-input-group"><label>ชื่อสถาบันศึกษา (ภาษาไทย)</label><input type="text" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="เช่น มหาวิทยาลัยขอนแก่น" value={regInstitutionNameTh} onChange={(e) => setRegInstitutionNameTh(e.target.value)} required disabled={isLoading} /></div>
-                                        <div className="gr-input-group"><label>ชื่อสถาบันศึกษา (ภาษาอังกฤษ)</label><input type="text" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="e.g. Khon Kaen University" value={regInstitutionNameEn} onChange={(e) => setRegInstitutionNameEn(e.target.value)} required disabled={isLoading} /></div>
+                                        <div className="gr-input-group"><label>ระดับการศึกษา (Education Level)</label><select className="gr-input" autoComplete="off" data-lpignore="true" value={regEducationLevel} onChange={(e) => setRegEducationLevel(e.target.value)} disabled={registerActionDisabled}>{EDUCATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
+                                        <div className="gr-input-group"><label>ภูมิลำเนา (Province)</label><input type="text" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="เช่น ขอนแก่น" value={regHomeProvince} onChange={(e) => setRegHomeProvince(e.target.value)} required disabled={registerActionDisabled} /></div>
+                                        <div className="gr-input-group"><label>ชื่อสถาบันศึกษา (ภาษาไทย)</label><input type="text" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="เช่น มหาวิทยาลัยขอนแก่น" value={regInstitutionNameTh} onChange={(e) => setRegInstitutionNameTh(e.target.value)} required disabled={registerActionDisabled} /></div>
+                                        <div className="gr-input-group"><label>ชื่อสถาบันศึกษา (ภาษาอังกฤษ)</label><input type="text" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="e.g. Khon Kaen University" value={regInstitutionNameEn} onChange={(e) => setRegInstitutionNameEn(e.target.value)} required disabled={registerActionDisabled} /></div>
                                     </div>
                                 </section>
 
                                 <section className="gr-form-section">
                                     <h3>ข้อมูลบัญชีผู้ใช้</h3>
                                     <div className="gr-form-grid gr-form-grid-2">
-                                        <div className="gr-input-group"><label>ชื่อผู้ใช้ (Username)</label><input type="text" name="registerUsername" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="อย่างน้อย 3 ตัวอักษร" value={regUserName} onChange={(e) => setRegUserName(e.target.value)} required disabled={isLoading} minLength={3} maxLength={50} /></div>
+                                        <div className="gr-input-group"><label>ชื่อผู้ใช้ (Username)</label><input type="text" name="registerUsername" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="อย่างน้อย 3 ตัวอักษร" value={regUserName} onChange={(e) => setRegUserName(e.target.value)} required disabled={registerActionDisabled} minLength={3} maxLength={50} /></div>
                                         <div className="gr-input-group"><label>เบอร์โทรศัพท์ (Phone Number)</label><input type="tel" name="registerPhone" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="เช่น 0812345678" value={regPhone} onChange={(e) => {
                                             const value = e.target.value.replace(/\D/g, '').slice(0, 10);
                                             setRegPhone(value);
-                                        }} required disabled={isLoading} minLength={9} maxLength={10} /></div>
-                                        <div className="gr-input-group"><label>อีเมล (Email)</label><input type="email" name="registerEmail" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="somchai.jaidee@kku.ac.th" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required disabled={isLoading} /></div>
-                                        <div className="gr-input-group"><label>รหัสผ่าน (Password)</label><div className="gr-password-wrap"><input type={showRegPass ? 'text' : 'password'} name="registerPassword" autoComplete="new-password" data-lpignore="true" className="gr-input" placeholder="อย่างน้อย 6 ตัวอักษร" value={regPass} onChange={(e) => setRegPass(e.target.value)} required disabled={isLoading} minLength={6} /><button type="button" className="gr-password-toggle" onClick={() => setShowRegPass(!showRegPass)} tabIndex={-1}>{showRegPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
-                                        <div className="gr-input-group gr-grid-span-2"><label>ยืนยันรหัสผ่าน (Confirm Password)</label><div className="gr-password-wrap"><input type={showRegConfirmPass ? 'text' : 'password'} name="registerConfirmPassword" autoComplete="new-password" data-lpignore="true" className="gr-input" placeholder="ยืนยันรหัสผ่านอีกครั้ง" value={regConfirmPass} onChange={(e) => setRegConfirmPass(e.target.value)} required disabled={isLoading} minLength={6} /><button type="button" className="gr-password-toggle" onClick={() => setShowRegConfirmPass(!showRegConfirmPass)} tabIndex={-1}>{showRegConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
+                                        }} required disabled={registerActionDisabled} minLength={9} maxLength={10} /></div>
+                                        <div className="gr-input-group"><label>อีเมล (Email)</label><input type="email" name="registerEmail" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="somchai.jaidee@kku.ac.th" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required disabled={registerActionDisabled} /></div>
+                                        <div className="gr-input-group"><label>รหัสผ่าน (Password)</label><div className="gr-password-wrap"><input type={showRegPass ? 'text' : 'password'} name="registerPassword" autoComplete="new-password" data-lpignore="true" className="gr-input" placeholder="อย่างน้อย 6 ตัวอักษร" value={regPass} onChange={(e) => setRegPass(e.target.value)} required disabled={registerActionDisabled} minLength={6} /><button type="button" className="gr-password-toggle" onClick={() => setShowRegPass(!showRegPass)} tabIndex={-1} disabled={registerActionDisabled}>{showRegPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
+                                        <div className="gr-input-group gr-grid-span-2"><label>ยืนยันรหัสผ่าน (Confirm Password)</label><div className="gr-password-wrap"><input type={showRegConfirmPass ? 'text' : 'password'} name="registerConfirmPassword" autoComplete="new-password" data-lpignore="true" className="gr-input" placeholder="ยืนยันรหัสผ่านอีกครั้ง" value={regConfirmPass} onChange={(e) => setRegConfirmPass(e.target.value)} required disabled={registerActionDisabled} minLength={6} /><button type="button" className="gr-password-toggle" onClick={() => setShowRegConfirmPass(!showRegConfirmPass)} tabIndex={-1} disabled={registerActionDisabled}>{showRegConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
                                     </div>
                                 </section>
                             </div>
@@ -533,15 +592,15 @@ function RegisterPage() {
                                             className="gr-consent-checkbox"
                                             checked={hasAcceptedConsent}
                                             onChange={(e) => setHasAcceptedConsent(e.target.checked)}
-                                            disabled={isLoading}
+                                            disabled={registerActionDisabled}
                                         />
                                         <p className="gr-consent-inline-text">
                                             ฉันได้อ่านและยอมรับ{' '}
-                                            <button type="button" className="gr-consent-inline-link" onClick={() => openConsentModalByCodes(TERMS_DOC_CODES)} disabled={isLoading}>
+                                            <button type="button" className="gr-consent-inline-link" onClick={() => openConsentModalByCodes(TERMS_DOC_CODES)} disabled={registerActionDisabled}>
                                                 ข้อกำหนดการใช้งาน
                                             </button>{' '}
                                             และ{' '}
-                                            <button type="button" className="gr-consent-inline-link" onClick={() => openConsentModalByCodes(PRIVACY_DOC_CODES)} disabled={isLoading}>
+                                            <button type="button" className="gr-consent-inline-link" onClick={() => openConsentModalByCodes(PRIVACY_DOC_CODES)} disabled={registerActionDisabled}>
                                                 นโยบายคุ้มครองข้อมูลส่วนบุคคล
                                             </button>{' '}
                                             ของเว็บไซต์นี้
@@ -550,14 +609,14 @@ function RegisterPage() {
                                 </div>
                             )}
 
-                            <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%'}} disabled={isLoading}>{isLoading ? <><Loader2 size={18} className="spin" /> กำลังลงทะเบียน...</> : 'ลงทะเบียน'}</button>
+                            <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%'}} disabled={registerActionDisabled}>{isLoading ? <><Loader2 size={18} className="spin" /> กำลังลงทะเบียน...</> : 'ลงทะเบียน'}</button>
                         </form>
                     )}
 
                     <p style={{ textAlign: 'center', marginTop: 16, fontSize: '0.85rem', color: 'var(--gt-text-muted)' }}>
                         {isRegisterMode
                             ? <>มีบัญชีแล้ว? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); resetVerificationState(); setIsRegisterMode(false); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>เข้าสู่ระบบ</a></>
-                            : <>ยังไม่มีบัญชี? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); resetVerificationState(); setIsRegisterMode(true); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>ลงทะเบียน</a></>}
+                            : <>ยังไม่มีบัญชี? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); resetVerificationState(); if (isRegistrationOpen) { setIsRegisterMode(true); } else { setErrorMsg(registerUnavailableMessage || 'ไม่สามารถลงทะเบียนได้ในขณะนี้'); } }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600, opacity: isRegistrationOpen ? 1 : 0.7, cursor: isRegistrationOpen ? 'pointer' : 'not-allowed' }}>ลงทะเบียน</a></>}
                     </p>
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}><ThemeToggle /></div>
                 </div>
