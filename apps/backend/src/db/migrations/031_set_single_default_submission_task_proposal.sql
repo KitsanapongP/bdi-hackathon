@@ -5,7 +5,7 @@ DELETE FROM submission_tasks;
 INSERT INTO submission_tasks
   (task_name, task_type, is_required, allowed_extensions, sort_order, is_enabled, is_default, created_by_user_id)
 VALUES
-  ('Proposal', 'file', 1, '.pdf,.csv', 1, 1, 1, NULL);
+  ('ส่ง Proposal', 'file', 1, '.pdf,.csv', 1, 1, 1, NULL);
 
 SET @proposal_task_id := LAST_INSERT_ID();
 

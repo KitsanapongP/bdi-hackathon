@@ -18,7 +18,6 @@ function formatRecordCount(value) {
 function DatasetsPage() {
     const [datasets, setDatasets] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -26,7 +25,6 @@ function DatasetsPage() {
         const fetchDatasets = async () => {
             try {
                 setLoading(true);
-                setError(null);
 
                 const response = await fetch(apiUrl('/api/content/datasets'), {
                     credentials: 'include',
@@ -47,7 +45,6 @@ function DatasetsPage() {
                 }
             } catch {
                 if (!isMounted) return;
-                setError('เกิดข้อผิดพลาดในการโหลดข้อมูลชุดตัวอย่าง');
                 setDatasets([]);
                 setLoading(false);
             }
@@ -71,12 +68,11 @@ function DatasetsPage() {
                 <section className="gt-info-panel">
                     <h1>ตัวอย่างชุดข้อมูล</h1>
                     {loading ? <p className="gt-info-status">กำลังโหลดข้อมูล...</p> : null}
-                    {error ? <p className="gt-info-status gt-info-status-error">{error}</p> : null}
                     <ul className="gt-dataset-bullets">
                         {datasetGroups.map((group) => (
                             <li key={group.key} className="gt-dataset-item">
                                 <h2>{group.title}</h2>
-                                {!loading && !error && (!group.rows || group.rows.length === 0) ? (
+                                {!loading && (!group.rows || group.rows.length === 0) ? (
                                     <p className="gt-info-status">Coming Soon...</p>
                                 ) : group.rows.length > 0 ? (
                                     <div className="gt-dataset-table-wrap">
