@@ -1478,7 +1478,7 @@ function HomePage() {
                                                                             rows.push(
                                                                                 <tr key={`milestone-empty-${scheduleIdx}-${monthGroup.key}-${day.day_id ?? dayIdx}`}>
                                                                                     <th className="gt-schedule-date-col">{fallbackDateLabel}</th>
-                                                                                    <td>ไม่มีกิจกรรมในวันนี้</td>
+                                                                                    <td className="gt-schedule-detail-cell">ไม่มีกิจกรรมในวันนี้</td>
                                                                                 </tr>
                                                                             );
                                                                             return;
@@ -1489,7 +1489,7 @@ function HomePage() {
                                                                             rows.push(
                                                                                 <tr key={`milestone-row-${item.item_id ?? `${scheduleIdx}-${monthGroup.key}-${dayIdx}-${itemIdx}`}`}>
                                                                                     <th className="gt-schedule-date-col">{dateLabel}</th>
-                                                                                    <td>{getScheduleItemName(item)}</td>
+                                                                                    <td className="gt-schedule-detail-cell">{getScheduleItemName(item)}</td>
                                                                                 </tr>
                                                                             );
                                                                         });
@@ -1517,7 +1517,7 @@ function HomePage() {
                                                                         rows.push(
                                                                             <tr key={`onsite-empty-${scheduleIdx}-${day.day_id ?? dayIdx}`}>
                                                                                 <td className="gt-schedule-time-col">-</td>
-                                                                                <td>ไม่มีกิจกรรมในวันนี้</td>
+                                                                                <td className="gt-schedule-detail-cell">ไม่มีกิจกรรมในวันนี้</td>
                                                                             </tr>
                                                                         );
                                                                         return rows;
@@ -1528,7 +1528,7 @@ function HomePage() {
                                                                         rows.push(
                                                                             <tr key={`onsite-item-${item.item_id ?? `${scheduleIdx}-${dayIdx}-${itemIdx}`}`}>
                                                                                 <td className="gt-schedule-time-col">{timeLabel}</td>
-                                                                                <td>{getScheduleItemName(item)}</td>
+                                                                                <td className="gt-schedule-detail-cell">{getScheduleItemName(item)}</td>
                                                                             </tr>
                                                                         );
                                                                     });

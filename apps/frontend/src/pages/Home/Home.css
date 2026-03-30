@@ -1371,6 +1371,10 @@ section.gt-hero {
     white-space: nowrap;
 }
 
+.gt-schedule-table .gt-schedule-detail-cell {
+    white-space: pre-line;
+}
+
 /* --- 9.5 Prizes & Process --- */
 .gt-participation-section {
     padding-top: 24px;
