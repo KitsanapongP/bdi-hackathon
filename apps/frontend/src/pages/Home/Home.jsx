@@ -85,13 +85,13 @@ const competitionSteps = [
     },
     {
         number: '03',
-        date: '31 พฤษภาคม 2569',
+        date: '24 พฤษภาคม - 3 มิถุนายน 2569',
         title: 'ส่งทีมเข้าร่วมการพิจารณา',
         items: [
             'สมาชิกทุกคนตรวจสอบความถูกต้องของข้อมูลอีกครั้ง',
             'หัวหน้าทีมส่งรายชื่อสมาชิกเข้าร่วมการพิจารณา',
             'หลังจากส่งรายชื่อจะไม่สามารถแก้ไขข้อมูลได้',
-            'ต้องส่งทีมเข้าร่วมการพิจารณาภายในวันที่ 31 พฤษภาคม 2569 เท่านั้น',
+            'ต้องส่งทีมเข้าร่วมการพิจารณาภายในวันที่ 3 มิถุนายน 2569 เท่านั้น',
         ],
     },
     {
@@ -100,7 +100,7 @@ const competitionSteps = [
         title: 'การพิจารณาและประกาศผล',
         items: [
             'คณะกรรมการพิจารณาทีมที่ผ่านคุณสมบัติ',
-            'ประกาศรายชื่อทีมที่ผ่านการพิจารณาในวันที่ 30 มิถุนายน 2569',
+            'ประกาศรายชื่อทีมที่ผ่านการพิจารณาในวันที่ 14 มิถุนายน 2569',
         ],
     },
     {
@@ -1106,7 +1106,7 @@ function HomePage() {
                 <>
                     {/* Hero */}
                     <section id="hero" className="gt-section gt-hero gt-container gt-reveal">
-                        <h1 className="gt-hero-title" style={{ whiteSpace: 'pre-line' }}>{config.locale.heroTitle}</h1>
+                        <HeroCarousel slides={carouselSlides} />
                         <div className={`gt-hero-countdown ${heroCountdown.expired ? 'is-expired' : ''}`} role="timer" aria-label={`นับถอยหลังสู่วันที่ ${HERO_COUNTDOWN_TARGET_LABEL}`}>
                             <div className="gt-hero-countdown-grid">
                                 {HERO_COUNTDOWN_UNITS.map((unit) => (
@@ -1122,6 +1122,7 @@ function HomePage() {
                             </p>
                             {heroCountdown.expired ? <p className="gt-hero-countdown-status">ถึงวันสุดท้ายของกิจกรรมแล้ว</p> : null}
                         </div>
+                        <h1 className="gt-hero-title" style={{ whiteSpace: 'pre-line' }}>{config.locale.heroTitle}</h1>
                         <div className="gt-hero-actions">
                             <button type="button" className="gt-btn gt-btn-primary" onClick={handlePrimaryCta}>
                                 {user ? 'ไปยังทีมของฉัน' : config.locale.ctaPrimary} <ArrowRight size={18} />
@@ -1130,7 +1131,6 @@ function HomePage() {
                                 {config.locale.ctaSecondary}
                             </button>
                         </div>
-                        <HeroCarousel slides={carouselSlides} />
                     </section>
 
                     {/* Participation Overview */}

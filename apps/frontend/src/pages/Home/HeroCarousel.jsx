@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 function getRelativeOffset(index, activeIndex, total) {
@@ -27,6 +27,8 @@ function HeroCarousel({ slides = [] }) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [paused, setPaused] = useState(false)
   const [previewSlide, setPreviewSlide] = useState(null)
+  const touchStartRef = useRef({ x: 0, y: 0 })
+  const suppressTapRef = useRef(false)
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.matchMedia('(max-width: 768px)').matches
@@ -60,7 +62,7 @@ function HeroCarousel({ slides = [] }) {
     if (paused || normalizedSlides.length <= 1) return undefined
     const timer = window.setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % normalizedSlides.length)
-    }, 5500)
+    }, 5000)
     return () => window.clearInterval(timer)
   }, [normalizedSlides.length, paused])
 
@@ -90,6 +92,43 @@ function HeroCarousel({ slides = [] }) {
         .filter((item) => Math.abs(item.offset) <= 2),
     [activeIndex, normalizedSlides],
   )
+
+  const goToNext = () => {
+    if (normalizedSlides.length <= 1) return
+    setActiveIndex((prev) => (prev + 1) % normalizedSlides.length)
+  }
+
+  const goToPrev = () => {
+    if (normalizedSlides.length <= 1) return
+    setActiveIndex((prev) => (prev - 1 + normalizedSlides.length) % normalizedSlides.length)
+  }
+
+  const handleTouchStart = (event) => {
+    const touch = event.changedTouches?.[0]
+    if (!touch) return
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+    suppressTapRef.current = false
+  }
+
+  const handleTouchEnd = (event) => {
+    const touch = event.changedTouches?.[0]
+    if (!touch) return
+
+    const deltaX = touch.clientX - touchStartRef.current.x
+    const deltaY = touch.clientY - touchStartRef.current.y
+    const hasHorizontalSwipe = Math.abs(deltaX) > 36 && Math.abs(deltaX) > Math.abs(deltaY)
+
+    if (!hasHorizontalSwipe) return
+
+    suppressTapRef.current = true
+
+    if (deltaX < 0) {
+      goToNext()
+      return
+    }
+
+    goToPrev()
+  }
 
   if (!normalizedSlides.length) return null
 
@@ -148,7 +187,11 @@ function HeroCarousel({ slides = [] }) {
       onBlurCapture={() => setPaused(false)}
       aria-label="Home spotlight carousel"
     >
-      <div className="gt-hero-carousel-stage">
+      <div
+        className="gt-hero-carousel-stage"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {visibleSlides.map(({ slide, index, offset }) => {
           const visual = getCardTransform(offset, isMobileViewport)
           const isActive = offset === 0
@@ -182,6 +225,11 @@ function HeroCarousel({ slides = [] }) {
               style={style}
               data-offset={offset}
               onClick={() => {
+                if (suppressTapRef.current) {
+                  suppressTapRef.current = false
+                  return
+                }
+
                 if (!isActive) {
                   setActiveIndex(index)
                   return

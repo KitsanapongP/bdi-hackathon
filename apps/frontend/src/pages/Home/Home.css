@@ -598,7 +598,7 @@ section.gt-hero {
 
 .gt-hero-carousel {
     width: 100%;
-    margin: 0 auto 14px;
+    margin: clamp(28px, 4vw, 52px) auto 14px;
     position: relative;
     z-index: 1;
     perspective: 2000px;
@@ -615,6 +615,7 @@ section.gt-hero {
     overflow: visible;
     border-radius: 28px;
     isolation: isolate;
+    touch-action: pan-y;
 }
 
 .gt-hero-carousel-stage::before {
@@ -882,7 +883,7 @@ section.gt-hero {
     font-size: clamp(1.3rem, 2.9vw, 2.05rem);
     font-weight: 800;
     line-height: 1.35;
-    margin: 0 0 28px;
+    margin: clamp(32px, 4.2vw, 56px) 0 28px;
     padding-bottom: 0.08em;
     background: var(--gt-gradient);
     background-size: 200% 200%;
@@ -898,8 +899,8 @@ section.gt-hero {
 }
 
 .gt-hero-countdown {
-    width: min(100%, 980px);
-    margin: 80px auto 18px;
+    width: min(100%, 735px);
+    margin: -30px auto 14px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -909,13 +910,13 @@ section.gt-hero {
 }
 
 .gt-hero-countdown-label {
-    margin: 6px 0 0;
+    margin: 4px 0 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     color: var(--gt-text-muted);
-    font-size: clamp(0.86rem, 1.35vw, 1rem);
+    font-size: clamp(0.95rem, 1.5vw, 1.2rem);
     font-weight: 600;
     letter-spacing: 0.01em;
 }
@@ -924,7 +925,7 @@ section.gt-hero {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: clamp(12px, 2vw, 28px);
+    gap: clamp(12px, 1.8vw, 21px);
 }
 
 .gt-hero-countdown-item {
@@ -939,11 +940,11 @@ section.gt-hero {
 .gt-hero-countdown-item:not(:last-child)::after {
     content: '';
     position: absolute;
-    right: calc(clamp(12px, 2vw, 28px) * -0.5);
+    right: calc(clamp(12px, 1.8vw, 21px) * -0.5);
     top: 50%;
     transform: translateY(-50%);
     width: 1px;
-    height: clamp(44px, 7vw, 72px);
+    height: clamp(36px, 5.25vw, 54px);
     background: linear-gradient(180deg, rgba(124, 58, 237, 0), rgba(124, 58, 237, 0.42), rgba(59, 130, 246, 0));
 }
 
@@ -952,7 +953,7 @@ section.gt-hero {
 }
 
 .gt-hero-countdown-value {
-    font-size: clamp(2.8rem, 10.5vw, 6.8rem);
+    font-size: clamp(2.1rem, 7.8vw, 5.1rem);
     line-height: 0.9;
     font-weight: 900;
     letter-spacing: -0.03em;
@@ -973,17 +974,17 @@ section.gt-hero {
 }
 
 .gt-hero-countdown-unit {
-    font-size: clamp(0.86rem, 1.4vw, 1.06rem);
+    font-size: clamp(0.95rem, 1.5vw, 1.3rem);
     font-weight: 700;
     color: var(--gt-text-muted);
     letter-spacing: 0.04em;
 }
 
 .gt-hero-countdown-status {
-    margin: 4px 0 0;
+    margin: 2px 0 0;
     color: #059669;
     font-weight: 700;
-    font-size: 0.95rem;
+    font-size: 1.15rem;
 }
 
 .dark .gt-hero-countdown-status {
@@ -1012,8 +1013,8 @@ section.gt-hero {
 .gt-hero-actions {
     display: flex;
     gap: 12px;
-    margin-top: 60px;
-    margin-bottom: 180px;
+    margin-top: 16px;
+    margin-bottom: 110px;
     position: relative;
     z-index: 1;
 }
