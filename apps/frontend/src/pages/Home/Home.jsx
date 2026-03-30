@@ -1501,7 +1501,9 @@ function HomePage() {
                                                                 scheduleDays.flatMap((day, dayIdx) => {
                                                                     const dayItems = Array.isArray(day?.items) ? day.items : [];
                                                                     const dayTitle = day.day_name_th || day.day_name_en || 'วันกิจกรรม';
-                                                                    const dayHeader = `${dayTitle} (${formatScheduleDateLabel(day.day_date)})`;
+                                                                    const dayHeader = day.day_name_th
+                                                                        ? day.day_name_th
+                                                                        : `${dayTitle} (${formatScheduleDateLabel(day.day_date)})`;
 
                                                                     const rows = [
                                                                         <tr key={`onsite-day-${scheduleIdx}-${day.day_id ?? dayIdx}`} className="gt-schedule-table-day-row">
