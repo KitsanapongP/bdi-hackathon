@@ -15,7 +15,6 @@ import {
     Calendar,
     Menu,
     X,
-    ChevronDown,
     ArrowRight,
     LogIn,
     LogOut,
@@ -381,6 +380,80 @@ function AnimatedCounter({ value, suffix }) {
     );
 }
 
+function normalizeScheduleCollection(rawData) {
+    if (!rawData) return [];
+
+    const scheduleList = Array.isArray(rawData)
+        ? rawData
+        : Array.isArray(rawData.schedules)
+            ? rawData.schedules
+            : Array.isArray(rawData.days)
+                ? [rawData]
+                : [];
+
+    return scheduleList
+        .filter((schedule) => schedule && typeof schedule === 'object')
+        .map((schedule) => ({
+            ...schedule,
+            table_type: schedule?.table_type || schedule?.tableType || 'onsite_timetable',
+            days: Array.isArray(schedule.days)
+                ? schedule.days.map((day) => ({
+                    ...day,
+                    items: Array.isArray(day.items) ? day.items : [],
+                }))
+                : [],
+        }));
+}
+
+function getScheduleItemName(item) {
+    const fromRequestedField = typeof item?.event_schedule_items === 'string'
+        ? item.event_schedule_items.trim()
+        : '';
+    if (fromRequestedField) return fromRequestedField;
+
+    const titleTh = typeof item?.title_th === 'string' ? item.title_th.trim() : '';
+    if (titleTh) return titleTh;
+
+    const titleEn = typeof item?.title_en === 'string' ? item.title_en.trim() : '';
+    if (titleEn) return titleEn;
+
+    return '-';
+}
+
+function groupScheduleDaysByMonth(days) {
+    if (!Array.isArray(days)) return [];
+
+    const monthMap = new Map();
+
+    days.forEach((day) => {
+        const parsed = day?.day_date ? new Date(day.day_date) : null;
+        const monthKey = parsed && !Number.isNaN(parsed.getTime())
+            ? `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`
+            : 'unknown';
+        const monthLabel = parsed && !Number.isNaN(parsed.getTime())
+            ? parsed.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
+            : 'กำหนดการ';
+
+        if (!monthMap.has(monthKey)) {
+            monthMap.set(monthKey, {
+                key: monthKey,
+                label: monthLabel,
+                days: [],
+            });
+        }
+
+        monthMap.get(monthKey).days.push(day);
+    });
+
+    return Array.from(monthMap.values());
+}
+
+function getScheduleTableType(schedule) {
+    const raw = String(schedule?.table_type || schedule?.tableType || '').trim();
+    if (raw === 'milestone' || raw === 'onsite_timetable') return raw;
+    return 'onsite_timetable';
+}
+
 
 
 /* ═══════════════════════ Component ═══════════════════════ */
@@ -395,7 +468,7 @@ function HomePage() {
     const bannerTrackRef = useRef(null);
     const [navScrolled, setNavScrolled] = useState(false);
     const [bannerMarquee, setBannerMarquee] = useState(false);
-    const [schedulesData, setSchedulesData] = useState(null);
+    const [schedulesData, setSchedulesData] = useState([]);
     const [scheduleLoading, setScheduleLoading] = useState(true);
     const [scheduleError, setScheduleError] = useState(null);
     const [rewards, setRewards] = useState([]);
@@ -409,11 +482,6 @@ function HomePage() {
     const [participationLoading, setParticipationLoading] = useState(true);
     const [participationError, setParticipationError] = useState(null);
     const [participationMode, setParticipationMode] = useState('weekly');
-    const [isScheduleMobile, setIsScheduleMobile] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        return window.matchMedia('(max-width: 768px)').matches;
-    });
-    const [openScheduleDay, setOpenScheduleDay] = useState(-1);
     const [heroCountdown, setHeroCountdown] = useState(() => getHeroCountdown(HERO_COUNTDOWN_TARGET_DATE));
 
     const processHighlightPhase = useMemo(() => {
@@ -491,12 +559,12 @@ function HomePage() {
                     throw new Error(payload?.message || 'Failed to fetch schedules');
                 }
 
-                setSchedulesData(payload.data);
+                setSchedulesData(normalizeScheduleCollection(payload.data));
                 setScheduleLoading(false);
             } catch (err) {
                 console.error('Failed to fetch schedules', err);
                 setScheduleError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
-                setSchedulesData(null);
+                setSchedulesData([]);
                 setScheduleLoading(false);
             }
         };
@@ -651,30 +719,6 @@ function HomePage() {
         }
     }, [location.state, user]);
 
-    useEffect(() => {
-        if (typeof window === 'undefined') return undefined;
-
-        const mediaQuery = window.matchMedia('(max-width: 768px)');
-        const handleChange = (event) => setIsScheduleMobile(event.matches);
-
-        setIsScheduleMobile(mediaQuery.matches);
-
-        if (mediaQuery.addEventListener) {
-            mediaQuery.addEventListener('change', handleChange);
-            return () => mediaQuery.removeEventListener('change', handleChange);
-        }
-
-        mediaQuery.addListener(handleChange);
-        return () => mediaQuery.removeListener(handleChange);
-    }, []);
-
-    useEffect(() => {
-        const dayCount = schedulesData?.days?.length || 0;
-        if (!isScheduleMobile || dayCount === 0) return;
-        if (openScheduleDay < dayCount) return;
-        setOpenScheduleDay(0);
-    }, [isScheduleMobile, schedulesData, openScheduleDay]);
-
     const formatPrizeAmount = (amount, currency) => {
         if (typeof amount !== 'number' || Number.isNaN(amount)) return null;
         const formatted = amount.toLocaleString('th-TH');
@@ -742,6 +786,17 @@ function HomePage() {
         const start = startTime?.substring(0, 5) || '--:--';
         const end = endTime?.substring(0, 5) || '--:--';
         return `${start} - ${end}`;
+    };
+
+    const formatScheduleDateCell = (dayDate) => {
+        if (!dayDate) return '-';
+        const parsed = new Date(dayDate);
+        if (Number.isNaN(parsed.getTime())) return dayDate;
+
+        return parsed.toLocaleDateString('th-TH', {
+            day: 'numeric',
+            month: 'long',
+        });
     };
 
     /* Observe banner — when it leaves the viewport the pill nav slides up */
@@ -1383,64 +1438,124 @@ function HomePage() {
                                 <div style={{ textAlign: 'center', padding: '40px', color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                                     {scheduleError}
                                 </div>
-                            ) : schedulesData && schedulesData.days && schedulesData.days.length > 0 ? (
-                                schedulesData.days.map((day, dIdx) => (
-                                    <div
-                                        key={dIdx}
-                                        className={`gt-schedule-day-group gt-reveal active ${(!isScheduleMobile || openScheduleDay === dIdx) ? 'is-open' : 'is-collapsed'}`}
-                                        style={{ transitionDelay: `${dIdx * 80}ms` }}
-                                    >
-                                        <div className="gt-schedule-day-content">
-                                            <button
-                                                type="button"
-                                                className="gt-schedule-day-header"
-                                                aria-expanded={!isScheduleMobile || openScheduleDay === dIdx}
-                                                aria-controls={`gt-schedule-day-items-${dIdx}`}
-                                                onClick={() => {
-                                                    if (!isScheduleMobile) return;
-                                                    setOpenScheduleDay((prev) => (prev === dIdx ? -1 : dIdx));
-                                                }}
-                                            >
-                                                <span className="gt-schedule-day-header-main">
-                                                    <Calendar size={18} />
-                                                    <span>
-                                                        <h3>{day.day_name_th || 'วันกิจกรรม'}</h3>
-                                                        <span className="gt-schedule-day-date">{formatScheduleDateLabel(day.day_date)}</span>
-                                                    </span>
-                                                </span>
-                                                <ChevronDown className="gt-schedule-day-chevron" size={18} />
-                                            </button>
+                            ) : schedulesData.length > 0 ? (
+                                schedulesData.map((schedule, scheduleIdx) => {
+                                    const scheduleTitleRaw = schedule?.schedule_name_th || schedule?.schedule_name_en;
+                                    const scheduleTitle = typeof scheduleTitleRaw === 'string' && scheduleTitleRaw.trim()
+                                        ? scheduleTitleRaw.trim()
+                                        : `กำหนดการชุดที่ ${scheduleIdx + 1}`;
+                                    const tableType = getScheduleTableType(schedule);
+                                    const scheduleDays = Array.isArray(schedule?.days) ? schedule.days : [];
+                                    const monthGroups = groupScheduleDaysByMonth(scheduleDays);
 
-                                            {(!isScheduleMobile || openScheduleDay === dIdx) && (
-                                                <div id={`gt-schedule-day-items-${dIdx}`} className="gt-schedule-day-items">
-                                                    {day.items.map((item, i) => (
-                                                        <div key={item.item_id} className="gt-schedule-card" style={{ transitionDelay: `${(dIdx + i) * 60}ms` }}>
-                                                            <div className="gt-time">
-                                                                {formatScheduleTime(item.start_time, item.end_time)}
-                                                            </div>
-                                                            <div>
-                                                                <h3>{item.title_th}</h3>
-                                                                {item.description_th && <p>{item.description_th}</p>}
-                                                                {(item.location_th || item.speaker_th) && (
-                                                                    <div className="gt-schedule-meta" style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--gt-text-muted)', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                                                                        {item.location_th && <span><Target size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {item.location_th}</span>}
-                                                                        {item.speaker_th && <span><Users size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} /> {item.speaker_th}</span>}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                    return (
+                                        <div key={schedule.schedule_id ?? `schedule-${scheduleIdx}`} className="gt-schedule-group">
+                                            <div className="gt-schedule-group-title">
+                                                <h3>{scheduleTitle}</h3>
+                                            </div>
+
+                                            {monthGroups.length > 0 ? (
+                                                <div className="gt-schedule-table-wrap gt-reveal active">
+                                                    <table className={`gt-schedule-table ${tableType === 'milestone' ? 'is-milestone' : 'is-onsite'}`}>
+                                                        <colgroup>
+                                                            <col className="gt-schedule-col-first" />
+                                                            <col />
+                                                        </colgroup>
+                                                        <tbody>
+                                                            {tableType === 'milestone' ? (
+                                                                monthGroups.flatMap((monthGroup, monthIdx) => {
+                                                                    const rows = [
+                                                                        <tr key={`month-${scheduleIdx}-${monthGroup.key}-${monthIdx}`} className="gt-schedule-table-month-row">
+                                                                            <th colSpan={2}>{monthGroup.label}</th>
+                                                                        </tr>,
+                                                                    ];
+
+                                                                    monthGroup.days.forEach((day, dayIdx) => {
+                                                                        const dayItems = Array.isArray(day?.items) ? day.items : [];
+                                                                        const fallbackDateLabel = formatScheduleDateCell(day.day_date);
+
+                                                                        if (dayItems.length === 0) {
+                                                                            rows.push(
+                                                                                <tr key={`milestone-empty-${scheduleIdx}-${monthGroup.key}-${day.day_id ?? dayIdx}`}>
+                                                                                    <th className="gt-schedule-date-col">{fallbackDateLabel}</th>
+                                                                                    <td>ไม่มีกิจกรรมในวันนี้</td>
+                                                                                </tr>
+                                                                            );
+                                                                            return;
+                                                                        }
+
+                                                                        dayItems.forEach((item, itemIdx) => {
+                                                                            const dateLabel = item?.display_date_label_th?.trim() || fallbackDateLabel;
+                                                                            rows.push(
+                                                                                <tr key={`milestone-row-${item.item_id ?? `${scheduleIdx}-${monthGroup.key}-${dayIdx}-${itemIdx}`}`}>
+                                                                                    <th className="gt-schedule-date-col">{dateLabel}</th>
+                                                                                    <td>{getScheduleItemName(item)}</td>
+                                                                                </tr>
+                                                                            );
+                                                                        });
+                                                                    });
+
+                                                                    return rows;
+                                                                })
+                                                            ) : (
+                                                                scheduleDays.flatMap((day, dayIdx) => {
+                                                                    const dayItems = Array.isArray(day?.items) ? day.items : [];
+                                                                    const dayTitle = day.day_name_th || day.day_name_en || 'วันกิจกรรม';
+                                                                    const dayHeader = `${dayTitle} (${formatScheduleDateLabel(day.day_date)})`;
+
+                                                                    const rows = [
+                                                                        <tr key={`onsite-day-${scheduleIdx}-${day.day_id ?? dayIdx}`} className="gt-schedule-table-day-row">
+                                                                            <th colSpan={2}>{dayHeader}</th>
+                                                                        </tr>,
+                                                                        <tr key={`onsite-head-${scheduleIdx}-${day.day_id ?? dayIdx}`} className="gt-schedule-table-head-row">
+                                                                            <th className="gt-schedule-time-col">เวลา</th>
+                                                                            <th>หัวข้อ/กิจกรรม</th>
+                                                                        </tr>,
+                                                                    ];
+
+                                                                    if (dayItems.length === 0) {
+                                                                        rows.push(
+                                                                            <tr key={`onsite-empty-${scheduleIdx}-${day.day_id ?? dayIdx}`}>
+                                                                                <td className="gt-schedule-time-col">-</td>
+                                                                                <td>ไม่มีกิจกรรมในวันนี้</td>
+                                                                            </tr>
+                                                                        );
+                                                                        return rows;
+                                                                    }
+
+                                                                    dayItems.forEach((item, itemIdx) => {
+                                                                        const timeLabel = item?.display_time_label_th?.trim() || formatScheduleTime(item.start_time, item.end_time);
+                                                                        rows.push(
+                                                                            <tr key={`onsite-item-${item.item_id ?? `${scheduleIdx}-${dayIdx}-${itemIdx}`}`}>
+                                                                                <td className="gt-schedule-time-col">{timeLabel}</td>
+                                                                                <td>{getScheduleItemName(item)}</td>
+                                                                            </tr>
+                                                                        );
+                                                                    });
+
+                                                                    return rows;
+                                                                })
+                                                            )}
+                                                        </tbody>
+                                                    </table>
                                                 </div>
+                                            ) : (
+                                                <div className="gt-schedule-empty-scope">ยังไม่มีรายการกำหนดการในหมวดนี้</div>
                                             )}
                                         </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             ) : (
                                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--gt-text-muted)' }}>
                                     ไม่มีกำหนดการ
                                 </div>
                             )}
                         </div>
+                        <p className="gt-schedule-note">
+                            <span className="gt-schedule-note-label">หมายเหตุ :</span>
+                            <span className="gt-schedule-note-line">- รับประทานอาหารว่างและเครื่องดื่ม ระหว่างการดำเนินกิจกรรม</span>
+                            <span className="gt-schedule-note-line gt-schedule-note-alert">- กำหนดการอาจมีการเปลี่ยนแปลงได้ตามความเหมาะสม</span>
+                        </p>
                     </section>
 
                     {/* Register CTA */}

@@ -17,6 +17,10 @@ export interface EventScheduleItemRow {
     is_highlight: number;
     sort_order: number;
     is_enabled: number;
+    display_date_label_th?: string | null;
+    display_date_label_en?: string | null;
+    display_time_label_th?: string | null;
+    display_time_label_en?: string | null;
 }
 
 export interface EventScheduleDayRow {
@@ -46,4 +50,5 @@ export interface EventScheduleRow {
     schedule_name_en: string;
     timezone: string;
     is_published: number;
+    table_type?: 'milestone' | 'onsite_timetable';
 }

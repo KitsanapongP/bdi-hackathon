@@ -38,6 +38,7 @@ import {
     handleCreateScheduleItemAdmin,
     handleUpdateScheduleItemAdmin,
     handleDeleteScheduleItemAdmin,
+    handleUpdateScheduleViewTypeAdmin,
     handleExportSubmittedVerificationBundle,
     handleGetSubmissionTasksAdmin,
     handleCreateSubmissionTaskAdmin,
@@ -93,6 +94,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.post('/schedules/items', handleCreateScheduleItemAdmin);
     fastify.patch('/schedules/items/:id', handleUpdateScheduleItemAdmin);
     fastify.delete('/schedules/items/:id', handleDeleteScheduleItemAdmin);
+    fastify.patch('/schedules/:id/view-type', handleUpdateScheduleViewTypeAdmin);
 
     fastify.get('/exports/submitted-verification-bundle', handleExportSubmittedVerificationBundle);
     fastify.get('/submission-tasks', handleGetSubmissionTasksAdmin);

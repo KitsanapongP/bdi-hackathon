@@ -58,7 +58,7 @@ body:has(.gt-page) {
     background: transparent;
     color: var(--gt-text);
     overflow-x: hidden;
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-family: inherit;
     position: relative;
     z-index: 1;
 }
@@ -1245,141 +1245,130 @@ section.gt-hero {
 /* --- 9. Schedule --- */
 .gt-schedule {
     display: grid;
-    gap: 16px;
+    gap: 12px;
     width: 100%;
-    max-width: 1020px;
+    max-width: 980px;
     margin: 0 auto;
 }
 
 
-.gt-schedule-day-group {
-    background: var(--gt-surface);
-    border: 1px solid var(--gt-border);
-    border-radius: var(--gt-radius);
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.gt-schedule-day-content {
+.gt-schedule-group {
     display: grid;
-    grid-template-columns: 210px 1fr;
-    gap: 14px;
-    align-items: start;
+    gap: 8px;
 }
 
-.gt-schedule-day-header {
-    order: -1;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    width: 100%;
-    text-align: left;
-    color: var(--gt-primary);
-    background: var(--gt-bg);
-    border: 1px solid var(--gt-border);
-    border-radius: 12px;
-    padding: 12px;
-    font: inherit;
+
+.gt-schedule-group-title {
+    border: 1px solid #202020;
+    background: #dbeafe;
+    border-radius: 0;
+    padding: 6px 10px;
 }
 
-.gt-schedule-day-header-main {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-}
 
-.gt-schedule-day-chevron {
-    display: none;
-    margin-left: auto;
-    color: var(--gt-text-muted);
-    transition: transform 0.25s ease;
-}
-
-.gt-schedule-day-header h3 {
+.gt-schedule-group-title h3 {
     margin: 0;
-    color: var(--gt-text-muted);
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-.gt-schedule-day-date {
-    margin-top: 4px;
-    color: var(--gt-text);
-    font-size: 1.15rem;
+    font-size: 1.04rem;
     font-weight: 800;
-    letter-spacing: 0.2px;
-    border-bottom: 2px solid var(--gt-primary);
-    padding-bottom: 2px;
-    display: inline-flex;
+    color: #111;
+    line-height: 1.3;
 }
 
-.gt-schedule-day-items {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+
+.gt-schedule-empty-scope {
+    border: 1px solid #202020;
+    border-radius: 0;
+    padding: 10px;
+    color: #222;
+    text-align: center;
+    background: #f9f9f9;
 }
 
-.gt-schedule-card {
-    background: var(--gt-bg);
-    border: 1px solid var(--gt-border);
-    border-radius: 14px;
-    padding: 16px;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-    z-index: 2;
+.gt-schedule-note {
+    margin: 10px auto 0;
+    width: 100%;
+    max-width: 980px;
+    color: var(--gt-text-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
     display: grid;
-    grid-template-columns: 130px 1fr;
-    gap: 14px;
+    grid-template-columns: auto 1fr;
+    column-gap: 8px;
+    row-gap: 2px;
     align-items: start;
 }
 
-.gt-schedule-card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 4px;
-    height: 100%;
-    background: var(--gt-gradient);
-    transform: scaleY(0);
-    transition: transform 0.3s;
-}
-
-.gt-schedule-card:hover::before {
-    transform: scaleY(1);
-}
-
-.gt-schedule-card:hover {
-    box-shadow: 0 8px 20px -10px var(--gt-primary-glow);
-    transform: scale(1.01);
-}
-
-.gt-time {
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(59, 130, 246, 0.1));
-    color: var(--gt-primary);
-    padding: 6px 12px;
-    border-radius: 10px;
+.gt-schedule-note-label {
+    grid-column: 1;
+    grid-row: 1 / span 2;
     font-weight: 700;
-    font-size: 0.85rem;
     white-space: nowrap;
-    border: 1px solid rgba(124, 58, 237, 0.15);
-    width: fit-content;
 }
 
-.gt-schedule-card h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin: 0 0 4px;
-    color: var(--gt-text);
+.gt-schedule-note-line {
+    grid-column: 2;
 }
 
-.gt-schedule-card p {
-    color: var(--gt-text-muted);
-    font-size: 0.9rem;
-    margin: 0;
+.gt-schedule-note-alert {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+.gt-schedule-table-wrap {
+    overflow-x: auto;
+}
+
+.gt-schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    border: 1px solid #202020;
+    background: #fff;
+}
+
+.gt-schedule-table th,
+.gt-schedule-table td {
+    border: 1px solid #202020;
+    padding: 4px 8px;
+    color: #111;
+    vertical-align: top;
+    line-height: 1.34;
+    text-align: left;
+    font-size: 0.98rem;
+}
+
+.gt-schedule-table.is-milestone col.gt-schedule-col-first {
+    width: 26%;
+}
+
+.gt-schedule-table.is-onsite col.gt-schedule-col-first {
+    width: 26%;
+}
+
+.gt-schedule-table .gt-schedule-table-month-row th,
+.gt-schedule-table .gt-schedule-table-day-row th {
+    background: #dbeafe;
+    font-weight: 800;
+    font-size: 1.02rem;
+}
+
+.gt-schedule-table .gt-schedule-table-head-row th {
+    background: #eff6ff;
+    font-weight: 700;
+    text-align: center;
+}
+
+.gt-schedule-table .gt-schedule-date-col {
+    width: 26%;
+    max-width: 240px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.gt-schedule-table .gt-schedule-time-col {
+    width: 18%;
+    max-width: 160px;
+    white-space: nowrap;
 }
 
 /* --- 9.5 Prizes & Process --- */
@@ -2576,39 +2565,33 @@ section.gt-hero {
         grid-column: span 1;
     }
 
-    .gt-schedule-card {
-        padding: 14px;
-        grid-template-columns: 1fr;
-        gap: 10px;
+    .gt-schedule-group-title {
+        padding: 6px 8px;
     }
 
-    .gt-schedule-day-group {
-        padding: 14px;
+    .gt-schedule-group-title h3 {
+        font-size: 0.96rem;
     }
 
-    .gt-schedule-day-content {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
+    .gt-schedule-table {
+        min-width: 620px;
     }
 
-    .gt-schedule-day-header {
-        align-items: center;
-        justify-content: space-between;
-        cursor: pointer;
+    .gt-schedule-table th,
+    .gt-schedule-table td {
+        padding: 4px 6px;
+        font-size: 0.88rem;
     }
 
-    .gt-schedule-day-header-main {
-        align-items: center;
-        min-width: 0;
+    .gt-schedule-table .gt-schedule-date-col,
+    .gt-schedule-table .gt-schedule-time-col {
+        width: 32%;
+        max-width: none;
     }
 
-    .gt-schedule-day-chevron {
-        display: inline-flex;
-    }
-
-    .gt-schedule-day-header[aria-expanded='true'] .gt-schedule-day-chevron {
-        transform: rotate(180deg);
+    .gt-schedule-table.is-milestone col.gt-schedule-col-first,
+    .gt-schedule-table.is-onsite col.gt-schedule-col-first {
+        width: 32%;
     }
 
     .gt-footer-inner {

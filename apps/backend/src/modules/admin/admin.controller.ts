@@ -17,6 +17,7 @@ import {
     reorderContactChannelsSchema,
     createScheduleItemSchema,
     updateScheduleItemSchema,
+    updateScheduleViewTypeSchema,
     createSubmissionTaskSchema,
     selectionTeamsQuerySchema,
     selectionResultSchema,
@@ -709,6 +710,37 @@ export async function handleDeleteScheduleItemAdmin(req: FastifyRequest<{ Params
     try {
         await eventService.deleteScheduleItemAdmin(req.server.ctx.db, parsedParams.data.id);
         return reply.send(ok({ success: true }, 'ลบรายการกำหนดการสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateScheduleViewTypeAdmin(
+    req: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = updateScheduleViewTypeSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await eventService.updateScheduleViewTypeAdmin(
+            req.server.ctx.db,
+            parsedParams.data.id,
+            parsedBody.data.tableType
+        );
+        return reply.send(ok(result, 'อัปเดตรูปแบบตารางกำหนดการสำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });
