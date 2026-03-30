@@ -127,6 +127,7 @@ export const reorderContactChannelsSchema = z.object({
 });
 
 const scheduleAudienceEnum = z.enum(['public', 'all_users', 'approved_teams', 'specific_teams']);
+const scheduleTableTypeEnum = z.enum(['milestone', 'onsite_timetable']);
 
 const scheduleTimeField = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'รูปแบบเวลาต้องเป็น HH:mm หรือ HH:mm:ss');
 
@@ -147,9 +148,17 @@ export const createScheduleItemSchema = z.object({
     isHighlight: z.boolean().optional(),
     sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป').optional(),
     isEnabled: z.boolean().optional(),
+    displayDateLabelTh: nullableText,
+    displayDateLabelEn: nullableText,
+    displayTimeLabelTh: nullableText,
+    displayTimeLabelEn: nullableText,
 });
 
 export const updateScheduleItemSchema = createScheduleItemSchema.partial();
+
+export const updateScheduleViewTypeSchema = z.object({
+    tableType: scheduleTableTypeEnum,
+});
 
 export const selectionTeamsQuerySchema = z.object({
     status: z.enum(['submitted', 'passed', 'failed', 'confirmed', 'not_joined']).optional(),

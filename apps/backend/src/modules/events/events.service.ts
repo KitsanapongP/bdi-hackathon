@@ -54,6 +54,10 @@ function toAdminScheduleItemResponse(row: {
     is_highlight: number;
     sort_order: number;
     is_enabled: number;
+    display_date_label_th?: string | null;
+    display_date_label_en?: string | null;
+    display_time_label_th?: string | null;
+    display_time_label_en?: string | null;
 }) {
     return {
         id: row.item_id,
@@ -74,26 +78,41 @@ function toAdminScheduleItemResponse(row: {
         isHighlight: row.is_highlight === 1,
         sortOrder: row.sort_order,
         isEnabled: row.is_enabled === 1,
+        displayDateLabelTh: row.display_date_label_th ?? null,
+        displayDateLabelEn: row.display_date_label_en ?? null,
+        displayTimeLabelTh: row.display_time_label_th ?? null,
+        displayTimeLabelEn: row.display_time_label_en ?? null,
     };
 }
 
 export async function getFullSchedule(db: DB) {
-    // Assuming we just get the first published schedule for now
     const schedules = await repo.getPublishedSchedules(db);
-    const [schedule] = schedules;
-    if (!schedule) return null;
+    if (!schedules.length) return null;
 
-    const days = await repo.getScheduleDays(db, schedule.schedule_id);
-    const tracks = await repo.getScheduleTracks(db, schedule.schedule_id);
-    const items = await repo.getScheduleItems(db, schedule.schedule_id);
+    const scheduleBundles = await Promise.all(
+        schedules.map(async (schedule) => {
+            const [days, tracks, items] = await Promise.all([
+                repo.getScheduleDays(db, schedule.schedule_id),
+                repo.getScheduleTracks(db, schedule.schedule_id),
+                repo.getScheduleItems(db, schedule.schedule_id),
+            ]);
+
+            return {
+                ...schedule,
+                days: days.map((day) => ({
+                    ...day,
+                    items: items.filter((item) => item.day_id === day.day_id),
+                })),
+                tracks,
+            };
+        })
+    );
+
+    const [primarySchedule] = scheduleBundles;
 
     return {
-        ...schedule,
-        days: days.map(day => ({
-            ...day,
-            items: items.filter(item => item.day_id === day.day_id)
-        })),
-        tracks
+        ...primarySchedule,
+        schedules: scheduleBundles,
     };
 }
 
@@ -113,6 +132,7 @@ export async function getScheduleAdminBundle(db: DB) {
             nameEn: item.schedule_name_en,
             timezone: item.timezone,
             isPublished: item.is_published === 1,
+            tableType: item.table_type || 'onsite_timetable',
         })),
         days: days.map((item) => ({
             id: item.day_id,
@@ -155,6 +175,10 @@ export async function createScheduleItemAdmin(
         isHighlight?: boolean | undefined;
         sortOrder?: number | undefined;
         isEnabled?: boolean | undefined;
+        displayDateLabelTh?: string | null | undefined;
+        displayDateLabelEn?: string | null | undefined;
+        displayTimeLabelTh?: string | null | undefined;
+        displayTimeLabelEn?: string | null | undefined;
     }
 ) {
     const day = await repo.getScheduleDayByIdAdmin(db, input.dayId);
@@ -197,6 +221,10 @@ export async function createScheduleItemAdmin(
         isHighlight: Boolean(input.isHighlight),
         sortOrder: Number.isFinite(Number(input.sortOrder)) ? Math.trunc(Number(input.sortOrder)) : 0,
         isEnabled: input.isEnabled ?? true,
+        displayDateLabelTh: normalizeOptionalText(input.displayDateLabelTh) ?? null,
+        displayDateLabelEn: normalizeOptionalText(input.displayDateLabelEn) ?? null,
+        displayTimeLabelTh: normalizeOptionalText(input.displayTimeLabelTh) ?? null,
+        displayTimeLabelEn: normalizeOptionalText(input.displayTimeLabelEn) ?? null,
     });
 
     const created = await repo.getScheduleItemByIdAdmin(db, itemId);
@@ -226,6 +254,10 @@ export async function updateScheduleItemAdmin(
         isHighlight?: boolean | undefined;
         sortOrder?: number | undefined;
         isEnabled?: boolean | undefined;
+        displayDateLabelTh?: string | null | undefined;
+        displayDateLabelEn?: string | null | undefined;
+        displayTimeLabelTh?: string | null | undefined;
+        displayTimeLabelEn?: string | null | undefined;
     }
 ) {
     const existing = await repo.getScheduleItemByIdAdmin(db, itemId);
@@ -275,6 +307,10 @@ export async function updateScheduleItemAdmin(
         isHighlight: input.isHighlight,
         sortOrder: input.sortOrder !== undefined ? Math.trunc(Number(input.sortOrder)) : undefined,
         isEnabled: input.isEnabled,
+        displayDateLabelTh: normalizeOptionalText(input.displayDateLabelTh),
+        displayDateLabelEn: normalizeOptionalText(input.displayDateLabelEn),
+        displayTimeLabelTh: normalizeOptionalText(input.displayTimeLabelTh),
+        displayTimeLabelEn: normalizeOptionalText(input.displayTimeLabelEn),
     });
 
     const updated = await repo.getScheduleItemByIdAdmin(db, itemId);
@@ -290,4 +326,32 @@ export async function deleteScheduleItemAdmin(db: DB, itemId: number): Promise<v
         throw new NotFoundError('ไม่พบข้อมูลกำหนดการนี้');
     }
     await repo.deleteScheduleItemAdmin(db, itemId);
+}
+
+export async function updateScheduleViewTypeAdmin(
+    db: DB,
+    scheduleId: number,
+    tableType: 'milestone' | 'onsite_timetable'
+) {
+    const existing = await repo.getScheduleByIdAdmin(db, scheduleId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบชุดกำหนดการที่เลือก');
+    }
+
+    await repo.updateScheduleViewTypeAdmin(db, scheduleId, tableType);
+
+    const updated = await repo.getScheduleByIdAdmin(db, scheduleId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบชุดกำหนดการหลังการอัปเดต');
+    }
+
+    return {
+        id: updated.schedule_id,
+        code: updated.schedule_code,
+        nameTh: updated.schedule_name_th,
+        nameEn: updated.schedule_name_en,
+        timezone: updated.timezone,
+        isPublished: updated.is_published === 1,
+        tableType: updated.table_type || 'onsite_timetable',
+    };
 }

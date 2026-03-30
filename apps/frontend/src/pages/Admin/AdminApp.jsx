@@ -3811,6 +3811,7 @@ function StaticSchedulePage() {
   const [activeDayFilter, setActiveDayFilter] = useState('all')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [savingScheduleId, setSavingScheduleId] = useState(null)
   const [errors, setErrors] = useState({})
   const [form, setForm] = useState({
     dayId: '',
@@ -3829,6 +3830,10 @@ function StaticSchedulePage() {
     sortOrder: 0,
     isHighlight: false,
     isEnabled: true,
+    displayDateLabelTh: '',
+    displayDateLabelEn: '',
+    displayTimeLabelTh: '',
+    displayTimeLabelEn: '',
   })
 
   const schedules = bundle.schedules || []
@@ -3887,6 +3892,10 @@ function StaticSchedulePage() {
     sortOrder: Number(item.sortOrder || 0),
     isHighlight: Boolean(item.isHighlight),
     isEnabled: Boolean(item.isEnabled),
+    displayDateLabelTh: item.displayDateLabelTh || '',
+    displayDateLabelEn: item.displayDateLabelEn || '',
+    displayTimeLabelTh: item.displayTimeLabelTh || '',
+    displayTimeLabelEn: item.displayTimeLabelEn || '',
   }), [])
 
   const openCreate = useCallback(() => {
@@ -3910,6 +3919,10 @@ function StaticSchedulePage() {
       sortOrder: 0,
       isHighlight: false,
       isEnabled: true,
+      displayDateLabelTh: '',
+      displayDateLabelEn: '',
+      displayTimeLabelTh: '',
+      displayTimeLabelEn: '',
     })
     setDrawerOpen(true)
   }, [days])
@@ -3970,6 +3983,10 @@ function StaticSchedulePage() {
       sortOrder: Number(form.sortOrder || 0),
       isHighlight: form.isHighlight,
       isEnabled: form.isEnabled,
+      displayDateLabelTh: form.displayDateLabelTh.trim() || null,
+      displayDateLabelEn: form.displayDateLabelEn.trim() || null,
+      displayTimeLabelTh: form.displayTimeLabelTh.trim() || null,
+      displayTimeLabelEn: form.displayTimeLabelEn.trim() || null,
     }
 
     const isEdit = Boolean(editingId)
@@ -4025,6 +4042,35 @@ function StaticSchedulePage() {
     }
   }, [fetchScheduleBundle, items, pushToast])
 
+  const updateScheduleViewType = useCallback(async (scheduleId, tableType) => {
+    try {
+      setSavingScheduleId(scheduleId)
+      const response = await fetch(apiUrl(`/api/admin/schedules/${scheduleId}/view-type`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ tableType }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.message || 'อัปเดตรูปแบบตารางไม่สำเร็จ')
+      }
+
+      setBundle((prev) => ({
+        ...prev,
+        schedules: (prev.schedules || []).map((schedule) =>
+          schedule.id === scheduleId ? { ...schedule, tableType } : schedule
+        ),
+      }))
+      pushToast({ title: 'อัปเดตรูปแบบตารางแล้ว' })
+    } catch (err) {
+      console.error('Failed to update schedule view type:', err)
+      pushToast({ type: 'error', title: err?.message || 'อัปเดตรูปแบบตารางไม่สำเร็จ' })
+    } finally {
+      setSavingScheduleId(null)
+    }
+  }, [pushToast])
+
   const rows = useMemo(
     () =>
       items.map((item) => {
@@ -4037,6 +4083,7 @@ function StaticSchedulePage() {
           ...item,
           dayLabel,
           scheduleLabel: schedule?.nameEn || schedule?.nameTh || '-',
+          tableType: schedule?.tableType || 'onsite_timetable',
           trackLabel: track ? track.trackNameEn || track.trackNameTh : 'Default Track',
           timeLabel: `${normalizeTimeInput(item.startTime)} - ${normalizeTimeInput(item.endTime)}`,
         }
@@ -4127,10 +4174,29 @@ function StaticSchedulePage() {
         ))}
       </div>
 
+      <section className="admin-ui-panel">
+        <h4>Schedule Table Type</h4>
+        <div className="admin-ui-two-col">
+          {schedules.map((schedule) => (
+            <label key={schedule.id}>
+              {schedule.nameTh || schedule.nameEn || `Schedule #${schedule.id}`}
+              <select
+                value={schedule.tableType || 'onsite_timetable'}
+                disabled={savingScheduleId === schedule.id}
+                onChange={(event) => updateScheduleViewType(schedule.id, event.target.value)}
+              >
+                <option value="onsite_timetable">Onsite Timetable (เวลา + หัวข้อ)</option>
+                <option value="milestone">Milestone (วันที่ + กิจกรรม)</option>
+              </select>
+            </label>
+          ))}
+        </div>
+      </section>
+
       <AdminDataTable
         loading={loading}
         rows={filteredRows}
-        searchKeys={['titleTh', 'titleEn', 'locationTh', 'locationEn', 'speakerTh', 'speakerEn', 'dayLabel', 'trackLabel']}
+        searchKeys={['titleTh', 'titleEn', 'locationTh', 'locationEn', 'speakerTh', 'speakerEn', 'dayLabel', 'trackLabel', 'displayDateLabelTh', 'displayTimeLabelTh']}
         searchPlaceholder="ค้นหาหัวข้อ, วิทยากร, สถานที่"
         filters={[
           { label: 'ทั้งหมด', value: 'all', predicate: () => true },
@@ -4261,6 +4327,28 @@ function StaticSchedulePage() {
                 onChange={(event) => setForm((prev) => ({ ...prev, endTime: event.target.value }))}
               />
               {errors.endTime ? <small>{errors.endTime}</small> : null}
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="schedule-display-date-label-th">
+              display_date_label_th (override)
+              <input
+                id="schedule-display-date-label-th"
+                value={form.displayDateLabelTh}
+                onChange={(event) => setForm((prev) => ({ ...prev, displayDateLabelTh: event.target.value }))}
+                placeholder="เช่น 14 มิ.ย. - 18 มิ.ย."
+              />
+            </label>
+
+            <label htmlFor="schedule-display-time-label-th">
+              display_time_label_th (override)
+              <input
+                id="schedule-display-time-label-th"
+                value={form.displayTimeLabelTh}
+                onChange={(event) => setForm((prev) => ({ ...prev, displayTimeLabelTh: event.target.value }))}
+                placeholder="เช่น 15.30 เป็นต้นไป ถึงเที่ยงคืน"
+              />
             </label>
           </div>
 

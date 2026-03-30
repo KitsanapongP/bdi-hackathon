@@ -40,6 +40,14 @@ export async function getAllSchedulesAdmin(db: DB): Promise<EventScheduleRow[]> 
     return rows as EventScheduleRow[];
 }
 
+export async function getScheduleByIdAdmin(db: DB, scheduleId: number): Promise<EventScheduleRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT * FROM event_schedules WHERE schedule_id = :scheduleId LIMIT 1`,
+        { scheduleId }
+    );
+    return (rows[0] as EventScheduleRow | undefined) ?? null;
+}
+
 export async function getAllScheduleDaysAdmin(db: DB): Promise<EventScheduleDayRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT * FROM event_schedule_days ORDER BY day_date ASC, sort_order ASC, day_id ASC`
@@ -105,6 +113,10 @@ export async function createScheduleItemAdmin(
         isHighlight: boolean;
         sortOrder: number;
         isEnabled: boolean;
+        displayDateLabelTh: string | null;
+        displayDateLabelEn: string | null;
+        displayTimeLabelTh: string | null;
+        displayTimeLabelEn: string | null;
     }
 ): Promise<number> {
     const [result] = await db.query<ResultSetHeader>(
@@ -125,8 +137,12 @@ export async function createScheduleItemAdmin(
             audience,
             is_highlight,
             sort_order,
-            is_enabled
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            is_enabled,
+            display_date_label_th,
+            display_date_label_en,
+            display_time_label_th,
+            display_time_label_en
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             data.scheduleId,
             data.dayId,
@@ -145,6 +161,10 @@ export async function createScheduleItemAdmin(
             data.isHighlight ? 1 : 0,
             data.sortOrder,
             data.isEnabled ? 1 : 0,
+            data.displayDateLabelTh,
+            data.displayDateLabelEn,
+            data.displayTimeLabelTh,
+            data.displayTimeLabelEn,
         ]
     );
 
@@ -172,6 +192,10 @@ export async function updateScheduleItemAdmin(
         isHighlight?: boolean | undefined;
         sortOrder?: number | undefined;
         isEnabled?: boolean | undefined;
+        displayDateLabelTh?: string | null | undefined;
+        displayDateLabelEn?: string | null | undefined;
+        displayTimeLabelTh?: string | null | undefined;
+        displayTimeLabelEn?: string | null | undefined;
     }
 ): Promise<void> {
     const fields: string[] = [];
@@ -194,6 +218,10 @@ export async function updateScheduleItemAdmin(
     if (data.isHighlight !== undefined) { fields.push('is_highlight = ?'); values.push(data.isHighlight ? 1 : 0); }
     if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
     if (data.isEnabled !== undefined) { fields.push('is_enabled = ?'); values.push(data.isEnabled ? 1 : 0); }
+    if (data.displayDateLabelTh !== undefined) { fields.push('display_date_label_th = ?'); values.push(data.displayDateLabelTh); }
+    if (data.displayDateLabelEn !== undefined) { fields.push('display_date_label_en = ?'); values.push(data.displayDateLabelEn); }
+    if (data.displayTimeLabelTh !== undefined) { fields.push('display_time_label_th = ?'); values.push(data.displayTimeLabelTh); }
+    if (data.displayTimeLabelEn !== undefined) { fields.push('display_time_label_en = ?'); values.push(data.displayTimeLabelEn); }
 
     if (!fields.length) return;
 
@@ -208,4 +236,15 @@ export async function updateScheduleItemAdmin(
 
 export async function deleteScheduleItemAdmin(db: DB, itemId: number): Promise<void> {
     await db.query(`DELETE FROM event_schedule_items WHERE item_id = ?`, [itemId]);
+}
+
+export async function updateScheduleViewTypeAdmin(
+    db: DB,
+    scheduleId: number,
+    tableType: 'milestone' | 'onsite_timetable'
+): Promise<void> {
+    await db.query(
+        `UPDATE event_schedules SET table_type = ?, updated_at = CURRENT_TIMESTAMP WHERE schedule_id = ?`,
+        [tableType, scheduleId]
+    );
 }
