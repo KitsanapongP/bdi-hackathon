@@ -100,9 +100,6 @@ function FAQPage() {
                                         aria-controls={answerId}
                                     >
                                         <span className="gt-faq-question-left">
-                                            <span className="gt-faq-icon" aria-hidden="true">
-                                                <HelpCircle size={18} />
-                                            </span>
                                             <h2>{item.question}</h2>
                                         </span>
                                         <ChevronDown className="gt-faq-chevron" size={18} />
