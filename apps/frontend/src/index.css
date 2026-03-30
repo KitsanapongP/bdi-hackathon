@@ -1,1 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@500&family=Nunito:wght@500&display=swap');
 @import "tailwindcss";
+
+:root {
+  font-family: 'Nunito', 'Anuphan', sans-serif;
+  font-weight: 500;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-weight: inherit;
+}

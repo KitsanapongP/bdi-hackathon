@@ -11,7 +11,7 @@ body:has(.gr-page) {
     min-height: 100vh;
     background: transparent;
     color: var(--gt-text, #1e293b);
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-family: inherit;
     display: flex;
     flex-direction: column;
     position: relative;
