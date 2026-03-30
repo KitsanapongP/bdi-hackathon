@@ -1987,6 +1987,259 @@ section.gt-hero {
     background: var(--gt-primary);
 }
 
+/* --- 9.8 Eligibility --- */
+.gt-eligibility-wrap {
+    width: 100%;
+    max-width: 1020px;
+    margin: 0 auto;
+    border: 1px solid var(--gt-border);
+    border-radius: 24px;
+    padding: 28px;
+    background: var(--gt-surface);
+    box-shadow: 0 24px 48px -30px rgba(15, 23, 42, 0.45);
+}
+
+.gt-eligibility-highlight {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid rgba(124, 58, 237, 0.28);
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(59, 130, 246, 0.08));
+}
+
+.gt-eligibility-highlight-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: var(--gt-gradient);
+    flex-shrink: 0;
+}
+
+.gt-eligibility-highlight h3 {
+    margin: 0 0 8px;
+    font-size: 1.3rem;
+    line-height: 1.3;
+    color: var(--gt-text);
+}
+
+.gt-eligibility-highlight p {
+    margin: 0;
+    color: var(--gt-text-muted);
+    font-size: 1rem;
+    line-height: 1.65;
+}
+
+.gt-eligibility-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.gt-eligibility-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    border: 1px solid var(--gt-border);
+    border-radius: 16px;
+    padding: 16px;
+    background: var(--gt-surface-alt);
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gt-eligibility-item:hover {
+    border-color: var(--gt-border);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -18px rgba(15, 23, 42, 0.3);
+}
+
+.gt-eligibility-item-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gt-primary);
+    background: rgba(124, 58, 237, 0.12);
+    flex-shrink: 0;
+}
+
+.gt-eligibility-item-index {
+    min-width: 42px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    background: rgba(124, 58, 237, 0.08);
+    color: var(--gt-primary);
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.gt-eligibility-item-body {
+    min-width: 0;
+}
+
+.gt-eligibility-item-body h4 {
+    margin: 0 0 4px;
+    color: var(--gt-text);
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.4;
+}
+
+.gt-eligibility-item-body p {
+    margin: 0;
+    color: var(--gt-text-muted);
+    font-size: 0.98rem;
+    font-weight: 500;
+    line-height: 1.65;
+}
+
+.dark .gt-eligibility-wrap {
+    box-shadow: 0 18px 36px -26px rgba(2, 6, 23, 0.92);
+}
+
+.dark .gt-eligibility-highlight {
+    border-color: rgba(124, 58, 237, 0.5);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(59, 130, 246, 0.16));
+}
+
+.dark .gt-eligibility-item {
+    box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.06);
+}
+
+.dark .gt-eligibility-item-index {
+    border-color: rgba(124, 58, 237, 0.5);
+    background: rgba(124, 58, 237, 0.2);
+}
+
+/* --- 9.9 Benefits --- */
+.gt-benefits-wrap {
+    width: 100%;
+    max-width: 1020px;
+    margin: 0 auto;
+}
+
+.gt-benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.gt-benefit-card {
+    border: 1px solid var(--gt-border);
+    border-radius: 18px;
+    padding: 18px;
+    background: var(--gt-surface);
+    box-shadow: 0 12px 26px -22px rgba(15, 23, 42, 0.55);
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.gt-benefit-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--gt-border);
+    box-shadow: 0 18px 34px -24px rgba(15, 23, 42, 0.55);
+}
+
+.gt-benefit-card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.gt-benefit-index {
+    min-width: 42px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid rgba(124, 58, 237, 0.28);
+    background: rgba(124, 58, 237, 0.08);
+    color: var(--gt-primary);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.gt-benefit-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gt-primary);
+    background: rgba(124, 58, 237, 0.12);
+    flex-shrink: 0;
+}
+
+.gt-benefit-card h3 {
+    margin: 0 0 5px;
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: var(--gt-text);
+    line-height: 1.4;
+}
+
+.gt-benefit-card p {
+    margin: 0;
+    color: var(--gt-text-muted);
+    font-size: 0.98rem;
+    line-height: 1.62;
+    font-weight: 500;
+}
+
+.gt-benefit-card-featured {
+    grid-column: 1 / -1;
+    background: var(--gt-surface);
+    border-color: rgba(245, 158, 11, 0.62);
+    box-shadow: 0 18px 34px -24px rgba(15, 23, 42, 0.45);
+}
+
+.gt-benefit-card-featured:hover {
+    border-color: rgba(217, 119, 6, 0.8);
+    box-shadow: 0 22px 40px -24px rgba(15, 23, 42, 0.52);
+}
+
+.gt-benefit-card-featured h3 {
+    font-size: 1.16rem;
+}
+
+.dark .gt-benefit-card {
+    box-shadow: 0 14px 28px -22px rgba(2, 6, 23, 0.95);
+}
+
+.dark .gt-benefit-index {
+    border-color: rgba(124, 58, 237, 0.48);
+    background: rgba(124, 58, 237, 0.22);
+}
+
+.dark .gt-benefit-card-featured {
+    border-color: rgba(124, 58, 237, 0.58);
+    background: var(--gt-surface-alt);
+    box-shadow: 0 16px 30px -20px rgba(2, 6, 23, 0.92);
+}
+
 /* --- 10. Footer --- */
 .gt-footer {
     background: var(--gt-footer-bg);
@@ -2586,6 +2839,71 @@ section.gt-hero {
         grid-area: body;
         min-height: auto;
         padding: 18px 16px;
+    }
+
+    .gt-eligibility-wrap {
+        padding: 18px 14px;
+        border-radius: 18px;
+    }
+
+    .gt-eligibility-highlight {
+        padding: 14px 12px;
+        gap: 12px;
+    }
+
+    .gt-eligibility-highlight h3 {
+        font-size: 1.08rem;
+    }
+
+    .gt-eligibility-item {
+        padding: 12px;
+        gap: 9px;
+        display: grid;
+        grid-template-columns: 40px 30px minmax(0, 1fr);
+        align-items: flex-start;
+    }
+
+    .gt-eligibility-item-index {
+        min-width: 40px;
+        height: 28px;
+        font-size: 0.72rem;
+        margin-top: 2px;
+    }
+
+    .gt-eligibility-item-icon {
+        width: 30px;
+        height: 30px;
+    }
+
+    .gt-eligibility-item-body h4 {
+        font-size: 1rem;
+        font-weight: 800;
+    }
+
+    .gt-eligibility-item-body p {
+        font-size: 0.92rem;
+        font-weight: 500;
+        line-height: 1.52;
+    }
+
+    .gt-benefits-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .gt-benefit-card,
+    .gt-benefit-card-featured {
+        grid-column: 1 / -1;
+        padding: 14px 12px;
+        border-radius: 14px;
+    }
+
+    .gt-benefit-card h3 {
+        font-size: 1rem;
+    }
+
+    .gt-benefit-card p {
+        font-size: 0.9rem;
     }
 }
 

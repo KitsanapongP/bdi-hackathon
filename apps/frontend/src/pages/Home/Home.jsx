@@ -6,7 +6,12 @@ import {
     Users,
     Trophy,
     Target,
+    BedDouble,
+    Car,
+    UtensilsCrossed,
+    Gift,
     Rocket,
+    Home,
     Calendar,
     Menu,
     X,
@@ -51,7 +56,7 @@ const config = {
         aboutDesc: 'นี่ไม่ใช่แค่การแข่งขัน แต่คือโอกาสครั้งสำคัญในการใช้เทคโนโลยีเปลี่ยนโลก!',
         scheduleTitle: 'กำหนดการกิจกรรม',
         scheduleDesc: 'ตารางเวลาของกิจกรรมทั้งหมดตลอดทั้งงาน',
-        footer: '© 2026 Intelligent Living Hackathon 2026',
+        footer: 'BDI Hackathon 2026: Intelligent Living',
     },
     process: {
         step4HighlightStartDate: import.meta.env.VITE_PROCESS_STEP4_HIGHLIGHT_START_DATE || '2026-06-21',
@@ -843,7 +848,7 @@ function HomePage() {
             return;
         }
 
-        navigate('/home/register');
+        navigate('/login');
     };
 
     useEffect(() => {
@@ -907,7 +912,7 @@ function HomePage() {
             <nav className={`gt-pill-nav ${navScrolled ? 'scrolled' : ''}`}>
                 <div className="gt-pill-bar">
                     <a href="#" className="gt-pill-icon" onClick={(e) => { e.preventDefault(); scrollTo('hero'); }} aria-label="Home">
-                        <Rocket size={20} />
+                        <Home size={20} />
                     </a>
                     <div className="gt-pill-links">
                         {config.locale.nav.map((label, i) => {
@@ -962,7 +967,7 @@ function HomePage() {
                                 </button>
                             </>
                         ) : (
-                            <Link to="/home/register" className="gt-pill-link gt-auth-btn gt-login">
+                            <Link to="/login" className="gt-pill-link gt-auth-btn gt-login">
                                 <LogIn size={15} /> เข้าสู่ระบบ
                             </Link>
                         )}
@@ -1025,7 +1030,7 @@ function HomePage() {
                                 </button>
                             </>
                         ) : (
-                            <Link to="/home/register" className="gt-collapse-link gt-collapse-login" onClick={() => setMobileOpen(false)}>
+                            <Link to="/login" className="gt-collapse-link gt-collapse-login" onClick={() => setMobileOpen(false)}>
                                 <LogIn size={16} /> เข้าสู่ระบบ
                             </Link>
                         )}
@@ -1261,6 +1266,108 @@ function HomePage() {
                         </div>
                     </section>
 
+                    {/* Eligibility */}
+                    <section id="eligibility" className="gt-section gt-container">
+                        <div className="gt-section-header gt-reveal">
+                            <h2>คุณสมบัติผู้สมัคร</h2>
+                            <p>ตรวจสอบคุณสมบัติเบื้องต้นก่อนสมัครเข้าร่วมการแข่งขัน</p>
+                        </div>
+
+                        <div className="gt-eligibility-wrap gt-reveal">
+                            <ul className="gt-eligibility-list" aria-label="คุณสมบัติผู้สมัคร">
+                                <li className="gt-eligibility-item">
+                                    <span className="gt-eligibility-item-index">01</span>
+                                    <span className="gt-eligibility-item-icon"><Users size={18} /></span>
+                                    <div className="gt-eligibility-item-body">
+                                        <h4>ขนาดทีม</h4>
+                                        <p>สมาชิกในทีม<strong>จำนวน 5 คน</strong> ไม่จำกัดเพศ</p>
+                                    </div>
+                                </li>
+                                <li className="gt-eligibility-item">
+                                    <span className="gt-eligibility-item-index">02</span>
+                                    <span className="gt-eligibility-item-icon"><Target size={18} /></span>
+                                    <div className="gt-eligibility-item-body">
+                                        <h4>การรวมทีม</h4>
+                                        <p>สามารถรวมกลุ่มกันกับต่างโรงเรียน หรือต่างมหาวิทยาลัยได้</p>
+                                    </div>
+                                </li>
+                                <li className="gt-eligibility-item">
+                                    <span className="gt-eligibility-item-index">03</span>
+                                    <span className="gt-eligibility-item-icon"><Activity size={18} /></span>
+                                    <div className="gt-eligibility-item-body">
+                                        <h4>สถานะผู้สมัคร</h4>
+                                        <p>สมาชิกในทีมต้องเป็นนักเรียนระดับมัธยมศึกษา หรือนักศึกษาระดับอุดมศึกษาจากสถาบันการศึกษาในประเทศไทย</p>
+                                    </div>
+                                </li>
+                                <li className="gt-eligibility-item">
+                                    <span className="gt-eligibility-item-index">04</span>
+                                    <span className="gt-eligibility-item-icon"><Sparkles size={18} /></span>
+                                    <div className="gt-eligibility-item-body">
+                                        <h4>ความพร้อมของทีม</h4>
+                                        <p>มีความพร้อมในการสร้างสรรค์ไอเดียและนวัตกรรม</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    {/* Benefits */}
+                    <section id="benefits" className="gt-section gt-container">
+                        <div className="gt-section-header gt-reveal">
+                            <h2>สิทธิประโยชน์ของผู้เข้าร่วมแข่งขัน (สำหรับ 14 ทีมที่ผ่านการคัดเลือก)</h2>
+                            <p>ครอบคลุมทั้งที่พัก การเดินทาง และการสนับสนุนระหว่างการแข่งขัน</p>
+                        </div>
+
+                        <div className="gt-benefits-wrap gt-reveal">
+                            <div className="gt-benefits-grid" aria-label="สิทธิประโยชน์ของผู้เข้าร่วมแข่งขัน">
+                                <article className="gt-benefit-card">
+                                    <div className="gt-benefit-card-head">
+                                        <span className="gt-benefit-index">01</span>
+                                        <span className="gt-benefit-icon"><BedDouble size={18} /></span>
+                                    </div>
+                                    <h3>ที่พัก</h3>
+                                    <p>จำนวน 3 คืน (ห้องคู่)</p>
+                                </article>
+
+                                <article className="gt-benefit-card">
+                                    <div className="gt-benefit-card-head">
+                                        <span className="gt-benefit-index">02</span>
+                                        <span className="gt-benefit-icon"><Car size={18} /></span>
+                                    </div>
+                                    <h3>ค่าเดินทาง</h3>
+                                    <p>เหมาจ่ายทีมละไม่เกิน 5,000 บาท</p>
+                                </article>
+
+                                <article className="gt-benefit-card">
+                                    <div className="gt-benefit-card-head">
+                                        <span className="gt-benefit-index">03</span>
+                                        <span className="gt-benefit-icon"><UtensilsCrossed size={18} /></span>
+                                    </div>
+                                    <h3>อาหารและเครื่องดื่ม</h3>
+                                    <p>จัดเตรียมให้ตลอดการเข้าร่วมกิจกรรม</p>
+                                </article>
+
+                                <article className="gt-benefit-card">
+                                    <div className="gt-benefit-card-head">
+                                        <span className="gt-benefit-index">04</span>
+                                        <span className="gt-benefit-icon"><Gift size={18} /></span>
+                                    </div>
+                                    <h3>ของที่ระลึก</h3>
+                                    <p>สำหรับผู้เข้าร่วมแข่งขันที่ผ่านการคัดเลือก</p>
+                                </article>
+
+                                <article className="gt-benefit-card gt-benefit-card-featured">
+                                    <div className="gt-benefit-card-head">
+                                        <span className="gt-benefit-index">05</span>
+                                        <span className="gt-benefit-icon"><Trophy size={18} /></span>
+                                    </div>
+                                    <h3>ชิงเงินรางวัลและถ้วยพระราชทานฯ</h3>
+                                    <p>เวทีสำคัญระดับประเทศ เพื่อสร้างผลงานที่สร้างผลกระทบจริง</p>
+                                </article>
+                            </div>
+                        </div>
+                    </section>
+
                     {/* Schedule */}
                     <section id="schedule" className="gt-section gt-container">
                         <div className="gt-section-header gt-reveal">
@@ -1341,7 +1448,7 @@ function HomePage() {
                         <section id="register" className="gt-section gt-container" style={{ textAlign: 'center', paddingBottom: 40 }}>
                             <div className="gt-reveal">
                                 <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: 16 }}>พร้อมเข้าร่วมแล้วหรือยัง?</h2>
-                                <Link to="/home/register" className="gt-btn gt-btn-primary" style={{ fontSize: '1.05rem', padding: '15px 36px' }}>
+                                <Link to="/login" className="gt-btn gt-btn-primary" style={{ fontSize: '1.05rem', padding: '15px 36px' }}>
                                     ลงทะเบียนเลย <ArrowRight size={20} />
                                 </Link>
                             </div>
@@ -1373,7 +1480,7 @@ function HomePage() {
                             <div className="gt-footer-inner">
                                 <div>
                                     <div className="gt-logo" style={{ marginBottom: 14 }}>
-                                        <Rocket size={20} /> Intelligent Living Hackathon 2026
+                                        <Home size={20} /> BDI Hackathon 2026: Intelligent Living
                                     </div>
                                     <p className="gt-footer-contact" style={{ color: 'var(--gt-footer-text)', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
                                         <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px' }} />

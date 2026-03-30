@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-    Rocket,
+    Home,
     Users,
     User,
     Menu,
@@ -67,7 +67,7 @@ function HomeShell({ children }) {
             return;
         }
 
-        navigate('/home/register');
+        navigate('/login');
     };
 
     const handleLogout = async () => {
@@ -232,7 +232,7 @@ function HomeShell({ children }) {
             <nav className={`gt-pill-nav ${navScrolled ? 'scrolled' : ''}`}>
                 <div className="gt-pill-bar">
                     <a href="#" className="gt-pill-icon" onClick={(e) => { e.preventDefault(); navigate('/home'); }} aria-label="Home">
-                        <Rocket size={20} />
+                        <Home size={20} />
                     </a>
                     <div className="gt-pill-links">
                         {navItems.map((label, i) => {
@@ -258,7 +258,7 @@ function HomeShell({ children }) {
                                 </button>
                             </>
                         ) : (
-                            <Link to="/home/register" className="gt-pill-link gt-auth-btn gt-login">
+                            <Link to="/login" className="gt-pill-link gt-auth-btn gt-login">
                                 <LogIn size={15} /> เข้าสู่ระบบ
                             </Link>
                         )}
@@ -297,7 +297,7 @@ function HomeShell({ children }) {
                                 </button>
                             </>
                         ) : (
-                            <Link to="/home/register" className="gt-collapse-link gt-collapse-login" onClick={() => setMobileOpen(false)}>
+                            <Link to="/login" className="gt-collapse-link gt-collapse-login" onClick={() => setMobileOpen(false)}>
                                 <LogIn size={16} /> เข้าสู่ระบบ
                             </Link>
                         )}
@@ -312,7 +312,7 @@ function HomeShell({ children }) {
                     <div className="gt-footer-inner">
                         <div>
                             <div className="gt-logo" style={{ marginBottom: 14 }}>
-                                <Rocket size={20} /> Intelligent Living Hackathon 2026
+                                <Home size={20} /> BDI Hackathon 2026: Intelligent Living
                             </div>
                             <p className="gt-footer-contact" style={{ color: 'var(--gt-footer-text)', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
                                 <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px' }} />
@@ -346,7 +346,7 @@ function HomeShell({ children }) {
                             </div>
                         </div>
                     </div>
-                    <div className="gt-footer-copy">© 2026 Intelligent Living Hackathon 2026</div>
+                    <div className="gt-footer-copy">BDI Hackathon 2026: Intelligent Living</div>
                 </div>
             </footer>
         </div>

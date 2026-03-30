@@ -4,7 +4,8 @@ import dayjs from 'dayjs';
 import { DatePicker } from 'antd';
 import {
     Loader2,
-    Rocket,
+    Home,
+    ArrowLeft,
     Eye,
     EyeOff,
     FileText,
@@ -448,10 +449,19 @@ function RegisterPage() {
     return (
         <div className="gr-page">
             <GameShapes sizeRange={[18, 40]} depthLayers={2} seed={99} />
+            <button
+                type="button"
+                className="gr-back-home"
+                onClick={() => navigate('/home')}
+                aria-label="กลับไปหน้าแรก"
+            >
+                <ArrowLeft size={18} />
+                <span>กลับหน้าแรก</span>
+            </button>
             <div className="gr-login-wrap">
                 <div className={`gr-login-card ${isRegisterMode ? 'is-register' : ''}`}>
                     <div className="gt-badge" style={{ marginBottom: 20 }}>
-                        <Rocket size={16} /> Hackathon 2026
+                        <Home size={16} /> Hackathon 2026
                     </div>
                     <h2 style={{ color: 'var(--gt-text)' }}>
                         {isRegisterMode ? (registerStep === 'verify' ? 'ยืนยันอีเมล' : 'ลงทะเบียน') : 'เข้าสู่ระบบ'}

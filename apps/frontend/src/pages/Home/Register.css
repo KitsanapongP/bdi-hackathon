@@ -18,6 +18,37 @@ body:has(.gr-page) {
     z-index: 1;
 }
 
+.gr-back-home {
+    position: fixed;
+    top: 22px;
+    left: 22px;
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--gt-border);
+    background: color-mix(in oklab, var(--gt-surface) 86%, transparent);
+    color: var(--gt-text);
+    border-radius: 999px;
+    padding: 10px 14px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 24px -16px rgba(15, 23, 42, 0.35);
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.gr-back-home:hover {
+    border-color: var(--gt-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 14px 32px -18px rgba(15, 23, 42, 0.5);
+}
+
+.gr-back-home:active {
+    transform: translateY(0);
+}
+
 /* --- Top bar --- */
 .gr-topbar {
     height: 56px;
@@ -1294,5 +1325,12 @@ body:has(.gr-page) {
 
     .gr-modal {
         padding: 24px 20px;
+    }
+
+    .gr-back-home {
+        top: 12px;
+        left: 12px;
+        padding: 9px 12px;
+        font-size: 0.82rem;
     }
 }

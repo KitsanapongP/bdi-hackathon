@@ -20,6 +20,7 @@ function App() {
       <Route path="/home/sponsors" element={<SponsorsPage />} />
       <Route path="/home/datasets" element={<DatasetsPage />} />
       <Route path="/home/register" element={<RegisterPage />} />
+      <Route path="/login" element={<RegisterPage />} />
       <Route path="/home/team" element={<TeamPage />} />
       <Route path="/admin/*" element={<AdminApp />} />
     </Routes>
