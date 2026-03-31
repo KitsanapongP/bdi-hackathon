@@ -18,6 +18,16 @@ import {
     handleDeleteSponsorAdmin,
     handleUploadSponsorLogoAdmin,
     handleReorderSponsorsAdmin,
+    handleGetAllVenuesAdmin,
+    handleCreateVenueAdmin,
+    handleUpdateVenueAdmin,
+    handleDeleteVenueAdmin,
+    handleReorderVenuesAdmin,
+    handleCreateVenueImageAdmin,
+    handleUpdateVenueImageAdmin,
+    handleUploadVenueImageAdmin,
+    handleDeleteVenueImageAdmin,
+    handleReorderVenueImagesAdmin,
     handleGetAllCarouselsAdmin,
     handleCreateCarouselAdmin,
     handleUpdateCarouselAdmin,
@@ -71,6 +81,17 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.post('/sponsors/:id/logo', handleUploadSponsorLogoAdmin);
     fastify.delete('/sponsors/:id', handleDeleteSponsorAdmin);
     fastify.put('/sponsors/reorder', handleReorderSponsorsAdmin);
+
+    fastify.get('/venues', handleGetAllVenuesAdmin);
+    fastify.post('/venues', handleCreateVenueAdmin);
+    fastify.patch('/venues/:id', handleUpdateVenueAdmin);
+    fastify.delete('/venues/:id', handleDeleteVenueAdmin);
+    fastify.put('/venues/reorder', handleReorderVenuesAdmin);
+    fastify.post('/venues/:venueId/images', handleCreateVenueImageAdmin);
+    fastify.put('/venues/:venueId/images/reorder', handleReorderVenueImagesAdmin);
+    fastify.patch('/venues/:venueId/images/:imageId', handleUpdateVenueImageAdmin);
+    fastify.post('/venues/:venueId/images/:imageId/upload', handleUploadVenueImageAdmin);
+    fastify.delete('/venues/:venueId/images/:imageId', handleDeleteVenueImageAdmin);
 
     fastify.get('/carousels', handleGetAllCarouselsAdmin);
     fastify.post('/carousels', handleCreateCarouselAdmin);

@@ -110,6 +110,65 @@ export type ContentDataset = {
     recordCount: number | null;
 };
 
+export type ContentVenueCategory = 'transportation' | 'accommodation' | 'attraction';
+
+export type ContentVenueRow = {
+    venue_id: number;
+    venue_category: ContentVenueCategory;
+    venue_name_th: string;
+    venue_name_en: string | null;
+    description_th: string | null;
+    description_en: string | null;
+    sort_order: number;
+    is_enabled: number;
+    created_at: string;
+    updated_at: string;
+};
+
+export type ContentVenueImageRow = {
+    venue_image_id: number;
+    venue_id: number;
+    image_storage_key: string;
+    image_alt_th: string | null;
+    image_alt_en: string | null;
+    sort_order: number;
+    is_cover: number;
+    is_enabled: number;
+    created_at: string;
+    updated_at: string;
+};
+
+export type ContentVenueImage = {
+    id: number;
+    imageStorageKey: string;
+    imageUrl: string;
+    altTh: string | null;
+    altEn: string | null;
+    sortOrder: number;
+    isCover: boolean;
+};
+
+export type ContentVenueImageAdmin = ContentVenueImage & {
+    venueId: number;
+    isEnabled: boolean;
+};
+
+export type ContentVenue = {
+    id: number;
+    category: ContentVenueCategory;
+    nameTh: string;
+    nameEn: string | null;
+    descriptionTh: string | null;
+    descriptionEn: string | null;
+    sortOrder: number;
+    images: ContentVenueImage[];
+};
+
+export type ContentVenueAdmin = Omit<ContentVenue, 'images'> & {
+    isEnabled: boolean;
+    images: ContentVenueImageAdmin[];
+};
+
 export type ContentCarouselSlideRow = {
     slide_id: number;
     title_th: string | null;

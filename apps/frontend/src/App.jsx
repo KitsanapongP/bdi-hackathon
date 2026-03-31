@@ -7,6 +7,7 @@ import ContactPage from './pages/Home/ContactPage'
 import FAQPage from './pages/Home/FAQPage'
 import SponsorsPage from './pages/Home/SponsorsPage'
 import DatasetsPage from './pages/Home/DatasetsPage'
+import VenuesPage from './pages/Home/VenuesPage'
 import AdminApp from './pages/Admin/AdminApp'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
       <Route path="/home/contact" element={<ContactPage />} />
       <Route path="/home/faqs" element={<FAQPage />} />
       <Route path="/home/sponsors" element={<SponsorsPage />} />
+      <Route path="/home/venues" element={<VenuesPage />} />
       <Route path="/home/datasets" element={<DatasetsPage />} />
       <Route path="/home/register" element={<RegisterPage />} />
       <Route path="/login" element={<RegisterPage />} />

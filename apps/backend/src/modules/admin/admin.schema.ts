@@ -41,6 +41,15 @@ export const idParamSchema = z.object({
     id: z.coerce.number().int().positive('ID ไม่ถูกต้อง'),
 });
 
+export const venueIdParamSchema = z.object({
+    venueId: z.coerce.number().int().positive('venueId ไม่ถูกต้อง'),
+});
+
+export const venueImageParamSchema = z.object({
+    venueId: z.coerce.number().int().positive('venueId ไม่ถูกต้อง'),
+    imageId: z.coerce.number().int().positive('imageId ไม่ถูกต้อง'),
+});
+
 export const contactIdParamSchema = z.object({
     contactId: z.coerce.number().int().positive('contactId ไม่ถูกต้อง'),
 });
@@ -52,6 +61,44 @@ export const contactChannelParamSchema = z.object({
 
 const nullableText = z.string().nullable().optional();
 const contactCategoryEnum = z.enum(['event_inquiry', 'dataset_inquiry', 'tech_it', 'facility']);
+const venueCategoryEnum = z.enum(['transportation', 'accommodation', 'attraction']);
+
+export const createVenueSchema = z.object({
+    category: venueCategoryEnum,
+    nameTh: z.string().trim().min(1, 'nameTh ต้องไม่ว่าง'),
+    nameEn: nullableText,
+    descriptionTh: nullableText,
+    descriptionEn: nullableText,
+    sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป').optional(),
+    isEnabled: z.boolean().optional(),
+});
+
+export const updateVenueSchema = createVenueSchema.partial();
+
+export const reorderVenuesSchema = z.object({
+    updates: z.array(z.object({
+        id: z.number().int().positive('ID ไม่ถูกต้อง'),
+        sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป'),
+    })),
+});
+
+export const createVenueImageSchema = z.object({
+    imageStorageKey: z.string().trim().min(1, 'imageStorageKey ต้องไม่ว่าง'),
+    imageAltTh: nullableText,
+    imageAltEn: nullableText,
+    sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป').optional(),
+    isCover: z.boolean().optional(),
+    isEnabled: z.boolean().optional(),
+});
+
+export const updateVenueImageSchema = createVenueImageSchema.partial();
+
+export const reorderVenueImagesSchema = z.object({
+    updates: z.array(z.object({
+        id: z.number().int().positive('ID ไม่ถูกต้อง'),
+        sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป'),
+    })),
+});
 
 export const createContactSchema = z.object({
     contactCategory: contactCategoryEnum.optional(),

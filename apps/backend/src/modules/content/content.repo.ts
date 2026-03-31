@@ -6,6 +6,9 @@ import type {
     ContentContactCategory,
     ContentContactChannelRow,
     ContentContactRow,
+    ContentVenueCategory,
+    ContentVenueImageRow,
+    ContentVenueRow,
     ContentPageRow,
     ContentParticipationPeriodCountRow,
     ContentRewardRow,
@@ -161,6 +164,267 @@ export async function getEnabledDatasets(db: DB): Promise<ContentDatasetRow[]> {
     );
 
     return rows as ContentDatasetRow[];
+}
+
+export async function getEnabledVenues(
+    db: DB,
+    venueCategory?: ContentVenueCategory,
+): Promise<ContentVenueRow[]> {
+    const query = venueCategory
+        ? `SELECT *
+           FROM content_venues
+           WHERE is_enabled = 1 AND venue_category = ?
+           ORDER BY sort_order ASC, venue_id ASC`
+        : `SELECT *
+           FROM content_venues
+           WHERE is_enabled = 1
+           ORDER BY FIELD(venue_category, 'accommodation', 'transportation', 'attraction'), sort_order ASC, venue_id ASC`;
+
+    const params = venueCategory ? [venueCategory] : [];
+    const [rows] = await db.query<RowDataPacket[]>(query, params);
+
+    return rows as ContentVenueRow[];
+}
+
+export async function getEnabledVenueImagesByVenueIds(db: DB, venueIds: number[]): Promise<ContentVenueImageRow[]> {
+    if (venueIds.length === 0) return [];
+
+    const placeholders = venueIds.map(() => '?').join(', ');
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_venue_images
+         WHERE is_enabled = 1 AND venue_id IN (${placeholders})
+         ORDER BY venue_id ASC, is_cover DESC, sort_order ASC, venue_image_id ASC`,
+        venueIds,
+    );
+
+    return rows as ContentVenueImageRow[];
+}
+
+export async function getAllVenuesAdmin(db: DB): Promise<ContentVenueRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_venues
+         ORDER BY FIELD(venue_category, 'accommodation', 'transportation', 'attraction'), sort_order ASC, venue_id ASC`
+    );
+
+    return rows as ContentVenueRow[];
+}
+
+export async function getVenueByIdAdmin(db: DB, venueId: number): Promise<ContentVenueRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT * FROM content_venues WHERE venue_id = ?`,
+        [venueId]
+    );
+
+    const result = rows as ContentVenueRow[];
+    return result[0] || null;
+}
+
+export async function createVenueAdmin(
+    db: DB,
+    data: {
+        category: ContentVenueCategory;
+        nameTh: string;
+        nameEn?: string | null;
+        descriptionTh?: string | null;
+        descriptionEn?: string | null;
+        sortOrder: number;
+        isEnabled: boolean;
+    }
+): Promise<number> {
+    const [result] = await db.query(
+        `INSERT INTO content_venues
+         (venue_category, venue_name_th, venue_name_en, description_th, description_en, sort_order, is_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+            data.category,
+            data.nameTh,
+            data.nameEn ?? null,
+            data.descriptionTh ?? null,
+            data.descriptionEn ?? null,
+            data.sortOrder,
+            data.isEnabled ? 1 : 0,
+        ]
+    );
+
+    return (result as any).insertId;
+}
+
+export async function updateVenueAdmin(
+    db: DB,
+    venueId: number,
+    data: {
+        category?: ContentVenueCategory | undefined;
+        nameTh?: string | undefined;
+        nameEn?: string | null | undefined;
+        descriptionTh?: string | null | undefined;
+        descriptionEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+    }
+): Promise<void> {
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (data.category !== undefined) { fields.push('venue_category = ?'); values.push(data.category); }
+    if (data.nameTh !== undefined) { fields.push('venue_name_th = ?'); values.push(data.nameTh); }
+    if (data.nameEn !== undefined) { fields.push('venue_name_en = ?'); values.push(data.nameEn); }
+    if (data.descriptionTh !== undefined) { fields.push('description_th = ?'); values.push(data.descriptionTh); }
+    if (data.descriptionEn !== undefined) { fields.push('description_en = ?'); values.push(data.descriptionEn); }
+    if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
+    if (data.isEnabled !== undefined) { fields.push('is_enabled = ?'); values.push(data.isEnabled ? 1 : 0); }
+
+    if (fields.length === 0) return;
+
+    values.push(venueId);
+    await db.query(
+        `UPDATE content_venues SET ${fields.join(', ')} WHERE venue_id = ?`,
+        values
+    );
+}
+
+export async function deleteVenueAdmin(db: DB, venueId: number): Promise<void> {
+    await db.query(`DELETE FROM content_venues WHERE venue_id = ?`, [venueId]);
+}
+
+export async function updateVenuesOrderAdmin(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
+    for (const update of updates) {
+        await db.query(`UPDATE content_venues SET sort_order = ? WHERE venue_id = ?`, [update.sortOrder, update.id]);
+    }
+}
+
+export async function getVenueImagesByVenueIdsAdmin(db: DB, venueIds: number[]): Promise<ContentVenueImageRow[]> {
+    if (venueIds.length === 0) return [];
+
+    const placeholders = venueIds.map(() => '?').join(', ');
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_venue_images
+         WHERE venue_id IN (${placeholders})
+         ORDER BY venue_id ASC, is_cover DESC, sort_order ASC, venue_image_id ASC`,
+        venueIds,
+    );
+
+    return rows as ContentVenueImageRow[];
+}
+
+export async function getVenueImageByIdAdmin(db: DB, imageId: number): Promise<ContentVenueImageRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT * FROM content_venue_images WHERE venue_image_id = ?`,
+        [imageId],
+    );
+
+    const result = rows as ContentVenueImageRow[];
+    return result[0] || null;
+}
+
+export async function clearVenueImageCoverFlagsAdmin(db: DB, venueId: number, excludeImageId?: number): Promise<void> {
+    if (excludeImageId !== undefined) {
+        await db.query(
+            `UPDATE content_venue_images
+             SET is_cover = 0
+             WHERE venue_id = ? AND venue_image_id <> ?`,
+            [venueId, excludeImageId],
+        );
+        return;
+    }
+
+    await db.query(
+        `UPDATE content_venue_images
+         SET is_cover = 0
+         WHERE venue_id = ?`,
+        [venueId],
+    );
+}
+
+export async function createVenueImageAdmin(
+    db: DB,
+    data: {
+        venueId: number;
+        imageStorageKey: string;
+        imageAltTh?: string | null;
+        imageAltEn?: string | null;
+        sortOrder: number;
+        isCover: boolean;
+        isEnabled: boolean;
+    }
+): Promise<number> {
+    const [result] = await db.query(
+        `INSERT INTO content_venue_images
+         (venue_id, image_storage_key, image_alt_th, image_alt_en, sort_order, is_cover, is_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+            data.venueId,
+            data.imageStorageKey,
+            data.imageAltTh ?? null,
+            data.imageAltEn ?? null,
+            data.sortOrder,
+            data.isCover ? 1 : 0,
+            data.isEnabled ? 1 : 0,
+        ]
+    );
+
+    return (result as any).insertId;
+}
+
+export async function updateVenueImageAdmin(
+    db: DB,
+    imageId: number,
+    data: {
+        imageStorageKey?: string | undefined;
+        imageAltTh?: string | null | undefined;
+        imageAltEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isCover?: boolean | undefined;
+        isEnabled?: boolean | undefined;
+    }
+): Promise<void> {
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (data.imageStorageKey !== undefined) { fields.push('image_storage_key = ?'); values.push(data.imageStorageKey); }
+    if (data.imageAltTh !== undefined) { fields.push('image_alt_th = ?'); values.push(data.imageAltTh); }
+    if (data.imageAltEn !== undefined) { fields.push('image_alt_en = ?'); values.push(data.imageAltEn); }
+    if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
+    if (data.isCover !== undefined) { fields.push('is_cover = ?'); values.push(data.isCover ? 1 : 0); }
+    if (data.isEnabled !== undefined) { fields.push('is_enabled = ?'); values.push(data.isEnabled ? 1 : 0); }
+
+    if (fields.length === 0) return;
+
+    values.push(imageId);
+    await db.query(
+        `UPDATE content_venue_images SET ${fields.join(', ')} WHERE venue_image_id = ?`,
+        values
+    );
+}
+
+export async function deleteVenueImageAdmin(db: DB, imageId: number): Promise<void> {
+    await db.query(`DELETE FROM content_venue_images WHERE venue_image_id = ?`, [imageId]);
+}
+
+export async function updateVenueImagesOrderAdmin(
+    db: DB,
+    venueId: number,
+    updates: { id: number; sortOrder: number }[]
+): Promise<void> {
+    for (const update of updates) {
+        await db.query(
+            `UPDATE content_venue_images
+             SET sort_order = ?
+             WHERE venue_id = ? AND venue_image_id = ?`,
+            [-(update.sortOrder + 1), venueId, update.id],
+        );
+    }
+
+    for (const update of updates) {
+        await db.query(
+            `UPDATE content_venue_images
+             SET sort_order = ?
+             WHERE venue_id = ? AND venue_image_id = ?`,
+            [update.sortOrder, venueId, update.id],
+        );
+    }
 }
 
 export async function getAllSponsors(db: DB): Promise<ContentSponsorRow[]> {

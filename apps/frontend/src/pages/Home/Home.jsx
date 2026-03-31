@@ -46,7 +46,7 @@ const config = {
         primary: '#7c3aed',
     },
     locale: {
-        nav: ['หน้าแรก', 'เกี่ยวกับ', 'ผู้สนับสนุน', 'กำหนดการกิจกรรม', 'ตัวอย่างชุดข้อมูล', 'ลงทะเบียน'],
+        nav: ['หน้าแรก', 'เกี่ยวกับ', 'ผู้สนับสนุน', 'กำหนดการกิจกรรม', 'สถานที่จัดงาน', 'ตัวอย่างชุดข้อมูล', 'ลงทะเบียน'],
         heroBadge: '🏆 Hackathon 2026',
         heroTitle: 'สถาบันข้อมูลขนาดใหญ่ ร่วมกับ วิทยาลัยการคอมพิวเตอร์\nมหาวิทยาลัยขอนแก่น เชิญชวน นักเรียน นิสิต นักศึกษา\nร่วมแข่งขันพัฒนานวัตกรรม ชิงถ้วยพระราชทานฯ',
         ctaPrimary: 'ลงทะเบียนเลย',
@@ -917,7 +917,7 @@ function HomePage() {
         return () => clearTimeout(timer);
     }, [location.state?.scrollTo]);
 
-    const sectionIds = ['hero', 'about', null, 'schedule', null, 'register'];
+    const sectionIds = ['hero', 'about', null, 'schedule', null, null, 'register'];
 
     return (
         <div className="gt-page">
@@ -971,7 +971,7 @@ function HomePage() {
                     </a>
                     <div className="gt-pill-links">
                         {config.locale.nav.map((label, i) => {
-                            if (i === 5 && user) return null; // hide ลงทะเบียน when logged in
+                            if (i === 6 && user) return null; // hide ลงทะเบียน when logged in
 
                             const handleNavClick = () => {
                                 if (i === 1) {
@@ -985,6 +985,11 @@ function HomePage() {
                                 }
 
                                 if (i === 4) {
+                                    navigate('/home/venues');
+                                    return;
+                                }
+
+                                if (i === 5) {
                                     navigate('/home/datasets');
                                     return;
                                 }
@@ -1037,7 +1042,7 @@ function HomePage() {
                 <div className={`gt-pill-collapse ${mobileOpen ? 'open' : ''}`}>
                     <div className="gt-pill-collapse-inner">
                         {config.locale.nav.map((label, i) => {
-                            const isRegister = i === 5;
+                            const isRegister = i === 6;
                             if (isRegister && user) {
                                 return (
                                     <button key={i} className="gt-collapse-link" onClick={() => { setShowLobby(true); setShowProfile(false); setMobileOpen(false); window.scrollTo(0, 0); }}>
@@ -1060,6 +1065,12 @@ function HomePage() {
                                 }
 
                                 if (i === 4) {
+                                    navigate('/home/venues');
+                                    setMobileOpen(false);
+                                    return;
+                                }
+
+                                if (i === 5) {
                                     navigate('/home/datasets');
                                     setMobileOpen(false);
                                     return;

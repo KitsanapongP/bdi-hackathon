@@ -536,3 +536,392 @@
         grid-template-columns: 1fr;
     }
 }
+
+.gt-venue-tabs {
+    margin-top: 22px;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    border-bottom: 1px solid var(--gt-border);
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.gt-venue-tab {
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    border-radius: 0;
+    padding: 10px 14px 11px;
+    color: var(--gt-text-muted);
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: 0 0 auto;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.gt-venue-tab:hover {
+    color: var(--gt-text);
+}
+
+.gt-venue-tab span {
+    font-size: 0.98rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.gt-venue-tab small {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--gt-text-muted);
+    opacity: 0.95;
+}
+
+.gt-venue-tab.is-active {
+    color: var(--gt-text);
+    border-bottom-color: var(--gt-primary);
+}
+
+.gt-venue-tab.is-active small {
+    color: var(--gt-primary);
+}
+
+.gt-venue-list {
+    margin-top: 24px;
+    display: grid;
+    gap: 18px;
+}
+
+.gt-venue-card {
+    border: 1px solid var(--gt-border);
+    border-radius: 18px;
+    padding: 18px;
+    background: linear-gradient(152deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 249, 0.94) 100%);
+    box-shadow: 0 18px 36px -26px rgba(15, 23, 42, 0.75);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 46%);
+    gap: 16px;
+    align-items: start;
+}
+
+.dark .gt-venue-card {
+    background: linear-gradient(152deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border-color: rgba(148, 163, 184, 0.3);
+    box-shadow: 0 20px 34px -24px rgba(0, 0, 0, 0.72);
+}
+
+.gt-venue-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.gt-venue-card h2 {
+    margin: 0;
+    font-size: clamp(1.1rem, 1.8vw, 1.36rem);
+    color: var(--gt-text);
+}
+
+.gt-venue-card-description {
+    margin: 0;
+    color: var(--gt-text-muted);
+    line-height: 1.65;
+    white-space: pre-line;
+}
+
+.gt-venue-card-media {
+    height: clamp(220px, 28vw, 280px);
+    align-self: start;
+}
+
+.gt-venue-slider {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #0f172a;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.gt-venue-slider-image-trigger {
+    all: unset;
+    cursor: zoom-in;
+    position: absolute;
+    inset: 0;
+    display: block;
+}
+
+.gt-venue-slider-image {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+    object-fit: cover;
+    display: block;
+    opacity: 0;
+    transform: scale(1.02);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.gt-venue-slider-image.is-active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.gt-venue-slider-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(226, 232, 240, 0.9);
+    font-size: 0.92rem;
+}
+
+.gt-venue-slider::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(2, 6, 23, 0.02) 35%, rgba(2, 6, 23, 0.32) 100%);
+}
+
+.gt-venue-slider-arrow {
+    position: absolute;
+    z-index: 3;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    background: rgba(15, 23, 42, 0.66);
+    color: #f8fafc;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.16s ease, background-color 0.16s ease;
+}
+
+.gt-venue-slider-arrow:hover {
+    background: rgba(15, 23, 42, 0.82);
+    transform: translateY(-50%) scale(1.06);
+}
+
+.gt-venue-slider-arrow-left {
+    left: 10px;
+}
+
+.gt-venue-slider-arrow-right {
+    right: 10px;
+}
+
+.gt-venue-slider-dots {
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: rgba(2, 6, 23, 0.35);
+}
+
+.gt-venue-slider-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(226, 232, 240, 0.55);
+    cursor: pointer;
+    transition: width 0.16s ease, background-color 0.16s ease;
+}
+
+.gt-venue-slider-dot.is-active {
+    width: 20px;
+    background: #f8fafc;
+}
+
+.gt-venue-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    background: rgba(2, 6, 23, 0.84);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.gt-venue-lightbox-panel {
+    width: min(1100px, 100%);
+    position: relative;
+    z-index: 2;
+}
+
+.gt-venue-lightbox-close {
+    position: fixed;
+    z-index: 5;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid rgba(226, 232, 240, 0.45);
+    background: rgba(2, 6, 23, 0.66);
+    color: #f8fafc;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.gt-venue-lightbox-frame {
+    position: relative;
+    height: min(78vh, 760px);
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    background: #020617;
+}
+
+.gt-venue-lightbox-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transform: scale(1.01);
+    transition: opacity 0.32s ease, transform 0.32s ease;
+}
+
+.gt-venue-lightbox-image.is-active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.gt-venue-lightbox-arrow {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    border: 1px solid rgba(226, 232, 240, 0.44);
+    background: rgba(15, 23, 42, 0.7);
+    color: #f8fafc;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.gt-venue-lightbox-arrow-left {
+    left: 16px;
+}
+
+.gt-venue-lightbox-arrow-right {
+    right: 16px;
+}
+
+.gt-venue-lightbox-dots {
+    position: fixed;
+    z-index: 5;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(2, 6, 23, 0.5);
+}
+
+.gt-venue-lightbox-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(226, 232, 240, 0.6);
+    cursor: pointer;
+    transition: width 0.2s ease;
+}
+
+.gt-venue-lightbox-dot.is-active {
+    width: 20px;
+    background: #f8fafc;
+}
+
+@media (max-width: 980px) {
+    .gt-venue-card {
+        grid-template-columns: 1fr;
+    }
+
+    .gt-venue-card-media {
+        height: min(62vw, 320px);
+    }
+}
+
+@media (max-width: 768px) {
+    .gt-venue-tabs {
+        gap: 2px;
+    }
+
+    .gt-venue-card {
+        padding: 14px;
+        border-radius: 14px;
+    }
+
+    .gt-venue-card-media {
+        height: 220px;
+    }
+
+    .gt-venue-slider-arrow {
+        width: 30px;
+        height: 30px;
+    }
+
+    .gt-venue-lightbox {
+        padding: 12px;
+    }
+
+    .gt-venue-lightbox-frame {
+        height: min(72vh, 460px);
+        border-radius: 12px;
+    }
+
+    .gt-venue-lightbox-close {
+        top: 8px;
+        right: 8px;
+        width: 32px;
+        height: 32px;
+    }
+
+    .gt-venue-lightbox-arrow {
+        width: 34px;
+        height: 34px;
+    }
+
+    .gt-venue-lightbox-arrow-left {
+        left: 8px;
+    }
+
+    .gt-venue-lightbox-arrow-right {
+        right: 8px;
+    }
+
+    .gt-venue-lightbox-dots {
+        bottom: 8px;
+    }
+}

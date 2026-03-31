@@ -37,37 +37,22 @@ function HomeShell({ children }) {
     const bannerRef = useRef(null);
     const bannerTrackRef = useRef(null);
 
-    const navItems = ['หน้าแรก', 'เกี่ยวกับ', 'ผู้สนับสนุน', 'กำหนดการกิจกรรม', 'ตัวอย่างชุดข้อมูล', 'ลงทะเบียน'];
+    const navItems = [
+        { key: 'home', label: 'หน้าแรก', onClick: () => navigate('/home') },
+        { key: 'about', label: 'เกี่ยวกับ', onClick: () => navigate('/home/about') },
+        { key: 'sponsors', label: 'ผู้สนับสนุน', onClick: () => navigate('/home/sponsors') },
+        { key: 'schedule', label: 'กำหนดการกิจกรรม', onClick: () => navigate('/home', { state: { scrollTo: 'schedule' } }) },
+        { key: 'venues', label: 'สถานที่จัดงาน', onClick: () => navigate('/home/venues') },
+        { key: 'datasets', label: 'ตัวอย่างชุดข้อมูล', onClick: () => navigate('/home/datasets') },
+        { key: 'register', label: 'ลงทะเบียน', onClick: () => navigate('/login') },
+    ];
 
-    const handleNavClick = (index) => {
+    const handleNavClick = (item) => {
         setMobileOpen(false);
 
-        if (index === 0) {
-            navigate('/home');
-            return;
+        if (item && typeof item.onClick === 'function') {
+            item.onClick();
         }
-
-        if (index === 1) {
-            navigate('/home/about');
-            return;
-        }
-
-        if (index === 2) {
-            navigate('/home/sponsors');
-            return;
-        }
-
-        if (index === 3) {
-            navigate('/home', { state: { scrollTo: 'schedule' } });
-            return;
-        }
-
-        if (index === 4) {
-            navigate('/home/datasets');
-            return;
-        }
-
-        navigate('/login');
     };
 
     const handleLogout = async () => {
@@ -235,11 +220,11 @@ function HomeShell({ children }) {
                         <Home size={20} />
                     </a>
                     <div className="gt-pill-links">
-                        {navItems.map((label, i) => {
-                            if (i === 5 && user) return null;
+                        {navItems.map((item) => {
+                            if (item.key === 'register' && user) return null;
                             return (
-                                <button key={label} className="gt-pill-link" onClick={() => handleNavClick(i)}>
-                                    {label}
+                                <button key={item.key} className="gt-pill-link" onClick={() => handleNavClick(item)}>
+                                    {item.label}
                                 </button>
                             );
                         })}
@@ -271,18 +256,18 @@ function HomeShell({ children }) {
 
                 <div className={`gt-pill-collapse ${mobileOpen ? 'open' : ''}`}>
                     <div className="gt-pill-collapse-inner">
-                        {navItems.map((label, i) => {
-                            const isRegister = i === 5;
+                        {navItems.map((item) => {
+                            const isRegister = item.key === 'register';
                             if (isRegister && user) {
                                 return (
-                                    <button key={label} className="gt-collapse-link" onClick={() => { setMobileOpen(false); navigate('/home', { state: { open: 'team' } }); }}>
+                                    <button key={item.key} className="gt-collapse-link" onClick={() => { setMobileOpen(false); navigate('/home', { state: { open: 'team' } }); }}>
                                         <Users size={16} /> ทีมของฉัน
                                     </button>
                                 );
                             }
                             return (
-                                <button key={label} className="gt-collapse-link" onClick={() => handleNavClick(i)}>
-                                    {label}
+                                <button key={item.key} className="gt-collapse-link" onClick={() => handleNavClick(item)}>
+                                    {item.label}
                                 </button>
                             );
                         })}

@@ -9,4 +9,5 @@ export const contentRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get('/contacts', controller.handleGetContacts);
     fastify.get('/participation-overview', controller.handleGetParticipationOverview);
     fastify.get('/datasets', controller.handleGetDatasets);
+    fastify.get('/venues', controller.handleGetVenues);
 };

@@ -41,6 +41,14 @@ export async function handleGetDatasets(req: FastifyRequest, reply: FastifyReply
     return reply.send(ok(datasets));
 }
 
+export async function handleGetVenues(
+    req: FastifyRequest<{ Querystring: { category?: string } }>,
+    reply: FastifyReply
+) {
+    const venues = await service.getVenues(req.server.ctx.db, req.query?.category);
+    return reply.send(ok(venues));
+}
+
 export async function handleGetAllRewardsAdmin(req: FastifyRequest, reply: FastifyReply) {
     const rewards = await service.getAllRewardsAdmin(req.server.ctx.db);
     return reply.send(ok(rewards));

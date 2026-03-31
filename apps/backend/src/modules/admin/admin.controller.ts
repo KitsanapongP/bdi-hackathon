@@ -4,8 +4,16 @@ import {
     dashboardQuerySchema,
     updateAllowlistSchema,
     idParamSchema,
+    venueIdParamSchema,
+    venueImageParamSchema,
     contactIdParamSchema,
     contactChannelParamSchema,
+    createVenueSchema,
+    updateVenueSchema,
+    reorderVenuesSchema,
+    createVenueImageSchema,
+    updateVenueImageSchema,
+    reorderVenueImagesSchema,
     createContactSchema,
     updateContactSchema,
     reorderContactsSchema,
@@ -273,6 +281,245 @@ export async function handleReorderSponsorsAdmin(req: FastifyRequest, reply: Fas
         const body = req.body as { updates: { id: number; displayOrder: number }[] };
         await contentService.reorderSponsorsAdmin(req.server.ctx.db, body.updates);
         return reply.send(ok({ success: true }, 'จัดลำดับ Sponsor สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleGetAllVenuesAdmin(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const venues = await contentService.getAllVenuesAdmin(req.server.ctx.db);
+        return reply.send(ok(venues));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleCreateVenueAdmin(req: FastifyRequest, reply: FastifyReply) {
+    const parsedBody = createVenueSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await contentService.createVenueAdmin(req.server.ctx.db, parsedBody.data);
+        return reply.status(201).send(ok(result, 'เพิ่มสถานที่สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateVenueAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = updateVenueSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await contentService.updateVenueAdmin(req.server.ctx.db, parsedParams.data.id, parsedBody.data);
+        return reply.send(ok(result, 'อัปเดตสถานที่สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleDeleteVenueAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await contentService.deleteVenueAdmin(req.server.ctx.db, parsedParams.data.id);
+        return reply.send(ok({ success: true }, 'ลบสถานที่สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleReorderVenuesAdmin(req: FastifyRequest, reply: FastifyReply) {
+    const parsedBody = reorderVenuesSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await contentService.reorderVenuesAdmin(req.server.ctx.db, parsedBody.data.updates || []);
+        return reply.send(ok({ success: true }, 'จัดลำดับสถานที่สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleCreateVenueImageAdmin(
+    req: FastifyRequest<{ Params: { venueId: string } }>,
+    reply: FastifyReply
+) {
+    const parsedParams = venueIdParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'venueId ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = createVenueImageSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await contentService.createVenueImageAdmin(req.server.ctx.db, parsedParams.data.venueId, parsedBody.data);
+        return reply.status(201).send(ok(result, 'เพิ่มรูปสถานที่สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateVenueImageAdmin(
+    req: FastifyRequest<{ Params: { venueId: string; imageId: string } }>,
+    reply: FastifyReply
+) {
+    const parsedParams = venueImageParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = updateVenueImageSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await contentService.updateVenueImageAdmin(
+            req.server.ctx.db,
+            parsedParams.data.venueId,
+            parsedParams.data.imageId,
+            parsedBody.data
+        );
+        return reply.send(ok(result, 'อัปเดตรูปสถานที่สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUploadVenueImageAdmin(
+    req: FastifyRequest<{ Params: { venueId: string; imageId: string } }>,
+    reply: FastifyReply
+) {
+    const parsedParams = venueImageParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const file = await (req as any).file();
+        if (!file) {
+            return reply.status(400).send({ ok: false, message: 'กรุณาแนบไฟล์รูปภาพ' });
+        }
+
+        const requestedFileName = (file.fields?.fileName?.value || '').toString();
+        const result = await contentService.uploadVenueImageAdmin(
+            req.server.ctx.db,
+            parsedParams.data.venueId,
+            parsedParams.data.imageId,
+            {
+                stream: file.file,
+                originalName: file.filename,
+                mimeType: file.mimetype,
+                requestedFileName: requestedFileName || null,
+            },
+        );
+
+        return reply.send(ok(result, 'อัปโหลดรูปสถานที่สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleDeleteVenueImageAdmin(
+    req: FastifyRequest<{ Params: { venueId: string; imageId: string } }>,
+    reply: FastifyReply
+) {
+    const parsedParams = venueImageParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await contentService.deleteVenueImageAdmin(req.server.ctx.db, parsedParams.data.venueId, parsedParams.data.imageId);
+        return reply.send(ok({ success: true }, 'ลบรูปสถานที่สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleReorderVenueImagesAdmin(
+    req: FastifyRequest<{ Params: { venueId: string } }>,
+    reply: FastifyReply
+) {
+    const parsedParams = venueIdParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'venueId ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = reorderVenueImagesSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await contentService.reorderVenueImagesAdmin(
+            req.server.ctx.db,
+            parsedParams.data.venueId,
+            parsedBody.data.updates || []
+        );
+        return reply.send(ok({ success: true }, 'จัดลำดับรูปสถานที่สำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });

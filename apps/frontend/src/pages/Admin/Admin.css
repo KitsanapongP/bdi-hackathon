@@ -1346,6 +1346,19 @@ body:has(.admin-ui-page) {
   font-size: 0.73rem;
 }
 
+.admin-ui-venue-image-preview {
+  min-height: 190px;
+}
+
+.admin-ui-venue-image-preview img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border: 1px solid var(--admin-ui-border);
+  border-radius: 10px;
+  background: #fff;
+}
+
 .admin-ui-headmin-ui-actions {
   display: inline-flex;
   gap: 8px;

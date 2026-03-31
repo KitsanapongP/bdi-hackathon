@@ -21,10 +21,15 @@ import type {
     ContentRewardAdmin,
     ContentSponsor,
     ContentSponsorAdmin,
+    ContentVenue,
+    ContentVenueAdmin,
+    ContentVenueCategory,
+    ContentVenueImageAdmin,
 } from './content.types.js';
 import { BadRequestError, NotFoundError } from '../../shared/errors.js';
 
 const PARTICIPATION_OVERVIEW_CACHE_TTL_MS = 5 * 60 * 1000;
+const VENUE_CATEGORIES: ContentVenueCategory[] = ['accommodation', 'transportation', 'attraction'];
 
 let participationOverviewCache:
     | {
@@ -167,6 +172,192 @@ function normalizeNullableText(value: string | null | undefined): string | null 
     if (value === undefined || value === null) return null;
     const normalized = String(value).trim();
     return normalized || null;
+}
+
+function normalizeVenueCategory(value: string | null | undefined): ContentVenueCategory | undefined {
+    if (value === undefined || value === null) return undefined;
+
+    const normalized = String(value).trim().toLowerCase();
+    if (!normalized) return undefined;
+
+    if ((VENUE_CATEGORIES as string[]).includes(normalized)) {
+        return normalized as ContentVenueCategory;
+    }
+
+    throw new BadRequestError('category ไม่ถูกต้อง');
+}
+
+function toVenueImageAdminResponse(row: {
+    venue_image_id: number;
+    venue_id: number;
+    image_storage_key: string;
+    image_alt_th: string | null;
+    image_alt_en: string | null;
+    sort_order: number;
+    is_cover: number;
+    is_enabled: number;
+}): ContentVenueImageAdmin {
+    return {
+        id: row.venue_image_id,
+        venueId: row.venue_id,
+        imageStorageKey: row.image_storage_key,
+        imageUrl: row.image_storage_key,
+        altTh: row.image_alt_th,
+        altEn: row.image_alt_en,
+        sortOrder: row.sort_order,
+        isCover: row.is_cover === 1,
+        isEnabled: row.is_enabled === 1,
+    };
+}
+
+function toVenueAdminResponse(row: {
+    venue_id: number;
+    venue_category: ContentVenueCategory;
+    venue_name_th: string;
+    venue_name_en: string | null;
+    description_th: string | null;
+    description_en: string | null;
+    sort_order: number;
+    is_enabled: number;
+}, images: ContentVenueImageAdmin[]): ContentVenueAdmin {
+    return {
+        id: row.venue_id,
+        category: row.venue_category,
+        nameTh: row.venue_name_th,
+        nameEn: row.venue_name_en,
+        descriptionTh: row.description_th,
+        descriptionEn: row.description_en,
+        sortOrder: row.sort_order,
+        isEnabled: row.is_enabled === 1,
+        images,
+    };
+}
+
+function normalizeVenueImageStorageKey(value: string): string {
+    const normalized = String(value || '').trim();
+    if (!normalized) {
+        throw new BadRequestError('กรุณาระบุ imageStorageKey');
+    }
+
+    if (/^https?:\/\//i.test(normalized)) {
+        try {
+            return new URL(normalized).toString();
+        } catch {
+            throw new BadRequestError('imageStorageKey ต้องเป็น URL ที่ถูกต้อง');
+        }
+    }
+
+    return normalized;
+}
+
+function normalizeVenuePayload(
+    data: {
+        category?: string | undefined;
+        nameTh?: string | undefined;
+        nameEn?: string | null | undefined;
+        descriptionTh?: string | null | undefined;
+        descriptionEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+    },
+    requireName: boolean,
+): {
+    category?: ContentVenueCategory;
+    nameTh?: string;
+    nameEn?: string | null;
+    descriptionTh?: string | null;
+    descriptionEn?: string | null;
+    sortOrder?: number;
+    isEnabled?: boolean;
+} {
+    const output: {
+        category?: ContentVenueCategory;
+        nameTh?: string;
+        nameEn?: string | null;
+        descriptionTh?: string | null;
+        descriptionEn?: string | null;
+        sortOrder?: number;
+        isEnabled?: boolean;
+    } = {};
+
+    if (data.category !== undefined) {
+        const category = normalizeVenueCategory(data.category);
+        if (category) {
+            output.category = category;
+        }
+    }
+
+    if (data.nameTh !== undefined) {
+        const normalized = data.nameTh.trim();
+        if (!normalized) throw new BadRequestError('nameTh ต้องไม่ว่าง');
+        output.nameTh = normalized;
+    } else if (requireName) {
+        throw new BadRequestError('nameTh ต้องไม่ว่าง');
+    }
+
+    if (data.nameEn !== undefined) output.nameEn = normalizeNullableText(data.nameEn);
+    if (data.descriptionTh !== undefined) output.descriptionTh = normalizeNullableText(data.descriptionTh);
+    if (data.descriptionEn !== undefined) output.descriptionEn = normalizeNullableText(data.descriptionEn);
+    if (data.isEnabled !== undefined) output.isEnabled = Boolean(data.isEnabled);
+
+    if (data.sortOrder !== undefined) {
+        const sortOrder = Number(data.sortOrder);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+            throw new BadRequestError('sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+        }
+        output.sortOrder = Math.trunc(sortOrder);
+    }
+
+    return output;
+}
+
+function normalizeVenueImagePayload(
+    data: {
+        imageStorageKey?: string | undefined;
+        imageAltTh?: string | null | undefined;
+        imageAltEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isCover?: boolean | undefined;
+        isEnabled?: boolean | undefined;
+    },
+    requireImageStorageKey: boolean,
+): {
+    imageStorageKey?: string;
+    imageAltTh?: string | null;
+    imageAltEn?: string | null;
+    sortOrder?: number;
+    isCover?: boolean;
+    isEnabled?: boolean;
+} {
+    const output: {
+        imageStorageKey?: string;
+        imageAltTh?: string | null;
+        imageAltEn?: string | null;
+        sortOrder?: number;
+        isCover?: boolean;
+        isEnabled?: boolean;
+    } = {};
+
+    if (data.imageStorageKey !== undefined) {
+        output.imageStorageKey = normalizeVenueImageStorageKey(data.imageStorageKey);
+    } else if (requireImageStorageKey) {
+        throw new BadRequestError('กรุณาระบุ imageStorageKey');
+    }
+
+    if (data.imageAltTh !== undefined) output.imageAltTh = normalizeNullableText(data.imageAltTh);
+    if (data.imageAltEn !== undefined) output.imageAltEn = normalizeNullableText(data.imageAltEn);
+    if (data.isCover !== undefined) output.isCover = Boolean(data.isCover);
+    if (data.isEnabled !== undefined) output.isEnabled = Boolean(data.isEnabled);
+
+    if (data.sortOrder !== undefined) {
+        const sortOrder = Number(data.sortOrder);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+            throw new BadRequestError('sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+        }
+        output.sortOrder = Math.trunc(sortOrder);
+    }
+
+    return output;
 }
 
 function normalizeCarouselImageStorageKey(imageInput: string): string {
@@ -1019,6 +1210,321 @@ export async function reorderSponsorsAdmin(db: DB, updates: { id: number; displa
     await repo.updateSponsorsOrder(db, updates.map(u => ({ id: u.id, sortOrder: u.displayOrder })));
 }
 
+export async function getAllVenuesAdmin(db: DB): Promise<ContentVenueAdmin[]> {
+    const venues = await repo.getAllVenuesAdmin(db);
+    const imageRows = await repo.getVenueImagesByVenueIdsAdmin(db, venues.map((venue) => venue.venue_id));
+
+    const imagesByVenue = new Map<number, ContentVenueImageAdmin[]>();
+    for (const imageRow of imageRows) {
+        const list = imagesByVenue.get(imageRow.venue_id) ?? [];
+        list.push(toVenueImageAdminResponse(imageRow));
+        imagesByVenue.set(imageRow.venue_id, list);
+    }
+
+    return venues.map((venue) =>
+        toVenueAdminResponse(venue, imagesByVenue.get(venue.venue_id) ?? []),
+    );
+}
+
+export async function createVenueAdmin(
+    db: DB,
+    data: {
+        category?: string | undefined;
+        nameTh: string;
+        nameEn?: string | null | undefined;
+        descriptionTh?: string | null | undefined;
+        descriptionEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+    }
+): Promise<ContentVenueAdmin> {
+    const payload = normalizeVenuePayload(data, true);
+    if (!payload.category) {
+        throw new BadRequestError('category ไม่ถูกต้อง');
+    }
+
+    const venueId = await repo.createVenueAdmin(db, {
+        category: payload.category,
+        nameTh: payload.nameTh!,
+        nameEn: payload.nameEn ?? null,
+        descriptionTh: payload.descriptionTh ?? null,
+        descriptionEn: payload.descriptionEn ?? null,
+        sortOrder: payload.sortOrder ?? 0,
+        isEnabled: payload.isEnabled ?? true,
+    });
+
+    const created = await repo.getVenueByIdAdmin(db, venueId);
+    if (!created) {
+        throw new NotFoundError('ไม่พบข้อมูลสถานที่ที่เพิ่งสร้าง');
+    }
+
+    return toVenueAdminResponse(created, []);
+}
+
+export async function updateVenueAdmin(
+    db: DB,
+    venueId: number,
+    data: {
+        category?: string | undefined;
+        nameTh?: string | undefined;
+        nameEn?: string | null | undefined;
+        descriptionTh?: string | null | undefined;
+        descriptionEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+    }
+): Promise<ContentVenueAdmin> {
+    const existing = await repo.getVenueByIdAdmin(db, venueId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูลสถานที่นี้');
+    }
+
+    const payload = normalizeVenuePayload(data, false);
+    await repo.updateVenueAdmin(db, venueId, payload);
+
+    const updated = await repo.getVenueByIdAdmin(db, venueId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบข้อมูลสถานที่หลังการอัปเดต');
+    }
+
+    const imageRows = await repo.getVenueImagesByVenueIdsAdmin(db, [venueId]);
+    return toVenueAdminResponse(updated, imageRows.map(toVenueImageAdminResponse));
+}
+
+export async function deleteVenueAdmin(db: DB, venueId: number): Promise<void> {
+    const existing = await repo.getVenueByIdAdmin(db, venueId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูลสถานที่นี้');
+    }
+
+    await repo.deleteVenueAdmin(db, venueId);
+}
+
+export async function reorderVenuesAdmin(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
+    const normalized = updates.map((update) => {
+        const sortOrder = Number(update.sortOrder);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+            throw new BadRequestError('sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+        }
+
+        return {
+            id: Number(update.id),
+            sortOrder: Math.trunc(sortOrder),
+        };
+    });
+
+    await repo.updateVenuesOrderAdmin(db, normalized);
+}
+
+export async function createVenueImageAdmin(
+    db: DB,
+    venueId: number,
+    data: {
+        imageStorageKey: string;
+        imageAltTh?: string | null | undefined;
+        imageAltEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isCover?: boolean | undefined;
+        isEnabled?: boolean | undefined;
+    }
+): Promise<ContentVenueImageAdmin> {
+    const venue = await repo.getVenueByIdAdmin(db, venueId);
+    if (!venue) {
+        throw new NotFoundError('ไม่พบข้อมูลสถานที่นี้');
+    }
+
+    const payload = normalizeVenueImagePayload(data, true);
+    const existingImages = await repo.getVenueImagesByVenueIdsAdmin(db, [venueId]);
+    const maxSortOrder = existingImages.reduce((max, row) => Math.max(max, Number(row.sort_order) || 0), -1);
+    const sortOrder = payload.sortOrder ?? (maxSortOrder + 1);
+    if (existingImages.some((row) => row.sort_order === sortOrder)) {
+        throw new BadRequestError('sortOrder ซ้ำกับรูปเดิมในสถานที่นี้');
+    }
+
+    const imageId = await repo.createVenueImageAdmin(db, {
+        venueId,
+        imageStorageKey: payload.imageStorageKey!,
+        imageAltTh: payload.imageAltTh ?? null,
+        imageAltEn: payload.imageAltEn ?? null,
+        sortOrder,
+        isCover: payload.isCover ?? false,
+        isEnabled: payload.isEnabled ?? true,
+    });
+
+    if (payload.isCover) {
+        await repo.clearVenueImageCoverFlagsAdmin(db, venueId, imageId);
+    }
+
+    const created = await repo.getVenueImageByIdAdmin(db, imageId);
+    if (!created) {
+        throw new NotFoundError('ไม่พบข้อมูลรูปที่เพิ่งสร้าง');
+    }
+
+    return toVenueImageAdminResponse(created);
+}
+
+export async function updateVenueImageAdmin(
+    db: DB,
+    venueId: number,
+    imageId: number,
+    data: {
+        imageStorageKey?: string | undefined;
+        imageAltTh?: string | null | undefined;
+        imageAltEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isCover?: boolean | undefined;
+        isEnabled?: boolean | undefined;
+    }
+): Promise<ContentVenueImageAdmin> {
+    const venue = await repo.getVenueByIdAdmin(db, venueId);
+    if (!venue) {
+        throw new NotFoundError('ไม่พบข้อมูลสถานที่นี้');
+    }
+
+    const existingImage = await repo.getVenueImageByIdAdmin(db, imageId);
+    if (!existingImage || existingImage.venue_id !== venueId) {
+        throw new NotFoundError('ไม่พบรูปนี้ในสถานที่ที่เลือก');
+    }
+
+    const payload = normalizeVenueImagePayload(data, false);
+    if (payload.sortOrder !== undefined) {
+        const existingImages = await repo.getVenueImagesByVenueIdsAdmin(db, [venueId]);
+        if (existingImages.some((row) => row.venue_image_id !== imageId && row.sort_order === payload.sortOrder)) {
+            throw new BadRequestError('sortOrder ซ้ำกับรูปเดิมในสถานที่นี้');
+        }
+    }
+
+    if (payload.isCover) {
+        await repo.clearVenueImageCoverFlagsAdmin(db, venueId, imageId);
+    }
+
+    await repo.updateVenueImageAdmin(db, imageId, payload);
+
+    const updated = await repo.getVenueImageByIdAdmin(db, imageId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบรูปหลังการอัปเดต');
+    }
+
+    return toVenueImageAdminResponse(updated);
+}
+
+export async function uploadVenueImageAdmin(
+    db: DB,
+    venueId: number,
+    imageId: number,
+    input: {
+        stream: NodeJS.ReadableStream;
+        originalName: string;
+        mimeType: string;
+        requestedFileName?: string | null;
+    },
+): Promise<ContentVenueImageAdmin> {
+    const venue = await repo.getVenueByIdAdmin(db, venueId);
+    if (!venue) {
+        throw new NotFoundError('ไม่พบข้อมูลสถานที่นี้');
+    }
+
+    const image = await repo.getVenueImageByIdAdmin(db, imageId);
+    if (!image || image.venue_id !== venueId) {
+        throw new NotFoundError('ไม่พบรูปนี้ในสถานที่ที่เลือก');
+    }
+
+    const extFromMime = extensionFromMimeType(input.mimeType);
+    if (!extFromMime) {
+        throw new BadRequestError('รองรับเฉพาะ PNG/JPG/WEBP/SVG');
+    }
+
+    const preferredName = (input.requestedFileName || '').trim() || input.originalName;
+    let safeFileName = sanitizeFileName(preferredName);
+    if (!safeFileName || !path.posix.extname(safeFileName)) {
+        safeFileName = `${sanitizeFileName(path.posix.parse(preferredName).name || 'venue-image')}${extFromMime}`;
+    }
+
+    const categoryFolder = String(venue.venue_category || 'accommodation').replace(/_/g, '-');
+    const uploadDir = path.join(process.cwd(), 'public', 'content', 'venues', categoryFolder);
+    await mkdir(uploadDir, { recursive: true });
+
+    const diskPath = path.join(uploadDir, safeFileName);
+    await pipeline(input.stream, createWriteStream(diskPath));
+
+    const imageStorageKey = `/static/content/venues/${categoryFolder}/${safeFileName}`;
+    await repo.updateVenueImageAdmin(db, imageId, { imageStorageKey });
+
+    const updated = await repo.getVenueImageByIdAdmin(db, imageId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบรูปหลังอัปโหลด');
+    }
+
+    return toVenueImageAdminResponse(updated);
+}
+
+export async function deleteVenueImageAdmin(db: DB, venueId: number, imageId: number): Promise<void> {
+    const venue = await repo.getVenueByIdAdmin(db, venueId);
+    if (!venue) {
+        throw new NotFoundError('ไม่พบข้อมูลสถานที่นี้');
+    }
+
+    const image = await repo.getVenueImageByIdAdmin(db, imageId);
+    if (!image || image.venue_id !== venueId) {
+        throw new NotFoundError('ไม่พบรูปนี้ในสถานที่ที่เลือก');
+    }
+
+    await repo.deleteVenueImageAdmin(db, imageId);
+}
+
+export async function reorderVenueImagesAdmin(
+    db: DB,
+    venueId: number,
+    updates: { id: number; sortOrder: number }[]
+): Promise<void> {
+    const venue = await repo.getVenueByIdAdmin(db, venueId);
+    if (!venue) {
+        throw new NotFoundError('ไม่พบข้อมูลสถานที่นี้');
+    }
+
+    const normalized = updates.map((update) => {
+        const sortOrder = Number(update.sortOrder);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+            throw new BadRequestError('sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+        }
+
+        return {
+            id: Number(update.id),
+            sortOrder: Math.trunc(sortOrder),
+        };
+    });
+
+    const uniqueSortOrder = new Set<number>();
+    for (const item of normalized) {
+        if (uniqueSortOrder.has(item.sortOrder)) {
+            throw new BadRequestError('sortOrder ซ้ำกันไม่ได้ในคำขอเดียวกัน');
+        }
+        uniqueSortOrder.add(item.sortOrder);
+    }
+
+    const existingImages = await repo.getVenueImagesByVenueIdsAdmin(db, [venueId]);
+    const imageIds = new Set(existingImages.map((row) => row.venue_image_id));
+    for (const item of normalized) {
+        if (!imageIds.has(item.id)) {
+            throw new BadRequestError('มี image id ที่ไม่อยู่ในสถานที่นี้');
+        }
+    }
+
+    const updatedIdSet = new Set(normalized.map((item) => item.id));
+    const untouchedSortOrders = new Set(
+        existingImages
+            .filter((row) => !updatedIdSet.has(row.venue_image_id))
+            .map((row) => row.sort_order)
+    );
+    for (const item of normalized) {
+        if (untouchedSortOrders.has(item.sortOrder)) {
+            throw new BadRequestError('sortOrder ซ้ำกับรูปที่ไม่ได้อยู่ในชุด reorder');
+        }
+    }
+
+    await repo.updateVenueImagesOrderAdmin(db, venueId, normalized);
+}
+
 export async function getAllCarouselsAdmin(db: DB): Promise<ContentCarouselSlideAdmin[]> {
     const rows = await repo.getAllCarouselSlidesAdmin(db);
     return rows.map(toCarouselAdminResponse);
@@ -1563,5 +2069,47 @@ export async function getDatasets(db: DB): Promise<ContentDataset[]> {
         link: row.dataset_link,
         domain: row.domain_code,
         recordCount: row.record_count === null ? null : Number(row.record_count),
+    }));
+}
+
+export async function getVenues(db: DB, categoryInput?: string): Promise<ContentVenue[]> {
+    const category = normalizeVenueCategory(categoryInput);
+
+    const venues = await repo.getEnabledVenues(db, category);
+    const imageRows = await repo.getEnabledVenueImagesByVenueIds(
+        db,
+        venues.map((venue) => venue.venue_id),
+    );
+
+    const imagesByVenue = new Map<number, ContentVenue['images']>();
+    for (const imageRow of imageRows) {
+        const normalizedImage = {
+            id: imageRow.venue_image_id,
+            imageStorageKey: imageRow.image_storage_key,
+            imageUrl: imageRow.image_storage_key,
+            altTh: imageRow.image_alt_th,
+            altEn: imageRow.image_alt_en,
+            sortOrder: imageRow.sort_order,
+            isCover: imageRow.is_cover === 1,
+        };
+
+        const list = imagesByVenue.get(imageRow.venue_id);
+        if (list) {
+            list.push(normalizedImage);
+            continue;
+        }
+
+        imagesByVenue.set(imageRow.venue_id, [normalizedImage]);
+    }
+
+    return venues.map((venue) => ({
+        id: venue.venue_id,
+        category: venue.venue_category,
+        nameTh: venue.venue_name_th,
+        nameEn: venue.venue_name_en,
+        descriptionTh: venue.description_th,
+        descriptionEn: venue.description_en,
+        sortOrder: venue.sort_order,
+        images: imagesByVenue.get(venue.venue_id) ?? [],
     }));
 }
