@@ -3,6 +3,7 @@ import type { DB } from '../../config/db.js';
 import type {
     ContentDatasetRow,
     ContentCarouselSlideRow,
+    ContentContactCategory,
     ContentContactChannelRow,
     ContentContactRow,
     ContentPageRow,
@@ -606,6 +607,7 @@ export async function getContactByIdAdmin(db: DB, contactId: number): Promise<Co
 export async function createContactAdmin(
     db: DB,
     data: {
+        contactCategory: ContentContactCategory;
         displayNameTh: string;
         displayNameEn: string;
         roleTh: string | null;
@@ -627,6 +629,7 @@ export async function createContactAdmin(
 ): Promise<number> {
     const [result] = await db.query(
         `INSERT INTO content_contacts (
+            contact_category,
             display_name_th,
             display_name_en,
             role_th,
@@ -644,8 +647,9 @@ export async function createContactAdmin(
             sort_order,
             is_enabled,
             published_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
+            data.contactCategory,
             data.displayNameTh,
             data.displayNameEn,
             data.roleTh,
@@ -673,6 +677,7 @@ export async function updateContactAdmin(
     db: DB,
     contactId: number,
     data: {
+        contactCategory?: ContentContactCategory | undefined;
         displayNameTh?: string | undefined;
         displayNameEn?: string | undefined;
         roleTh?: string | null | undefined;
@@ -695,6 +700,7 @@ export async function updateContactAdmin(
     const fields: string[] = [];
     const values: Array<string | number | null> = [];
 
+    if (data.contactCategory !== undefined) { fields.push('contact_category = ?'); values.push(data.contactCategory); }
     if (data.displayNameTh !== undefined) { fields.push('display_name_th = ?'); values.push(data.displayNameTh); }
     if (data.displayNameEn !== undefined) { fields.push('display_name_en = ?'); values.push(data.displayNameEn); }
     if (data.roleTh !== undefined) { fields.push('role_th = ?'); values.push(data.roleTh); }

@@ -1,7 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import HomeShell from './HomeShell';
 import { apiUrl } from '../../lib/api';
 import './InfoPages.css';
+
+const CONTACT_SECTIONS = [
+    {
+        key: 'event_inquiry',
+        title: 'ติดต่อสอบถามรายละเอียดการจัดงาน',
+    },
+    {
+        key: 'dataset_inquiry',
+        title: 'ติดต่อสอบถามรายละเอียดชุดข้อมูล',
+    },
+    {
+        key: 'tech_it',
+        title: 'ฝ่ายเทคนิคและสารสนเทศ',
+    },
+    {
+        key: 'facility',
+        title: 'ฝ่ายอาคารสถานที่',
+    },
+];
+
+const isKnownCategory = (category) => CONTACT_SECTIONS.some((section) => section.key === category);
 
 function ContactPage() {
     const [contacts, setContacts] = useState([]);
@@ -48,45 +69,86 @@ function ContactPage() {
         };
     }, []);
 
+    const contactsByCategory = useMemo(() => {
+        const grouped = new Map(CONTACT_SECTIONS.map((section) => [section.key, []]));
+
+        contacts.forEach((contact) => {
+            const category = isKnownCategory(contact.contactCategory) ? contact.contactCategory : 'event_inquiry';
+            grouped.get(category)?.push(contact);
+        });
+
+        return grouped;
+    }, [contacts]);
+
     return (
         <HomeShell>
             <main className="gt-info-main gt-container">
                 <section className="gt-info-panel">
                     <h1>ติดต่อสอบถาม</h1>
+                    <p className="gt-contact-page-subtitle">ข้อมูลผู้ติดต่อถูกจัดกลุ่มตามหน้าที่เพื่อให้ค้นหาได้ง่ายขึ้น</p>
 
                     {loading ? (
                         <p className="gt-info-status">กำลังโหลดข้อมูล...</p>
                     ) : error ? (
                         <p className="gt-info-status gt-info-status-error">{error}</p>
-                    ) : contacts.length === 0 ? (
-                        <p className="gt-info-status">ยังไม่มีข้อมูลติดต่อ</p>
                     ) : (
-                        <div className="gt-contact-grid">
-                            {contacts.map((contact) => (
-                                <article key={contact.id} className="gt-contact-card">
-                                    <h2>{contact.displayNameTh || contact.displayNameEn}</h2>
-                                    {contact.roleTh && <p className="gt-contact-meta">{contact.roleTh}</p>}
-                                    {contact.organizationTh && <p className="gt-contact-meta">{contact.organizationTh}</p>}
-                                    {contact.departmentTh && <p className="gt-contact-meta">{contact.departmentTh}</p>}
-                                    {contact.bioTh && <p className="gt-contact-bio">{contact.bioTh}</p>}
+                        <>
+                            {contacts.length === 0 ? <p className="gt-info-status">ยังไม่มีข้อมูลติดต่อในระบบ</p> : null}
+                            <div className="gt-contact-sections">
+                                {CONTACT_SECTIONS.map((section) => {
+                                    const sectionContacts = contactsByCategory.get(section.key) || [];
 
-                                    <div className="gt-contact-channels">
-                                        {(contact.channels || []).map((channel) => (
-                                            <div key={channel.id} className="gt-contact-channel">
-                                                <span className="gt-contact-label">{channel.labelTh || channel.type}</span>
-                                                {channel.url ? (
-                                                    <a href={channel.url} target="_blank" rel="noopener noreferrer">
-                                                        {channel.value}
-                                                    </a>
-                                                ) : (
-                                                    <span>{channel.value}</span>
-                                                )}
+                                    return (
+                                        <section key={section.key} className="gt-contact-section">
+                                            <div className="gt-contact-section-head">
+                                                <h2>{section.title}</h2>
                                             </div>
-                                        ))}
-                                    </div>
-                                </article>
-                            ))}
-                        </div>
+
+                                            {sectionContacts.length === 0 ? (
+                                                <p className="gt-contact-section-empty">ยังไม่มีข้อมูลผู้ติดต่อในหมวดนี้</p>
+                                            ) : (
+                                                <div className="gt-contact-grid">
+                                                    {sectionContacts.map((contact) => {
+                                                        const role = contact.roleTh || contact.roleEn;
+                                                        const organization = contact.organizationTh || contact.organizationEn;
+                                                        const department = contact.departmentTh || contact.departmentEn;
+                                                        const bio = contact.bioTh || contact.bioEn;
+
+                                                        return (
+                                                            <article key={contact.id} className="gt-contact-card">
+                                                                <div className="gt-contact-card-head">
+                                                                    <h3>{contact.displayNameTh || contact.displayNameEn}</h3>
+                                                                    {role ? <p className="gt-contact-meta">{role}</p> : null}
+                                                                </div>
+
+                                                                {organization ? <p className="gt-contact-meta">{organization}</p> : null}
+                                                                {department ? <p className="gt-contact-meta">{department}</p> : null}
+                                                                {bio ? <p className="gt-contact-bio">{bio}</p> : null}
+
+                                                                <div className="gt-contact-channels">
+                                                                    {(contact.channels || []).map((channel) => (
+                                                                        <div key={channel.id} className="gt-contact-channel">
+                                                                            <span className="gt-contact-label">{channel.labelTh || channel.labelEn || channel.type}</span>
+                                                                            {channel.url ? (
+                                                                                <a href={channel.url} target="_blank" rel="noopener noreferrer">
+                                                                                    {channel.value}
+                                                                                </a>
+                                                                            ) : (
+                                                                                <span>{channel.value}</span>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </article>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </section>
+                                    );
+                                })}
+                            </div>
+                        </>
                     )}
                 </section>
             </main>

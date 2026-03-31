@@ -47,22 +47,61 @@
     color: #ef4444;
 }
 
+.gt-contact-page-subtitle {
+    margin: 0 0 22px;
+    color: var(--gt-text-muted);
+    line-height: 1.7;
+}
+
+.gt-contact-sections {
+    display: grid;
+    gap: 18px;
+}
+
+.gt-contact-section {
+    border: 1px solid color-mix(in srgb, var(--gt-primary) 20%, var(--gt-border));
+    border-radius: 16px;
+    padding: 16px;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.96) 0%, rgba(241, 245, 249, 0.9) 100%);
+}
+
+.dark .gt-contact-section {
+    border-color: color-mix(in srgb, var(--gt-primary) 34%, rgba(148, 163, 184, 0.36));
+    background: linear-gradient(165deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.92) 100%);
+}
+
+.gt-contact-section-head {
+    margin-bottom: 12px;
+}
+
+.gt-contact-section-head h2 {
+    margin: 0;
+    font-size: 1.08rem;
+    color: var(--gt-text);
+}
+
+.gt-contact-section-empty {
+    margin: 0;
+    color: var(--gt-text-muted);
+    font-size: 0.93rem;
+}
+
 .gt-contact-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
+    gap: 12px;
 }
 
 .gt-contact-card {
     border: 1px solid var(--gt-border);
     border-radius: 14px;
-    padding: 18px;
+    padding: 16px;
     background: var(--gt-surface-alt);
 }
 
-.gt-contact-card h2 {
+.gt-contact-card-head h3 {
     margin: 0;
-    font-size: 1.15rem;
+    font-size: 1.02rem;
     color: var(--gt-text);
 }
 
@@ -75,12 +114,14 @@
 .gt-contact-bio {
     margin: 12px 0 0;
     color: var(--gt-text);
-    font-size: 0.93rem;
-    line-height: 1.6;
+    font-size: 0.92rem;
+    line-height: 1.65;
 }
 
 .gt-contact-channels {
     margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px dashed color-mix(in srgb, var(--gt-border) 76%, transparent);
     display: grid;
     gap: 8px;
 }
@@ -94,7 +135,7 @@
 }
 
 .gt-contact-label {
-    min-width: 70px;
+    min-width: 92px;
     color: var(--gt-text-muted);
 }
 
@@ -398,6 +439,21 @@
 }
 
 @media (max-width: 768px) {
+    .gt-contact-section {
+        padding: 14px;
+    }
+
+    .gt-contact-channel {
+        flex-direction: column;
+        gap: 2px;
+        align-items: flex-start;
+    }
+
+    .gt-contact-label {
+        min-width: 0;
+        font-size: 0.82rem;
+    }
+
     .gt-faq-question {
         padding: 14px 14px;
     }

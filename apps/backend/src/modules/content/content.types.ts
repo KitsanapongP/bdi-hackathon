@@ -181,6 +181,7 @@ export type ContentPageAdmin = ContentPage & {
 
 export type ContentContactRow = {
     contact_id: number;
+    contact_category: ContentContactCategory;
     display_name_th: string;
     display_name_en: string;
     role_th: string | null;
@@ -229,8 +230,11 @@ export type ContentContactChannel = {
     sortOrder: number;
 };
 
+export type ContentContactCategory = 'event_inquiry' | 'dataset_inquiry' | 'tech_it' | 'facility';
+
 export type ContentContact = {
     id: number;
+    contactCategory: ContentContactCategory;
     displayNameTh: string;
     displayNameEn: string;
     roleTh: string | null;
@@ -264,6 +268,7 @@ export type ContentContactChannelAdmin = {
 
 export type ContentContactAdmin = {
     id: number;
+    contactCategory: ContentContactCategory;
     displayNameTh: string;
     displayNameEn: string;
     roleTh: string | null;

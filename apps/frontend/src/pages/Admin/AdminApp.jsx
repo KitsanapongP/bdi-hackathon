@@ -2879,6 +2879,7 @@ function StaticContactsPage() {
   const [contactErrors, setContactErrors] = useState({})
   const [channelErrors, setChannelErrors] = useState({})
   const [contactForm, setContactForm] = useState({
+    contactCategory: 'event_inquiry',
     displayNameTh: '',
     displayNameEn: '',
     roleTh: '',
@@ -2949,6 +2950,7 @@ function StaticContactsPage() {
     setEditingContactId(null)
     setContactErrors({})
     setContactForm({
+      contactCategory: 'event_inquiry',
       displayNameTh: '',
       displayNameEn: '',
       roleTh: '',
@@ -2974,6 +2976,7 @@ function StaticContactsPage() {
     setEditingContactId(item.id)
     setContactErrors({})
     setContactForm({
+      contactCategory: item.contactCategory || 'event_inquiry',
       displayNameTh: item.displayNameTh || '',
       displayNameEn: item.displayNameEn || '',
       roleTh: item.roleTh || '',
@@ -2997,6 +3000,7 @@ function StaticContactsPage() {
 
   const validateContact = () => {
     const next = {}
+    if (!contactForm.contactCategory.trim()) next.contactCategory = 'กรุณาเลือกประเภทผู้ติดต่อ'
     if (!contactForm.displayNameTh.trim()) next.displayNameTh = 'กรุณากรอก display_name_th'
     if (!contactForm.displayNameEn.trim()) next.displayNameEn = 'กรุณากรอก display_name_en'
     if (Number(contactForm.sortOrder) < 1) next.sortOrder = 'sort_order ต้องมากกว่าหรือเท่ากับ 1'
@@ -3008,6 +3012,7 @@ function StaticContactsPage() {
     if (!validateContact()) return
 
     const payload = {
+      contactCategory: contactForm.contactCategory.trim(),
       displayNameTh: contactForm.displayNameTh.trim(),
       displayNameEn: contactForm.displayNameEn.trim(),
       roleTh: contactForm.roleTh.trim() || null,
@@ -3262,6 +3267,16 @@ function StaticContactsPage() {
   }
 
   const channelTypeOptions = ['email', 'phone', 'line', 'facebook', 'instagram', 'linkedin', 'x', 'website', 'map', 'other']
+  const contactCategoryOptions = [
+    { value: 'event_inquiry', label: 'ติดต่อสอบถามรายละเอียดการจัดงาน' },
+    { value: 'dataset_inquiry', label: 'ติดต่อสอบถามรายละเอียดชุดข้อมูล' },
+    { value: 'tech_it', label: 'ฝ่ายเทคนิคและสารสนเทศ' },
+    { value: 'facility', label: 'ฝ่ายอาคารสถานที่' },
+  ]
+
+  const getContactCategoryLabel = (category) => {
+    return contactCategoryOptions.find((item) => item.value === category)?.label || '-'
+  }
 
   return (
     <div className="admin-ui-stack">
@@ -3279,8 +3294,8 @@ function StaticContactsPage() {
       <AdminDataTable
         loading={loading}
         rows={sortedContacts}
-        searchKeys={['displayNameTh', 'displayNameEn', 'roleTh', 'roleEn', 'organizationTh', 'organizationEn']}
-        searchPlaceholder="ค้นหา display name / role / organization"
+        searchKeys={['contactCategory', 'displayNameTh', 'displayNameEn', 'roleTh', 'roleEn', 'organizationTh', 'organizationEn']}
+        searchPlaceholder="ค้นหาประเภท / display name / role / organization"
         filters={[
           { label: 'ทั้งหมด', value: 'all', predicate: () => true },
           { label: 'Enabled', value: 'enabled', predicate: (row) => row.isEnabled },
@@ -3298,6 +3313,11 @@ function StaticContactsPage() {
                 <span>{row.roleTh || row.roleEn || '-'}</span>
               </div>
             ),
+          },
+          {
+            key: 'contactCategory',
+            label: 'Category',
+            render: (row) => getContactCategoryLabel(row.contactCategory),
           },
           {
             key: 'organization',
@@ -3503,6 +3523,22 @@ function StaticContactsPage() {
         subtitle="ตั้งค่าทุกคอลัมน์ของ content_contacts"
       >
         <div className="admin-ui-form">
+          <label htmlFor="contact-category">
+            contact_category
+            <select
+              id="contact-category"
+              value={contactForm.contactCategory}
+              onChange={(event) => setContactForm((prev) => ({ ...prev, contactCategory: event.target.value }))}
+            >
+              {contactCategoryOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {contactErrors.contactCategory ? <small>{contactErrors.contactCategory}</small> : null}
+          </label>
+
           <label htmlFor="contact-display-name-th">
             display_name_th *
             <input

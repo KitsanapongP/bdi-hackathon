@@ -9,6 +9,7 @@ import type {
     ContentCarouselSlide,
     ContentCarouselSlideAdmin,
     ContentContact,
+    ContentContactCategory,
     ContentContactAdmin,
     ContentContactChannelAdmin,
     ContentPage,
@@ -412,8 +413,31 @@ function toContactChannelAdminResponse(row: {
     };
 }
 
+const CONTACT_CATEGORIES: ContentContactCategory[] = ['event_inquiry', 'dataset_inquiry', 'tech_it', 'facility'];
+
+function isContactCategory(value: string): value is ContentContactCategory {
+    return CONTACT_CATEGORIES.includes(value as ContentContactCategory);
+}
+
+function normalizeContactCategory(
+    value: string | null | undefined,
+    mode: 'strict' | 'fallback',
+): ContentContactCategory {
+    const normalized = (value || '').trim().toLowerCase();
+    if (isContactCategory(normalized)) {
+        return normalized;
+    }
+
+    if (mode === 'fallback') {
+        return 'event_inquiry';
+    }
+
+    throw new BadRequestError('contactCategory ไม่ถูกต้อง');
+}
+
 function toContactAdminResponse(row: {
     contact_id: number;
+    contact_category: ContentContactCategory;
     display_name_th: string;
     display_name_en: string;
     role_th: string | null;
@@ -434,6 +458,7 @@ function toContactAdminResponse(row: {
 }, channels: ContentContactChannelAdmin[]): ContentContactAdmin {
     return {
         id: row.contact_id,
+        contactCategory: normalizeContactCategory(row.contact_category, 'fallback'),
         displayNameTh: row.display_name_th,
         displayNameEn: row.display_name_en,
         roleTh: row.role_th,
@@ -469,6 +494,7 @@ function parsePublishedAt(value: string | null | undefined): string | null {
 }
 
 function normalizeContactPayload(data: {
+    contactCategory?: string | undefined;
     displayNameTh?: string | undefined;
     displayNameEn?: string | undefined;
     roleTh?: string | null | undefined;
@@ -487,6 +513,7 @@ function normalizeContactPayload(data: {
     isEnabled?: boolean | undefined;
     publishedAt?: string | null | undefined;
 }, requireName: boolean): {
+    contactCategory?: ContentContactCategory;
     displayNameTh?: string;
     displayNameEn?: string;
     roleTh?: string | null;
@@ -506,6 +533,7 @@ function normalizeContactPayload(data: {
     publishedAt?: string | null;
 } {
     const output: {
+        contactCategory?: ContentContactCategory;
         displayNameTh?: string;
         displayNameEn?: string;
         roleTh?: string | null;
@@ -524,6 +552,10 @@ function normalizeContactPayload(data: {
         isEnabled?: boolean;
         publishedAt?: string | null;
     } = {};
+
+    if (data.contactCategory !== undefined) {
+        output.contactCategory = normalizeContactCategory(data.contactCategory, 'strict');
+    }
 
     if (data.displayNameTh !== undefined) {
         const v = data.displayNameTh.trim();
@@ -1166,6 +1198,7 @@ export async function getAllContactsAdmin(db: DB): Promise<ContentContactAdmin[]
 export async function createContactAdmin(
     db: DB,
     data: {
+        contactCategory?: string | undefined;
         displayNameTh: string;
         displayNameEn: string;
         roleTh?: string | null | undefined;
@@ -1187,6 +1220,7 @@ export async function createContactAdmin(
 ): Promise<ContentContactAdmin> {
     const payload = normalizeContactPayload(data, true);
     const contactId = await repo.createContactAdmin(db, {
+        contactCategory: payload.contactCategory ?? 'event_inquiry',
         displayNameTh: payload.displayNameTh!,
         displayNameEn: payload.displayNameEn!,
         roleTh: payload.roleTh ?? null,
@@ -1218,6 +1252,7 @@ export async function updateContactAdmin(
     db: DB,
     contactId: number,
     data: {
+        contactCategory?: string | undefined;
         displayNameTh?: string | undefined;
         displayNameEn?: string | undefined;
         roleTh?: string | null;
@@ -1497,6 +1532,7 @@ export async function getContacts(db: DB): Promise<ContentContact[]> {
 
     return contacts.map((contact) => ({
         id: contact.contact_id,
+        contactCategory: normalizeContactCategory(contact.contact_category, 'fallback'),
         displayNameTh: contact.display_name_th,
         displayNameEn: contact.display_name_en,
         roleTh: contact.role_th,

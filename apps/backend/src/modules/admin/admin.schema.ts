@@ -51,8 +51,10 @@ export const contactChannelParamSchema = z.object({
 });
 
 const nullableText = z.string().nullable().optional();
+const contactCategoryEnum = z.enum(['event_inquiry', 'dataset_inquiry', 'tech_it', 'facility']);
 
 export const createContactSchema = z.object({
+    contactCategory: contactCategoryEnum.optional(),
     displayNameTh: z.string().trim().min(1, 'displayNameTh ต้องไม่ว่าง'),
     displayNameEn: z.string().trim().min(1, 'displayNameEn ต้องไม่ว่าง'),
     roleTh: nullableText,
