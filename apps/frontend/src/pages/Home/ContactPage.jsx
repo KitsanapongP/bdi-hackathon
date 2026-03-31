@@ -85,7 +85,6 @@ function ContactPage() {
             <main className="gt-info-main gt-container">
                 <section className="gt-info-panel">
                     <h1>ติดต่อสอบถาม</h1>
-                    <p className="gt-contact-page-subtitle">ข้อมูลผู้ติดต่อถูกจัดกลุ่มตามหน้าที่เพื่อให้ค้นหาได้ง่ายขึ้น</p>
 
                     {loading ? (
                         <p className="gt-info-status">กำลังโหลดข้อมูล...</p>
