@@ -1096,12 +1096,15 @@ CREATE TABLE `sys_configs` (
 --
 
 INSERT INTO `sys_configs` (`config_key`, `config_value`, `description_th`, `description_en`, `updated_at`) VALUES
-('GLOBAL_SELECTION_CONFIRM_DEADLINE_AT', '2026-03-31 23:19:00', NULL, NULL, '2026-03-07 23:19:56'),
+('GLOBAL_SELECTION_CONFIRM_CLOSE_AT', '2026-06-01 23:59:59', 'วันเวลาปิดยืนยันการเข้าร่วมโครงการหลังผ่านการคัดเลือก', 'Global selection confirmation closing datetime', '2026-04-01 00:00:00'),
+('GLOBAL_SELECTION_CONFIRM_OPEN_AT', '2026-04-02 00:00:00', 'วันเวลาเปิดยืนยันการเข้าร่วมโครงการหลังผ่านการคัดเลือก', 'Global selection confirmation opening datetime', '2026-04-01 00:00:00'),
 ('REGISTRATION_CLOSE_AT', '2026-06-03 23:59:59', 'วันเวลาปิดลงทะเบียน', 'Registration closing datetime', '2026-03-29 00:00:00'),
 ('REGISTRATION_OPEN_AT', '2026-04-01 00:00:00', 'วันเวลาเปิดลงทะเบียน', 'Registration opening datetime', '2026-03-29 00:00:00'),
 ('TEAM_CODE_PREFIX', 'TM', 'คำนำหน้าโค้ดทีม', 'Team code prefix', '2026-02-20 17:50:25'),
 ('TEAM_RECRUITMENT_CLOSE_AT', '2026-06-03 23:59:59', 'วันเวลาปิดรับสมัครทีม', 'Team recruitment closing datetime', '2026-03-29 00:00:00'),
 ('TEAM_RECRUITMENT_OPEN_AT', '2026-05-24 00:00:00', 'วันเวลาเปิดรับสมัครทีม', 'Team recruitment opening datetime', '2026-03-29 00:00:00'),
+('TEAM_SELECTION_SUBMISSION_CLOSE_AT', '2026-06-03 23:59:59', 'วันเวลาปิดส่งทีมเข้าคัดเลือก', 'Team selection submission closing datetime', '2026-04-01 00:00:00'),
+('TEAM_SELECTION_SUBMISSION_OPEN_AT', '2026-05-24 00:00:00', 'วันเวลาเปิดส่งทีมเข้าคัดเลือก', 'Team selection submission opening datetime', '2026-04-01 00:00:00'),
 ('TEAM_MEMBER_MAX', '5', 'จำนวนสมาชิกสูงสุดต่อทีม', 'Maximum members per team', '2026-02-20 17:50:25'),
 ('TEAM_MEMBER_MIN', '3', 'จำนวนสมาชิกขั้นต่ำต่อทีม', 'Minimum members per team', '2026-02-20 17:50:25');
 

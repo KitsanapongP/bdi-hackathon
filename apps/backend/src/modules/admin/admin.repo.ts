@@ -633,6 +633,20 @@ export async function applyGlobalSelectionDeadlineToPassedTeams(db: DB, confirma
     `, { confirmationDeadlineAt });
 }
 
+export async function expirePassedTeamsToNotJoined(db: DB): Promise<number> {
+    const [result] = await db.query<ResultSetHeader>(`
+        UPDATE team_teams
+        SET status = 'not_joined',
+            updated_at = NOW()
+        WHERE status = 'passed'
+          AND confirmed_at IS NULL
+          AND confirmation_deadline_at IS NOT NULL
+          AND confirmation_deadline_at < NOW()
+          AND deleted_at IS NULL
+    `);
+    return Number(result.affectedRows || 0);
+}
+
 export async function listSubmissionTasksAdmin(db: DB): Promise<AdminSubmissionTaskRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(`
         SELECT

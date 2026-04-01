@@ -56,6 +56,7 @@ import {
     handleSetSelectionResult,
     handleGetGlobalSelectionDeadline,
     handleSetGlobalSelectionDeadline,
+    handleExpireSelectionNotJoined,
 } from './admin.controller.js';
 
 const adminRoutes: FastifyPluginAsync = async (fastify) => {
@@ -124,6 +125,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.post('/selection/teams/:teamId/result', handleSetSelectionResult);
     fastify.get('/selection/global-deadline', handleGetGlobalSelectionDeadline);
     fastify.put('/selection/global-deadline', handleSetGlobalSelectionDeadline);
+    fastify.post('/selection/expire-not-joined', handleExpireSelectionNotJoined);
 };
 
 export default adminRoutes;

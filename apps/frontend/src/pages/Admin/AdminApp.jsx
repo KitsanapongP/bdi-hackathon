@@ -6302,8 +6302,10 @@ function SelectionPage() {
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState([])
   const [status, setStatus] = useState('submitted')
-  const [deadline, setDeadline] = useState('')
-  const [savingDeadline, setSavingDeadline] = useState(false)
+  const [openAt, setOpenAt] = useState('')
+  const [closeAt, setCloseAt] = useState('')
+  const [savingWindow, setSavingWindow] = useState(false)
+  const [expiringSelection, setExpiringSelection] = useState(false)
 
   const fetchRows = useCallback(async () => {
     try {
@@ -6333,19 +6335,10 @@ function SelectionPage() {
         const payload = await res.json()
         if (!mounted) return
         if (res.ok && payload?.ok) {
-          const raw = String(payload?.data?.confirmDeadlineAt || '')
-          if (!raw) {
-            setDeadline('')
-            return
-          }
-          const normalized = raw.includes(' ') && !raw.includes('T') ? raw.replace(' ', 'T') : raw
-          const date = new Date(normalized)
-          if (Number.isNaN(date.getTime())) {
-            setDeadline('')
-            return
-          }
-          const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-          setDeadline(offsetDate.toISOString().slice(0, 16))
+          const openRaw = payload?.data?.openAt
+          const closeRaw = payload?.data?.closeAt
+          setOpenAt(formatDateInput(openRaw))
+          setCloseAt(formatDateInput(closeRaw))
         }
       } catch {
         // no-op
@@ -6354,23 +6347,34 @@ function SelectionPage() {
     return () => { mounted = false }
   }, [])
 
-  const saveGlobalDeadline = async () => {
+  const saveGlobalConfirmWindow = async () => {
+    const openMs = new Date(openAt).getTime()
+    const closeMs = new Date(closeAt).getTime()
+    if (!Number.isFinite(openMs) || !Number.isFinite(closeMs)) {
+      pushToast({ type: 'error', title: 'รูปแบบวันเวลาไม่ถูกต้อง' })
+      return
+    }
+    if (openMs > closeMs) {
+      pushToast({ type: 'error', title: 'วันเวลาเปิดต้องไม่มากกว่าวันเวลาปิด' })
+      return
+    }
+
     try {
-      setSavingDeadline(true)
+      setSavingWindow(true)
       const res = await fetch(apiUrl('/api/admin/selection/global-deadline'), {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirmDeadlineAt: deadline }),
+        body: JSON.stringify({ openAt, closeAt }),
       })
       const payload = await res.json()
       if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'save failed')
-      pushToast({ title: 'บันทึก Global deadline สำเร็จ' })
+      pushToast({ title: 'บันทึก Global confirm window สำเร็จ' })
       fetchRows()
     } catch (err) {
-      pushToast({ type: 'error', title: err?.message || 'บันทึก Global deadline ไม่สำเร็จ' })
+      pushToast({ type: 'error', title: err?.message || 'บันทึก Global confirm window ไม่สำเร็จ' })
     } finally {
-      setSavingDeadline(false)
+      setSavingWindow(false)
     }
   }
 
@@ -6394,6 +6398,27 @@ function SelectionPage() {
     }
   }
 
+  const expireTimedOutSelectionTeams = async () => {
+    const confirmed = window.confirm('อัปเดตทีมที่หมดเวลายืนยันให้เป็น not_joined ตอนนี้ใช่หรือไม่?')
+    if (!confirmed) return
+    try {
+      setExpiringSelection(true)
+      const res = await fetch(apiUrl('/api/admin/selection/expire-not-joined'), {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'expire failed')
+      const updatedCount = Number(payload?.data?.updatedCount || 0)
+      pushToast({ title: `อัปเดตสถานะสำเร็จ ${updatedCount} ทีม` })
+      fetchRows()
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'อัปเดตทีมหมดเวลาไม่สำเร็จ' })
+    } finally {
+      setExpiringSelection(false)
+    }
+  }
+
   return (
     <div className="admin-ui-stack">
       <SectionHeading title="Selection Result" description="ประกาศผลผ่าน/ไม่ผ่าน และกำหนดเวลาให้ทีมยืนยันเข้าร่วม" />
@@ -6410,29 +6435,42 @@ function SelectionPage() {
             </select>
           </label>
           <label>
-            Confirm deadline (for passed)
-            <input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+            Confirm open at
+            <input type="datetime-local" value={openAt} onChange={(e) => setOpenAt(e.target.value)} />
+          </label>
+          <label>
+            Confirm close at
+            <input type="datetime-local" value={closeAt} onChange={(e) => setCloseAt(e.target.value)} />
           </label>
           <button
             type="button"
             className="admin-ui-btn admin-ui-btn-primary"
-            onClick={saveGlobalDeadline}
-            disabled={savingDeadline || !deadline}
-            title="บันทึก deadline กลางสำหรับทุกทีมที่ passed"
+            onClick={saveGlobalConfirmWindow}
+            disabled={savingWindow || !openAt || !closeAt}
+            title="บันทึกช่วงเวลาเปิด/ปิดการยืนยันสำหรับทุกทีมที่ passed"
           >
-            {savingDeadline ? 'Saving...' : 'Save Global deadline'}
+            {savingWindow ? 'Saving...' : 'Save Global window'}
           </button>
           <button
             type="button"
             className="admin-ui-btn"
-            onClick={() => setDeadline('')}
-            title="ล้างค่า deadline ที่กรอกไว้"
+            onClick={() => { setOpenAt(''); setCloseAt('') }}
+            title="ล้างค่าเวลาเปิด/ปิดที่กรอกไว้"
           >
-            Clear deadline
+            Clear window
           </button>
           <button type="button" className="admin-ui-btn" onClick={fetchRows}>
             <RefreshCw size={14} />
             Refresh
+          </button>
+          <button
+            type="button"
+            className="admin-ui-btn"
+            onClick={expireTimedOutSelectionTeams}
+            disabled={expiringSelection}
+            title="อัปเดตทีม passed ที่หมดเวลายืนยันให้เป็น not_joined"
+          >
+            {expiringSelection ? 'Updating...' : 'Update expired teams'}
           </button>
         </div>
       </article>

@@ -9,6 +9,7 @@ import type { TeamMemberProfileSafe } from './teams.types.js';
 import {
     evaluateWindowStatus,
     formatThaiDate,
+    getGlobalSelectionConfirmWindow,
     getTeamMemberMax,
     getTeamRecruitmentWindow,
 } from '../sys-config/sys-config-window.js';
@@ -63,6 +64,16 @@ async function assertTeamRecruitmentOpen(db: DB): Promise<void> {
         throw new AppError(`การสร้างทีมจะเปิดในวันที่ ${formatThaiDate(windowConfig.openAtMs)}`, 400);
     }
     throw new AppError('หมดเขตการรับสมัคร', 400);
+}
+
+async function assertSelectionConfirmWindowOpen(db: DB): Promise<void> {
+    const windowConfig = await getGlobalSelectionConfirmWindow(db);
+    const status = evaluateWindowStatus(windowConfig);
+    if (status === 'open') return;
+    if (status === 'not_open') {
+        throw new AppError(`การยืนยันการเข้าร่วมโครงการจะเปิดในวันที่ ${formatThaiDate(windowConfig.openAtMs)}`, 400);
+    }
+    throw new AppError('หมดเวลายืนยันการเข้าร่วมโครงการแล้ว', 400);
 }
 
 export async function createTeam(db: DB, userId: number, data: { teamNameTh: string; teamNameEn: string; visibility: 'public' | 'private' }) {
@@ -636,6 +647,7 @@ export async function markTeamInboxAsRead(db: DB, notificationLogId: number, use
 
 export async function confirmParticipation(db: DB, teamId: number, leaderUserId: number) {
     await applySelectionExpiryIfNeeded(db, teamId);
+    await assertSelectionConfirmWindowOpen(db);
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
     if (team.current_leader_user_id !== leaderUserId) {
@@ -676,6 +688,7 @@ export async function confirmParticipation(db: DB, teamId: number, leaderUserId:
 
 export async function declineParticipation(db: DB, teamId: number, leaderUserId: number) {
     await applySelectionExpiryIfNeeded(db, teamId);
+    await assertSelectionConfirmWindowOpen(db);
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
     if (team.current_leader_user_id !== leaderUserId) {

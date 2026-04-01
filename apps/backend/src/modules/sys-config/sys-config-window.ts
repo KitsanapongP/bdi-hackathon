@@ -6,6 +6,10 @@ export const REGISTRATION_OPEN_AT_KEY = 'REGISTRATION_OPEN_AT';
 export const REGISTRATION_CLOSE_AT_KEY = 'REGISTRATION_CLOSE_AT';
 export const TEAM_RECRUITMENT_OPEN_AT_KEY = 'TEAM_RECRUITMENT_OPEN_AT';
 export const TEAM_RECRUITMENT_CLOSE_AT_KEY = 'TEAM_RECRUITMENT_CLOSE_AT';
+export const TEAM_SELECTION_SUBMISSION_OPEN_AT_KEY = 'TEAM_SELECTION_SUBMISSION_OPEN_AT';
+export const TEAM_SELECTION_SUBMISSION_CLOSE_AT_KEY = 'TEAM_SELECTION_SUBMISSION_CLOSE_AT';
+export const GLOBAL_SELECTION_CONFIRM_OPEN_AT_KEY = 'GLOBAL_SELECTION_CONFIRM_OPEN_AT';
+export const GLOBAL_SELECTION_CONFIRM_CLOSE_AT_KEY = 'GLOBAL_SELECTION_CONFIRM_CLOSE_AT';
 export const TEAM_MEMBER_MAX_KEY = 'TEAM_MEMBER_MAX';
 export const TEAM_MEMBER_MIN_KEY = 'TEAM_MEMBER_MIN';
 
@@ -68,6 +72,14 @@ export async function getRegistrationWindow(db: DB): Promise<ConfigWindow> {
 
 export async function getTeamRecruitmentWindow(db: DB): Promise<ConfigWindow> {
     return readWindowByKeys(db, TEAM_RECRUITMENT_OPEN_AT_KEY, TEAM_RECRUITMENT_CLOSE_AT_KEY);
+}
+
+export async function getTeamSelectionSubmissionWindow(db: DB): Promise<ConfigWindow> {
+    return readWindowByKeys(db, TEAM_SELECTION_SUBMISSION_OPEN_AT_KEY, TEAM_SELECTION_SUBMISSION_CLOSE_AT_KEY);
+}
+
+export async function getGlobalSelectionConfirmWindow(db: DB): Promise<ConfigWindow> {
+    return readWindowByKeys(db, GLOBAL_SELECTION_CONFIRM_OPEN_AT_KEY, GLOBAL_SELECTION_CONFIRM_CLOSE_AT_KEY);
 }
 
 export function evaluateWindowStatus(windowConfig: ConfigWindow, nowMs: number = Date.now()): WindowStatus {
