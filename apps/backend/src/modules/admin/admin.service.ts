@@ -22,7 +22,8 @@ import archiver from 'archiver';
 import { createTeamAuditLog } from '../teams/teams.repo.js';
 import { triggerNotificationEvent } from '../notifications/notifications.service.js';
 
-const GLOBAL_SELECTION_DEADLINE_KEY = 'GLOBAL_SELECTION_CONFIRM_DEADLINE_AT';
+const GLOBAL_SELECTION_CONFIRM_OPEN_AT_KEY = 'GLOBAL_SELECTION_CONFIRM_OPEN_AT';
+const GLOBAL_SELECTION_CONFIRM_CLOSE_AT_KEY = 'GLOBAL_SELECTION_CONFIRM_CLOSE_AT';
 import { PDFDocument } from 'pdf-lib';
 
 interface TeamExportBundle {
@@ -632,17 +633,16 @@ export async function setSelectionResult(
         teamId: number;
         adminUserId: number;
         status: 'passed' | 'failed';
-        confirmDeadlineAt?: string | null;
     },
 ): Promise<SelectionTeamRow> {
     const team = await repo.getSelectionTeamById(db, data.teamId);
     if (!team) throw new NotFoundError('ไม่พบทีม');
 
     const confirmDeadlineAt = data.status === 'passed'
-        ? await getGlobalSelectionDeadline(db)
+        ? (await getGlobalSelectionConfirmWindow(db)).closeAt
         : null;
     if (data.status === 'passed' && !confirmDeadlineAt) {
-        throw new BadRequestError('ยังไม่ได้ตั้งค่า Global confirm deadline จากหน้า admin');
+        throw new BadRequestError('ยังไม่ได้ตั้งค่า Global confirm close time จากหน้า admin');
     }
 
     await repo.updateSelectionResult(db, {
@@ -676,7 +676,7 @@ export async function setSelectionResult(
     return updated;
 }
 
-function normalizeDeadlineToDb(rawInput: string): string {
+function normalizeDateTimeToDb(rawInput: string): string {
     const raw = String(rawInput || '').trim();
     let date: Date;
     if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) {
@@ -685,7 +685,7 @@ function normalizeDeadlineToDb(rawInput: string): string {
         date = new Date(raw);
     }
     if (Number.isNaN(date.getTime())) {
-        throw new BadRequestError('รูปแบบวันเวลาหมดเขตไม่ถูกต้อง');
+        throw new BadRequestError('รูปแบบวันเวลาไม่ถูกต้อง');
     }
 
     const yyyy = date.getFullYear();
@@ -697,15 +697,42 @@ function normalizeDeadlineToDb(rawInput: string): string {
     return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
 }
 
-export async function getGlobalSelectionDeadline(db: DB): Promise<string | null> {
-    return repo.getSysConfigValue(db, GLOBAL_SELECTION_DEADLINE_KEY);
+export async function getGlobalSelectionConfirmWindow(db: DB): Promise<{ openAt: string | null; closeAt: string | null }> {
+    const [openAt, closeAt] = await Promise.all([
+        repo.getSysConfigValue(db, GLOBAL_SELECTION_CONFIRM_OPEN_AT_KEY),
+        repo.getSysConfigValue(db, GLOBAL_SELECTION_CONFIRM_CLOSE_AT_KEY),
+    ]);
+    return {
+        openAt,
+        closeAt,
+    };
 }
 
-export async function setGlobalSelectionDeadline(db: DB, rawDeadline: string): Promise<{ confirmDeadlineAt: string }> {
-    const deadline = normalizeDeadlineToDb(rawDeadline);
-    await repo.upsertSysConfigValue(db, GLOBAL_SELECTION_DEADLINE_KEY, deadline);
-    await repo.applyGlobalSelectionDeadlineToPassedTeams(db, deadline);
-    return { confirmDeadlineAt: deadline };
+export async function setGlobalSelectionConfirmWindow(
+    db: DB,
+    rawOpenAt: string,
+    rawCloseAt: string,
+): Promise<{ openAt: string; closeAt: string }> {
+    const openAt = normalizeDateTimeToDb(rawOpenAt);
+    const closeAt = normalizeDateTimeToDb(rawCloseAt);
+    if (new Date(closeAt).getTime() < new Date(openAt).getTime()) {
+        throw new BadRequestError('วันเวลาเปิดต้องไม่มากกว่าวันเวลาปิด');
+    }
+
+    await Promise.all([
+        repo.upsertSysConfigValue(db, GLOBAL_SELECTION_CONFIRM_OPEN_AT_KEY, openAt),
+        repo.upsertSysConfigValue(db, GLOBAL_SELECTION_CONFIRM_CLOSE_AT_KEY, closeAt),
+    ]);
+    await repo.applyGlobalSelectionDeadlineToPassedTeams(db, closeAt);
+    return {
+        openAt,
+        closeAt,
+    };
+}
+
+export async function expireSelectionConfirmTimedOutTeams(db: DB): Promise<{ updatedCount: number }> {
+    const updatedCount = await repo.expirePassedTeamsToNotJoined(db);
+    return { updatedCount };
 }
 
 function normalizeAllowedExtensions(rawValue: string | null | undefined): string | null {

@@ -4,7 +4,12 @@ import * as repo from './verification.repo.js';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../../shared/errors.js';
 import { failTeamIfConfirmationExpired, getTeamById, getTeamMembers } from '../teams/teams.repo.js';
 import * as notificationService from '../notifications/notifications.service.js';
-import { getTeamMemberMin } from '../sys-config/sys-config-window.js';
+import {
+    evaluateWindowStatus,
+    formatThaiDate,
+    getTeamMemberMin,
+    getTeamSelectionSubmissionWindow,
+} from '../sys-config/sys-config-window.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -333,6 +338,15 @@ export async function submitTeam(
         throw new UnauthorizedError('\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e2b\u0e31\u0e27\u0e2b\u0e19\u0e49\u0e32\u0e17\u0e35\u0e21\u0e40\u0e17\u0e48\u0e32\u0e19\u0e31\u0e49\u0e19\u0e17\u0e35\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e2a\u0e48\u0e07\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23\u0e44\u0e14\u0e49');
     }
     assertTeamEditable(team.status);
+
+    const selectionSubmissionWindow = await getTeamSelectionSubmissionWindow(db);
+    const selectionSubmissionWindowStatus = evaluateWindowStatus(selectionSubmissionWindow);
+    if (selectionSubmissionWindowStatus === 'not_open') {
+        throw new BadRequestError(`การส่งทีมเข้าคัดเลือกจะเปิดในวันที่ ${formatThaiDate(selectionSubmissionWindow.openAtMs)}`);
+    }
+    if (selectionSubmissionWindowStatus === 'closed') {
+        throw new BadRequestError('หมดเขตการส่งทีมเข้าคัดเลือก');
+    }
 
     const round = await repo.getOrCreateVerifyRound(db, teamId, leaderUserId);
     const members = await getTeamMembers(db, teamId);

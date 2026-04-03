@@ -40,7 +40,9 @@ import {
 } from 'lucide-react';
 import { apiUrl } from '../../lib/api';
 import {
+    fetchGlobalSelectionConfirmWindowStatus,
     fetchSysConfigValue,
+    fetchTeamSelectionSubmissionWindowStatus,
     fetchTeamRecruitmentWindowStatus,
     formatThaiDate,
     SYSTEM_WINDOW_STATUS,
@@ -382,6 +384,16 @@ export default function TeamContent({ user }) {
         openAtMs: null,
         closeAtMs: null,
     });
+    const [teamSelectionSubmissionWindow, setTeamSelectionSubmissionWindow] = useState({
+        status: SYSTEM_WINDOW_STATUS.UNKNOWN,
+        openAtMs: null,
+        closeAtMs: null,
+    });
+    const [globalSelectionConfirmWindow, setGlobalSelectionConfirmWindow] = useState({
+        status: SYSTEM_WINDOW_STATUS.UNKNOWN,
+        openAtMs: null,
+        closeAtMs: null,
+    });
     const [teamMemberLimits, setTeamMemberLimits] = useState({
         max: TEAM_MEMBER_MAX_DEFAULT,
         min: TEAM_MEMBER_MIN_DEFAULT,
@@ -399,6 +411,14 @@ export default function TeamContent({ user }) {
     const teamRecruitmentMessage = teamRecruitmentWindow.status === SYSTEM_WINDOW_STATUS.NOT_OPEN
         ? `การสร้างทีมจะเปิดในวันที่ ${formatThaiDate(teamRecruitmentWindow.openAtMs)}`
         : (teamRecruitmentWindow.status === SYSTEM_WINDOW_STATUS.CLOSED ? 'หมดเขตการรับสมัคร' : '');
+    const isTeamSelectionSubmissionOpen = teamSelectionSubmissionWindow.status === SYSTEM_WINDOW_STATUS.OPEN;
+    const teamSelectionSubmissionMessage = teamSelectionSubmissionWindow.status === SYSTEM_WINDOW_STATUS.NOT_OPEN
+        ? `การส่งทีมเข้าคัดเลือกจะเปิดในวันที่ ${formatThaiDate(teamSelectionSubmissionWindow.openAtMs)}`
+        : (teamSelectionSubmissionWindow.status === SYSTEM_WINDOW_STATUS.CLOSED ? 'หมดเขตการส่งทีมเข้าคัดเลือก' : '');
+    const isGlobalSelectionConfirmOpen = globalSelectionConfirmWindow.status === SYSTEM_WINDOW_STATUS.OPEN;
+    const globalSelectionConfirmMessage = globalSelectionConfirmWindow.status === SYSTEM_WINDOW_STATUS.NOT_OPEN
+        ? `การยืนยันการเข้าร่วมโครงการจะเปิดในวันที่ ${formatThaiDate(globalSelectionConfirmWindow.openAtMs)}`
+        : (globalSelectionConfirmWindow.status === SYSTEM_WINDOW_STATUS.CLOSED ? 'หมดเวลายืนยันการเข้าร่วมโครงการแล้ว' : '');
     const hasPendingJoinRequests = pendingJoinRequests.length > 0;
     const sortedMembers = useMemo(() => {
         if (!team?.members) return [];
@@ -414,12 +434,18 @@ export default function TeamContent({ user }) {
 
         const loadTeamRecruitmentWindow = async () => {
             try {
-                const [nextWindow, maxRaw, minRaw] = await Promise.all([
+                const [nextRecruitmentWindow, nextSelectionSubmissionWindow, nextGlobalSelectionConfirmWindow, maxRaw, minRaw] = await Promise.all([
                     fetchTeamRecruitmentWindowStatus(),
+                    fetchTeamSelectionSubmissionWindowStatus(),
+                    fetchGlobalSelectionConfirmWindowStatus(),
                     fetchSysConfigValue('TEAM_MEMBER_MAX'),
                     fetchSysConfigValue('TEAM_MEMBER_MIN'),
                 ]);
-                if (!cancelled) setTeamRecruitmentWindow(nextWindow);
+                if (!cancelled) {
+                    setTeamRecruitmentWindow(nextRecruitmentWindow);
+                    setTeamSelectionSubmissionWindow(nextSelectionSubmissionWindow);
+                    setGlobalSelectionConfirmWindow(nextGlobalSelectionConfirmWindow);
+                }
                 if (!cancelled) {
                     const parsedMax = Number.parseInt(String(maxRaw || ''), 10);
                     const parsedMin = Number.parseInt(String(minRaw || ''), 10);
@@ -434,6 +460,14 @@ export default function TeamContent({ user }) {
             } catch {
                 if (!cancelled) {
                     setTeamRecruitmentWindow((prev) => ({
+                        ...prev,
+                        status: SYSTEM_WINDOW_STATUS.UNKNOWN,
+                    }));
+                    setTeamSelectionSubmissionWindow((prev) => ({
+                        ...prev,
+                        status: SYSTEM_WINDOW_STATUS.UNKNOWN,
+                    }));
+                    setGlobalSelectionConfirmWindow((prev) => ({
                         ...prev,
                         status: SYSTEM_WINDOW_STATUS.UNKNOWN,
                     }));
@@ -1079,6 +1113,7 @@ export default function TeamContent({ user }) {
         { id: 'members-confirmed', ok: allMembersConfirmed, label: 'สมาชิกทุกคนต้องยืนยันเอกสารยืนยันตัวตนให้ครบ' },
         { id: 'min-members', ok: isMinMembersReady, label: `ทีมจะต้องมีสมาชิก ${minSubmitMembers} คนในทีม (ปัจจุบัน ${memberCountForSubmit} คน)` },
         { id: 'required-submission-tasks', ok: !hasMissingRequiredTaskForReadiness, label: 'กรุณาส่งข้อมูลงานที่บังคับให้ครบก่อนยืนยันเข้าร่วมการคัดเลือก' },
+        { id: 'submission-window', ok: isTeamSelectionSubmissionOpen, label: teamSelectionSubmissionMessage || 'ยังไม่อยู่ในช่วงเวลาส่งทีมเข้าคัดเลือก' },
     ];
     const submitMissing = readinessLoaded
         ? submitReadinessRules.filter((item) => !item.ok).map((item) => item.label)
@@ -1273,6 +1308,10 @@ export default function TeamContent({ user }) {
             showToast('กำลังโหลดข้อมูลทีมเพื่อประเมินความพร้อม กรุณารอสักครู่', 'error');
             return;
         }
+        if (!isTeamSelectionSubmissionOpen) {
+            showToast(teamSelectionSubmissionMessage || 'ยังไม่อยู่ในช่วงเวลาส่งทีมเข้าคัดเลือก', 'error');
+            return;
+        }
         if (submitMissing.length > 0) {
             showToast(`ยังยืนยันเข้าร่วมการคัดเลือกไม่ได้: ${submitMissing.join(', ')}`, 'error');
             return;
@@ -1368,6 +1407,10 @@ export default function TeamContent({ user }) {
     };
 
     const handleConfirmParticipation = () => {
+        if (!isGlobalSelectionConfirmOpen) {
+            showToast(globalSelectionConfirmMessage || 'ยังไม่อยู่ในช่วงเวลายืนยันการเข้าร่วมโครงการ', 'error');
+            return;
+        }
         openConfirm('ยืนยันการเข้าร่วมโครงการ', 'ยืนยันการเข้าร่วมตามผลคัดเลือกใช่หรือไม่?', () => {
             closeConfirm();
             withAction(async () => {
@@ -1384,6 +1427,10 @@ export default function TeamContent({ user }) {
     };
 
     const handleDeclineParticipation = () => {
+        if (!isGlobalSelectionConfirmOpen) {
+            showToast(globalSelectionConfirmMessage || 'ยังไม่อยู่ในช่วงเวลายืนยันการเข้าร่วมโครงการ', 'error');
+            return;
+        }
         openConfirm('ปฏิเสธการเข้าร่วมโครงการ', 'หากปฏิเสธแล้ว ทีมจะถูกปรับเป็นสถานะ "ไม่กดเข้าร่วมโครงการ" ทันที', () => {
             closeConfirm();
             withAction(async () => {
@@ -2601,7 +2648,7 @@ export default function TeamContent({ user }) {
                                                 <div className="gl-top-action-group">
                                                     <button
                                                         className="gl-top-confirm-btn"
-                                                        disabled={!isLeader || actionLoading || confirmationExpired}
+                                                        disabled={!isLeader || actionLoading || confirmationExpired || !isGlobalSelectionConfirmOpen}
                                                         onClick={handleConfirmParticipation}
                                                     >
                                                         <span className="gl-top-btn-icon"><CheckCircle size={18} /></span>
@@ -2609,7 +2656,7 @@ export default function TeamContent({ user }) {
                                                     </button>
                                                     <button
                                                         className="gl-top-decline-btn"
-                                                        disabled={!isLeader || actionLoading || confirmationExpired}
+                                                        disabled={!isLeader || actionLoading || confirmationExpired || !isGlobalSelectionConfirmOpen}
                                                         onClick={handleDeclineParticipation}
                                                     >
                                                         <span className="gl-top-btn-icon"><XCircle size={16} /></span>
@@ -2619,7 +2666,7 @@ export default function TeamContent({ user }) {
                                             ) : (
                                                 <button
                                                     className="gl-top-submit-btn"
-                                                    disabled={!isLeader || actionLoading || !readinessLoaded || readinessLoading || isTeamEditLocked || submitMissing.length > 0}
+                                                    disabled={!isLeader || actionLoading || !readinessLoaded || readinessLoading || isTeamEditLocked || submitMissing.length > 0 || !isTeamSelectionSubmissionOpen}
                                                     onClick={handleSubmitTeam}
                                                 >
                                                     <ShieldCheck size={18} />
@@ -2632,16 +2679,18 @@ export default function TeamContent({ user }) {
                             </div>
 
                             {/* Hints row */}
-                            {!isParticipationConfirmed && (submitMissing.length > 0 || !isLeader || isTeamEditLocked || !readinessLoaded || (shouldShowParticipationConfirm && confirmationExpired)) && (
+                            {!isParticipationConfirmed && (submitMissing.length > 0 || !isLeader || isTeamEditLocked || !readinessLoaded || !isTeamSelectionSubmissionOpen || (shouldShowParticipationConfirm && (!isGlobalSelectionConfirmOpen || confirmationExpired))) && (
                                 <div className="gl-top-hints">
                                     {!isLeader && <span className="gl-top-hint-item"><Lock size={12} /> เฉพาะหัวหน้าทีม</span>}
                                     {!readinessLoaded && <span className="gl-top-hint-item"><Loader2 size={12} /> กำลังตรวจสอบข้อมูลความพร้อมของทีม...</span>}
+                                    {!shouldShowParticipationConfirm && !isTeamSelectionSubmissionOpen && <span className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {teamSelectionSubmissionMessage || 'ยังไม่อยู่ในช่วงเวลาส่งทีมเข้าคัดเลือก'}</span>}
                                     {readinessLoaded && !shouldShowParticipationConfirm && submitMissing.map((msg, i) => (
                                         <span key={i} className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {msg}</span>
                                     ))}
                                     {shouldShowParticipationConfirm && !confirmationExpired && (
                                         <span className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> ทีมผ่านการคัดเลือกแล้ว กรุณากดยืนยันเข้าร่วมโครงการ หรือกดปฏิเสธหากไม่ประสงค์เข้าร่วม</span>
                                     )}
+                                    {shouldShowParticipationConfirm && !isGlobalSelectionConfirmOpen && <span className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {globalSelectionConfirmMessage || 'ยังไม่อยู่ในช่วงเวลายืนยันการเข้าร่วมโครงการ'}</span>}
                                     {!shouldShowParticipationConfirm && isTeamEditLocked && <span className="gl-top-hint-item"><Lock size={12} /> ทีมอยู่ในสถานะที่แก้ไขไม่ได้</span>}
                                     {shouldShowParticipationConfirm && confirmationExpired && <span className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> เลยเวลายืนยันการเข้าร่วมโครงการแล้ว</span>}
                                 </div>

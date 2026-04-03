@@ -424,6 +424,37 @@
     text-decoration: underline;
 }
 
+.gt-dataset-requirements {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--gt-border);
+    display: grid;
+    gap: 14px;
+}
+
+.gt-dataset-requirements h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--gt-text);
+}
+
+.gt-dataset-requirement-block {
+    display: grid;
+    gap: 8px;
+}
+
+.gt-dataset-requirement-title {
+    margin: 0;
+    font-weight: 700;
+    color: var(--gt-text);
+}
+
+.gt-dataset-requirement-block p {
+    margin: 0;
+    color: var(--gt-text);
+    line-height: 1.7;
+}
+
 @media (max-width: 900px) {
     .gt-contact-grid {
         grid-template-columns: 1fr;

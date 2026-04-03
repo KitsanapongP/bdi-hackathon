@@ -215,11 +215,11 @@ export const selectionTeamsQuerySchema = z.object({
 
 export const selectionResultSchema = z.object({
     status: z.enum(['passed', 'failed']),
-    confirmDeadlineAt: z.string().trim().min(1).nullable().optional(),
 });
 
 export const updateGlobalSelectionDeadlineSchema = z.object({
-    confirmDeadlineAt: z.string().trim().min(1, 'กรุณาระบุวันเวลาหมดเขต'),
+    openAt: z.string().trim().min(1, 'กรุณาระบุวันเวลาเปิด'),
+    closeAt: z.string().trim().min(1, 'กรุณาระบุวันเวลาปิด'),
 });
 
 export const createSubmissionTaskSchema = z.object({

@@ -1080,7 +1080,6 @@ export async function handleSetSelectionResult(
             teamId,
             adminUserId: user.userId,
             status: parsed.data.status,
-            confirmDeadlineAt: parsed.data.confirmDeadlineAt ?? null,
         });
         return reply.send(ok(row, 'บันทึกผลคัดเลือกสำเร็จ'));
     } catch (err) {
@@ -1093,8 +1092,8 @@ export async function handleSetSelectionResult(
 
 export async function handleGetGlobalSelectionDeadline(req: FastifyRequest, reply: FastifyReply) {
     try {
-        const value = await service.getGlobalSelectionDeadline(req.server.ctx.db);
-        return reply.send(ok({ confirmDeadlineAt: value }));
+        const value = await service.getGlobalSelectionConfirmWindow(req.server.ctx.db);
+        return reply.send(ok(value));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });
@@ -1111,8 +1110,24 @@ export async function handleSetGlobalSelectionDeadline(req: FastifyRequest, repl
     }
 
     try {
-        const result = await service.setGlobalSelectionDeadline(req.server.ctx.db, parsed.data.confirmDeadlineAt);
-        return reply.send(ok(result, 'ตั้งค่า Global deadline สำเร็จ'));
+        const result = await service.setGlobalSelectionConfirmWindow(
+            req.server.ctx.db,
+            parsed.data.openAt,
+            parsed.data.closeAt,
+        );
+        return reply.send(ok(result, 'ตั้งค่า Global confirm window สำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleExpireSelectionNotJoined(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const result = await service.expireSelectionConfirmTimedOutTeams(req.server.ctx.db);
+        return reply.send(ok(result, 'อัปเดตทีมที่หมดเวลายืนยันเป็น not_joined สำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });
