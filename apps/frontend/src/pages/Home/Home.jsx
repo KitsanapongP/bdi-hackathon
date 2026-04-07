@@ -66,7 +66,7 @@ const config = {
 const competitionSteps = [
     {
         number: '01',
-        date: '1 เมษายน 2569',
+        date: '10 เมษายน 2569',
         title: 'ลงทะเบียน',
         items: [
             'ลงทะเบียนด้วยอีเมลจริง',
