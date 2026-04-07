@@ -29,6 +29,11 @@ const DEFAULT_EVENT_MESSAGES: Record<NotificationEventCode, string> = {
   TEAM_DISBANDED: 'ทีม {{team_name}} [{{team_code}}] ถูกยุบทีมเรียบร้อยแล้ว โดย {{actor_name}} เหตุผล: {{disband_reason}}',
 };
 
+const SMTP_QUOTA_RETRY_DELAY_MS = (() => {
+  const raw = Number(process.env.SMTP_QUOTA_RETRY_DELAY_MS ?? 60 * 60 * 1000);
+  if (!Number.isFinite(raw) || raw < 0) return 60 * 60 * 1000;
+  return Math.floor(raw);
+})();
 const requireModule = createRequire(import.meta.url);
 
 type TriggerEventInput = {
@@ -129,6 +134,31 @@ function buildStandardEmailHtml(input: {
   `;
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function isSmtpQuotaError(error: any): boolean {
+  const responseCode = Number(error?.responseCode);
+  if ([421, 450, 451, 452, 454].includes(responseCode)) {
+    return true;
+  }
+
+  const message = `${String(error?.code || '')} ${String(error?.message || '')} ${String(error?.response || '')}`.toLowerCase();
+  return [
+    'quota',
+    'rate limit',
+    'rate-limit',
+    'too many',
+    'limit exceeded',
+    'daily user sending quota exceeded',
+    '4.7.0',
+    '4.7.1',
+  ].some((token) => message.includes(token));
+}
+
 function getTransporter() {
   const host = process.env.SMTP_HOST?.trim();
   if (!host) return { transporter: null, reason: 'SMTP_HOST is empty' as const };
@@ -154,6 +184,35 @@ function getTransporter() {
     tls: skipTlsVerify ? { rejectUnauthorized: false } : undefined,
   });
   return { transporter, reason: null };
+}
+
+async function sendMailWithQuotaRetry(transporter: any, mailOptions: {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  try {
+    const result = await transporter.sendMail(mailOptions);
+    return { result, retryAfterQuota: false };
+  } catch (error: any) {
+    if (!isSmtpQuotaError(error)) {
+      throw error;
+    }
+
+    await delay(SMTP_QUOTA_RETRY_DELAY_MS);
+
+    try {
+      const result = await transporter.sendMail(mailOptions);
+      return { result, retryAfterQuota: true };
+    } catch (retryError: any) {
+      if (retryError && typeof retryError === 'object') {
+        retryError.quotaRetryAttempted = true;
+        retryError.quotaRetryDelayMs = SMTP_QUOTA_RETRY_DELAY_MS;
+      }
+      throw retryError;
+    }
+  }
 }
 
 async function resolveEventSetting(db: DB, eventCode: NotificationEventCode): Promise<EventSetting> {
@@ -284,81 +343,83 @@ async function sendEmailWithLog(
   let failed = 0;
   let skipped = 0;
 
-  await Promise.all(
-    input.recipients.map(async (recipient) => {
-      if (!recipient.email) {
-        skipped += 1;
-        await repo.createNotificationLog(db, {
-          eventCode: input.eventCode,
-          channel: 'email',
-          teamId: input.teamId,
-          recipientUserId: recipient.user_id,
-          actorUserId: input.actorUserId,
-          templateCode: input.templateCode,
-          subjectText: input.subject,
-          messageText: input.logMessage,
-          status: 'skipped',
-          errorMessage: 'recipient email is empty',
-        });
-        return;
-      }
+  for (const recipient of input.recipients) {
+    if (!recipient.email) {
+      skipped += 1;
+      await repo.createNotificationLog(db, {
+        eventCode: input.eventCode,
+        channel: 'email',
+        teamId: input.teamId,
+        recipientUserId: recipient.user_id,
+        actorUserId: input.actorUserId,
+        templateCode: input.templateCode,
+        subjectText: input.subject,
+        messageText: input.logMessage,
+        status: 'skipped',
+        errorMessage: 'recipient email is empty',
+      });
+      continue;
+    }
 
-      if (!transporter) {
-        skipped += 1;
-        await repo.createNotificationLog(db, {
-          eventCode: input.eventCode,
-          channel: 'email',
-          teamId: input.teamId,
-          recipientUserId: recipient.user_id,
-          actorUserId: input.actorUserId,
-          templateCode: input.templateCode,
-          subjectText: input.subject,
-          messageText: input.logMessage,
-          status: 'skipped',
-          errorMessage: `SMTP is not configured: ${reason ?? 'unknown reason'}`,
-        });
-        return;
-      }
+    if (!transporter) {
+      skipped += 1;
+      await repo.createNotificationLog(db, {
+        eventCode: input.eventCode,
+        channel: 'email',
+        teamId: input.teamId,
+        recipientUserId: recipient.user_id,
+        actorUserId: input.actorUserId,
+        templateCode: input.templateCode,
+        subjectText: input.subject,
+        messageText: input.logMessage,
+        status: 'skipped',
+        errorMessage: `SMTP is not configured: ${reason ?? 'unknown reason'}`,
+      });
+      continue;
+    }
 
-      try {
-        const result = await transporter.sendMail({
-          from: fromEmail,
-          to: recipient.email,
-          subject: input.subject,
-          html: input.htmlMessage,
-        });
+    try {
+      const { result, retryAfterQuota } = await sendMailWithQuotaRetry(transporter, {
+        from: fromEmail,
+        to: recipient.email,
+        subject: input.subject,
+        html: input.htmlMessage,
+      });
 
-        sent += 1;
-        await repo.createNotificationLog(db, {
-          eventCode: input.eventCode,
-          channel: 'email',
-          teamId: input.teamId,
-          recipientUserId: recipient.user_id,
-          actorUserId: input.actorUserId,
-          templateCode: input.templateCode,
-          subjectText: input.subject,
-          messageText: input.logMessage,
-          status: 'sent',
-          providerMessageId: result.messageId,
-          sentAt: new Date(),
-        });
-      } catch (error: any) {
-        failed += 1;
-        await repo.createNotificationLog(db, {
-          eventCode: input.eventCode,
-          channel: 'email',
-          teamId: input.teamId,
-          recipientUserId: recipient.user_id,
-          actorUserId: input.actorUserId,
-          templateCode: input.templateCode,
-          subjectText: input.subject,
-          messageText: input.logMessage,
-          status: 'failed',
-          errorMessage: String(error?.message || error),
-        });
-      }
-    }),
-  );
+      sent += 1;
+      await repo.createNotificationLog(db, {
+        eventCode: input.eventCode,
+        channel: 'email',
+        teamId: input.teamId,
+        recipientUserId: recipient.user_id,
+        actorUserId: input.actorUserId,
+        templateCode: input.templateCode,
+        subjectText: input.subject,
+        messageText: input.logMessage,
+        status: 'sent',
+        providerMessageId: result.messageId,
+        errorMessage: retryAfterQuota ? `retry_after_quota(waited_ms=${SMTP_QUOTA_RETRY_DELAY_MS})` : null,
+        sentAt: new Date(),
+      });
+    } catch (error: any) {
+      const retryInfo = error?.quotaRetryAttempted
+        ? `retry_after_quota(waited_ms=${error?.quotaRetryDelayMs ?? SMTP_QUOTA_RETRY_DELAY_MS}); `
+        : '';
+      failed += 1;
+      await repo.createNotificationLog(db, {
+        eventCode: input.eventCode,
+        channel: 'email',
+        teamId: input.teamId,
+        recipientUserId: recipient.user_id,
+        actorUserId: input.actorUserId,
+        templateCode: input.templateCode,
+        subjectText: input.subject,
+        messageText: input.logMessage,
+        status: 'failed',
+        errorMessage: `${retryInfo}${String(error?.message || error)}`,
+      });
+    }
+  }
 
   return { sent, failed, skipped, totalRecipients: input.recipients.length };
 }
