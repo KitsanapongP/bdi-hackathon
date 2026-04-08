@@ -135,6 +135,17 @@ export function buildApp(ctx: AppContext) {
   });
 
   app.register(fastifyStatic, {
+    root: path.join(process.cwd(), 'public', 'content', 'venues'),
+    prefix: '/static/content/venues/',
+    decorateReply: false,
+    cacheControl: true,
+    maxAge: '7d',
+    immutable: false,
+    etag: true,
+    lastModified: true,
+  });
+
+  app.register(fastifyStatic, {
     root: path.join(process.cwd(), 'public', 'uploads', 'avatars'),
     prefix: '/static/uploads/avatars/',
     decorateReply: false,
