@@ -190,10 +190,16 @@ function normalizeVenueGoogleMapsUrl(value: string | null | undefined): string |
     }
 
     const hostname = parsed.hostname.toLowerCase();
-    const isGoogleMapsHost = hostname === 'maps.google.com'
-        || hostname === 'google.com'
+    const isGoogleDomain = hostname === 'google.com'
         || hostname.endsWith('.google.com')
-        || hostname === 'goo.gl';
+        || /^google\.[a-z.]+$/.test(hostname)
+        || /\.google\.[a-z.]+$/.test(hostname);
+
+    const isGoogleMapsHost = isGoogleDomain
+        || hostname === 'goo.gl'
+        || hostname.endsWith('.goo.gl')
+        || hostname === 'maps.app.goo.gl'
+        || hostname.endsWith('.maps.app.goo.gl');
 
     if (!isGoogleMapsHost) {
         throw new BadRequestError('googleMapsUrl ต้องเป็นลิงก์จาก Google Maps');

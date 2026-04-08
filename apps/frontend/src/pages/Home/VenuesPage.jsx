@@ -6,7 +6,7 @@ import { apiUrl } from '../../lib/api';
 import './InfoPages.css';
 
 const VENUE_TABS = [
-    { key: 'venue', labelTh: 'สถานที่จัดงาน', labelEn: 'VENUE' },
+    { key: 'venue', labelTh: 'สถานที่จัดการแข่งขัน', labelEn: 'EVENT VENUE' },
     { key: 'accommodation', labelTh: 'ที่พัก', labelEn: 'ACCOMMODATION' },
     { key: 'transportation', labelTh: 'การเดินทาง', labelEn: 'TRANSPORTATION' },
     { key: 'attraction', labelTh: 'สถานที่ท่องเที่ยว', labelEn: 'ATTRACTION' },
