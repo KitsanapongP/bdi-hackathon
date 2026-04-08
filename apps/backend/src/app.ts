@@ -24,6 +24,7 @@ import { verificationRoutes } from './modules/verification/verification.routes.j
 import { submissionsRoutes } from './modules/submissions/submissions.routes.js';
 import { notificationsRoutes } from './modules/notifications/notifications.routes.js';
 import { privilegesRoutes } from './modules/privileges/privileges.routes.js';
+import { cronRoutes } from './modules/cron/cron.routes.js';
 
 export type AppContext = { env: Env; db: DB };
 
@@ -159,6 +160,7 @@ export function buildApp(ctx: AppContext) {
   app.register(submissionsRoutes, { prefix: '/api/submissions' });
   app.register(notificationsRoutes, { prefix: '/api/notifications' });
   app.register(privilegesRoutes, { prefix: '/api/privileges' });
+  app.register(cronRoutes, { prefix: '/api/cron' });
 
   // Log incoming request body
   app.addHook('preHandler', async (request, reply) => {

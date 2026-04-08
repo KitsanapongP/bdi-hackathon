@@ -64,11 +64,18 @@ Run retry worker manually:
 npm run retry:emails
 ```
 
-Recommended scheduler setup: run this command every 1 hour.
+Recommended scheduler setup (Plesk): use **Fetch a URL** every 1 hour.
+
+Endpoint:
+`GET /api/cron/notifications/retry-emails?token=<CRON_RETRY_TOKEN>&limit=200`
+
+Example:
+`https://<your-domain>/api/cron/notifications/retry-emails?token=<CRON_RETRY_TOKEN>&limit=200`
 
 Optional env values:
 - `SMTP_QUOTA_RETRY_DELAY_MS` (default `3600000`)
 - `SMTP_RETRY_BATCH_SIZE` (default `200`)
+- `CRON_RETRY_TOKEN` (required for cron endpoint auth)
 
 ---
 
