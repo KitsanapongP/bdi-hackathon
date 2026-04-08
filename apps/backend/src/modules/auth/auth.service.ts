@@ -102,8 +102,25 @@ function hashVerificationLinkToken(token: string): string {
 }
 
 function getFrontendBaseUrl(): string {
-    const value = process.env['FRONTEND_BASE_URL']?.trim() || process.env['APP_BASE_URL']?.trim() || 'http://localhost:5173';
-    return value.replace(/\/+$/, '');
+    const value = process.env['FRONTEND_BASE_URL']?.trim();
+
+    if (value) {
+        try {
+            const parsed = new URL(value);
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                throw new Error('invalid protocol');
+            }
+            return value.replace(/\/+$/, '');
+        } catch {
+            throw new AppError('FRONTEND_BASE_URL ไม่ถูกต้อง ต้องเป็น URL แบบ http/https', 500);
+        }
+    }
+
+    if (process.env['NODE_ENV'] === 'production') {
+        throw new AppError('ระบบยืนยันอีเมลยังไม่พร้อมใช้งาน (กรุณาตั้งค่า FRONTEND_BASE_URL)', 500);
+    }
+
+    return 'http://localhost:5173';
 }
 
 function buildRegisterVerifyLink(token: string): string {
