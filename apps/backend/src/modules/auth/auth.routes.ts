@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import {
     handleRegister,
     handleRegisterVerify,
+    handleRegisterVerifyLink,
     handleRegisterResend,
     handleLogin,
     handleMe,
@@ -11,6 +12,7 @@ import {
 export const authRoutes: FastifyPluginAsync = async (app) => {
     app.post('/register', handleRegister);
     app.post('/register/verify', handleRegisterVerify);
+    app.post('/register/verify-link', handleRegisterVerifyLink);
     app.post('/register/resend', handleRegisterResend);
     app.post('/login', handleLogin);
     app.get('/me', handleMe);

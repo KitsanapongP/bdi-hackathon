@@ -62,6 +62,11 @@ export interface RegisterVerifyInput {
     code: string;
 }
 
+/** Input for POST /api/auth/register/verify-link */
+export interface RegisterVerifyLinkInput {
+    token: string;
+}
+
 /** Input for POST /api/auth/register/resend */
 export interface RegisterResendInput {
     email: string;
@@ -111,8 +116,9 @@ export interface PendingRegistrationRow extends RowDataPacket {
     registration_id: number;
     email: string;
     user_name: string;
+    pending_user_id: number | null;
     verification_code_hash: string;
-    payload_json: string;
+    verification_link_token_hash: string;
     expires_at: Date;
     last_sent_at: Date;
     attempt_count: number;

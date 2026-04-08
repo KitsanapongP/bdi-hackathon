@@ -40,10 +40,36 @@ export async function emailExists(db: DB, email: string): Promise<boolean> {
     return rows.length > 0;
 }
 
+export async function emailExistsInActiveUser(db: DB, email: string): Promise<boolean> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT 1
+         FROM user_users
+         WHERE email = :email
+           AND is_active = 1
+           AND deleted_at IS NULL
+         LIMIT 1`,
+        { email },
+    );
+    return rows.length > 0;
+}
+
 /** Check if user_name already exists */
 export async function userNameExists(db: DB, userName: string): Promise<boolean> {
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT 1 FROM user_users WHERE user_name = :userName AND deleted_at IS NULL LIMIT 1`,
+        { userName },
+    );
+    return rows.length > 0;
+}
+
+export async function userNameExistsInActiveUser(db: DB, userName: string): Promise<boolean> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT 1
+         FROM user_users
+         WHERE user_name = :userName
+           AND is_active = 1
+           AND deleted_at IS NULL
+         LIMIT 1`,
         { userName },
     );
     return rows.length > 0;
@@ -100,6 +126,22 @@ export async function createCredential(
     );
 }
 
+export async function upsertProvisionalCredential(
+    db: DB,
+    data: { userId: number; email: string; passwordHash: string },
+): Promise<void> {
+    await db.query(
+        `INSERT INTO user_credentials_local (user_id, login_email, password_hash, is_enabled, created_at, updated_at)
+         VALUES (:userId, :email, :passwordHash, 0, NOW(), NOW())
+         ON DUPLICATE KEY UPDATE
+            user_id = VALUES(user_id),
+            password_hash = VALUES(password_hash),
+            is_enabled = 0,
+            updated_at = NOW()`,
+        { userId: data.userId, email: data.email, passwordHash: data.passwordHash },
+    );
+}
+
 /** Create an identity record */
 export async function createIdentity(
     db: DB,
@@ -116,6 +158,111 @@ export async function createIdentity(
             isVerified: data.isVerified ? 1 : 0,
             verifiedAt: data.isVerified ? new Date() : null,
         },
+    );
+}
+
+export async function upsertProvisionalIdentity(
+    db: DB,
+    data: { userId: number; email: string; identityType: string; domainRule: string },
+): Promise<void> {
+    const [updated] = await db.query<ResultSetHeader>(
+        `UPDATE user_identities
+         SET identity_type = :identityType,
+             identifier = :email,
+             domain_rule = :domainRule,
+             is_verified = 0,
+             verified_at = NULL,
+             updated_at = NOW()
+         WHERE user_id = :userId
+         LIMIT 1`,
+        data,
+    );
+
+    if (updated.affectedRows > 0) return;
+
+    await db.query(
+        `INSERT INTO user_identities (user_id, identity_type, identifier, domain_rule, is_verified, verified_at, created_at, updated_at)
+         VALUES (:userId, :identityType, :email, :domainRule, 0, NULL, NOW(), NOW())`,
+        data,
+    );
+}
+
+export async function createProvisionalUser(
+    db: DB,
+    data: {
+        userName: string;
+        email: string;
+        phone: string;
+        firstNameTh: string;
+        lastNameTh: string;
+        firstNameEn: string;
+        lastNameEn: string;
+        gender: 'male' | 'female' | 'other';
+        birthDate: string;
+        educationLevel: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate';
+        institutionNameTh: string;
+        institutionNameEn: string;
+        homeProvince: string;
+    },
+): Promise<number> {
+    const [result] = await db.query<ResultSetHeader>(
+        `INSERT INTO user_users (
+            user_name, email, phone,
+            first_name_th, last_name_th, first_name_en, last_name_en,
+            gender, birth_date, education_level,
+            institution_name_th, institution_name_en, home_province,
+            is_active, created_at, updated_at
+        )
+        VALUES (
+            :userName, :email, :phone,
+            :firstNameTh, :lastNameTh, :firstNameEn, :lastNameEn,
+            :gender, :birthDate, :educationLevel,
+            :institutionNameTh, :institutionNameEn, :homeProvince,
+            0, NOW(), NOW()
+        )`,
+        data,
+    );
+    return result.insertId;
+}
+
+export async function updateProvisionalUser(
+    db: DB,
+    data: {
+        userId: number;
+        userName: string;
+        email: string;
+        phone: string;
+        firstNameTh: string;
+        lastNameTh: string;
+        firstNameEn: string;
+        lastNameEn: string;
+        gender: 'male' | 'female' | 'other';
+        birthDate: string;
+        educationLevel: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate';
+        institutionNameTh: string;
+        institutionNameEn: string;
+        homeProvince: string;
+    },
+): Promise<void> {
+    await db.query(
+        `UPDATE user_users
+         SET user_name = :userName,
+             email = :email,
+             phone = :phone,
+             first_name_th = :firstNameTh,
+             last_name_th = :lastNameTh,
+             first_name_en = :firstNameEn,
+             last_name_en = :lastNameEn,
+             gender = :gender,
+             birth_date = :birthDate,
+             education_level = :educationLevel,
+             institution_name_th = :institutionNameTh,
+             institution_name_en = :institutionNameEn,
+             home_province = :homeProvince,
+             updated_at = NOW()
+         WHERE user_id = :userId
+           AND is_active = 0`,
+        data,
     );
 }
 
@@ -140,29 +287,45 @@ export async function findActivePendingRegistrationByUserName(db: DB, userName: 
     return (rows[0] as PendingRegistrationRow | undefined) ?? null;
 }
 
+export async function findPendingRegistrationByLinkTokenHash(
+    db: DB,
+    verificationLinkTokenHash: string,
+): Promise<PendingRegistrationRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM user_registration_verifications
+         WHERE verification_link_token_hash = :verificationLinkTokenHash
+         LIMIT 1`,
+        { verificationLinkTokenHash },
+    );
+    return (rows[0] as PendingRegistrationRow | undefined) ?? null;
+}
+
 export async function upsertPendingRegistration(
     db: DB,
     data: {
+        pendingUserId: number;
         email: string;
         userName: string;
         verificationCodeHash: string;
-        payloadJson: string;
+        verificationLinkTokenHash: string;
         expiresAt: Date;
     },
 ): Promise<void> {
     await db.query(
         `INSERT INTO user_registration_verifications (
-            email, user_name, verification_code_hash, payload_json, expires_at,
+            pending_user_id, email, user_name, verification_code_hash, verification_link_token_hash, expires_at,
             last_sent_at, attempt_count, consumed_at, created_at, updated_at
         )
         VALUES (
-            :email, :userName, :verificationCodeHash, :payloadJson, :expiresAt,
+            :pendingUserId, :email, :userName, :verificationCodeHash, :verificationLinkTokenHash, :expiresAt,
             NOW(), 0, NULL, NOW(), NOW()
         )
         ON DUPLICATE KEY UPDATE
+            pending_user_id = VALUES(pending_user_id),
             user_name = VALUES(user_name),
             verification_code_hash = VALUES(verification_code_hash),
-            payload_json = VALUES(payload_json),
+            verification_link_token_hash = VALUES(verification_link_token_hash),
             expires_at = VALUES(expires_at),
             last_sent_at = NOW(),
             attempt_count = 0,
@@ -174,11 +337,12 @@ export async function upsertPendingRegistration(
 
 export async function refreshPendingRegistrationCode(
     db: DB,
-    data: { email: string; verificationCodeHash: string; expiresAt: Date },
+    data: { email: string; verificationCodeHash: string; verificationLinkTokenHash: string; expiresAt: Date },
 ): Promise<void> {
     await db.query(
         `UPDATE user_registration_verifications
          SET verification_code_hash = :verificationCodeHash,
+             verification_link_token_hash = :verificationLinkTokenHash,
              expires_at = :expiresAt,
              last_sent_at = NOW(),
              attempt_count = 0,
@@ -204,9 +368,61 @@ export async function consumePendingRegistration(db: DB, registrationId: number)
         `UPDATE user_registration_verifications
          SET consumed_at = NOW(),
              verification_code_hash = '',
+             verification_link_token_hash = '',
              updated_at = NOW()
          WHERE registration_id = :registrationId`,
         { registrationId },
+    );
+}
+
+export async function cleanupExpiredPendingRegistrationsForIdentity(
+    db: DB,
+    data: { email: string; userName: string },
+): Promise<void> {
+    await db.query(
+        `DELETE u
+         FROM user_users u
+         INNER JOIN user_registration_verifications urv ON urv.pending_user_id = u.user_id
+         WHERE u.is_active = 0
+           AND urv.consumed_at IS NULL
+           AND urv.expires_at <= NOW()
+           AND (urv.email = :email OR urv.user_name = :userName)`,
+        data,
+    );
+}
+
+export async function activatePendingRegistrationUser(
+    db: DB,
+    data: { userId: number; email: string; identityType: 'local' | 'email'; domainRule: 'any' | 'ac_th_only' },
+): Promise<void> {
+    await db.query(
+        `UPDATE user_users
+         SET is_active = 1,
+             updated_at = NOW()
+         WHERE user_id = :userId`,
+        { userId: data.userId },
+    );
+
+    await db.query(
+        `UPDATE user_credentials_local
+         SET is_enabled = 1,
+             password_updated_at = COALESCE(password_updated_at, NOW()),
+             updated_at = NOW()
+         WHERE user_id = :userId
+           AND login_email = :email`,
+        { userId: data.userId, email: data.email },
+    );
+
+    await db.query(
+        `UPDATE user_identities
+         SET identity_type = :identityType,
+             identifier = :email,
+             domain_rule = :domainRule,
+             is_verified = 1,
+             verified_at = COALESCE(verified_at, NOW()),
+             updated_at = NOW()
+         WHERE user_id = :userId`,
+        data,
     );
 }
 

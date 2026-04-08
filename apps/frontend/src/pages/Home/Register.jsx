@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { DatePicker } from 'antd';
 import {
@@ -40,6 +40,7 @@ const PRIVACY_DOC_CODES = ['PRIVACY', 'PDPA'];
 
 function RegisterPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [isRegisterMode, setIsRegisterMode] = useState(false);
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPass, setLoginPass] = useState('');
@@ -65,6 +66,7 @@ function RegisterPage() {
     const [verificationCountdown, setVerificationCountdown] = useState(0);
 
     const [errorMsg, setErrorMsg] = useState('');
+    const errorMsgRef = useRef(null);
     const [isLoading, setIsLoading] = useState(false);
     const [registrationWindow, setRegistrationWindow] = useState({
         status: SYSTEM_WINDOW_STATUS.UNKNOWN,
@@ -87,6 +89,58 @@ function RegisterPage() {
             navigate('/home', { replace: true });
         }
     }, [navigate]);
+
+    useEffect(() => {
+        const query = new URLSearchParams(location.search);
+        const verifyToken = query.get('verifyToken')?.trim();
+        if (!verifyToken) return;
+
+        let cancelled = false;
+
+        const verifyByLink = async () => {
+            setErrorMsg('');
+            setIsRegisterMode(true);
+            setRegisterStep('verify');
+            setIsLoading(true);
+
+            try {
+                const res = await fetch(apiUrl('/api/auth/register/verify-link'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ token: verifyToken }),
+                });
+                const data = await res.json();
+
+                if (!res.ok || !data.ok) {
+                    if (!cancelled) {
+                        setErrorMsg(data.message || 'ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุแล้ว');
+                        navigate('/home/register', { replace: true });
+                    }
+                    return;
+                }
+
+                if (!cancelled) {
+                    saveUserAndRedirect(data.data);
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    setErrorMsg(err instanceof Error ? err.message : 'ไม่สามารถยืนยันอีเมลจากลิงก์ได้');
+                    navigate('/home/register', { replace: true });
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        verifyByLink();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [location.search, navigate]);
 
     useEffect(() => {
         if (!isRegisterMode) return;
@@ -186,7 +240,7 @@ function RegisterPage() {
         return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     };
 
-    const saveUserAndRedirect = (user) => {
+    const saveUserAndRedirect = useCallback((user) => {
         const userInfo = {
             userId: user.userId,
             name: user.userName,
@@ -205,7 +259,7 @@ function RegisterPage() {
         } else {
             navigate('/home', { replace: true });
         }
-    };
+    }, [navigate]);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -264,55 +318,66 @@ function RegisterPage() {
         setSelectedConsentDoc(null);
     };
 
+    const showRegisterError = (message) => {
+        setErrorMsg(message);
+        window.requestAnimationFrame(() => {
+            errorMsgRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+    };
+
     const handleRegister = async (e) => {
         e.preventDefault();
         setErrorMsg('');
 
         if (!isRegistrationOpen) {
-            setErrorMsg(registerUnavailableMessage || 'ไม่สามารถลงทะเบียนได้ในขณะนี้');
+            showRegisterError(registerUnavailableMessage || 'ไม่สามารถลงทะเบียนได้ในขณะนี้');
             return;
         }
 
         if (!regFullNameTh.trim().includes(' ')) {
-            setErrorMsg('กรุณากรอกชื่อและนามสกุล (ภาษาไทย) โดยเว้นวรรคระหว่างชื่อกับนามสกุล');
+            showRegisterError('กรุณากรอกชื่อและนามสกุล (ภาษาไทย) โดยเว้นวรรคระหว่างชื่อกับนามสกุล');
             return;
         }
         if (!regFullNameEn.trim().includes(' ')) {
-            setErrorMsg('กรุณากรอกชื่อและนามสกุล (ภาษาอังกฤษ) โดยเว้นวรรคระหว่างชื่อกับนามสกุล');
+            showRegisterError('กรุณากรอกชื่อและนามสกุล (ภาษาอังกฤษ) โดยเว้นวรรคระหว่างชื่อกับนามสกุล');
             return;
         }
         if (regUserName.length < 3) {
-            setErrorMsg('ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร');
+            showRegisterError('ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร');
             return;
         }
         if (regPass !== regConfirmPass) {
-            setErrorMsg('รหัสผ่านไม่ตรงกัน');
+            showRegisterError('รหัสผ่านไม่ตรงกัน');
             return;
         }
-        if (regPass.length < 6) {
-            setErrorMsg('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+        if (regPass.length < 8) {
+            showRegisterError('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+            return;
+        }
+        if (!/[A-Za-z]/.test(regPass) || !/\d/.test(regPass)) {
+            showRegisterError('รหัสผ่านต้องมีทั้งตัวอักษรและตัวเลข');
             return;
         }
         if (!regBirthDate) {
-            setErrorMsg('กรุณาเลือกวันเดือนปีเกิด');
+            showRegisterError('กรุณาเลือกวันเดือนปีเกิด');
             return;
         }
         if (isConsentLoading) {
-            setErrorMsg('กำลังโหลดเอกสารข้อตกลง กรุณารอสักครู่');
+            showRegisterError('กำลังโหลดเอกสารข้อตกลง กรุณารอสักครู่');
             return;
         }
         if (consentDocs.length === 0) {
-            setErrorMsg('ไม่พบเอกสารข้อตกลงสำหรับการลงทะเบียน');
+            showRegisterError('ไม่พบเอกสารข้อตกลงสำหรับการลงทะเบียน');
             return;
         }
 
         if (!termsDoc || !privacyDoc) {
-            setErrorMsg('ไม่พบเอกสารข้อตกลงที่จำเป็นสำหรับการลงทะเบียน');
+            showRegisterError('ไม่พบเอกสารข้อตกลงที่จำเป็นสำหรับการลงทะเบียน');
             return;
         }
 
         if (!hasAcceptedConsent) {
-            setErrorMsg('กรุณายืนยันการยอมรับข้อกำหนดการใช้งานและนโยบายคุ้มครองข้อมูลส่วนบุคคล');
+            showRegisterError('กรุณายืนยันการยอมรับข้อกำหนดการใช้งานและนโยบายคุ้มครองข้อมูลส่วนบุคคล');
             return;
         }
 
@@ -345,7 +410,7 @@ function RegisterPage() {
             const data = await res.json();
 
             if (!res.ok || !data.ok) {
-                setErrorMsg(data.message || 'ไม่สามารถลงทะเบียนได้');
+                showRegisterError(data.message || 'ไม่สามารถลงทะเบียนได้');
                 return;
             }
 
@@ -357,7 +422,7 @@ function RegisterPage() {
             setVerificationExpiresAt(nextExpiresAt);
             setRegisterStep('verify');
         } catch (err) {
-            setErrorMsg(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+            showRegisterError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
         } finally {
             setIsLoading(false);
         }
@@ -473,7 +538,7 @@ function RegisterPage() {
                         </div>
                     )}
 
-                    {errorMsg && <div style={{ color: '#ef4444', textAlign: 'center', marginBottom: 16, fontSize: '0.9rem', background: '#fee2e2', padding: 8, borderRadius: 8 }}>{errorMsg}</div>}
+                    {errorMsg && <div ref={errorMsgRef} style={{ color: '#ef4444', textAlign: 'center', marginBottom: 16, fontSize: '0.9rem', background: '#fee2e2', padding: 8, borderRadius: 8 }}>{errorMsg}</div>}
 
                     {!isRegisterMode ? (
                         <form onSubmit={handleLogin} autoComplete="on">
@@ -485,7 +550,7 @@ function RegisterPage() {
                         <form onSubmit={handleVerifyRegister} autoComplete="off" data-lpignore="true" className="gr-verify-form">
                             <div className="gr-verify-panel">
                                 <p className="gr-verify-text">
-                                    เราได้ส่งรหัสยืนยัน 6 หลักไปที่อีเมล
+                                    เราได้ส่งรหัสยืนยัน 6 หลักและลิงก์ยืนยันไปที่อีเมล
                                     <br />
                                     <strong>{pendingVerificationEmail}</strong>
                                 </p>
@@ -582,8 +647,8 @@ function RegisterPage() {
                                             setRegPhone(value);
                                         }} required disabled={registerActionDisabled} minLength={9} maxLength={10} /></div>
                                         <div className="gr-input-group"><label>อีเมล (Email)</label><input type="email" name="registerEmail" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="somchai.jaidee@kku.ac.th" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required disabled={registerActionDisabled} /></div>
-                                        <div className="gr-input-group"><label>รหัสผ่าน (Password)</label><div className="gr-password-wrap"><input type={showRegPass ? 'text' : 'password'} name="registerPassword" autoComplete="new-password" data-lpignore="true" className="gr-input" placeholder="อย่างน้อย 6 ตัวอักษร" value={regPass} onChange={(e) => setRegPass(e.target.value)} required disabled={registerActionDisabled} minLength={6} /><button type="button" className="gr-password-toggle" onClick={() => setShowRegPass(!showRegPass)} tabIndex={-1} disabled={registerActionDisabled}>{showRegPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
-                                        <div className="gr-input-group gr-grid-span-2"><label>ยืนยันรหัสผ่าน (Confirm Password)</label><div className="gr-password-wrap"><input type={showRegConfirmPass ? 'text' : 'password'} name="registerConfirmPassword" autoComplete="new-password" data-lpignore="true" className="gr-input" placeholder="ยืนยันรหัสผ่านอีกครั้ง" value={regConfirmPass} onChange={(e) => setRegConfirmPass(e.target.value)} required disabled={registerActionDisabled} minLength={6} /><button type="button" className="gr-password-toggle" onClick={() => setShowRegConfirmPass(!showRegConfirmPass)} tabIndex={-1} disabled={registerActionDisabled}>{showRegConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
+                                        <div className="gr-input-group"><label>รหัสผ่าน (Password)</label><div className="gr-password-wrap"><input type={showRegPass ? 'text' : 'password'} name="registerPassword" autoComplete="new-password" data-lpignore="true" className="gr-input" placeholder="อย่างน้อย 8 ตัว และมีทั้งตัวอักษรกับตัวเลข" value={regPass} onChange={(e) => setRegPass(e.target.value)} required disabled={registerActionDisabled} minLength={8} /><button type="button" className="gr-password-toggle" onClick={() => setShowRegPass(!showRegPass)} tabIndex={-1} disabled={registerActionDisabled}>{showRegPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
+                                        <div className="gr-input-group gr-grid-span-2"><label>ยืนยันรหัสผ่าน (Confirm Password)</label><div className="gr-password-wrap"><input type={showRegConfirmPass ? 'text' : 'password'} name="registerConfirmPassword" autoComplete="new-password" data-lpignore="true" className="gr-input" placeholder="ยืนยันรหัสผ่านอีกครั้ง" value={regConfirmPass} onChange={(e) => setRegConfirmPass(e.target.value)} required disabled={registerActionDisabled} minLength={8} /><button type="button" className="gr-password-toggle" onClick={() => setShowRegConfirmPass(!showRegConfirmPass)} tabIndex={-1} disabled={registerActionDisabled}>{showRegConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
                                     </div>
                                 </section>
                             </div>
