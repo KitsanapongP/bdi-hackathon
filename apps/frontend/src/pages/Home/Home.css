@@ -24,7 +24,7 @@
     --gt-radius: 16px;
     --gt-nav-h: 64px;
     --gt-banner-h: 48px;
-    --gt-max-w: 1200px;
+    --gt-max-w: 1220px;
     --gt-glass: rgba(241, 245, 249, 0.55);
     --gt-glass-strong: rgba(241, 245, 249, 0.7);
     --gt-glass-border: rgba(226, 232, 240, 0.5);
@@ -891,11 +891,9 @@ section.gt-hero {
     -webkit-text-fill-color: transparent;
     background-clip: text;
     animation: gt-grad 8s ease infinite;
-    max-width: 900px;
+    max-width: 1300px;
     position: relative;
     z-index: 1;
-    overflow-wrap: anywhere;
-    text-wrap: balance;
 }
 
 .gt-hero-carousel+.gt-hero-title {
