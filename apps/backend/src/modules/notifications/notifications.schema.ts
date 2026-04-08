@@ -27,6 +27,10 @@ export const adminSendCustomEmailSchema = z.object({
   message: z.string().trim().min(1),
 });
 
+export const adminSendBurstTestEmailSchema = z.object({
+  recipientEmail: z.string().trim().email('รูปแบบอีเมลไม่ถูกต้อง'),
+});
+
 export const notificationRecipientParamSchema = z.object({
   userId: z.coerce.number().int().positive('userId ไม่ถูกต้อง'),
 });

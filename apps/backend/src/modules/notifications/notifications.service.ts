@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import type { DB } from '../../config/db.js';
 import * as repo from './notifications.repo.js';
 import type { NotificationEventCode } from './notifications.types.js';
-import { NotFoundError } from '../../shared/errors.js';
+import { AppError, NotFoundError } from '../../shared/errors.js';
 import { createTeamAuditLog } from '../teams/teams.repo.js';
 
 const EVENT_TITLES: Record<NotificationEventCode, string> = {
@@ -719,6 +719,110 @@ export async function sendCustomEmailToTeam(
     teamId: data.teamId,
     subject,
     ...result,
+  };
+}
+
+export async function sendBurstTestEmail(db: DB, recipientEmail: string, actorUserId: number) {
+  const { transporter, reason } = getTransporter();
+  if (!transporter) {
+    throw new AppError(`ระบบอีเมลยังไม่พร้อมใช้งาน (${reason})`, 500);
+  }
+
+  const normalizedRecipient = recipientEmail.trim().toLowerCase();
+  const fromEmail = process.env.SMTP_FROM?.trim() || process.env.SMTP_USER?.trim() || 'noreply@hackathon.local';
+  const total = 110;
+  let sent = 0;
+  let failed = 0;
+  let queued = 0;
+
+  for (let index = 1; index <= total; index += 1) {
+    const subject = `[EMAIL BURST TEST ${index}/${total}] Intelligent Living Hackathon 2026`;
+    const html = buildStandardEmailHtml({
+      eventTitle: 'อีเมลทดสอบระบบส่งเมล',
+      headline: `Burst Test ${index}/${total}`,
+      message: `นี่คืออีเมลทดสอบครั้งที่ ${index} จากทั้งหมด ${total} ครั้ง`,
+      detailLines: [
+        formatDetailLine('ประเภท', 'Admin burst email test'),
+        formatDetailLine('ลำดับ', `${index}/${total}`),
+        formatDetailLine('ผู้รับ', normalizedRecipient),
+        formatDetailLine('เวลาส่ง', formatThaiDateTime(new Date().toISOString())),
+      ],
+    });
+    const logMessage = `admin burst email test ${index}/${total} -> ${normalizedRecipient}`;
+
+    try {
+      const result = await sendMailWithQuotaRetry(transporter, {
+        from: fromEmail,
+        to: normalizedRecipient,
+        subject,
+        html,
+      });
+
+      await repo.createNotificationLog(db, {
+        eventCode: 'ADMIN_BURST_TEST_EMAIL',
+        channel: 'email',
+        teamId: null,
+        recipientUserId: actorUserId,
+        actorUserId,
+        templateCode: null,
+        subjectText: subject,
+        messageText: logMessage,
+        status: 'sent',
+        recipientEmail: normalizedRecipient,
+        emailHtml: html,
+        providerMessageId: result.messageId,
+        sentAt: new Date(),
+      });
+      sent += 1;
+    } catch (error: any) {
+      if (isSmtpQuotaError(error)) {
+        queued += 1;
+        await repo.createNotificationLog(db, {
+          eventCode: 'ADMIN_BURST_TEST_EMAIL',
+          channel: 'email',
+          teamId: null,
+          recipientUserId: actorUserId,
+          actorUserId,
+          templateCode: null,
+          subjectText: subject,
+          messageText: logMessage,
+          status: 'queued',
+          recipientEmail: normalizedRecipient,
+          emailHtml: html,
+          retryAfterAt: buildRetryAfterDate(),
+          retryCount: 1,
+          errorMessage: `queued_after_quota(waited_ms=${SMTP_QUOTA_RETRY_DELAY_MS}); ${String(error?.message || error)}`,
+        });
+        continue;
+      }
+
+      failed += 1;
+      const errorMessage = isPermanentRecipientError(error)
+        ? `permanent_recipient_error; ${String(error?.message || error)}`
+        : String(error?.message || error);
+      await repo.createNotificationLog(db, {
+        eventCode: 'ADMIN_BURST_TEST_EMAIL',
+        channel: 'email',
+        teamId: null,
+        recipientUserId: actorUserId,
+        actorUserId,
+        templateCode: null,
+        subjectText: subject,
+        messageText: logMessage,
+        status: 'failed',
+        recipientEmail: normalizedRecipient,
+        emailHtml: html,
+        errorMessage,
+      });
+    }
+  }
+
+  return {
+    recipientEmail: normalizedRecipient,
+    total,
+    sent,
+    queued,
+    failed,
   };
 }
 

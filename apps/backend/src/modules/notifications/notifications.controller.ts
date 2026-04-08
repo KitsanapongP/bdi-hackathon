@@ -3,6 +3,7 @@ import { ok } from '../../shared/response.js';
 import { AppError } from '../../shared/errors.js';
 import * as service from './notifications.service.js';
 import {
+  adminSendBurstTestEmailSchema,
   adminSendCustomEmailSchema,
   eventCodeSchema,
   notificationRecipientParamSchema,
@@ -95,6 +96,22 @@ export async function handleAdminSendCustomEmail(req: FastifyRequest, reply: Fas
       actorUserId: user.userId,
     });
     return reply.send(ok(result, 'ส่งอีเมลสำเร็จ'));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleAdminSendBurstTestEmail(req: FastifyRequest, reply: FastifyReply) {
+  const parsed = adminSendBurstTestEmailSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+  }
+
+  try {
+    const user = req.user as JwtPayload;
+    const result = await service.sendBurstTestEmail(req.server.ctx.db, parsed.data.recipientEmail, user.userId);
+    return reply.send(ok(result, 'ส่งอีเมลทดสอบครบ 110 ครั้งแล้ว'));
   } catch (err) {
     if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
     throw err;

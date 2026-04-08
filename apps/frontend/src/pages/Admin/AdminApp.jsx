@@ -6748,8 +6748,10 @@ function NotificationSettingsPage() {
   const [teamOptions, setTeamOptions] = useState([])
   const [eventDrafts, setEventDrafts] = useState({})
   const [customEmail, setCustomEmail] = useState({ teamId: '', subject: '', message: '' })
+  const [burstTestRecipientEmail, setBurstTestRecipientEmail] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [sendingBurstTest, setSendingBurstTest] = useState(false)
   const [updatingRecipientUserId, setUpdatingRecipientUserId] = useState(null)
 
   const loadSelectionTeamOptions = useCallback(async () => {
@@ -6883,6 +6885,33 @@ function NotificationSettingsPage() {
       pushToast({ type: 'error', title: err?.message || 'ส่งอีเมลไม่สำเร็จ' })
     } finally {
       setSending(false)
+    }
+  }
+
+  const sendBurstTestEmail = async () => {
+    const email = burstTestRecipientEmail.trim()
+    if (!email) {
+      pushToast({ type: 'error', title: 'กรุณากรอกอีเมลปลายทางสำหรับทดสอบ' })
+      return
+    }
+
+    try {
+      setSendingBurstTest(true)
+      const res = await fetch(apiUrl('/api/notifications/admin/test-burst-email'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientEmail: email }),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'send burst test failed')
+      pushToast({
+        title: `Burst test done (total=${payload.data?.total || 0}, sent=${payload.data?.sent || 0}, queued=${payload.data?.queued || 0}, failed=${payload.data?.failed || 0})`,
+      })
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'ส่ง burst test ไม่สำเร็จ' })
+    } finally {
+      setSendingBurstTest(false)
     }
   }
 
@@ -7038,6 +7067,30 @@ function NotificationSettingsPage() {
           <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={sending} onClick={sendCustomEmail}>
             <Mail size={14} />
             {sending ? 'Sending...' : 'Send Custom Email'}
+          </button>
+        </div>
+      </article>
+
+      <article className="admin-ui-panel">
+        <h3>SMTP Quota Burst Test (110 emails)</h3>
+        <div className="admin-ui-form">
+          <label>
+            Recipient Email
+            <input
+              type="email"
+              value={burstTestRecipientEmail}
+              onChange={(e) => setBurstTestRecipientEmail(e.target.value)}
+              placeholder="example@domain.com"
+            />
+          </label>
+          <button
+            type="button"
+            className="admin-ui-btn admin-ui-btn-primary"
+            disabled={sendingBurstTest || !burstTestRecipientEmail.trim()}
+            onClick={sendBurstTestEmail}
+          >
+            <Mail size={14} />
+            {sendingBurstTest ? 'Sending 110 emails...' : 'Send 110 Test Emails'}
           </button>
         </div>
       </article>
