@@ -56,6 +56,22 @@ npm run start
 
 ---
 
+## Email retry queue (for SMTP quota limits)
+When SMTP returns quota/rate-limit errors, email logs are stored with `status = queued` and `retry_after_at`.
+
+Run retry worker manually:
+```bash
+npm run retry:emails
+```
+
+Recommended scheduler setup: run this command every 1 hour.
+
+Optional env values:
+- `SMTP_QUOTA_RETRY_DELAY_MS` (default `3600000`)
+- `SMTP_RETRY_BATCH_SIZE` (default `200`)
+
+---
+
 ## Migrations (manual SQL scripts)
 Migration SQL files are stored here:
 - `src/db/migrations/`

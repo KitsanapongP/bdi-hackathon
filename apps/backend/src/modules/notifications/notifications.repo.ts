@@ -66,7 +66,11 @@ export async function createNotificationLog(
     templateCode: string | null;
     subjectText: string | null;
     messageText: string | null;
-    status: 'sent' | 'failed' | 'skipped' | 'read';
+    status: 'queued' | 'sent' | 'failed' | 'skipped' | 'read';
+    recipientEmail?: string | null;
+    emailHtml?: string | null;
+    retryAfterAt?: Date | null;
+    retryCount?: number;
     providerMessageId?: string | null;
     errorMessage?: string | null;
     sentAt?: Date | null;
@@ -75,10 +79,12 @@ export async function createNotificationLog(
   const [result] = await db.query<ResultSetHeader>(`
     INSERT INTO notification_logs (
       event_code, channel, team_id, recipient_user_id, actor_user_id, template_code,
-      subject_text, message_text, status, provider_message_id, error_message, sent_at, created_at
+      subject_text, message_text, status, recipient_email, email_html, retry_after_at, retry_count,
+      provider_message_id, error_message, sent_at, created_at
     ) VALUES (
       :eventCode, :channel, :teamId, :recipientUserId, :actorUserId, :templateCode,
-      :subjectText, :messageText, :status, :providerMessageId, :errorMessage, :sentAt, NOW()
+      :subjectText, :messageText, :status, :recipientEmail, :emailHtml, :retryAfterAt, :retryCount,
+      :providerMessageId, :errorMessage, :sentAt, NOW()
     )
   `, {
     eventCode: data.eventCode,
@@ -90,6 +96,10 @@ export async function createNotificationLog(
     subjectText: data.subjectText,
     messageText: data.messageText,
     status: data.status,
+    recipientEmail: data.recipientEmail ?? null,
+    emailHtml: data.emailHtml ?? null,
+    retryAfterAt: data.retryAfterAt ?? null,
+    retryCount: data.retryCount ?? 0,
     providerMessageId: data.providerMessageId ?? null,
     errorMessage: data.errorMessage ?? null,
     sentAt: data.sentAt ?? null,
@@ -113,6 +123,89 @@ export async function getTeamInbox(
     LIMIT :limit
   `, { teamId, userId, limit });
   return rows as NotificationLogRow[];
+}
+
+export async function getQueuedEmailLogs(
+  db: DB,
+  now: Date,
+  limit: number,
+): Promise<NotificationLogRow[]> {
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT nl.*
+    FROM notification_logs nl
+    WHERE nl.channel = 'email'
+      AND nl.status = 'queued'
+      AND nl.retry_after_at IS NOT NULL
+      AND nl.retry_after_at <= :now
+      AND nl.email_html IS NOT NULL
+      AND nl.recipient_email IS NOT NULL
+    ORDER BY nl.retry_after_at ASC, nl.created_at ASC, nl.notification_log_id ASC
+    LIMIT :limit
+  `, {
+    now,
+    limit,
+  });
+
+  return rows as NotificationLogRow[];
+}
+
+export async function markNotificationLogAsSent(
+  db: DB,
+  notificationLogId: number,
+  providerMessageId: string | null,
+): Promise<void> {
+  await db.query(`
+    UPDATE notification_logs
+    SET status = 'sent',
+        provider_message_id = :providerMessageId,
+        error_message = NULL,
+        sent_at = NOW(),
+        retry_after_at = NULL,
+        updated_at = NOW()
+    WHERE notification_log_id = :notificationLogId
+  `, {
+    notificationLogId,
+    providerMessageId,
+  });
+}
+
+export async function markNotificationLogAsFailed(
+  db: DB,
+  notificationLogId: number,
+  errorMessage: string,
+): Promise<void> {
+  await db.query(`
+    UPDATE notification_logs
+    SET status = 'failed',
+        error_message = :errorMessage,
+        retry_after_at = NULL,
+        updated_at = NOW()
+    WHERE notification_log_id = :notificationLogId
+  `, {
+    notificationLogId,
+    errorMessage,
+  });
+}
+
+export async function requeueNotificationLog(
+  db: DB,
+  notificationLogId: number,
+  retryAfterAt: Date,
+  errorMessage: string,
+): Promise<void> {
+  await db.query(`
+    UPDATE notification_logs
+    SET status = 'queued',
+        retry_after_at = :retryAfterAt,
+        retry_count = retry_count + 1,
+        error_message = :errorMessage,
+        updated_at = NOW()
+    WHERE notification_log_id = :notificationLogId
+  `, {
+    notificationLogId,
+    retryAfterAt,
+    errorMessage,
+  });
 }
 
 export async function markNotificationAsRead(

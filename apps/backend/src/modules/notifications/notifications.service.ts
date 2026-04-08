@@ -134,12 +134,6 @@ function buildStandardEmailHtml(input: {
   `;
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
 function isSmtpQuotaError(error: any): boolean {
   const responseCode = Number(error?.responseCode);
   if ([421, 450, 451, 452, 454].includes(responseCode)) {
@@ -147,15 +141,43 @@ function isSmtpQuotaError(error: any): boolean {
   }
 
   const message = `${String(error?.code || '')} ${String(error?.message || '')} ${String(error?.response || '')}`.toLowerCase();
+  if (/limit[^\n\r]*exceed/.test(message) || /exceed[^\n\r]*limit/.test(message)) {
+    return true;
+  }
+
   return [
     'quota',
     'rate limit',
     'rate-limit',
     'too many',
     'limit exceeded',
+    'allowed outgoing messages was exceeded',
+    'number of allowed outgoing messages was exceeded',
+    'outgoing messages was exceeded',
     'daily user sending quota exceeded',
     '4.7.0',
     '4.7.1',
+  ].some((token) => message.includes(token));
+}
+
+function isPermanentRecipientError(error: any): boolean {
+  const responseCode = Number(error?.responseCode);
+  if ([550, 551, 552, 553].includes(responseCode)) {
+    return true;
+  }
+
+  const message = `${String(error?.code || '')} ${String(error?.message || '')} ${String(error?.response || '')}`.toLowerCase();
+  return [
+    'mailbox unavailable',
+    'unknown user',
+    'user unknown',
+    'no such user',
+    'no such mailbox',
+    'recipient address rejected',
+    'invalid recipient',
+    'address not found',
+    'does not exist',
+    'unrouteable address',
   ].some((token) => message.includes(token));
 }
 
@@ -192,27 +214,11 @@ async function sendMailWithQuotaRetry(transporter: any, mailOptions: {
   subject: string;
   html: string;
 }) {
-  try {
-    const result = await transporter.sendMail(mailOptions);
-    return { result, retryAfterQuota: false };
-  } catch (error: any) {
-    if (!isSmtpQuotaError(error)) {
-      throw error;
-    }
+  return transporter.sendMail(mailOptions);
+}
 
-    await delay(SMTP_QUOTA_RETRY_DELAY_MS);
-
-    try {
-      const result = await transporter.sendMail(mailOptions);
-      return { result, retryAfterQuota: true };
-    } catch (retryError: any) {
-      if (retryError && typeof retryError === 'object') {
-        retryError.quotaRetryAttempted = true;
-        retryError.quotaRetryDelayMs = SMTP_QUOTA_RETRY_DELAY_MS;
-      }
-      throw retryError;
-    }
-  }
+function buildRetryAfterDate(fromDate = new Date()): Date {
+  return new Date(fromDate.getTime() + SMTP_QUOTA_RETRY_DELAY_MS);
 }
 
 async function resolveEventSetting(db: DB, eventCode: NotificationEventCode): Promise<EventSetting> {
@@ -342,6 +348,7 @@ async function sendEmailWithLog(
   let sent = 0;
   let failed = 0;
   let skipped = 0;
+  let queued = 0;
 
   for (const recipient of input.recipients) {
     if (!recipient.email) {
@@ -356,6 +363,8 @@ async function sendEmailWithLog(
         subjectText: input.subject,
         messageText: input.logMessage,
         status: 'skipped',
+        recipientEmail: null,
+        emailHtml: input.htmlMessage,
         errorMessage: 'recipient email is empty',
       });
       continue;
@@ -373,13 +382,15 @@ async function sendEmailWithLog(
         subjectText: input.subject,
         messageText: input.logMessage,
         status: 'skipped',
+        recipientEmail: recipient.email,
+        emailHtml: input.htmlMessage,
         errorMessage: `SMTP is not configured: ${reason ?? 'unknown reason'}`,
       });
       continue;
     }
 
     try {
-      const { result, retryAfterQuota } = await sendMailWithQuotaRetry(transporter, {
+      const result = await sendMailWithQuotaRetry(transporter, {
         from: fromEmail,
         to: recipient.email,
         subject: input.subject,
@@ -397,15 +408,37 @@ async function sendEmailWithLog(
         subjectText: input.subject,
         messageText: input.logMessage,
         status: 'sent',
+        recipientEmail: recipient.email,
+        emailHtml: input.htmlMessage,
         providerMessageId: result.messageId,
-        errorMessage: retryAfterQuota ? `retry_after_quota(waited_ms=${SMTP_QUOTA_RETRY_DELAY_MS})` : null,
         sentAt: new Date(),
       });
     } catch (error: any) {
-      const retryInfo = error?.quotaRetryAttempted
-        ? `retry_after_quota(waited_ms=${error?.quotaRetryDelayMs ?? SMTP_QUOTA_RETRY_DELAY_MS}); `
-        : '';
+      if (isSmtpQuotaError(error)) {
+        queued += 1;
+        await repo.createNotificationLog(db, {
+          eventCode: input.eventCode,
+          channel: 'email',
+          teamId: input.teamId,
+          recipientUserId: recipient.user_id,
+          actorUserId: input.actorUserId,
+          templateCode: input.templateCode,
+          subjectText: input.subject,
+          messageText: input.logMessage,
+          status: 'queued',
+          recipientEmail: recipient.email,
+          emailHtml: input.htmlMessage,
+          retryAfterAt: buildRetryAfterDate(),
+          retryCount: 1,
+          errorMessage: `queued_after_quota(waited_ms=${SMTP_QUOTA_RETRY_DELAY_MS}); ${String(error?.message || error)}`,
+        });
+        continue;
+      }
+
       failed += 1;
+      const errorMessage = isPermanentRecipientError(error)
+        ? `permanent_recipient_error; ${String(error?.message || error)}`
+        : String(error?.message || error);
       await repo.createNotificationLog(db, {
         eventCode: input.eventCode,
         channel: 'email',
@@ -416,12 +449,86 @@ async function sendEmailWithLog(
         subjectText: input.subject,
         messageText: input.logMessage,
         status: 'failed',
-        errorMessage: `${retryInfo}${String(error?.message || error)}`,
+        recipientEmail: recipient.email,
+        emailHtml: input.htmlMessage,
+        errorMessage,
       });
     }
   }
 
-  return { sent, failed, skipped, totalRecipients: input.recipients.length };
+  return { sent, failed, skipped, queued, totalRecipients: input.recipients.length };
+}
+
+export async function processQueuedEmailRetries(db: DB, limit = 100) {
+  const { transporter, reason } = getTransporter();
+  if (!transporter) {
+    return {
+      scanned: 0,
+      sent: 0,
+      failed: 0,
+      requeued: 0,
+      skipped: 0,
+      message: `SMTP is not configured: ${reason ?? 'unknown reason'}`,
+    };
+  }
+
+  const now = new Date();
+  const rows = await repo.getQueuedEmailLogs(db, now, Math.max(1, Math.min(limit, 1000)));
+  const fromEmail = process.env.SMTP_FROM?.trim() || process.env.SMTP_USER?.trim() || 'noreply@hackathon.local';
+
+  let sent = 0;
+  let failed = 0;
+  let requeued = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    if (!row.recipient_email || !row.email_html || !row.subject_text) {
+      skipped += 1;
+      await repo.markNotificationLogAsFailed(db, row.notification_log_id, 'queued email payload is incomplete');
+      continue;
+    }
+
+    try {
+      const result = await sendMailWithQuotaRetry(transporter, {
+        from: fromEmail,
+        to: row.recipient_email,
+        subject: row.subject_text,
+        html: row.email_html,
+      });
+
+      sent += 1;
+      await repo.markNotificationLogAsSent(
+        db,
+        row.notification_log_id,
+        result?.messageId ? String(result.messageId) : null,
+      );
+    } catch (error: any) {
+      if (isSmtpQuotaError(error)) {
+        requeued += 1;
+        await repo.requeueNotificationLog(
+          db,
+          row.notification_log_id,
+          buildRetryAfterDate(),
+          `queued_after_quota(waited_ms=${SMTP_QUOTA_RETRY_DELAY_MS}); ${String(error?.message || error)}`,
+        );
+        continue;
+      }
+
+      failed += 1;
+      const errorMessage = isPermanentRecipientError(error)
+        ? `permanent_recipient_error; ${String(error?.message || error)}`
+        : String(error?.message || error);
+      await repo.markNotificationLogAsFailed(db, row.notification_log_id, errorMessage);
+    }
+  }
+
+  return {
+    scanned: rows.length,
+    sent,
+    failed,
+    requeued,
+    skipped,
+  };
 }
 
 export async function triggerNotificationEvent(db: DB, input: TriggerEventInput): Promise<void> {
@@ -567,6 +674,7 @@ export async function sendCustomEmailToTeam(
       sent: 0,
       failed: 0,
       skipped: 0,
+      queued: 0,
     };
   }
 
@@ -603,6 +711,7 @@ export async function sendCustomEmailToTeam(
       sent: result.sent,
       failed: result.failed,
       skipped: result.skipped,
+      queued: result.queued,
     },
   });
 

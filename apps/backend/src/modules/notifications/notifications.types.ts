@@ -26,7 +26,11 @@ export interface NotificationLogRow extends RowDataPacket {
   template_code: string | null;
   subject_text: string | null;
   message_text: string | null;
-  status: 'sent' | 'failed' | 'skipped' | 'read';
+  status: 'queued' | 'sent' | 'failed' | 'skipped' | 'read';
+  recipient_email: string | null;
+  email_html: string | null;
+  retry_after_at: Date | null;
+  retry_count: number;
   provider_message_id: string | null;
   error_message: string | null;
   sent_at: Date | null;

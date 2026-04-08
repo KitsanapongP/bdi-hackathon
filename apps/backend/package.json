@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "retry:emails": "tsx src/scripts/process-email-retries.ts"
   },
   "keywords": [],
   "author": "",
