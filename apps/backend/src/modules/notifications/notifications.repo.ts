@@ -160,8 +160,7 @@ export async function markNotificationLogAsSent(
         provider_message_id = :providerMessageId,
         error_message = NULL,
         sent_at = NOW(),
-        retry_after_at = NULL,
-        updated_at = NOW()
+        retry_after_at = NULL
     WHERE notification_log_id = :notificationLogId
   `, {
     notificationLogId,
@@ -178,8 +177,7 @@ export async function markNotificationLogAsFailed(
     UPDATE notification_logs
     SET status = 'failed',
         error_message = :errorMessage,
-        retry_after_at = NULL,
-        updated_at = NOW()
+        retry_after_at = NULL
     WHERE notification_log_id = :notificationLogId
   `, {
     notificationLogId,
@@ -198,8 +196,7 @@ export async function requeueNotificationLog(
     SET status = 'queued',
         retry_after_at = :retryAfterAt,
         retry_count = retry_count + 1,
-        error_message = :errorMessage,
-        updated_at = NOW()
+        error_message = :errorMessage
     WHERE notification_log_id = :notificationLogId
   `, {
     notificationLogId,
