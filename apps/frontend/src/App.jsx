@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import HomePage from './pages/Home/Home'
 import RegisterPage from './pages/Home/Register'
@@ -13,6 +14,10 @@ import AdminApp from './pages/Admin/AdminApp'
 function App() {
   const location = useLocation()
   const isPublicRoute = !location.pathname.startsWith('/admin')
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [location.pathname])
 
   return (
     <div key={location.pathname} className={isPublicRoute ? 'app-route-fade' : ''}>
