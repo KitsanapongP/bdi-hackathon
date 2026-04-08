@@ -544,7 +544,7 @@ body:has(.gt-page) {
 /* --- 5. Hero Section --- */
 section.gt-hero {
     padding-top: 60px;
-    padding-bottom: 50px;
+    padding-bottom: 60px;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -1018,7 +1018,7 @@ section.gt-hero {
     display: flex;
     gap: 12px;
     margin-top: 16px;
-    margin-bottom: 110px;
+    margin-bottom: 16px;
     position: relative;
     z-index: 1;
 }
