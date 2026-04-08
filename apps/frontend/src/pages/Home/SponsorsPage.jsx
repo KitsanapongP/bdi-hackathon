@@ -43,7 +43,7 @@ function SponsorsPage() {
                 }
             } catch {
                 if (!isMounted) return;
-                setError('เกิดข้อผิดพลาดในการโหลดข้อมูลผู้สนับสนุน');
+                setError('เกิดข้อผิดพลาดในการโหลดข้อมูลภาคีเครือข่าย');
                 setSponsors([]);
                 setLoading(false);
             }
@@ -60,14 +60,14 @@ function SponsorsPage() {
         <HomeShell>
             <main className="gt-info-main gt-container">
                 <section className="gt-info-panel">
-                    <h1>ผู้สนับสนุนอย่างเป็นทางการ</h1>
+                    <h1>ภาคีเครือข่ายความร่วมมือ</h1>
 
                     {loading ? (
                         <p className="gt-info-status">กำลังโหลดข้อมูล...</p>
                     ) : error ? (
                         <p className="gt-info-status gt-info-status-error">{error}</p>
                     ) : sponsors.length === 0 ? (
-                        <p className="gt-info-status">ยังไม่มีข้อมูลผู้สนับสนุน</p>
+                        <p className="gt-info-status">ยังไม่มีข้อมูลภาคีเครือข่าย</p>
                     ) : (
                         <div className="gt-sponsors-page-grid">
                             {sponsors.map((sponsor) => {
@@ -79,7 +79,7 @@ function SponsorsPage() {
                                             <div className="gt-sponsor-page-logo-wrap">
                                                 <img
                                                     src={apiUrl(sponsor.logoUrl)}
-                                                    alt={sponsor.nameEn || sponsor.nameTh || 'Sponsor'}
+                                                    alt={sponsor.nameEn || sponsor.nameTh || 'Partner'}
                                                     className="gt-sponsor-page-logo"
                                                     loading="lazy"
                                                     decoding="async"
@@ -102,7 +102,7 @@ function SponsorsPage() {
                                             <div className="gt-sponsor-page-logo-wrap">
                                                 <img
                                                     src={apiUrl(sponsor.logoUrl)}
-                                                    alt={sponsor.nameEn || sponsor.nameTh || 'Sponsor'}
+                                                    alt={sponsor.nameEn || sponsor.nameTh || 'Partner'}
                                                     className="gt-sponsor-page-logo"
                                                     loading="lazy"
                                                     decoding="async"

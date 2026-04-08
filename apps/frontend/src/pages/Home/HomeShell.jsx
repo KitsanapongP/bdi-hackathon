@@ -40,7 +40,7 @@ function HomeShell({ children }) {
     const navItems = [
         { key: 'home', label: 'หน้าแรก', onClick: () => navigate('/home') },
         { key: 'about', label: 'เกี่ยวกับ', onClick: () => navigate('/home/about') },
-        { key: 'sponsors', label: 'ผู้สนับสนุน', onClick: () => navigate('/home/sponsors') },
+        { key: 'sponsors', label: 'ภาคีเครือข่าย', onClick: () => navigate('/home/partner') },
         { key: 'schedule', label: 'กำหนดการกิจกรรม', onClick: () => navigate('/home', { state: { scrollTo: 'schedule' } }) },
         { key: 'venues', label: 'สถานที่จัดงาน', onClick: () => navigate('/home/venues') },
         { key: 'datasets', label: 'ตัวอย่างชุดข้อมูล', onClick: () => navigate('/home/datasets') },
@@ -316,7 +316,7 @@ function HomeShell({ children }) {
                                 <h4>Quick Links</h4>
                                 <Link to="/home" state={{ scrollTo: 'schedule' }}>กำหนดการ</Link>
                                 <Link to="/home" state={{ scrollTo: 'prizes' }}>รางวัล</Link>
-                                <Link to="/home/sponsors">ผู้สนับสนุน</Link>
+                                <Link to="/home/partner">ภาคีเครือข่าย</Link>
                             </div>
                             <div className="gt-footer-col">
                                 <h4>Support</h4>

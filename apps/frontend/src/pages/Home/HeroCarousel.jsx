@@ -196,7 +196,7 @@ function HeroCarousel({ slides = [] }) {
           const visual = getCardTransform(offset, isMobileViewport)
           const isActive = offset === 0
           const style = {
-            transform: `translateX(-50%) translateX(${visual.shift}) scale(${visual.scale}) rotateY(${visual.rotate}deg)`,
+            transform: `translateX(-50%)${isMobileViewport ? '' : ' translateY(-50%)'} translateX(${visual.shift}) scale(${visual.scale}) rotateY(${visual.rotate}deg)`,
             opacity: visual.opacity,
             zIndex: 50 - Math.abs(offset),
           }

@@ -46,7 +46,7 @@ const config = {
         primary: '#7c3aed',
     },
     locale: {
-        nav: ['หน้าแรก', 'เกี่ยวกับ', 'ผู้สนับสนุน', 'กำหนดการกิจกรรม', 'สถานที่จัดงาน', 'ตัวอย่างชุดข้อมูล', 'ลงทะเบียน'],
+        nav: ['หน้าแรก', 'เกี่ยวกับ', 'ภาคีเครือข่าย', 'กำหนดการกิจกรรม', 'สถานที่จัดงาน', 'ตัวอย่างชุดข้อมูล', 'ลงทะเบียน'],
         heroBadge: '🏆 Hackathon 2026',
         heroTitle: 'สถาบันข้อมูลขนาดใหญ่ ร่วมกับ วิทยาลัยการคอมพิวเตอร์\nมหาวิทยาลัยขอนแก่น เชิญชวน นักเรียน นิสิต นักศึกษา\nร่วมแข่งขันพัฒนานวัตกรรม ชิงถ้วยพระราชทานฯ',
         ctaPrimary: 'ลงทะเบียนเลย',
@@ -980,7 +980,7 @@ function HomePage() {
                                 }
 
                                 if (i === 2) {
-                                    navigate('/home/sponsors');
+                                    navigate('/home/partner');
                                     return;
                                 }
 
@@ -1059,7 +1059,7 @@ function HomePage() {
                                 }
 
                                 if (i === 2) {
-                                    navigate('/home/sponsors');
+                                    navigate('/home/partner');
                                     setMobileOpen(false);
                                     return;
                                 }
@@ -1118,6 +1118,7 @@ function HomePage() {
                     {/* Hero */}
                     <section id="hero" className="gt-section gt-hero gt-container gt-reveal">
                         <HeroCarousel slides={carouselSlides} />
+                        <h1 className="gt-hero-title" style={{ whiteSpace: 'pre-line' }}>{config.locale.heroTitle}</h1>
                         <div className={`gt-hero-countdown ${heroCountdown.expired ? 'is-expired' : ''}`} role="timer" aria-label={`นับถอยหลังสู่วันที่ ${HERO_COUNTDOWN_TARGET_LABEL}`}>
                             <div className="gt-hero-countdown-grid">
                                 {HERO_COUNTDOWN_UNITS.map((unit) => (
@@ -1133,7 +1134,6 @@ function HomePage() {
                             </p>
                             {heroCountdown.expired ? <p className="gt-hero-countdown-status">ถึงวันสุดท้ายของกิจกรรมแล้ว</p> : null}
                         </div>
-                        <h1 className="gt-hero-title" style={{ whiteSpace: 'pre-line' }}>{config.locale.heroTitle}</h1>
                         <div className="gt-hero-actions">
                             <button type="button" className="gt-btn gt-btn-primary" onClick={handlePrimaryCta}>
                                 {user ? 'ไปยังทีมของฉัน' : config.locale.ctaPrimary} <ArrowRight size={18} />
@@ -1586,14 +1586,14 @@ function HomePage() {
                     {/* Sponsors Marquee — Moved to bottom */}
                     <div className="gt-sponsors-wrapper">
                         <div className="gt-container" style={{ textAlign: 'center', marginBottom: 24, color: 'var(--gt-text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>
-                            ผู้สนับสนุนหลักอย่างเป็นทางการ
+                            ภาคีเครือข่ายหลักอย่างเป็นทางการ
                         </div>
                         <div className="gt-marquee">
                             {(!sponsorsLoading ? [...sponsors, ...sponsors] : []).map((item, i) => (
                                 <img
                                     key={`${item.id}-${i}`}
                                     src={apiUrl(item.logoUrl)}
-                                    alt={item.nameEn || item.nameTh || `Sponsor ${i + 1}`}
+                                    alt={item.nameEn || item.nameTh || `Partner ${i + 1}`}
                                     className="gt-sponsor-logo"
                                     loading="eager"
                                     decoding="async"
@@ -1627,7 +1627,7 @@ function HomePage() {
                                         <h4>Quick Links</h4>
                                         <a href="#schedule" onClick={(e) => { e.preventDefault(); scrollTo('schedule'); }}>กำหนดการ</a>
                                         <a href="#prizes" onClick={(e) => { e.preventDefault(); scrollTo('prizes'); }}>รางวัล</a>
-                                        <Link to="/home/sponsors">ผู้สนับสนุน</Link>
+                                        <Link to="/home/partner">ภาคีเครือข่าย</Link>
                                     </div>
                                     <div className="gt-footer-col">
                                         <h4>Support</h4>
