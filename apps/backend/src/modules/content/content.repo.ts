@@ -178,7 +178,7 @@ export async function getEnabledVenues(
         : `SELECT *
            FROM content_venues
            WHERE is_enabled = 1
-           ORDER BY FIELD(venue_category, 'accommodation', 'transportation', 'attraction'), sort_order ASC, venue_id ASC`;
+           ORDER BY FIELD(venue_category, 'venue', 'accommodation', 'transportation', 'attraction'), sort_order ASC, venue_id ASC`;
 
     const params = venueCategory ? [venueCategory] : [];
     const [rows] = await db.query<RowDataPacket[]>(query, params);
@@ -205,7 +205,7 @@ export async function getAllVenuesAdmin(db: DB): Promise<ContentVenueRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT *
          FROM content_venues
-         ORDER BY FIELD(venue_category, 'accommodation', 'transportation', 'attraction'), sort_order ASC, venue_id ASC`
+         ORDER BY FIELD(venue_category, 'venue', 'accommodation', 'transportation', 'attraction'), sort_order ASC, venue_id ASC`
     );
 
     return rows as ContentVenueRow[];
@@ -229,20 +229,26 @@ export async function createVenueAdmin(
         nameEn?: string | null;
         descriptionTh?: string | null;
         descriptionEn?: string | null;
+        googleMapsUrl?: string | null;
+        latitude?: number | null;
+        longitude?: number | null;
         sortOrder: number;
         isEnabled: boolean;
     }
 ): Promise<number> {
     const [result] = await db.query(
         `INSERT INTO content_venues
-         (venue_category, venue_name_th, venue_name_en, description_th, description_en, sort_order, is_enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         (venue_category, venue_name_th, venue_name_en, description_th, description_en, google_maps_url, latitude, longitude, sort_order, is_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             data.category,
             data.nameTh,
             data.nameEn ?? null,
             data.descriptionTh ?? null,
             data.descriptionEn ?? null,
+            data.googleMapsUrl ?? null,
+            data.latitude ?? null,
+            data.longitude ?? null,
             data.sortOrder,
             data.isEnabled ? 1 : 0,
         ]
@@ -260,6 +266,9 @@ export async function updateVenueAdmin(
         nameEn?: string | null | undefined;
         descriptionTh?: string | null | undefined;
         descriptionEn?: string | null | undefined;
+        googleMapsUrl?: string | null | undefined;
+        latitude?: number | null | undefined;
+        longitude?: number | null | undefined;
         sortOrder?: number | undefined;
         isEnabled?: boolean | undefined;
     }
@@ -272,6 +281,9 @@ export async function updateVenueAdmin(
     if (data.nameEn !== undefined) { fields.push('venue_name_en = ?'); values.push(data.nameEn); }
     if (data.descriptionTh !== undefined) { fields.push('description_th = ?'); values.push(data.descriptionTh); }
     if (data.descriptionEn !== undefined) { fields.push('description_en = ?'); values.push(data.descriptionEn); }
+    if (data.googleMapsUrl !== undefined) { fields.push('google_maps_url = ?'); values.push(data.googleMapsUrl); }
+    if (data.latitude !== undefined) { fields.push('latitude = ?'); values.push(data.latitude); }
+    if (data.longitude !== undefined) { fields.push('longitude = ?'); values.push(data.longitude); }
     if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
     if (data.isEnabled !== undefined) { fields.push('is_enabled = ?'); values.push(data.isEnabled ? 1 : 0); }
 

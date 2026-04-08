@@ -19,8 +19,12 @@ function App() {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [location.pathname])
 
+  useEffect(() => {
+    document.title = 'BDIkku-Hackathon'
+  }, [])
+
   return (
-    <div key={location.pathname} className={isPublicRoute ? 'app-route-fade' : ''}>
+    <div key={isPublicRoute ? location.pathname : 'admin-shell'} className={isPublicRoute ? 'app-route-fade' : ''}>
       <Routes>
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<HomePage />} />

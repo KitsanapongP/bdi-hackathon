@@ -290,7 +290,9 @@ function HomeShell({ children }) {
                 </div>
             </nav>
 
-            {children}
+            <div className="gt-page-content">
+                {children}
+            </div>
 
             <footer className="gt-footer">
                 <div className="gt-container">

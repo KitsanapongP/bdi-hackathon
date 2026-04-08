@@ -61,7 +61,7 @@ export const contactChannelParamSchema = z.object({
 
 const nullableText = z.string().nullable().optional();
 const contactCategoryEnum = z.enum(['event_inquiry', 'dataset_inquiry', 'tech_it', 'facility']);
-const venueCategoryEnum = z.enum(['transportation', 'accommodation', 'attraction']);
+const venueCategoryEnum = z.enum(['venue', 'transportation', 'accommodation', 'attraction']);
 
 export const createVenueSchema = z.object({
     category: venueCategoryEnum,
@@ -69,6 +69,9 @@ export const createVenueSchema = z.object({
     nameEn: nullableText,
     descriptionTh: nullableText,
     descriptionEn: nullableText,
+    googleMapsUrl: nullableText,
+    latitude: z.number().min(-90, 'latitude ต้องอยู่ในช่วง -90 ถึง 90').max(90, 'latitude ต้องอยู่ในช่วง -90 ถึง 90').nullable().optional(),
+    longitude: z.number().min(-180, 'longitude ต้องอยู่ในช่วง -180 ถึง 180').max(180, 'longitude ต้องอยู่ในช่วง -180 ถึง 180').nullable().optional(),
     sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป').optional(),
     isEnabled: z.boolean().optional(),
 });

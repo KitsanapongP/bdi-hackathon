@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import HomeShell from './HomeShell';
 import { apiUrl } from '../../lib/api';
 import './InfoPages.css';
 
 const VENUE_TABS = [
+    { key: 'venue', labelTh: 'สถานที่จัดงาน', labelEn: 'VENUE' },
     { key: 'accommodation', labelTh: 'ที่พัก', labelEn: 'ACCOMMODATION' },
     { key: 'transportation', labelTh: 'การเดินทาง', labelEn: 'TRANSPORTATION' },
     { key: 'attraction', labelTh: 'สถานที่ท่องเที่ยว', labelEn: 'ATTRACTION' },
@@ -18,6 +19,44 @@ function normalizeVenueCategory(value) {
     const normalized = value.trim().toLowerCase();
     if (!normalized) return null;
     return VENUE_TABS.some((item) => item.key === normalized) ? normalized : null;
+}
+
+function toValidCoordinate(value, type) {
+    if (value === null || value === undefined || value === '') return null;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return null;
+    if (type === 'lat' && (numeric < -90 || numeric > 90)) return null;
+    if (type === 'lng' && (numeric < -180 || numeric > 180)) return null;
+    return numeric;
+}
+
+function buildGoogleMapsLinks(venue) {
+    const lat = toValidCoordinate(venue?.latitude, 'lat');
+    const lng = toValidCoordinate(venue?.longitude, 'lng');
+    const directUrl = typeof venue?.googleMapsUrl === 'string' ? venue.googleMapsUrl.trim() : '';
+
+    if (lat !== null && lng !== null) {
+        const query = `${lat},${lng}`;
+        return {
+            mapsUrl: `https://www.google.com/maps?q=${encodeURIComponent(query)}`,
+            embedUrl: `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`,
+        };
+    }
+
+    if (directUrl) {
+        const normalizedUrl = /^https?:\/\//i.test(directUrl) ? directUrl : `https://${directUrl}`;
+        return {
+            mapsUrl: normalizedUrl,
+            embedUrl: normalizedUrl.includes('?')
+                ? `${normalizedUrl}&output=embed`
+                : `${normalizedUrl}?output=embed`,
+        };
+    }
+
+    return {
+        mapsUrl: null,
+        embedUrl: null,
+    };
 }
 
 function VenueImageSlider({ images, venueName }) {
@@ -227,6 +266,26 @@ function VenuesPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeCategory, setActiveCategory] = useState(DEFAULT_CATEGORY);
+    const [activeMap, setActiveMap] = useState(null);
+
+    useEffect(() => {
+        if (!activeMap) return undefined;
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        const onKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setActiveMap(null);
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            window.removeEventListener('keydown', onKeyDown);
+        };
+    }, [activeMap]);
 
     useEffect(() => {
         let isMounted = true;
@@ -307,16 +366,45 @@ function VenuesPage() {
                             {activeVenues.map((venue) => {
                                 const venueName = venue.nameTh || venue.nameEn || '-';
                                 const venueDescription = venue.descriptionTh || venue.descriptionEn || '-';
+                                const { mapsUrl, embedUrl } = buildGoogleMapsLinks(venue);
+                                const isCurrentVenueMapOpen = activeMap?.venueId === venue.id;
 
                                 return (
                                     <article key={venue.id} className="gt-venue-card">
-                                        <div className="gt-venue-card-info">
-                                            <h2>{venueName}</h2>
-                                            <p className="gt-venue-card-description">{venueDescription}</p>
+                                        <div className="gt-venue-card-top">
+                                            <div className="gt-venue-card-info">
+                                                <h2>{venueName}</h2>
+                                                <p className="gt-venue-card-description">{venueDescription}</p>
+                                            </div>
+                                            <div className="gt-venue-card-media">
+                                                <VenueImageSlider images={venue.images} venueName={venueName} />
+                                            </div>
                                         </div>
-                                        <div className="gt-venue-card-media">
-                                            <VenueImageSlider images={venue.images} venueName={venueName} />
-                                        </div>
+                                        {mapsUrl ? (
+                                            <div className="gt-venue-map-block">
+                                                <div className="gt-venue-map-actions">
+                                                    {embedUrl ? (
+                                                        <button
+                                                            type="button"
+                                                            className="gt-venue-map-open-btn"
+                                                            onClick={() => setActiveMap({ venueId: venue.id, name: venueName, mapsUrl, embedUrl })}
+                                                        >
+                                                            <ChevronDown size={14} className={`gt-venue-map-open-icon ${isCurrentVenueMapOpen ? 'is-open' : ''}`} />
+                                                            เปิดแผนที่
+                                                        </button>
+                                                    ) : null}
+                                                    <a
+                                                        className="gt-venue-map-link"
+                                                        href={mapsUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                    >
+                                                        <ExternalLink size={14} />
+                                                        ไป Google Maps
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        ) : null}
                                     </article>
                                 );
                             })}
@@ -324,6 +412,43 @@ function VenuesPage() {
                     )}
                 </section>
             </main>
+
+            {activeMap ? createPortal(
+                <div className="gt-venue-map-modal" role="dialog" aria-modal="true" onClick={() => setActiveMap(null)}>
+                    <div className="gt-venue-map-modal-panel" onClick={(event) => event.stopPropagation()}>
+                        <div className="gt-venue-map-modal-header">
+                            <strong>{activeMap.name}</strong>
+                            <div className="gt-venue-map-modal-actions">
+                                <a
+                                    className="gt-venue-map-link"
+                                    href={activeMap.mapsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <ExternalLink size={14} />
+                                    ไป Google Maps
+                                </a>
+                                <button
+                                    type="button"
+                                    className="gt-venue-map-modal-close"
+                                    onClick={() => setActiveMap(null)}
+                                    aria-label="ปิดแผนที่"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        </div>
+                        <iframe
+                            title={`แผนที่ ${activeMap.name}`}
+                            src={activeMap.embedUrl}
+                            className="gt-venue-map-modal-embed"
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                        />
+                    </div>
+                </div>,
+                document.body,
+            ) : null}
         </HomeShell>
     );
 }

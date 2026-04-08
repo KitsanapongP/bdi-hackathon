@@ -3854,11 +3854,14 @@ function StaticVenuesPage() {
   const [venueErrors, setVenueErrors] = useState({})
   const [imageErrors, setImageErrors] = useState({})
   const [venueForm, setVenueForm] = useState({
-    category: 'accommodation',
+    category: 'venue',
     nameTh: '',
     nameEn: '',
     descriptionTh: '',
     descriptionEn: '',
+    googleMapsUrl: '',
+    latitude: '',
+    longitude: '',
     sortOrder: 0,
     isEnabled: true,
   })
@@ -3876,15 +3879,17 @@ function StaticVenuesPage() {
   })
 
   const venueCategoryOptions = [
+    { value: 'venue', label: 'สถานที่จัดงาน' },
     { value: 'accommodation', label: 'ที่พัก' },
     { value: 'transportation', label: 'การเดินทาง' },
     { value: 'attraction', label: 'สถานที่ท่องเที่ยว' },
   ]
 
   const venueCategoryRank = {
-    accommodation: 1,
-    transportation: 2,
-    attraction: 3,
+    venue: 1,
+    accommodation: 2,
+    transportation: 3,
+    attraction: 4,
   }
 
   const getVenueCategoryLabel = useCallback(
@@ -3961,13 +3966,16 @@ function StaticVenuesPage() {
   const openCreateVenue = () => {
     setEditingVenueId(null)
     setVenueErrors({})
-    const category = 'accommodation'
+    const category = 'venue'
     setVenueForm({
       category,
       nameTh: '',
       nameEn: '',
       descriptionTh: '',
       descriptionEn: '',
+      googleMapsUrl: '',
+      latitude: '',
+      longitude: '',
       sortOrder: getNextVenueSortOrder(category, sortedVenues),
       isEnabled: true,
     })
@@ -3978,11 +3986,14 @@ function StaticVenuesPage() {
     setEditingVenueId(venue.id)
     setVenueErrors({})
     setVenueForm({
-      category: venue.category || 'accommodation',
+      category: venue.category || 'venue',
       nameTh: venue.nameTh || '',
       nameEn: venue.nameEn || '',
       descriptionTh: venue.descriptionTh || '',
       descriptionEn: venue.descriptionEn || '',
+      googleMapsUrl: venue.googleMapsUrl || '',
+      latitude: venue.latitude === null || venue.latitude === undefined ? '' : String(venue.latitude),
+      longitude: venue.longitude === null || venue.longitude === undefined ? '' : String(venue.longitude),
       sortOrder: Number(venue.sortOrder || 0),
       isEnabled: Boolean(venue.isEnabled),
     })
@@ -3991,8 +4002,35 @@ function StaticVenuesPage() {
 
   const validateVenue = () => {
     const next = {}
+    const googleMapsUrl = String(venueForm.googleMapsUrl || '').trim()
+    const latitudeRaw = String(venueForm.latitude || '').trim()
+    const longitudeRaw = String(venueForm.longitude || '').trim()
+
     if (!venueForm.category.trim()) next.category = 'กรุณาเลือกหมวดหมู่'
     if (!venueForm.nameTh.trim()) next.nameTh = 'กรุณากรอก venue_name_th'
+    if (googleMapsUrl) {
+      try {
+        new URL(googleMapsUrl)
+      } catch {
+        next.googleMapsUrl = 'google_maps_url ต้องเป็น URL ที่ถูกต้อง'
+      }
+    }
+    if ((latitudeRaw && !longitudeRaw) || (!latitudeRaw && longitudeRaw)) {
+      next.latitude = 'latitude และ longitude ต้องระบุคู่กัน'
+      next.longitude = 'latitude และ longitude ต้องระบุคู่กัน'
+    }
+    if (latitudeRaw) {
+      const latitude = Number(latitudeRaw)
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+        next.latitude = 'latitude ต้องอยู่ในช่วง -90 ถึง 90'
+      }
+    }
+    if (longitudeRaw) {
+      const longitude = Number(longitudeRaw)
+      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        next.longitude = 'longitude ต้องอยู่ในช่วง -180 ถึง 180'
+      }
+    }
     if (Number(venueForm.sortOrder) < 0) next.sortOrder = 'sort_order ต้องมากกว่าหรือเท่ากับ 0'
     setVenueErrors(next)
     return Object.keys(next).length === 0
@@ -4007,6 +4045,9 @@ function StaticVenuesPage() {
       nameEn: venueForm.nameEn.trim() || null,
       descriptionTh: venueForm.descriptionTh.trim() || null,
       descriptionEn: venueForm.descriptionEn.trim() || null,
+      googleMapsUrl: venueForm.googleMapsUrl.trim() || null,
+      latitude: String(venueForm.latitude || '').trim() === '' ? null : Number(venueForm.latitude),
+      longitude: String(venueForm.longitude || '').trim() === '' ? null : Number(venueForm.longitude),
       sortOrder: Number(venueForm.sortOrder),
       isEnabled: venueForm.isEnabled,
     }
@@ -4080,6 +4121,7 @@ function StaticVenuesPage() {
     ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
 
     const counters = {
+      venue: 0,
       accommodation: 0,
       transportation: 0,
       attraction: 0,
@@ -4174,7 +4216,7 @@ function StaticVenuesPage() {
     if (!validateImage()) return
     if (!selectedVenue) return
 
-    const categoryFolder = String(selectedVenue.category || 'accommodation').replace(/_/g, '-')
+    const categoryFolder = String(selectedVenue.category || 'venue').replace(/_/g, '-')
     const derivedStorageKey = imageForm.imageFileName.trim()
       ? `/static/content/venues/${categoryFolder}/${imageForm.imageFileName.trim()}`
       : ''
@@ -4307,7 +4349,7 @@ function StaticVenuesPage() {
     }
   }
 
-  const imageCategoryFolder = String(selectedVenue?.category || 'accommodation').replace(/_/g, '-')
+  const imageCategoryFolder = String(selectedVenue?.category || 'venue').replace(/_/g, '-')
   const previewStorageKey = imageForm.imageStorageKey.trim() || (
     imageForm.imageFileName.trim() ? `/static/content/venues/${imageCategoryFolder}/${imageForm.imageFileName.trim()}` : ''
   )
@@ -4329,10 +4371,11 @@ function StaticVenuesPage() {
       <AdminDataTable
         loading={loading}
         rows={sortedVenues}
-        searchKeys={['category', 'nameTh', 'nameEn', 'descriptionTh', 'descriptionEn']}
+        searchKeys={['category', 'nameTh', 'nameEn', 'descriptionTh', 'descriptionEn', 'googleMapsUrl', 'latitude', 'longitude']}
         searchPlaceholder="ค้นหา category / venue name / description"
         filters={[
           { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+          { label: 'สถานที่จัดงาน', value: 'venue', predicate: (row) => row.category === 'venue' },
           { label: 'ที่พัก', value: 'accommodation', predicate: (row) => row.category === 'accommodation' },
           { label: 'การเดินทาง', value: 'transportation', predicate: (row) => row.category === 'transportation' },
           { label: 'ท่องเที่ยว', value: 'attraction', predicate: (row) => row.category === 'attraction' },
@@ -4348,6 +4391,7 @@ function StaticVenuesPage() {
                 <strong>{row.nameTh || '-'}</strong>
                 <span>{row.nameEn || '-'}</span>
                 <span>{row.descriptionTh || row.descriptionEn || '-'}</span>
+                <span>{row.googleMapsUrl || (row.latitude !== null && row.longitude !== null ? `${row.latitude}, ${row.longitude}` : '-')}</span>
               </div>
             ),
           },
@@ -4607,6 +4651,40 @@ function StaticVenuesPage() {
             />
             {venueErrors.sortOrder ? <small>{venueErrors.sortOrder}</small> : null}
           </label>
+
+          <label htmlFor="venue-google-maps-url">
+            google_maps_url
+            <input
+              id="venue-google-maps-url"
+              value={venueForm.googleMapsUrl}
+              onChange={(event) => setVenueForm((prev) => ({ ...prev, googleMapsUrl: event.target.value }))}
+              placeholder="https://www.google.com/maps?q=13.7563,100.5018"
+            />
+            {venueErrors.googleMapsUrl ? <small>{venueErrors.googleMapsUrl}</small> : null}
+          </label>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="venue-latitude">
+              latitude
+              <input
+                id="venue-latitude"
+                value={venueForm.latitude}
+                onChange={(event) => setVenueForm((prev) => ({ ...prev, latitude: event.target.value }))}
+                placeholder="13.7563000"
+              />
+              {venueErrors.latitude ? <small>{venueErrors.latitude}</small> : null}
+            </label>
+            <label htmlFor="venue-longitude">
+              longitude
+              <input
+                id="venue-longitude"
+                value={venueForm.longitude}
+                onChange={(event) => setVenueForm((prev) => ({ ...prev, longitude: event.target.value }))}
+                placeholder="100.5018000"
+              />
+              {venueErrors.longitude ? <small>{venueErrors.longitude}</small> : null}
+            </label>
+          </div>
 
           <label className="admin-ui-check">
             <input

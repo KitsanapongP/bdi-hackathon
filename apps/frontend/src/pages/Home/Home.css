@@ -55,12 +55,18 @@ body:has(.gt-page) {
 
 .gt-page {
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
     background: transparent;
     color: var(--gt-text);
     overflow-x: hidden;
     font-family: inherit;
     position: relative;
     z-index: 1;
+}
+
+.gt-page-content {
+    flex: 1;
 }
 
 .gt-container {

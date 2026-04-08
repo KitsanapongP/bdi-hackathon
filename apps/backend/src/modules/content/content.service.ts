@@ -29,7 +29,7 @@ import type {
 import { BadRequestError, NotFoundError } from '../../shared/errors.js';
 
 const PARTICIPATION_OVERVIEW_CACHE_TTL_MS = 5 * 60 * 1000;
-const VENUE_CATEGORIES: ContentVenueCategory[] = ['accommodation', 'transportation', 'attraction'];
+const VENUE_CATEGORIES: ContentVenueCategory[] = ['venue', 'accommodation', 'transportation', 'attraction'];
 
 let participationOverviewCache:
     | {
@@ -174,6 +174,56 @@ function normalizeNullableText(value: string | null | undefined): string | null 
     return normalized || null;
 }
 
+function normalizeVenueGoogleMapsUrl(value: string | null | undefined): string | null {
+    const normalized = normalizeNullableText(value);
+    if (!normalized) return null;
+
+    let parsed: URL;
+    try {
+        parsed = new URL(normalized);
+    } catch {
+        throw new BadRequestError('googleMapsUrl ต้องเป็น URL ที่ถูกต้อง');
+    }
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new BadRequestError('googleMapsUrl รองรับเฉพาะ http หรือ https');
+    }
+
+    const hostname = parsed.hostname.toLowerCase();
+    const isGoogleMapsHost = hostname === 'maps.google.com'
+        || hostname === 'google.com'
+        || hostname.endsWith('.google.com')
+        || hostname === 'goo.gl';
+
+    if (!isGoogleMapsHost) {
+        throw new BadRequestError('googleMapsUrl ต้องเป็นลิงก์จาก Google Maps');
+    }
+
+    return parsed.toString();
+}
+
+function normalizeLatitude(value: number | null): number | null {
+    if (value === null) return null;
+
+    const latitude = Number(value);
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+        throw new BadRequestError('latitude ต้องอยู่ในช่วง -90 ถึง 90');
+    }
+
+    return Number(latitude.toFixed(7));
+}
+
+function normalizeLongitude(value: number | null): number | null {
+    if (value === null) return null;
+
+    const longitude = Number(value);
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        throw new BadRequestError('longitude ต้องอยู่ในช่วง -180 ถึง 180');
+    }
+
+    return Number(longitude.toFixed(7));
+}
+
 function normalizeVenueCategory(value: string | null | undefined): ContentVenueCategory | undefined {
     if (value === undefined || value === null) return undefined;
 
@@ -217,6 +267,9 @@ function toVenueAdminResponse(row: {
     venue_name_en: string | null;
     description_th: string | null;
     description_en: string | null;
+    google_maps_url: string | null;
+    latitude: string | number | null;
+    longitude: string | number | null;
     sort_order: number;
     is_enabled: number;
 }, images: ContentVenueImageAdmin[]): ContentVenueAdmin {
@@ -227,6 +280,9 @@ function toVenueAdminResponse(row: {
         nameEn: row.venue_name_en,
         descriptionTh: row.description_th,
         descriptionEn: row.description_en,
+        googleMapsUrl: row.google_maps_url,
+        latitude: row.latitude === null ? null : Number(row.latitude),
+        longitude: row.longitude === null ? null : Number(row.longitude),
         sortOrder: row.sort_order,
         isEnabled: row.is_enabled === 1,
         images,
@@ -257,6 +313,9 @@ function normalizeVenuePayload(
         nameEn?: string | null | undefined;
         descriptionTh?: string | null | undefined;
         descriptionEn?: string | null | undefined;
+        googleMapsUrl?: string | null | undefined;
+        latitude?: number | null | undefined;
+        longitude?: number | null | undefined;
         sortOrder?: number | undefined;
         isEnabled?: boolean | undefined;
     },
@@ -267,6 +326,9 @@ function normalizeVenuePayload(
     nameEn?: string | null;
     descriptionTh?: string | null;
     descriptionEn?: string | null;
+    googleMapsUrl?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
     sortOrder?: number;
     isEnabled?: boolean;
 } {
@@ -276,6 +338,9 @@ function normalizeVenuePayload(
         nameEn?: string | null;
         descriptionTh?: string | null;
         descriptionEn?: string | null;
+        googleMapsUrl?: string | null;
+        latitude?: number | null;
+        longitude?: number | null;
         sortOrder?: number;
         isEnabled?: boolean;
     } = {};
@@ -298,7 +363,24 @@ function normalizeVenuePayload(
     if (data.nameEn !== undefined) output.nameEn = normalizeNullableText(data.nameEn);
     if (data.descriptionTh !== undefined) output.descriptionTh = normalizeNullableText(data.descriptionTh);
     if (data.descriptionEn !== undefined) output.descriptionEn = normalizeNullableText(data.descriptionEn);
+    if (data.googleMapsUrl !== undefined) output.googleMapsUrl = normalizeVenueGoogleMapsUrl(data.googleMapsUrl);
+    if (data.latitude !== undefined) output.latitude = normalizeLatitude(data.latitude);
+    if (data.longitude !== undefined) output.longitude = normalizeLongitude(data.longitude);
     if (data.isEnabled !== undefined) output.isEnabled = Boolean(data.isEnabled);
+
+    const latitudeProvided = output.latitude !== undefined;
+    const longitudeProvided = output.longitude !== undefined;
+    if (latitudeProvided !== longitudeProvided) {
+        throw new BadRequestError('latitude และ longitude ต้องระบุคู่กัน หรือไม่ระบุทั้งคู่');
+    }
+
+    if (latitudeProvided && longitudeProvided) {
+        const bothNull = output.latitude === null && output.longitude === null;
+        const bothNumber = output.latitude !== null && output.longitude !== null;
+        if (!bothNull && !bothNumber) {
+            throw new BadRequestError('latitude และ longitude ต้องระบุคู่กัน หรือไม่ระบุทั้งคู่');
+        }
+    }
 
     if (data.sortOrder !== undefined) {
         const sortOrder = Number(data.sortOrder);
@@ -1234,6 +1316,9 @@ export async function createVenueAdmin(
         nameEn?: string | null | undefined;
         descriptionTh?: string | null | undefined;
         descriptionEn?: string | null | undefined;
+        googleMapsUrl?: string | null | undefined;
+        latitude?: number | null | undefined;
+        longitude?: number | null | undefined;
         sortOrder?: number | undefined;
         isEnabled?: boolean | undefined;
     }
@@ -1249,6 +1334,9 @@ export async function createVenueAdmin(
         nameEn: payload.nameEn ?? null,
         descriptionTh: payload.descriptionTh ?? null,
         descriptionEn: payload.descriptionEn ?? null,
+        googleMapsUrl: payload.googleMapsUrl ?? null,
+        latitude: payload.latitude ?? null,
+        longitude: payload.longitude ?? null,
         sortOrder: payload.sortOrder ?? 0,
         isEnabled: payload.isEnabled ?? true,
     });
@@ -1270,6 +1358,9 @@ export async function updateVenueAdmin(
         nameEn?: string | null | undefined;
         descriptionTh?: string | null | undefined;
         descriptionEn?: string | null | undefined;
+        googleMapsUrl?: string | null | undefined;
+        latitude?: number | null | undefined;
+        longitude?: number | null | undefined;
         sortOrder?: number | undefined;
         isEnabled?: boolean | undefined;
     }
@@ -1440,7 +1531,7 @@ export async function uploadVenueImageAdmin(
         safeFileName = `${sanitizeFileName(path.posix.parse(preferredName).name || 'venue-image')}${extFromMime}`;
     }
 
-    const categoryFolder = String(venue.venue_category || 'accommodation').replace(/_/g, '-');
+    const categoryFolder = String(venue.venue_category || 'venue').replace(/_/g, '-');
     const uploadDir = path.join(process.cwd(), 'public', 'content', 'venues', categoryFolder);
     await mkdir(uploadDir, { recursive: true });
 
@@ -2109,6 +2200,9 @@ export async function getVenues(db: DB, categoryInput?: string): Promise<Content
         nameEn: venue.venue_name_en,
         descriptionTh: venue.description_th,
         descriptionEn: venue.description_en,
+        googleMapsUrl: venue.google_maps_url,
+        latitude: venue.latitude === null ? null : Number(venue.latitude),
+        longitude: venue.longitude === null ? null : Number(venue.longitude),
         sortOrder: venue.sort_order,
         images: imagesByVenue.get(venue.venue_id) ?? [],
     }));

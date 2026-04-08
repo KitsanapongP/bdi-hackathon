@@ -110,7 +110,7 @@ export type ContentDataset = {
     recordCount: number | null;
 };
 
-export type ContentVenueCategory = 'transportation' | 'accommodation' | 'attraction';
+export type ContentVenueCategory = 'venue' | 'transportation' | 'accommodation' | 'attraction';
 
 export type ContentVenueRow = {
     venue_id: number;
@@ -119,6 +119,9 @@ export type ContentVenueRow = {
     venue_name_en: string | null;
     description_th: string | null;
     description_en: string | null;
+    google_maps_url: string | null;
+    latitude: string | number | null;
+    longitude: string | number | null;
     sort_order: number;
     is_enabled: number;
     created_at: string;
@@ -160,6 +163,9 @@ export type ContentVenue = {
     nameEn: string | null;
     descriptionTh: string | null;
     descriptionEn: string | null;
+    googleMapsUrl: string | null;
+    latitude: number | null;
+    longitude: number | null;
     sortOrder: number;
     images: ContentVenueImage[];
 };
