@@ -415,6 +415,18 @@ export async function deleteVenueImageAdmin(db: DB, imageId: number): Promise<vo
     await db.query(`DELETE FROM content_venue_images WHERE venue_image_id = ?`, [imageId]);
 }
 
+export async function countVenueImagesByStorageKey(db: DB, imageStorageKey: string): Promise<number> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT COUNT(*) AS total
+         FROM content_venue_images
+         WHERE image_storage_key = ?`,
+        [imageStorageKey],
+    );
+
+    const first = rows[0] as { total?: number | string } | undefined;
+    return Number(first?.total || 0);
+}
+
 export async function updateVenueImagesOrderAdmin(
     db: DB,
     venueId: number,

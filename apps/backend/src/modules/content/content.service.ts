@@ -1,6 +1,6 @@
 import type { DB } from '../../config/db.js';
 import path from 'node:path';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, unlink } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import * as repo from './content.repo.js';
@@ -235,6 +235,45 @@ function normalizeVenueCategory(value: string | null | undefined): ContentVenueC
     }
 
     throw new BadRequestError('category ไม่ถูกต้อง');
+}
+
+function resolveVenueImageDiskPath(imageStorageKey: string | null | undefined): string | null {
+    const raw = String(imageStorageKey || '').trim();
+    if (!raw) return null;
+
+    let pathname = raw;
+    if (/^https?:\/\//i.test(raw)) {
+        try {
+            pathname = new URL(raw).pathname;
+        } catch {
+            return null;
+        }
+    }
+
+    const normalizedPathname = pathname.startsWith('/') ? pathname : `/${pathname}`;
+    const staticPrefix = '/static/content/venues/';
+    if (!normalizedPathname.startsWith(staticPrefix)) {
+        return null;
+    }
+
+    let decodedRelativePath: string;
+    try {
+        decodedRelativePath = decodeURIComponent(normalizedPathname.slice(staticPrefix.length));
+    } catch {
+        return null;
+    }
+
+    const relativePath = decodedRelativePath.replace(/^[/\\]+/, '');
+    if (!relativePath) return null;
+
+    const venuesRoot = path.resolve(process.cwd(), 'public', 'content', 'venues');
+    const diskPath = path.resolve(venuesRoot, relativePath);
+    const safePrefix = `${venuesRoot}${path.sep}`;
+    if (diskPath !== venuesRoot && !diskPath.startsWith(safePrefix)) {
+        return null;
+    }
+
+    return diskPath;
 }
 
 function toVenueImageAdminResponse(row: {
@@ -1560,7 +1599,35 @@ export async function deleteVenueImageAdmin(db: DB, venueId: number, imageId: nu
         throw new NotFoundError('ไม่พบรูปนี้ในสถานที่ที่เลือก');
     }
 
+    const imageStorageKey = image.image_storage_key;
     await repo.deleteVenueImageAdmin(db, imageId);
+
+    if (!imageStorageKey) {
+        return;
+    }
+
+    const remainingReferences = await repo.countVenueImagesByStorageKey(db, imageStorageKey);
+    if (remainingReferences > 0) {
+        return;
+    }
+
+    const diskPath = resolveVenueImageDiskPath(imageStorageKey);
+    if (!diskPath) {
+        return;
+    }
+
+    try {
+        await unlink(diskPath);
+    } catch (error: any) {
+        if (error?.code === 'ENOENT') return;
+        console.warn('[content] Failed to delete venue image file', {
+            imageId,
+            venueId,
+            imageStorageKey,
+            diskPath,
+            error: error?.message || String(error),
+        });
+    }
 }
 
 export async function reorderVenueImagesAdmin(
