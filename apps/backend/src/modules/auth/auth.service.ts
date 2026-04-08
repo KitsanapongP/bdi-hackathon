@@ -101,7 +101,7 @@ function hashVerificationLinkToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
 }
 
-function getFrontendBaseUrl(): string {
+function getFrontendBaseUrl(requestOrigin?: string): string {
     const value = process.env['FRONTEND_BASE_URL']?.trim();
 
     if (value) {
@@ -116,15 +116,23 @@ function getFrontendBaseUrl(): string {
         }
     }
 
-    if (process.env['NODE_ENV'] === 'production') {
-        throw new AppError('ระบบยืนยันอีเมลยังไม่พร้อมใช้งาน (กรุณาตั้งค่า FRONTEND_BASE_URL)', 500);
+    if (requestOrigin) {
+        const origin = requestOrigin.trim();
+        try {
+            const parsed = new URL(origin);
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                return origin.replace(/\/+$/, '');
+            }
+        } catch {
+            // ignore invalid origin fallback
+        }
     }
 
     return 'http://localhost:5173';
 }
 
-function buildRegisterVerifyLink(token: string): string {
-    const url = new URL('/home/register', getFrontendBaseUrl());
+function buildRegisterVerifyLink(token: string, requestOrigin?: string): string {
+    const url = new URL('/home/register', getFrontendBaseUrl(requestOrigin));
     url.searchParams.set('verifyToken', token);
     return url.toString();
 }
@@ -275,7 +283,7 @@ export async function getAccessRole(db: DB, userId: number): Promise<'admin' | '
 export async function requestRegistrationVerification(
     db: DB,
     input: RegisterInput,
-    meta: { acceptIp: string; userAgent: string },
+    meta: { acceptIp: string; userAgent: string; origin?: string },
 ): Promise<{ email: string; expiresAt: string; expiresInSeconds: number }> {
     const registrationWindow = await getRegistrationWindow(db);
     const registrationStatus = evaluateWindowStatus(registrationWindow);
@@ -381,7 +389,7 @@ export async function requestRegistrationVerification(
         expiresAt,
     });
 
-    await sendRegistrationVerificationEmail(normalizedEmail, verificationCode, buildRegisterVerifyLink(verificationLinkToken));
+    await sendRegistrationVerificationEmail(normalizedEmail, verificationCode, buildRegisterVerifyLink(verificationLinkToken, meta.origin));
 
     return {
         email: normalizedEmail,
@@ -393,6 +401,7 @@ export async function requestRegistrationVerification(
 export async function resendRegistrationVerification(
     db: DB,
     input: RegisterResendInput,
+    meta?: { origin?: string },
 ): Promise<{ email: string; expiresAt: string; expiresInSeconds: number }> {
     const registrationWindow = await getRegistrationWindow(db);
     const registrationStatus = evaluateWindowStatus(registrationWindow);
@@ -427,7 +436,7 @@ export async function resendRegistrationVerification(
         expiresAt,
     });
 
-    await sendRegistrationVerificationEmail(normalizedEmail, code, buildRegisterVerifyLink(verificationLinkToken));
+    await sendRegistrationVerificationEmail(normalizedEmail, code, buildRegisterVerifyLink(verificationLinkToken, meta?.origin));
 
     return {
         email: normalizedEmail,

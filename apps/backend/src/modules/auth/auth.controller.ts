@@ -30,6 +30,7 @@ export async function handleRegister(req: FastifyRequest, reply: FastifyReply) {
         const data = await service.requestRegistrationVerification(req.server.ctx.db, parsed.data, {
             acceptIp: req.ip || '0.0.0.0',
             userAgent: String(req.headers['user-agent'] || 'unknown'),
+            origin: String(req.headers.origin || ''),
         });
         return reply.send(ok(data, 'ส่งรหัสยืนยันไปยังอีเมลแล้ว'));
     } catch (err) {
@@ -107,7 +108,9 @@ export async function handleRegisterResend(req: FastifyRequest, reply: FastifyRe
     }
 
     try {
-        const data = await service.resendRegistrationVerification(req.server.ctx.db, parsed.data);
+        const data = await service.resendRegistrationVerification(req.server.ctx.db, parsed.data, {
+            origin: String(req.headers.origin || ''),
+        });
         return reply.send(ok(data, 'ส่งรหัสยืนยันใหม่เรียบร้อย'));
     } catch (err) {
         if (err instanceof AppError) {
