@@ -8,7 +8,7 @@ import type { JwtPayload } from '../auth/auth.types.js';
 export async function handleCreateTeam(req: FastifyRequest, reply: FastifyReply) {
     const parsed = createTeamSchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
     const user = req.user as JwtPayload;
     try {
@@ -110,7 +110,7 @@ export async function handleTransferLeader(req: FastifyRequest<{ Params: { id: s
     if (isNaN(teamId)) return reply.status(400).send({ ok: false, message: 'Invalid team ID' });
     const parsed = transferLeaderSchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
 
     try {
@@ -129,7 +129,7 @@ export async function handleUpdateTeamVisibility(req: FastifyRequest<{ Params: {
     if (isNaN(teamId)) return reply.status(400).send({ ok: false, message: 'Invalid team ID' });
     const parsed = updateTeamVisibilitySchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
     const user = req.user as JwtPayload;
     try {
@@ -148,7 +148,7 @@ export async function handleUpdateTeamName(req: FastifyRequest<{ Params: { id: s
     if (isNaN(teamId)) return reply.status(400).send({ ok: false, message: 'Invalid team ID' });
     const parsed = updateTeamNameSchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
     const user = req.user as JwtPayload;
     try {
@@ -167,7 +167,7 @@ export async function handleSubmitJoinRequest(req: FastifyRequest<{ Params: { id
     if (isNaN(teamId)) return reply.status(400).send({ ok: false, message: 'Invalid team ID' });
     const parsed = requestJoinSchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
     const user = req.user as JwtPayload;
     try {
@@ -202,7 +202,7 @@ export async function handleRespondJoinRequest(req: FastifyRequest<{ Params: { i
     if (isNaN(teamId) || isNaN(requestId)) return reply.status(400).send({ ok: false, message: 'Invalid ID' });
     const parsed = respondJoinSchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
     const user = req.user as JwtPayload;
     try {
@@ -221,7 +221,7 @@ export async function handleSendInvitation(req: FastifyRequest<{ Params: { id: s
     if (isNaN(teamId)) return reply.status(400).send({ ok: false, message: 'Invalid team ID' });
     const parsed = createInvitationSchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
     const user = req.user as JwtPayload;
     try {
@@ -249,7 +249,7 @@ export async function handleRespondInvitation(req: FastifyRequest<{ Params: { in
     if (isNaN(invitationId)) return reply.status(400).send({ ok: false, message: 'Invalid invitation ID' });
     const parsed = respondInvitationSchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
     const user = req.user as JwtPayload;
     try {
@@ -266,7 +266,7 @@ export async function handleRespondInvitation(req: FastifyRequest<{ Params: { in
 export async function handleJoinByCode(req: FastifyRequest, reply: FastifyReply) {
     const parsed = joinByCodeSchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
     const user = req.user as JwtPayload;
     try {

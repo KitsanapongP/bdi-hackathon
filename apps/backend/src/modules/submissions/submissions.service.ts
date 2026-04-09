@@ -267,7 +267,7 @@ export async function addAdvisor(
     if (data.email) {
         const existing = await repo.findAdvisorByEmail(db, data.email);
         if (existing) {
-            throw new ConflictError('อาจารย์ที่ปรึกษาท่านนี้ (email) ถูกลงทะเบียนกับทีมอื่นแล้ว');
+            throw new ConflictError('อีเมลอาจารย์ที่ปรึกษานี้ถูกลงทะเบียนกับทีมอื่นแล้ว');
         }
     }
 
@@ -304,7 +304,7 @@ export async function updateAdvisor(
     if (data.email) {
         const existing = await repo.findAdvisorByEmail(db, data.email, advisorId);
         if (existing) {
-            throw new ConflictError('อาจารย์ที่ปรึกษาท่านนี้ (email) ถูกลงทะเบียนกับทีมอื่นแล้ว');
+            throw new ConflictError('อีเมลอาจารย์ที่ปรึกษานี้ถูกลงทะเบียนกับทีมอื่นแล้ว');
         }
     }
 

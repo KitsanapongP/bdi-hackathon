@@ -38,6 +38,28 @@
     margin: 0 0 14px;
 }
 
+.gt-info-content h2 {
+    margin: 24px 0 10px;
+    font-size: clamp(1.2rem, 2.2vw, 1.45rem);
+    line-height: 1.4;
+    color: var(--gt-text);
+}
+
+.gt-info-content ul {
+    margin: 0 0 18px;
+    padding-left: 1.35rem;
+    list-style: disc;
+}
+
+.gt-info-content li {
+    margin: 0 0 8px;
+    color: var(--gt-text);
+}
+
+.gt-info-content li::marker {
+    color: var(--gt-primary);
+}
+
 .gt-info-status {
     margin: 0;
     color: var(--gt-text-muted);

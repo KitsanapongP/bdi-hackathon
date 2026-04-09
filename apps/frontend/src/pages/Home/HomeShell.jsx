@@ -44,7 +44,7 @@ function HomeShell({ children }) {
         { key: 'schedule', label: 'กำหนดการกิจกรรม', onClick: () => navigate('/home', { state: { scrollTo: 'schedule' } }) },
         { key: 'venues', label: 'สถานที่จัดงาน', onClick: () => navigate('/home/venues') },
         { key: 'datasets', label: 'ตัวอย่างชุดข้อมูล', onClick: () => navigate('/home/datasets') },
-        { key: 'register', label: 'ลงทะเบียน', onClick: () => navigate('/login') },
+        { key: 'register', label: 'ลงทะเบียน', onClick: () => navigate('/home/register') },
     ];
 
     const handleNavClick = (item) => {
@@ -93,7 +93,7 @@ function HomeShell({ children }) {
                     };
                     setUser(verifiedUser);
                     localStorage.setItem('gt_user', JSON.stringify(verifiedUser));
-                } else if (data.message === 'กรุณาเข้าสู่ระบบ') {
+                } else if (data.message === 'ไม่มีสิทธิ์เข้าถึง' || data.message === 'กรุณาเข้าสู่ระบบ') {
                     localStorage.removeItem('gt_user');
                     setUser(null);
                 }
@@ -117,7 +117,7 @@ function HomeShell({ children }) {
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch sponsors: ${response.status}`);
+                    throw new Error('ไม่สามารถโหลดข้อมูลภาคีเครือข่ายได้');
                 }
 
                 const payload = await response.json();
@@ -299,7 +299,7 @@ function HomeShell({ children }) {
                     <div className="gt-footer-inner">
                         <div>
                             <div className="gt-logo" style={{ marginBottom: 14 }}>
-                                <Home size={20} /> BDI Hackathon 2026: Intelligent Living
+                                <Home size={20} /> BDI Young Innovator Hackathon: Intelligent Living
                             </div>
                             <p className="gt-footer-contact" style={{ color: 'var(--gt-footer-text)', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
                                 <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px' }} />
@@ -333,7 +333,7 @@ function HomeShell({ children }) {
                             </div>
                         </div>
                     </div>
-                    <div className="gt-footer-copy">BDI Hackathon 2026: Intelligent Living</div>
+                    <div className="gt-footer-copy">BDI Young Innovator Hackathon: Intelligent Living</div>
                 </div>
             </footer>
         </div>

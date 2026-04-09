@@ -243,7 +243,7 @@ function PrivilegesTab({ apiFetch, showToast }) {
                 body: JSON.stringify({}),
             });
             const updated = res?.data;
-            if (!updated) throw new Error('refresh failed');
+            if (!updated) throw new Error('รีเฟรชข้อมูลไม่สำเร็จ');
 
             setPayload((prev) => ({
                 ...prev,
@@ -1002,6 +1002,7 @@ function ConsentTab({ apiFetch, showToast }) {
     const [docs, setDocs] = useState([]);
     const [myConsents, setMyConsents] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedConsentDoc, setSelectedConsentDoc] = useState(null);
 
     const load = useCallback(async () => {
         try {
@@ -1036,6 +1037,9 @@ function ConsentTab({ apiFetch, showToast }) {
     if (loading) return <div className="gl-empty-state"><Loader2 size={32} /></div>;
 
     const isAccepted = (docId) => myConsents.some((c) => c.consentDocId === docId);
+    const closeConsentModal = () => setSelectedConsentDoc(null);
+    const selectedConsentContent = (selectedConsentDoc?.contentTh || selectedConsentDoc?.contentEn || '').trim();
+    const selectedConsentLines = selectedConsentContent ? selectedConsentContent.split('\n') : ['ยังไม่มีเนื้อหาเอกสารข้อตกลง'];
 
     return (
         <div className="gl-detail-view">
@@ -1058,18 +1062,43 @@ function ConsentTab({ apiFetch, showToast }) {
                                     <div className="pf-consent-title">{doc.titleTh || doc.titleEn}</div>
                                     <div className="pf-consent-version">{doc.version}</div>
                                 </div>
-                                {isAccepted(doc.consentDocId) ? (
-                                    <span className="pf-consent-badge accepted"><CheckCircle size={14} /> ยอมรับแล้ว</span>
-                                ) : (
-                                    <button className="gl-action-btn gl-submit-btn" style={{ padding: '8px 18px', fontSize: '0.85rem' }} onClick={() => accept(doc.consentDocId)}>
-                                        ยอมรับ
+                                <div className="pf-consent-actions">
+                                    <button
+                                        className="gl-action-btn"
+                                        style={{ padding: '8px 18px', fontSize: '0.85rem' }}
+                                        onClick={() => setSelectedConsentDoc(doc)}
+                                    >
+                                        อ่าน
                                     </button>
-                                )}
+                                    {isAccepted(doc.consentDocId) ? (
+                                        <span className="pf-consent-badge accepted"><CheckCircle size={14} /> ยอมรับแล้ว</span>
+                                    ) : (
+                                        <button className="gl-action-btn gl-submit-btn" style={{ padding: '8px 18px', fontSize: '0.85rem' }} onClick={() => accept(doc.consentDocId)}>
+                                            ยอมรับ
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>
                 )}
             </div>
+
+            {selectedConsentDoc && (
+                <div className="pf-modal-backdrop" onClick={closeConsentModal}>
+                    <div className="pf-modal pf-consent-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3><FileText size={18} /> {selectedConsentDoc.titleTh || selectedConsentDoc.titleEn || 'ข้อตกลงและเงื่อนไข'}</h3>
+                        <div className="pf-consent-content">
+                            {selectedConsentLines.map((line, idx) => (
+                                <p key={`${selectedConsentDoc.consentDocId}-${idx}`}>{line || '\u00A0'}</p>
+                            ))}
+                        </div>
+                        <div className="pf-modal-actions">
+                            <button className="gl-action-btn gl-invite-btn" onClick={closeConsentModal}>ปิด</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

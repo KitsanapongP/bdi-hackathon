@@ -35,7 +35,7 @@ export async function handleGetProfile(req: FastifyRequest, reply: FastifyReply)
 export async function handleUpdateProfile(req: FastifyRequest, reply: FastifyReply) {
     const parsed = updateProfileSchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
 
     try {
@@ -92,7 +92,7 @@ export async function handleGetPrivacy(req: FastifyRequest, reply: FastifyReply)
 export async function handleUpdatePrivacy(req: FastifyRequest, reply: FastifyReply) {
     const parsed = updatePrivacySchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
 
     const privacy = await service.updatePrivacy(req.server.ctx.db, getUserId(req), parsed.data);
@@ -113,7 +113,7 @@ export async function handleGetSocialLinks(req: FastifyRequest, reply: FastifyRe
 export async function handleCreateSocialLink(req: FastifyRequest, reply: FastifyReply) {
     const parsed = createSocialLinkSchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
 
     try {
@@ -135,7 +135,7 @@ export async function handleUpdateSocialLink(req: FastifyRequest, reply: Fastify
 
     const parsed = updateSocialLinkSchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
 
     try {
@@ -178,7 +178,7 @@ export async function handleGetMyPublicProfile(req: FastifyRequest, reply: Fasti
 export async function handleUpdatePublicProfile(req: FastifyRequest, reply: FastifyReply) {
     const parsed = updatePublicProfileSchema.safeParse(req.body);
     if (!parsed.success) {
-        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
     }
 
     try {

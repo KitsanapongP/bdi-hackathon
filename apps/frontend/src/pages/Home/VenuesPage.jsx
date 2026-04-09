@@ -300,12 +300,12 @@ function VenuesPage() {
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch venues: ${response.status}`);
+                    throw new Error('ไม่สามารถโหลดข้อมูลสถานที่จัดงานได้');
                 }
 
                 const payload = await response.json();
                 if (!payload?.ok || !Array.isArray(payload.data)) {
-                    throw new Error(payload?.message || 'Failed to fetch venues');
+                    throw new Error(payload?.message || 'ไม่สามารถโหลดข้อมูลสถานที่จัดงานได้');
                 }
 
                 if (isMounted) {

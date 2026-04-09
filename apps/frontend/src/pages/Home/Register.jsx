@@ -41,7 +41,7 @@ const PRIVACY_DOC_CODES = ['PRIVACY', 'PDPA'];
 function RegisterPage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const [isRegisterMode, setIsRegisterMode] = useState(false);
+    const [isRegisterMode, setIsRegisterMode] = useState(() => location.pathname === '/home/register');
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPass, setLoginPass] = useState('');
 
@@ -526,7 +526,7 @@ function RegisterPage() {
             <div className="gr-login-wrap">
                 <div className={`gr-login-card ${isRegisterMode ? 'is-register' : ''}`}>
                     <div className="gt-badge" style={{ marginBottom: 20 }}>
-                        <Home size={16} /> Hackathon 2026
+                        <Home size={16} /> BDI Young Innovator Hackathon
                     </div>
                     <h2 style={{ color: 'var(--gt-text)' }}>
                         {isRegisterMode ? (registerStep === 'verify' ? 'ยืนยันอีเมล' : 'ลงทะเบียน') : 'เข้าสู่ระบบ'}

@@ -24,7 +24,9 @@
     --gt-radius: 16px;
     --gt-nav-h: 64px;
     --gt-banner-h: 48px;
-    --gt-max-w: 1220px;
+    --gt-max-w: 1400px;
+    --gt-hero-max-w: 1800px;
+    --gt-hero-title-max-w: 1680px;
     --gt-glass: rgba(241, 245, 249, 0.55);
     --gt-glass-strong: rgba(241, 245, 249, 0.7);
     --gt-glass-border: rgba(226, 232, 240, 0.5);
@@ -556,6 +558,8 @@ section.gt-hero {
     flex-direction: column;
     align-items: center;
     position: relative;
+    max-width: var(--gt-hero-max-w);
+    padding-inline: clamp(20px, 4vw, 40px);
 }
 
 .gt-hero::before {
@@ -897,7 +901,8 @@ section.gt-hero {
     -webkit-text-fill-color: transparent;
     background-clip: text;
     animation: gt-grad 8s ease infinite;
-    max-width: 1300px;
+    width: min(100%, var(--gt-hero-title-max-w));
+    max-width: none;
     position: relative;
     z-index: 1;
 }
@@ -1085,7 +1090,7 @@ section.gt-hero {
 }
 
 #about .gt-section-header {
-    max-width: 1200px;
+    max-width: 1400px;
 }
 
 #about.gt-container {
@@ -1751,6 +1756,27 @@ section.gt-hero {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+.prize-trophy-line {
+    font-size: clamp(1.28rem, 2.2vw, 1.75rem);
+    font-weight: 800;
+    line-height: 1.3;
+    margin: 0 auto 10px;
+    max-width: 22ch;
+    background: var(--gt-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    white-space: pre-line;
+}
+
+.prize-amount-note {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gt-text);
+    line-height: 1.45;
+    margin: 0;
 }
 
 .prize-extra {

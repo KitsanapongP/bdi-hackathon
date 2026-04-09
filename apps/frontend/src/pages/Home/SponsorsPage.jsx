@@ -29,12 +29,20 @@ function SponsorsPage() {
                 });
 
                 if (!response.ok) {
+<<<<<<< HEAD
                     throw new Error(`Failed to fetch sponsor groups: ${response.status}`);
+=======
+                    throw new Error('ไม่สามารถโหลดข้อมูลภาคีเครือข่ายได้');
+>>>>>>> 2cefb672e16d52b5878ef98f50f97e27844a6d38
                 }
 
                 const payload = await response.json();
                 if (!payload?.ok || !Array.isArray(payload.data)) {
+<<<<<<< HEAD
                     throw new Error(payload?.message || 'Failed to fetch sponsor groups');
+=======
+                    throw new Error(payload?.message || 'ไม่สามารถโหลดข้อมูลภาคีเครือข่ายได้');
+>>>>>>> 2cefb672e16d52b5878ef98f50f97e27844a6d38
                 }
 
                 if (isMounted) {

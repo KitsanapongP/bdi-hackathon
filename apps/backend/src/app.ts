@@ -25,6 +25,7 @@ import { submissionsRoutes } from './modules/submissions/submissions.routes.js';
 import { notificationsRoutes } from './modules/notifications/notifications.routes.js';
 import { privilegesRoutes } from './modules/privileges/privileges.routes.js';
 import { cronRoutes } from './modules/cron/cron.routes.js';
+import { AppError } from './shared/errors.js';
 
 export type AppContext = { env: Env; db: DB };
 
@@ -198,10 +199,25 @@ export function buildApp(ctx: AppContext) {
   app.setErrorHandler((err, _req, reply) => {
     app.log.error(err);
 
-    const statusCode =
-      typeof (err as any)?.statusCode === 'number' ? (err as any).statusCode : 500;
+    const rawStatusCode =
+      typeof (err as any)?.statusCode === 'number' ? Number((err as any).statusCode) : 500;
+    const statusCode = rawStatusCode >= 400 && rawStatusCode < 600 ? rawStatusCode : 500;
 
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
+    let message = 'ขออภัย เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง';
+
+    if (statusCode < 500) {
+      if (err instanceof AppError) {
+        message = err.message;
+      } else if (statusCode === 401) {
+        message = 'ไม่มีสิทธิ์เข้าถึง';
+      } else if (statusCode === 403) {
+        message = 'คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้';
+      } else if (statusCode === 404) {
+        message = 'ไม่พบข้อมูลที่ต้องการ';
+      } else {
+        message = 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
+      }
+    }
 
     reply.status(statusCode).send({ ok: false, message });
   });

@@ -16,7 +16,7 @@ export async function handleGetMyConsents(req: FastifyRequest, reply: FastifyRep
     try {
         await req.jwtVerify();
     } catch {
-        return reply.status(401).send({ ok: false, message: 'กรุณาเข้าสู่ระบบ' });
+        return reply.status(401).send({ ok: false, message: 'ไม่มีสิทธิ์เข้าถึง' });
     }
 
     const decoded = req.user as JwtPayload;
@@ -29,12 +29,12 @@ export async function handleAcceptConsent(req: FastifyRequest, reply: FastifyRep
     try {
         await req.jwtVerify();
     } catch {
-        return reply.status(401).send({ ok: false, message: 'กรุณาเข้าสู่ระบบ' });
+        return reply.status(401).send({ ok: false, message: 'ไม่มีสิทธิ์เข้าถึง' });
     }
 
     const parsed = acceptConsentSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 

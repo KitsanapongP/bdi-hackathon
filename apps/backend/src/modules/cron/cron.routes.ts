@@ -18,7 +18,7 @@ export const cronRoutes: FastifyPluginAsync = async (app) => {
     const queryToken = String(req.query.token || '').trim();
     const providedToken = headerToken || queryToken;
     if (!providedToken || providedToken !== expectedToken) {
-      return reply.status(401).send({ ok: false, message: 'unauthorized cron token' });
+      return reply.status(401).send({ ok: false, message: 'ไม่มีสิทธิ์เข้าถึง' });
     }
 
     const requestedLimit = Number(req.query.limit || process.env.SMTP_RETRY_BATCH_SIZE || 200);
