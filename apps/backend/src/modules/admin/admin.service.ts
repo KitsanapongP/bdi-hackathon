@@ -622,7 +622,7 @@ export async function exportSubmittedVerificationBundle(db: DB): Promise<{ fileN
 
 export async function getSelectionTeams(
     db: DB,
-    status?: 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined',
+    status?: 'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined',
 ): Promise<SelectionTeamRow[]> {
     return repo.listSelectionTeams(db, status);
 }
@@ -782,6 +782,34 @@ export async function listSubmissionTasksAdmin(db: DB) {
     return rows.map(toSubmissionTaskResponse);
 }
 
+export async function getSubmissionTaskAssignedTeamsAdmin(db: DB, submissionTaskId: number) {
+    const task = await repo.getSubmissionTaskByIdAdmin(db, submissionTaskId);
+    if (!task) {
+        throw new NotFoundError('ไม่พบงานส่งผลงาน');
+    }
+
+    const rows = await repo.listAssignedTeamsBySubmissionTaskAdmin(db, submissionTaskId);
+    return rows.map((row) => ({
+        teamId: row.team_id,
+        teamCode: row.team_code,
+        teamName: row.team_name_th || row.team_name_en || '-',
+        status: row.status,
+        isSubmissionOpen: row.is_submission_open === 1,
+    }));
+}
+
+async function resolveTeamIdsForSubmissionTaskAssignment(
+    db: DB,
+    input: {
+        teamIds?: number[] | undefined;
+        teamStatuses?: Array<'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined' | 'disbanded'> | undefined;
+    },
+): Promise<number[]> {
+    const teamIdsFromStatus = await repo.listTeamIdsByStatusesAdmin(db, input.teamStatuses ?? []);
+    const explicitTeamIds = (input.teamIds ?? []).filter((teamId) => Number.isFinite(teamId));
+    return Array.from(new Set([...explicitTeamIds, ...teamIdsFromStatus]));
+}
+
 export async function createSubmissionTaskAdmin(
     db: DB,
     input: {
@@ -799,9 +827,7 @@ export async function createSubmissionTaskAdmin(
     },
     adminUserId: number,
 ) {
-    const teamIdsFromStatus = await repo.listTeamIdsByStatusesAdmin(db, input.teamStatuses ?? []);
-    const explicitTeamIds = (input.teamIds ?? []).filter((teamId) => Number.isFinite(teamId));
-    const mergedTeamIds = Array.from(new Set([...explicitTeamIds, ...teamIdsFromStatus]));
+    const mergedTeamIds = await resolveTeamIdsForSubmissionTaskAssignment(db, input);
 
     if (mergedTeamIds.length === 0) {
         throw new BadRequestError('ไม่พบทีมที่ตรงกับเงื่อนไขสำหรับ assign งาน');
@@ -847,4 +873,150 @@ export async function createSubmissionTaskAdmin(
         assignedCount,
         assignedTeamIds: teamIdsToAssign,
     };
+}
+
+export async function updateSubmissionTaskAdmin(
+    db: DB,
+    submissionTaskId: number,
+    input: {
+        taskName?: string | undefined;
+        description?: string | null | undefined;
+        taskType?: 'link' | 'file' | undefined;
+        stage?: 'pre_selection' | 'training' | 'onsite' | undefined;
+        isRequired?: boolean | undefined;
+        allowedExtensions?: string | null | undefined;
+        sortOrder?: number | undefined;
+        deadlineAt?: string | null | undefined;
+        isEnabled?: boolean | undefined;
+    },
+) {
+    const existing = await repo.getSubmissionTaskByIdAdmin(db, submissionTaskId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบงานส่งผลงาน');
+    }
+
+    const patch: {
+        taskName?: string;
+        description?: string | null;
+        taskType?: 'link' | 'file';
+        stage?: 'pre_selection' | 'training' | 'onsite';
+        isRequired?: boolean;
+        allowedExtensions?: string | null;
+        sortOrder?: number;
+        deadlineAt?: string | null;
+        isEnabled?: boolean;
+    } = {};
+
+    if (input.taskName !== undefined) {
+        const taskName = input.taskName.trim();
+        if (!taskName) {
+            throw new BadRequestError('กรุณาระบุชื่องาน');
+        }
+        patch.taskName = taskName;
+    }
+    if (input.description !== undefined) {
+        patch.description = input.description?.trim() || null;
+    }
+    if (input.taskType !== undefined) {
+        patch.taskType = input.taskType;
+    }
+    if (input.stage !== undefined) {
+        patch.stage = input.stage;
+    }
+    if (input.isRequired !== undefined) {
+        patch.isRequired = Boolean(input.isRequired);
+    }
+    if (input.sortOrder !== undefined) {
+        patch.sortOrder = Math.max(0, Math.trunc(Number(input.sortOrder) || 0));
+    }
+    if (input.deadlineAt !== undefined) {
+        patch.deadlineAt = normalizeOptionalDeadline(input.deadlineAt);
+    }
+    if (input.isEnabled !== undefined) {
+        patch.isEnabled = Boolean(input.isEnabled);
+    }
+
+    const nextTaskType = input.taskType ?? existing.task_type;
+    if (nextTaskType === 'file') {
+        if (input.allowedExtensions !== undefined) {
+            patch.allowedExtensions = normalizeAllowedExtensions(input.allowedExtensions);
+        }
+    } else {
+        patch.allowedExtensions = null;
+    }
+
+    await repo.updateSubmissionTaskAdmin(db, submissionTaskId, patch);
+
+    const updated = await repo.getSubmissionTaskByIdAdmin(db, submissionTaskId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบงานส่งผลงานหลังอัปเดต');
+    }
+
+    return toSubmissionTaskResponse(updated);
+}
+
+export async function assignSubmissionTaskTeamsAdmin(
+    db: DB,
+    submissionTaskId: number,
+    input: {
+        isSubmissionOpen?: boolean | undefined;
+        teamIds?: number[] | undefined;
+        teamStatuses?: Array<'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined' | 'disbanded'> | undefined;
+    },
+    adminUserId: number,
+) {
+    const existingTask = await repo.getSubmissionTaskByIdAdmin(db, submissionTaskId);
+    if (!existingTask) {
+        throw new NotFoundError('ไม่พบงานส่งผลงาน');
+    }
+
+    const mergedTeamIds = await resolveTeamIdsForSubmissionTaskAssignment(db, input);
+    if (mergedTeamIds.length === 0) {
+        throw new BadRequestError('ไม่พบทีมที่ตรงกับเงื่อนไขสำหรับ assign งาน');
+    }
+
+    const existingAssignedTeamIds = await repo.listExistingAssignedTeamIdsAdmin(db, submissionTaskId);
+    const existingAssignedSet = new Set(existingAssignedTeamIds);
+    const teamIdsToAssign = mergedTeamIds.filter((teamId) => !existingAssignedSet.has(teamId));
+
+    const assignedSource = (input.teamStatuses?.length ?? 0) > 0 ? 'admin_status' : 'admin_team';
+    const assignedCount = await repo.bulkAssignSubmissionTaskToTeamsAdmin(db, {
+        submissionTaskId,
+        assignedByUserId: adminUserId,
+        assignedSource,
+        isSubmissionOpen: input.isSubmissionOpen ?? true,
+        teamIds: teamIdsToAssign,
+    });
+
+    const updated = await repo.getSubmissionTaskByIdAdmin(db, submissionTaskId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบงานส่งผลงานหลัง assign ทีม');
+    }
+
+    return {
+        task: toSubmissionTaskResponse(updated),
+        assignedCount,
+        assignedTeamIds: teamIdsToAssign,
+    };
+}
+
+export async function reorderSubmissionTasksAdmin(
+    db: DB,
+    updates: Array<{ submissionTaskId: number; sortOrder: number }>,
+): Promise<void> {
+    await repo.reorderSubmissionTasksAdmin(db, updates);
+}
+
+export async function deleteSubmissionTaskAdmin(db: DB, submissionTaskId: number): Promise<void> {
+    const existing = await repo.getSubmissionTaskByIdAdmin(db, submissionTaskId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบงานส่งผลงาน');
+    }
+
+    if (existing.is_default === 1) {
+        throw new BadRequestError('ไม่สามารถลบงานตั้งต้นของระบบได้');
+    }
+
+    await repo.softDeleteSubmissionTaskAdmin(db, submissionTaskId);
+    await repo.softDeleteTeamSubmissionTasksByTaskIdAdmin(db, submissionTaskId);
 }

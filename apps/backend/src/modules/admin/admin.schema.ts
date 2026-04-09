@@ -213,7 +213,7 @@ export const updateScheduleViewTypeSchema = z.object({
 });
 
 export const selectionTeamsQuerySchema = z.object({
-    status: z.enum(['submitted', 'passed', 'failed', 'confirmed', 'not_joined']).optional(),
+    status: z.enum(['forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined']).optional(),
 });
 
 export const selectionResultSchema = z.object({
@@ -225,19 +225,54 @@ export const updateGlobalSelectionDeadlineSchema = z.object({
     closeAt: z.string().trim().min(1, 'กรุณาระบุวันเวลาปิด'),
 });
 
+const submissionTaskTypeEnum = z.enum(['link', 'file']);
+const submissionTaskStageEnum = z.enum(['pre_selection', 'training', 'onsite']);
+const submissionTaskTeamStatusEnum = z.enum(['forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined', 'disbanded']);
+
 export const createSubmissionTaskSchema = z.object({
     taskName: z.string().trim().min(1, 'กรุณาระบุชื่องาน'),
     description: z.string().trim().nullable().optional(),
-    taskType: z.enum(['link', 'file']),
-    stage: z.enum(['pre_selection', 'training', 'onsite']).optional(),
+    taskType: submissionTaskTypeEnum,
+    stage: submissionTaskStageEnum.optional(),
     isRequired: z.boolean().optional(),
     allowedExtensions: z.string().trim().nullable().optional(),
     sortOrder: z.number().int().min(0).optional(),
     deadlineAt: z.string().trim().nullable().optional(),
     isSubmissionOpen: z.boolean().optional(),
     teamIds: z.array(z.number().int().positive()).optional(),
-    teamStatuses: z.array(z.enum(['forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined', 'disbanded'])).optional(),
+    teamStatuses: z.array(submissionTaskTeamStatusEnum).optional(),
 }).refine((value) => (value.teamIds?.length ?? 0) > 0 || (value.teamStatuses?.length ?? 0) > 0, {
     message: 'กรุณาระบุทีมเป้าหมายอย่างน้อย 1 ทีม หรือ 1 สถานะทีม',
     path: ['teamIds'],
+});
+
+export const updateSubmissionTaskSchema = z.object({
+    taskName: z.string().trim().min(1, 'กรุณาระบุชื่องาน').optional(),
+    description: z.string().trim().nullable().optional(),
+    taskType: submissionTaskTypeEnum.optional(),
+    stage: submissionTaskStageEnum.optional(),
+    isRequired: z.boolean().optional(),
+    allowedExtensions: z.string().trim().nullable().optional(),
+    sortOrder: z.number().int().min(0).optional(),
+    deadlineAt: z.string().trim().nullable().optional(),
+    isEnabled: z.boolean().optional(),
+}).refine((value) => Object.keys(value).length > 0, {
+    message: 'กรุณาระบุข้อมูลที่ต้องการแก้ไขอย่างน้อย 1 รายการ',
+    path: ['taskName'],
+});
+
+export const assignSubmissionTaskSchema = z.object({
+    isSubmissionOpen: z.boolean().optional(),
+    teamIds: z.array(z.number().int().positive()).optional(),
+    teamStatuses: z.array(submissionTaskTeamStatusEnum).optional(),
+}).refine((value) => (value.teamIds?.length ?? 0) > 0 || (value.teamStatuses?.length ?? 0) > 0, {
+    message: 'กรุณาระบุทีมเป้าหมายอย่างน้อย 1 ทีม หรือ 1 สถานะทีม',
+    path: ['teamIds'],
+});
+
+export const reorderSubmissionTasksSchema = z.object({
+    updates: z.array(z.object({
+        submissionTaskId: z.number().int().positive('submissionTaskId ไม่ถูกต้อง'),
+        sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป'),
+    })).min(1, 'กรุณาระบุรายการที่ต้องการจัดลำดับ'),
 });

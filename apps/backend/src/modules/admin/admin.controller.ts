@@ -27,6 +27,9 @@ import {
     updateScheduleItemSchema,
     updateScheduleViewTypeSchema,
     createSubmissionTaskSchema,
+    updateSubmissionTaskSchema,
+    assignSubmissionTaskSchema,
+    reorderSubmissionTasksSchema,
     selectionTeamsQuerySchema,
     selectionResultSchema,
     updateGlobalSelectionDeadlineSchema,
@@ -1076,6 +1079,27 @@ export async function handleGetSubmissionTasksAdmin(req: FastifyRequest, reply: 
     }
 }
 
+export async function handleGetSubmissionTaskAssignedTeamsAdmin(
+    req: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const rows = await service.getSubmissionTaskAssignedTeamsAdmin(req.server.ctx.db, parsedParams.data.id);
+        return reply.send(ok(rows));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
 export async function handleCreateSubmissionTaskAdmin(req: FastifyRequest, reply: FastifyReply) {
     const parsed = createSubmissionTaskSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -1087,6 +1111,109 @@ export async function handleCreateSubmissionTaskAdmin(req: FastifyRequest, reply
         const user = req.user as JwtPayload;
         const result = await service.createSubmissionTaskAdmin(req.server.ctx.db, parsed.data, user.userId);
         return reply.status(201).send(ok(result, 'สร้างงานส่งผลงานและ assign ทีมสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateSubmissionTaskAdmin(
+    req: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = updateSubmissionTaskSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await service.updateSubmissionTaskAdmin(
+            req.server.ctx.db,
+            parsedParams.data.id,
+            parsedBody.data,
+        );
+        return reply.send(ok(result, 'อัปเดตงานส่งผลงานสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleAssignSubmissionTaskTeamsAdmin(
+    req: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = assignSubmissionTaskSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const user = req.user as JwtPayload;
+        const result = await service.assignSubmissionTaskTeamsAdmin(
+            req.server.ctx.db,
+            parsedParams.data.id,
+            parsedBody.data,
+            user.userId,
+        );
+        return reply.send(ok(result, 'assign ทีมให้งานส่งผลงานสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleReorderSubmissionTasksAdmin(req: FastifyRequest, reply: FastifyReply) {
+    const parsedBody = reorderSubmissionTasksSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await service.reorderSubmissionTasksAdmin(req.server.ctx.db, parsedBody.data.updates);
+        return reply.send(ok({ success: true }, 'จัดลำดับงานส่งผลงานสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleDeleteSubmissionTaskAdmin(
+    req: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await service.deleteSubmissionTaskAdmin(req.server.ctx.db, parsedParams.data.id);
+        return reply.send(ok({ success: true }, 'ลบงานส่งผลงานสำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });

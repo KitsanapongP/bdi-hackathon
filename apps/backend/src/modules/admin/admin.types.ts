@@ -177,3 +177,12 @@ export interface AdminSubmissionTaskRow {
     updated_at: Date;
     assigned_team_count: number;
 }
+
+export interface AdminSubmissionTaskAssignedTeamRow {
+    team_id: number;
+    team_code: string;
+    team_name_th: string | null;
+    team_name_en: string | null;
+    status: 'submitted' | 'passed' | 'failed' | 'confirmed' | 'forming' | 'disbanded' | 'not_joined';
+    is_submission_open: number;
+}

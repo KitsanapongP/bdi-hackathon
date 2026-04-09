@@ -55,7 +55,12 @@ import {
     handleUpdateScheduleViewTypeAdmin,
     handleExportSubmittedVerificationBundle,
     handleGetSubmissionTasksAdmin,
+    handleGetSubmissionTaskAssignedTeamsAdmin,
     handleCreateSubmissionTaskAdmin,
+    handleUpdateSubmissionTaskAdmin,
+    handleAssignSubmissionTaskTeamsAdmin,
+    handleReorderSubmissionTasksAdmin,
+    handleDeleteSubmissionTaskAdmin,
     handleGetSelectionTeams,
     handleSetSelectionResult,
     handleGetGlobalSelectionDeadline,
@@ -128,7 +133,12 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
 
     fastify.get('/exports/submitted-verification-bundle', handleExportSubmittedVerificationBundle);
     fastify.get('/submission-tasks', handleGetSubmissionTasksAdmin);
+    fastify.get('/submission-tasks/:id/teams', handleGetSubmissionTaskAssignedTeamsAdmin);
     fastify.post('/submission-tasks', handleCreateSubmissionTaskAdmin);
+    fastify.put('/submission-tasks/reorder', handleReorderSubmissionTasksAdmin);
+    fastify.patch('/submission-tasks/:id', handleUpdateSubmissionTaskAdmin);
+    fastify.post('/submission-tasks/:id/assign', handleAssignSubmissionTaskTeamsAdmin);
+    fastify.delete('/submission-tasks/:id', handleDeleteSubmissionTaskAdmin);
     fastify.get('/selection/teams', handleGetSelectionTeams);
     fastify.post('/selection/teams/:teamId/result', handleSetSelectionResult);
     fastify.get('/selection/global-deadline', handleGetGlobalSelectionDeadline);
