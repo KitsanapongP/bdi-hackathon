@@ -41,7 +41,7 @@ const PRIVACY_DOC_CODES = ['PRIVACY', 'PDPA'];
 function RegisterPage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const [isRegisterMode, setIsRegisterMode] = useState(false);
+    const [isRegisterMode, setIsRegisterMode] = useState(() => location.pathname === '/home/register');
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPass, setLoginPass] = useState('');
 

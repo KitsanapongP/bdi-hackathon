@@ -967,6 +967,11 @@ function HomePage() {
                                     return;
                                 }
 
+                                if (i === 6) {
+                                    navigate('/home/register');
+                                    return;
+                                }
+
                                 scrollTo(sectionIds[i]);
                             };
 
@@ -1045,6 +1050,12 @@ function HomePage() {
 
                                 if (i === 5) {
                                     navigate('/home/datasets');
+                                    setMobileOpen(false);
+                                    return;
+                                }
+
+                                if (i === 6) {
+                                    navigate('/home/register');
                                     setMobileOpen(false);
                                     return;
                                 }

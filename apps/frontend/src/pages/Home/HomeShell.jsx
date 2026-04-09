@@ -44,7 +44,7 @@ function HomeShell({ children }) {
         { key: 'schedule', label: 'กำหนดการกิจกรรม', onClick: () => navigate('/home', { state: { scrollTo: 'schedule' } }) },
         { key: 'venues', label: 'สถานที่จัดงาน', onClick: () => navigate('/home/venues') },
         { key: 'datasets', label: 'ตัวอย่างชุดข้อมูล', onClick: () => navigate('/home/datasets') },
-        { key: 'register', label: 'ลงทะเบียน', onClick: () => navigate('/login') },
+        { key: 'register', label: 'ลงทะเบียน', onClick: () => navigate('/home/register') },
     ];
 
     const handleNavClick = (item) => {
