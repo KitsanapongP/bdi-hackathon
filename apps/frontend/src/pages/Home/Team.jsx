@@ -1411,7 +1411,7 @@ export default function TeamContent({ user }) {
             showToast(globalSelectionConfirmMessage || 'ยังไม่อยู่ในช่วงเวลายืนยันการเข้าร่วมโครงการ', 'error');
             return;
         }
-        openConfirm('ยืนยันการเข้าร่วมโครงการ', 'ยืนยันการเข้าร่วมตามผลคัดเลือกใช่หรือไม่?', () => {
+        openConfirm('ยืนยันการเข้าร่วมโครงการ', <>ยืนยันการเข้าร่วมตามผลคัดเลือกใช่หรือไม่?<br />หมายเหตุ: สมาชิกในทีมทุกคนต้องเข้าร่วมกิจกรรมในวันที่ 3-5 ก.ค.</>, () => {
             closeConfirm();
             withAction(async () => {
                 const res = await fetch(apiUrl(`/api/teams/${team.id}/confirm-participation`), {
