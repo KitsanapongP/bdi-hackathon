@@ -48,14 +48,14 @@ const config = {
     locale: {
         nav: ['หน้าแรก', 'เกี่ยวกับ', 'ภาคีเครือข่าย', 'กำหนดการกิจกรรม', 'สถานที่จัดงาน', 'ตัวอย่างชุดข้อมูล', 'ลงทะเบียน'],
         heroBadge: '🏆 Hackathon 2026',
-        heroTitle: 'สถาบันข้อมูลขนาดใหญ่ ร่วมกับ วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น เชิญชวน นักเรียน นิสิต นักศึกษา ร่วมแข่งขันพัฒนานวัตกรรม ชิงถ้วยพระราชทานฯ',
+        heroTitle: 'สถาบันข้อมูลขนาดใหญ่ (องค์การมหาชน) ร่วมกับวิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น\nขอเชิญนักเรียน นิสิต และนักศึกษา เข้าร่วมการแข่งขัน BDI Young Innovator Hackathon\nชิงถ้วยพระราชทาน สมเด็จพระกนิษฐาธิราชเจ้า กรมสมเด็จพระเทพรัตนราชสุดา ฯ สยามบรมราชกุมารี',
         ctaPrimary: 'ลงทะเบียนเลย',
         ctaSecondary: 'ดูกำหนดการ',
         aboutTitle: 'ทำไมคุณถึงไม่ควรพลาด "Intelligent Living Hackathon"',
         aboutDesc: 'นี่ไม่ใช่แค่การแข่งขัน แต่คือโอกาสครั้งสำคัญในการใช้เทคโนโลยีเปลี่ยนโลก!',
         scheduleTitle: 'กำหนดการกิจกรรม',
         scheduleDesc: 'ตารางเวลาของกิจกรรมทั้งหมดตลอดทั้งงาน',
-        footer: 'BDI Hackathon 2026: Intelligent Living',
+        footer: 'BDI Young Innovator Hackathon: Intelligent Living',
     },
     process: {
         step4HighlightStartDate: import.meta.env.VITE_PROCESS_STEP4_HIGHLIGHT_START_DATE || '2026-06-21',
@@ -126,6 +126,28 @@ const HERO_COUNTDOWN_UNITS = [
     { key: 'hours', label: 'ชั่วโมง' },
     { key: 'minutes', label: 'นาที' },
     { key: 'seconds', label: 'วินาที' },
+];
+
+const STATIC_PRIZES = [
+    {
+        id: 'prize-runner-up-1',
+        rank: '2',
+        title: 'รางวัลรองชนะเลิศอันดับ 1',
+        amountLine: '30,000 บาท',
+    },
+    {
+        id: 'prize-champion',
+        rank: '1',
+        title: 'รางวัลชนะเลิศ',
+        trophyLine: 'ถ้วยพระราชทาน\nกรมสมเด็จพระเทพฯ',
+        amountLine: 'พร้อมเงินรางวัลสูงสุด 50,000 บาท',
+    },
+    {
+        id: 'prize-runner-up-2',
+        rank: '3',
+        title: 'รางวัลรองชนะเลิศอันดับ 2',
+        amountLine: '20,000 บาท',
+    },
 ];
 
 const THAI_DATE_IN_TEXT_PATTERN = /(\d{1,2}(?:\s*-\s*\d{1,2})?\s+[ก-๙]+\s+25\d{2})/g;
@@ -471,9 +493,6 @@ function HomePage() {
     const [schedulesData, setSchedulesData] = useState([]);
     const [scheduleLoading, setScheduleLoading] = useState(true);
     const [scheduleError, setScheduleError] = useState(null);
-    const [rewards, setRewards] = useState([]);
-    const [rewardsLoading, setRewardsLoading] = useState(true);
-    const [rewardsError, setRewardsError] = useState(null);
     const [carouselSlides, setCarouselSlides] = useState(() => getCachedHomeCarouselSlides() || []);
     const [coOrganizerSponsors, setCoOrganizerSponsors] = useState(() => getCachedCoOrganizerSponsors() || []);
     const [sponsors, setSponsors] = useState([]);
@@ -566,33 +585,6 @@ function HomePage() {
                 setScheduleError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
                 setSchedulesData([]);
                 setScheduleLoading(false);
-            }
-        };
-
-        const fetchRewards = async () => {
-            try {
-                setRewardsLoading(true);
-                setRewardsError(null);
-                const response = await fetch(apiUrl('/api/content/rewards'), {
-                    credentials: 'include',
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch rewards: ${response.status}`);
-                }
-
-                const payload = await response.json();
-                if (!payload?.ok || !Array.isArray(payload.data)) {
-                    throw new Error(payload?.message || 'Failed to fetch rewards');
-                }
-
-                setRewards(payload.data);
-                setRewardsLoading(false);
-            } catch (err) {
-                console.error('Failed to fetch rewards', err);
-                setRewardsError('เกิดข้อผิดพลาดในการโหลดข้อมูลรางวัล');
-                setRewards([]);
-                setRewardsLoading(false);
             }
         };
 
@@ -695,7 +687,6 @@ function HomePage() {
         };
 
         fetchSchedules();
-        fetchRewards();
         fetchCarousels();
         fetchSponsors();
         fetchParticipationOverview();
@@ -718,24 +709,6 @@ function HomePage() {
             window.scrollTo(0, 0);
         }
     }, [location.state, user]);
-
-    const formatPrizeAmount = (amount, currency) => {
-        if (typeof amount !== 'number' || Number.isNaN(amount)) return null;
-        const formatted = amount.toLocaleString('th-TH');
-        return currency ? `${formatted} ${currency}` : formatted;
-    };
-
-    const displayRewards = (() => {
-        if (rewards.length !== 3) return rewards;
-
-        const championReward = rewards.find((reward) => reward.rank === '1');
-        if (!championReward) return rewards;
-
-        const otherRewards = rewards.filter((reward) => reward.id !== championReward.id);
-        if (otherRewards.length !== 2) return rewards;
-
-        return [otherRewards[0], championReward, otherRewards[1]];
-    })();
 
     const participationTrendRows = useMemo(() => {
         const rows = participationOverview?.trend?.[participationMode];
@@ -1230,29 +1203,26 @@ function HomePage() {
                             <h2>รางวัลระดับประเทศ</h2>
                         </div>
                         <div className="gt-prizes gt-reveal">
-                            {rewardsLoading ? (
-                                <p className="gt-prize-status">กำลังโหลดข้อมูลรางวัล...</p>
-                            ) : rewardsError ? (
-                                <p className="gt-prize-status">{rewardsError}</p>
-                            ) : displayRewards.length === 0 ? (
-                                <p className="gt-prize-status">ยังไม่มีข้อมูลรางวัล</p>
-                            ) : (
-                                displayRewards.map((reward) => {
-                                    const amountLabel = formatPrizeAmount(reward.amount, reward.currency);
-                                    const isChampion = reward.rank === '1';
-                                    const cardClass = isChampion ? 'champion' : 'runner-up';
-                                    const iconSize = isChampion ? 48 : 32;
+                            {STATIC_PRIZES.map((reward) => {
+                                const isChampion = reward.rank === '1';
+                                const cardClass = isChampion ? 'champion' : 'runner-up';
+                                const iconSize = isChampion ? 48 : 32;
 
-                                    return (
-                                        <div key={reward.id} className={`gt-prize-card ${cardClass}`} data-rank={String(reward.rank || '')}>
-                                            <div className="prize-icon"><Trophy size={iconSize} /></div>
-                                            <h3>{reward.nameTh}</h3>
-                                            {amountLabel && <div className="prize-amount">{amountLabel}</div>}
-                                            {reward.prizeTextTh && <div className="prize-extra">{reward.prizeTextTh}</div>}
-                                        </div>
-                                    );
-                                })
-                            )}
+                                return (
+                                    <div key={reward.id} className={`gt-prize-card ${cardClass}`} data-rank={String(reward.rank || '')}>
+                                        <div className="prize-icon"><Trophy size={iconSize} /></div>
+                                        <h3>{reward.title}</h3>
+                                        {isChampion ? (
+                                            <>
+                                                <div className="prize-trophy-line">{reward.trophyLine}</div>
+                                                <div className="prize-amount-note">{reward.amountLine}</div>
+                                            </>
+                                        ) : (
+                                            <div className="prize-amount">{reward.amountLine}</div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </section>
 
@@ -1346,7 +1316,7 @@ function HomePage() {
                                     <span className="gt-eligibility-item-icon"><Users size={18} /></span>
                                     <div className="gt-eligibility-item-body">
                                         <h4>ขนาดทีม</h4>
-                                        <p>สมาชิกในทีม<strong>จำนวน 5 คน</strong> ไม่จำกัดเพศ</p>
+                                        <p>สมาชิกในทีม<strong>จำนวน 5 คน</strong></p>
                                     </div>
                                 </li>
                                 <li className="gt-eligibility-item">
@@ -1427,7 +1397,7 @@ function HomePage() {
                                         <span className="gt-benefit-index">05</span>
                                         <span className="gt-benefit-icon"><Trophy size={18} /></span>
                                     </div>
-                                    <h3>ชิงเงินรางวัลและถ้วยพระราชทานฯ</h3>
+                                    <h3>ชิงถ้วยพระราชทาน กรมสมเด็จพระเทพฯ พร้อมเงินรางวัล</h3>
                                     <p>เวทีสำคัญระดับประเทศ เพื่อสร้างผลงานที่สร้างผลกระทบจริง</p>
                                 </article>
                             </div>
