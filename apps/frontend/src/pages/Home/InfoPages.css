@@ -678,6 +678,10 @@
 .gt-venue-map-actions {
     display: flex;
     flex-wrap: wrap;
+    width: min(100%, max(260px, 40%));
+    margin-left: auto;
+    margin-right: 8px;
+    justify-content: flex-end;
     gap: 8px;
 }
 
