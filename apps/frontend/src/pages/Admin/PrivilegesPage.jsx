@@ -44,8 +44,8 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
       ])
       const templatesPayload = await templatesRes.json().catch(() => ({}))
       const claimsPayload = await claimsRes.json().catch(() => ({}))
-      if (!templatesRes.ok || !templatesPayload?.ok) throw new Error(templatesPayload?.message || 'load templates failed')
-      if (!claimsRes.ok || !claimsPayload?.ok) throw new Error(claimsPayload?.message || 'load claims failed')
+      if (!templatesRes.ok || !templatesPayload?.ok) throw new Error(templatesPayload?.message || 'โหลดเทมเพลตไม่สำเร็จ')
+      if (!claimsRes.ok || !claimsPayload?.ok) throw new Error(claimsPayload?.message || 'โหลดข้อมูลการรับสิทธิ์ไม่สำเร็จ')
       setTemplates(templatesPayload.data || [])
       setClaims(claimsPayload.data || [])
     } catch (error) {
@@ -138,7 +138,7 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
         body: JSON.stringify({ token }),
       })
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'scan failed')
+      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'สแกนไม่สำเร็จ')
       setScanResult(payload.data)
       if (!silent) pushToast({ title: 'ตรวจสอบ token สำเร็จ' })
     } catch (error) {
@@ -286,7 +286,7 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
         body: JSON.stringify(payloadBody),
       })
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'save failed')
+      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'บันทึกข้อมูลไม่สำเร็จ')
       pushToast({ title: editingId ? 'อัปเดตสิทธิ์สำเร็จ' : 'สร้างสิทธิ์สำเร็จ' })
       resetForm()
       await fetchData(search)
@@ -306,7 +306,7 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
         body: JSON.stringify({ isPublished: !template.isPublished }),
       })
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'publish failed')
+      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'เผยแพร่ไม่สำเร็จ')
       pushToast({ title: template.isPublished ? 'ยกเลิกเผยแพร่แล้ว' : 'เผยแพร่แล้ว' })
       await fetchData(search)
     } catch (error) {
@@ -319,7 +319,7 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
     try {
       const response = await fetch(apiUrl(`/api/privileges/admin/templates/${templateId}`), { method: 'DELETE', credentials: 'include' })
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'delete failed')
+      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'ลบข้อมูลไม่สำเร็จ')
       pushToast({ type: 'warning', title: 'ลบสิทธิ์แล้ว' })
       await fetchData(search)
     } catch (error) {
@@ -342,7 +342,7 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
         body: JSON.stringify({ token: scanToken.trim() }),
       })
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'redeem failed')
+      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'บันทึกรับสิทธิ์ไม่สำเร็จ')
       setScanResult(payload.data?.claim || null)
       pushToast({ title: payload.data?.alreadyClaimed ? 'สิทธิ์นี้ถูกรับแล้ว' : 'รับสิทธิ์สำเร็จ' })
       await fetchData(search)
@@ -360,7 +360,7 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
         body: JSON.stringify({ claimStatus }),
       })
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'update failed')
+      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'อัปเดตข้อมูลไม่สำเร็จ')
       pushToast({ title: 'อัปเดตสถานะสิทธิ์สำเร็จ' })
       await fetchData(search)
     } catch (error) {
@@ -381,7 +381,7 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
         body: JSON.stringify({ claimStatus: bulkForm.claimStatus, claimNote: bulkForm.claimNote || null }),
       })
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'bulk failed')
+      if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'ประมวลผลแบบกลุ่มไม่สำเร็จ')
       pushToast({ title: 'อัปเดตทั้งทีมสำเร็จ' })
       await fetchData(search)
     } catch (error) {

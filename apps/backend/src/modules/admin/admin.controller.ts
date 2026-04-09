@@ -89,7 +89,7 @@ export async function handleGetAllowlist(req: FastifyRequest, reply: FastifyRepl
 export async function handleCreateAllowlist(req: FastifyRequest, reply: FastifyReply) {
     const parsed = allowlistSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -113,7 +113,7 @@ export async function handleUpdateAllowlist(req: FastifyRequest<{ Params: { allo
 
     const parsed = updateAllowlistSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -304,7 +304,7 @@ export async function handleGetAllVenuesAdmin(req: FastifyRequest, reply: Fastif
 export async function handleCreateVenueAdmin(req: FastifyRequest, reply: FastifyReply) {
     const parsedBody = createVenueSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -328,7 +328,7 @@ export async function handleUpdateVenueAdmin(req: FastifyRequest<{ Params: { id:
 
     const parsedBody = updateVenueSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -364,7 +364,7 @@ export async function handleDeleteVenueAdmin(req: FastifyRequest<{ Params: { id:
 export async function handleReorderVenuesAdmin(req: FastifyRequest, reply: FastifyReply) {
     const parsedBody = reorderVenuesSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -391,7 +391,7 @@ export async function handleCreateVenueImageAdmin(
 
     const parsedBody = createVenueImageSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -418,7 +418,7 @@ export async function handleUpdateVenueImageAdmin(
 
     const parsedBody = updateVenueImageSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -509,7 +509,7 @@ export async function handleReorderVenueImagesAdmin(
 
     const parsedBody = reorderVenueImagesSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -582,7 +582,7 @@ export async function handleGetAllCarouselsAdmin(req: FastifyRequest, reply: Fas
 export async function handleCreateCarouselAdmin(req: FastifyRequest, reply: FastifyReply) {
     const parsedBody = createCarouselSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -607,7 +607,7 @@ export async function handleUpdateCarouselAdmin(req: FastifyRequest<{ Params: { 
 
     const parsedBody = updateCarouselSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -643,7 +643,7 @@ export async function handleDeleteCarouselAdmin(req: FastifyRequest<{ Params: { 
 export async function handleReorderCarouselsAdmin(req: FastifyRequest, reply: FastifyReply) {
     const parsedBody = reorderCarouselsSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -703,7 +703,7 @@ export async function handleGetAllContactsAdmin(req: FastifyRequest, reply: Fast
 export async function handleCreateContactAdmin(req: FastifyRequest, reply: FastifyReply) {
     const parsed = createContactSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -727,7 +727,7 @@ export async function handleUpdateContactAdmin(req: FastifyRequest<{ Params: { i
 
     const parsedBody = updateContactSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -763,7 +763,7 @@ export async function handleDeleteContactAdmin(req: FastifyRequest<{ Params: { i
 export async function handleReorderContactsAdmin(req: FastifyRequest, reply: FastifyReply) {
     const parsed = reorderContactsSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -790,7 +790,7 @@ export async function handleCreateContactChannelAdmin(
 
     const parsedBody = createContactChannelSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -817,7 +817,7 @@ export async function handleUpdateContactChannelAdmin(
 
     const parsedBody = updateContactChannelSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -874,7 +874,7 @@ export async function handleReorderContactChannelsAdmin(
 
     const parsedBody = reorderContactChannelsSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -908,7 +908,7 @@ export async function handleGetScheduleAdminBundle(req: FastifyRequest, reply: F
 export async function handleCreateScheduleItemAdmin(req: FastifyRequest, reply: FastifyReply) {
     const parsed = createScheduleItemSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -932,7 +932,7 @@ export async function handleUpdateScheduleItemAdmin(req: FastifyRequest<{ Params
 
     const parsedBody = updateScheduleItemSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -977,7 +977,7 @@ export async function handleUpdateScheduleViewTypeAdmin(
 
     const parsedBody = updateScheduleViewTypeSchema.safeParse(req.body);
     if (!parsedBody.success) {
-        const firstError = parsedBody.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -1025,7 +1025,7 @@ export async function handleGetSubmissionTasksAdmin(req: FastifyRequest, reply: 
 export async function handleCreateSubmissionTaskAdmin(req: FastifyRequest, reply: FastifyReply) {
     const parsed = createSubmissionTaskSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -1044,7 +1044,7 @@ export async function handleCreateSubmissionTaskAdmin(req: FastifyRequest, reply
 export async function handleGetSelectionTeams(req: FastifyRequest, reply: FastifyReply) {
     const parsed = selectionTeamsQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -1070,7 +1070,7 @@ export async function handleSetSelectionResult(
 
     const parsed = selectionResultSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -1105,7 +1105,7 @@ export async function handleGetGlobalSelectionDeadline(req: FastifyRequest, repl
 export async function handleSetGlobalSelectionDeadline(req: FastifyRequest, reply: FastifyReply) {
     const parsed = updateGlobalSelectionDeadlineSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 

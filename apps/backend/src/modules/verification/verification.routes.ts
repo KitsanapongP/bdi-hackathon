@@ -7,7 +7,7 @@ export async function verificationRoutes(app: FastifyInstance) {
         try {
             await request.jwtVerify();
         } catch {
-            reply.code(401).send({ ok: false, message: 'Unauthorized' });
+            reply.code(401).send({ ok: false, message: 'ไม่มีสิทธิ์เข้าถึง' });
         }
     });
 

@@ -243,7 +243,7 @@ function PrivilegesTab({ apiFetch, showToast }) {
                 body: JSON.stringify({}),
             });
             const updated = res?.data;
-            if (!updated) throw new Error('refresh failed');
+            if (!updated) throw new Error('รีเฟรชข้อมูลไม่สำเร็จ');
 
             setPayload((prev) => ({
                 ...prev,

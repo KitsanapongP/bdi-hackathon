@@ -962,7 +962,7 @@ function DashboardPage() {
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.message || 'load failed')
+        throw new Error(payload?.message || 'ไม่สามารถโหลดข้อมูลได้')
       }
       setOverview(payload.data)
     } catch (error) {
@@ -1428,7 +1428,7 @@ function StaticSponsorsPage() {
       })
       const uploadData = await uploadResponse.json()
       if (!uploadData.ok) {
-        throw new Error(uploadData.message || 'Logo upload failed')
+        throw new Error(uploadData.message || 'อัปโหลดโลโก้ไม่สำเร็จ')
       }
     }
 
@@ -1960,7 +1960,7 @@ function StaticCarouselsPage() {
       })
       const uploadData = await uploadResponse.json()
       if (!uploadData.ok) {
-        throw new Error(uploadData.message || 'Image upload failed')
+        throw new Error(uploadData.message || 'อัปโหลดรูปภาพไม่สำเร็จ')
       }
     }
 
@@ -3112,7 +3112,7 @@ function StaticContactsPage() {
       })
       const data = await response.json()
       if (!data.ok) {
-        throw new Error(data.message || 'reorder failed')
+        throw new Error(data.message || 'จัดลำดับข้อมูลไม่สำเร็จ')
       }
     } catch (err) {
       console.error('Failed to reorder contacts:', err)
@@ -3264,7 +3264,7 @@ function StaticContactsPage() {
       })
       const data = await response.json()
       if (!data.ok) {
-        throw new Error(data.message || 'reorder channel failed')
+        throw new Error(data.message || 'จัดลำดับช่องทางติดต่อไม่สำเร็จ')
       }
     } catch (err) {
       console.error('Failed to reorder channels:', err)
@@ -4145,7 +4145,7 @@ function StaticVenuesPage() {
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok || !data?.ok) {
-        throw new Error(data?.message || 'reorder failed')
+        throw new Error(data?.message || 'จัดลำดับข้อมูลไม่สำเร็จ')
       }
     } catch (error) {
       console.error('Failed to reorder venues:', error)
@@ -4340,7 +4340,7 @@ function StaticVenuesPage() {
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok || !data?.ok) {
-        throw new Error(data?.message || 'reorder image failed')
+        throw new Error(data?.message || 'จัดลำดับรูปภาพไม่สำเร็จ')
       }
     } catch (error) {
       console.error('Failed to reorder venue images:', error)
@@ -6392,7 +6392,7 @@ function SelectionPage() {
       if (status) query.set('status', status)
       const res = await fetch(apiUrl(`/api/admin/selection/teams?${query.toString()}`), { credentials: 'include' })
       const payload = await res.json()
-      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'load failed')
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ไม่สามารถโหลดข้อมูลได้')
       setRows(payload.data || [])
     } catch (err) {
       pushToast({ type: 'error', title: err?.message || 'โหลดข้อมูล selection ไม่สำเร็จ' })
@@ -6446,7 +6446,7 @@ function SelectionPage() {
         body: JSON.stringify({ openAt, closeAt }),
       })
       const payload = await res.json()
-      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'save failed')
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'บันทึกข้อมูลไม่สำเร็จ')
       pushToast({ title: 'บันทึก Global confirm window สำเร็จ' })
       fetchRows()
     } catch (err) {
@@ -6468,7 +6468,7 @@ function SelectionPage() {
         body: JSON.stringify(body),
       })
       const payload = await res.json()
-      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'update failed')
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'อัปเดตข้อมูลไม่สำเร็จ')
       pushToast({ title: 'บันทึกผลคัดเลือกสำเร็จ' })
       fetchRows()
     } catch (err) {
@@ -6486,7 +6486,7 @@ function SelectionPage() {
         credentials: 'include',
       })
       const payload = await res.json()
-      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'expire failed')
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'เปลี่ยนสถานะหมดอายุไม่สำเร็จ')
       const updatedCount = Number(payload?.data?.updatedCount || 0)
       pushToast({ title: `อัปเดตสถานะสำเร็จ ${updatedCount} ทีม` })
       fetchRows()
@@ -6642,7 +6642,7 @@ function SubmissionTasksPage() {
       setLoading(true)
       const res = await fetch(apiUrl('/api/admin/submission-tasks'), { credentials: 'include' })
       const payload = await res.json()
-      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'load failed')
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ไม่สามารถโหลดข้อมูลได้')
       setRows(payload.data || [])
       await loadTeamOptions()
     } catch (err) {
@@ -6677,7 +6677,7 @@ function SubmissionTasksPage() {
         body: JSON.stringify(payloadBody),
       })
       const payload = await res.json()
-      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'save failed')
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'บันทึกข้อมูลไม่สำเร็จ')
       pushToast({ title: `สร้างงานสำเร็จ (assign ${payload.data?.assignedCount || 0} ทีม)` })
       setForm((prev) => ({
         ...prev,
@@ -6864,8 +6864,8 @@ function NotificationSettingsPage() {
       ])
       const settingsPayload = await settingsRes.json()
       const recipientsPayload = await recipientsRes.json()
-      if (!settingsRes.ok || !settingsPayload?.ok) throw new Error(settingsPayload?.message || 'load settings failed')
-      if (!recipientsRes.ok || !recipientsPayload?.ok) throw new Error(recipientsPayload?.message || 'load recipients failed')
+      if (!settingsRes.ok || !settingsPayload?.ok) throw new Error(settingsPayload?.message || 'โหลดการตั้งค่าไม่สำเร็จ')
+      if (!recipientsRes.ok || !recipientsPayload?.ok) throw new Error(recipientsPayload?.message || 'โหลดรายชื่อผู้รับไม่สำเร็จ')
 
       const settingsRows = settingsPayload.data || []
       setSettings(settingsRows)
@@ -6900,7 +6900,7 @@ function NotificationSettingsPage() {
         body: JSON.stringify(patch),
       })
       const payload = await res.json()
-      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'update failed')
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'อัปเดตข้อมูลไม่สำเร็จ')
       pushToast({ title: successTitle })
       load()
     } catch (err) {
@@ -6918,7 +6918,7 @@ function NotificationSettingsPage() {
         body: JSON.stringify({ enabled: !recipient.enabled }),
       })
       const payload = await res.json()
-      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'update recipient failed')
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'อัปเดตรายชื่อผู้รับไม่สำเร็จ')
       setRecipients((prev) => prev.map((row) => (row.userId === recipient.userId ? payload.data : row)))
       pushToast({ title: 'อัปเดตรายชื่อผู้รับแจ้งเตือนสำเร็จ' })
     } catch (err) {
@@ -6955,7 +6955,7 @@ function NotificationSettingsPage() {
         }),
       })
       const payload = await res.json()
-      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'send failed')
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ส่งข้อมูลไม่สำเร็จ')
       pushToast({ title: `ส่งสำเร็จ (sent=${payload.data?.sent || 0}, failed=${payload.data?.failed || 0}, skipped=${payload.data?.skipped || 0})` })
       setCustomEmail({ teamId: '', subject: '', message: '' })
       load()
@@ -6982,7 +6982,7 @@ function NotificationSettingsPage() {
         body: JSON.stringify({ recipientEmail: email }),
       })
       const payload = await res.json()
-      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'send burst test failed')
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ส่งอีเมลทดสอบแบบชุดไม่สำเร็จ')
       pushToast({
         title: `Burst test done (total=${payload.data?.total || 0}, sent=${payload.data?.sent || 0}, queued=${payload.data?.queued || 0}, failed=${payload.data?.failed || 0})`,
       })

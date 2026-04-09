@@ -552,7 +552,7 @@ function HomePage() {
                         };
                         setUser(verifiedUser);
                         localStorage.setItem('gt_user', JSON.stringify(verifiedUser));
-                    } else if (data.message === 'กรุณาเข้าสู่ระบบ') {
+                    } else if (data.message === 'ไม่มีสิทธิ์เข้าถึง' || data.message === 'กรุณาเข้าสู่ระบบ') {
                         // User session expired
                         localStorage.removeItem('gt_user');
                         setUser(null);
@@ -570,12 +570,12 @@ function HomePage() {
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch schedules: ${response.status}`);
+                    throw new Error('ไม่สามารถโหลดข้อมูลกำหนดการได้');
                 }
 
                 const payload = await response.json();
                 if (!payload?.ok) {
-                    throw new Error(payload?.message || 'Failed to fetch schedules');
+                    throw new Error(payload?.message || 'ไม่สามารถโหลดข้อมูลกำหนดการได้');
                 }
 
                 setSchedulesData(normalizeScheduleCollection(payload.data));
@@ -595,7 +595,7 @@ function HomePage() {
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch carousels: ${response.status}`);
+                    throw new Error('ไม่สามารถโหลดภาพประชาสัมพันธ์ได้');
                 }
 
                 const payload = await response.json();
@@ -634,7 +634,7 @@ function HomePage() {
                 ]);
 
                 if (!coOrganizerResponse.ok || !sponsorResponse.ok) {
-                    throw new Error(`Failed to fetch sponsors: ${coOrganizerResponse.status}/${sponsorResponse.status}`);
+                    throw new Error('ไม่สามารถโหลดข้อมูลภาคีเครือข่ายได้');
                 }
 
                 const [coOrganizerPayload, sponsorPayload] = await Promise.all([
@@ -668,12 +668,12 @@ function HomePage() {
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch participation overview: ${response.status}`);
+                    throw new Error('ไม่สามารถโหลดสถิติการเข้าร่วมได้');
                 }
 
                 const payload = await response.json();
                 if (!payload?.ok || !payload?.data) {
-                    throw new Error(payload?.message || 'Failed to fetch participation overview');
+                    throw new Error(payload?.message || 'ไม่สามารถโหลดสถิติการเข้าร่วมได้');
                 }
 
                 setParticipationOverview(payload.data);

@@ -21,7 +21,7 @@ function getUserId(req: FastifyRequest): number {
 }
 
 function getValidationError(parsed: { error?: { issues?: Array<{ message?: string }> } }): string {
-  return parsed.error?.issues?.[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+  return parsed.error?.issues?.[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
 }
 
 export async function handleGetMyPrivileges(req: FastifyRequest, reply: FastifyReply) {

@@ -33,7 +33,7 @@ export async function handleUpdateNotificationSetting(
 
   const parsed = updateNotificationSettingSchema.safeParse(req.body);
   if (!parsed.success) {
-    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
   }
 
   try {
@@ -84,7 +84,7 @@ export async function handleMarkTeamInboxRead(
 export async function handleAdminSendCustomEmail(req: FastifyRequest, reply: FastifyReply) {
   const parsed = adminSendCustomEmailSchema.safeParse(req.body);
   if (!parsed.success) {
-    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
   }
 
   try {
@@ -105,7 +105,7 @@ export async function handleAdminSendCustomEmail(req: FastifyRequest, reply: Fas
 export async function handleAdminSendBurstTestEmail(req: FastifyRequest, reply: FastifyReply) {
   const parsed = adminSendBurstTestEmailSchema.safeParse(req.body);
   if (!parsed.success) {
-    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
   }
 
   try {
@@ -139,7 +139,7 @@ export async function handleUpdateAdminNotificationRecipient(
 
   const bodyParsed = updateNotificationRecipientSchema.safeParse(req.body);
   if (!bodyParsed.success) {
-    return reply.status(400).send({ ok: false, message: bodyParsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+    return reply.status(400).send({ ok: false, message: bodyParsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
   }
 
   try {

@@ -22,7 +22,7 @@ function setTokenCookie(reply: FastifyReply, token: string) {
 export async function handleRegister(req: FastifyRequest, reply: FastifyReply) {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -45,7 +45,7 @@ export async function handleRegister(req: FastifyRequest, reply: FastifyReply) {
 export async function handleRegisterVerify(req: FastifyRequest, reply: FastifyReply) {
     const parsed = registerVerifySchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -74,7 +74,7 @@ export async function handleRegisterVerify(req: FastifyRequest, reply: FastifyRe
 export async function handleRegisterVerifyLink(req: FastifyRequest, reply: FastifyReply) {
     const parsed = registerVerifyLinkSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -103,7 +103,7 @@ export async function handleRegisterVerifyLink(req: FastifyRequest, reply: Fasti
 export async function handleRegisterResend(req: FastifyRequest, reply: FastifyReply) {
     const parsed = registerResendSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -124,7 +124,7 @@ export async function handleRegisterResend(req: FastifyRequest, reply: FastifyRe
 export async function handleLogin(req: FastifyRequest, reply: FastifyReply) {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 
@@ -154,7 +154,7 @@ export async function handleMe(req: FastifyRequest, reply: FastifyReply) {
     try {
         await req.jwtVerify();
     } catch {
-        return reply.status(401).send({ ok: false, message: 'กรุณาเข้าสู่ระบบ' });
+        return reply.status(401).send({ ok: false, message: 'ไม่มีสิทธิ์เข้าถึง' });
     }
 
     const decoded = req.user as JwtPayload;

@@ -33,7 +33,7 @@ export async function handleUpdateConfig(
 ) {
     const parsed = updateConfigSchema.safeParse(req.body);
     if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง';
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
         return reply.status(400).send({ ok: false, message: firstError });
     }
 

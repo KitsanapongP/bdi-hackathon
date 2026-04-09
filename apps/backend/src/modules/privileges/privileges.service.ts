@@ -226,7 +226,7 @@ export async function createAdminTemplate(
   actorUserId: number,
 ) {
   const existing = await repo.getTemplateByCode(db, input.privilegeCode);
-  if (existing) throw new ConflictError('privilegeCode ซ้ำในระบบ');
+  if (existing) throw new ConflictError('รหัสสิทธิประโยชน์นี้ถูกใช้งานแล้ว');
 
   const templateId = await repo.createTemplate(db, {
     privilegeCode: input.privilegeCode,
@@ -276,7 +276,7 @@ export async function updateAdminTemplate(
   if (patch.privilegeCode && patch.privilegeCode !== current.privilege_code) {
     const duplicate = await repo.getTemplateByCode(db, patch.privilegeCode);
     if (duplicate && Number(duplicate.privilege_id) !== templateId) {
-      throw new ConflictError('privilegeCode ซ้ำในระบบ');
+      throw new ConflictError('รหัสสิทธิประโยชน์นี้ถูกใช้งานแล้ว');
     }
   }
 

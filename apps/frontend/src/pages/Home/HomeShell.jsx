@@ -93,7 +93,7 @@ function HomeShell({ children }) {
                     };
                     setUser(verifiedUser);
                     localStorage.setItem('gt_user', JSON.stringify(verifiedUser));
-                } else if (data.message === 'กรุณาเข้าสู่ระบบ') {
+                } else if (data.message === 'ไม่มีสิทธิ์เข้าถึง' || data.message === 'กรุณาเข้าสู่ระบบ') {
                     localStorage.removeItem('gt_user');
                     setUser(null);
                 }
@@ -117,7 +117,7 @@ function HomeShell({ children }) {
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch sponsors: ${response.status}`);
+                    throw new Error('ไม่สามารถโหลดข้อมูลภาคีเครือข่ายได้');
                 }
 
                 const payload = await response.json();

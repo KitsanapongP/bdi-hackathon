@@ -31,12 +31,12 @@ function DatasetsPage() {
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch datasets: ${response.status}`);
+                    throw new Error('ไม่สามารถโหลดข้อมูลชุดข้อมูลได้');
                 }
 
                 const payload = await response.json();
                 if (!payload?.ok || !Array.isArray(payload.data)) {
-                    throw new Error(payload?.message || 'Failed to fetch datasets');
+                    throw new Error(payload?.message || 'ไม่สามารถโหลดข้อมูลชุดข้อมูลได้');
                 }
 
                 if (isMounted) {

@@ -1,6 +1,6 @@
 import type { DB } from '../../config/db.js';
 import type { UserProfileSafe, PrivacySettingsSafe, SocialLinkSafe, PublicProfileSafe, SocialLinkRow } from './user.types.js';
-import { BadRequestError, NotFoundError } from '../../shared/errors.js';
+import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js';
 import * as repo from './user.repo.js';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -19,6 +19,12 @@ const ALLOWED_AVATAR_MIME: Record<string, AvatarFormat> = {
     'image/png': 'png',
     'image/webp': 'webp',
 };
+
+function isDuplicateUserNameError(err: unknown): boolean {
+    const code = String((err as { code?: string } | null)?.code || '');
+    const message = String((err as { message?: string } | null)?.message || '');
+    return code === 'ER_DUP_ENTRY' && /user_name|uq_user_users_user_name/i.test(message);
+}
 
 function detectAvatarFormat(buffer: Buffer): AvatarFormat | null {
     if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
@@ -161,7 +167,14 @@ export async function updateProfile(
     },
 ): Promise<UserProfileSafe> {
     await assertProfileEditable(db, userId);
-    await repo.updateProfile(db, userId, data);
+    try {
+        await repo.updateProfile(db, userId, data);
+    } catch (err) {
+        if (isDuplicateUserNameError(err)) {
+            throw new ConflictError('ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาใช้ชื่ออื่น');
+        }
+        throw err;
+    }
     return getProfile(db, userId);
 }
 
