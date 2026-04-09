@@ -299,7 +299,7 @@ function HomeShell({ children }) {
                     <div className="gt-footer-inner">
                         <div>
                             <div className="gt-logo" style={{ marginBottom: 14 }}>
-                                <Home size={20} /> BDI Hackathon 2026: Intelligent Living
+                                <Home size={20} /> BDI Young Innovator Hackathon: Intelligent Living
                             </div>
                             <p className="gt-footer-contact" style={{ color: 'var(--gt-footer-text)', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
                                 <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px' }} />
@@ -333,7 +333,7 @@ function HomeShell({ children }) {
                             </div>
                         </div>
                     </div>
-                    <div className="gt-footer-copy">BDI Hackathon 2026: Intelligent Living</div>
+                    <div className="gt-footer-copy">BDI Young Innovator Hackathon: Intelligent Living</div>
                 </div>
             </footer>
         </div>

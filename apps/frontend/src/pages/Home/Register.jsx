@@ -526,7 +526,7 @@ function RegisterPage() {
             <div className="gr-login-wrap">
                 <div className={`gr-login-card ${isRegisterMode ? 'is-register' : ''}`}>
                     <div className="gt-badge" style={{ marginBottom: 20 }}>
-                        <Home size={16} /> Hackathon 2026
+                        <Home size={16} /> BDI Young Innovator Hackathon
                     </div>
                     <h2 style={{ color: 'var(--gt-text)' }}>
                         {isRegisterMode ? (registerStep === 'verify' ? 'ยืนยันอีเมล' : 'ลงทะเบียน') : 'เข้าสู่ระบบ'}

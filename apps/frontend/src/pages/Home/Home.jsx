@@ -47,7 +47,7 @@ const config = {
     },
     locale: {
         nav: ['หน้าแรก', 'เกี่ยวกับ', 'ภาคีเครือข่าย', 'กำหนดการกิจกรรม', 'สถานที่จัดงาน', 'ตัวอย่างชุดข้อมูล', 'ลงทะเบียน'],
-        heroBadge: '🏆 Hackathon 2026',
+        heroBadge: '🏆 BDI Young Innovator Hackathon',
         heroTitle: 'สถาบันข้อมูลขนาดใหญ่ (องค์การมหาชน) ร่วมกับวิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น\nขอเชิญนักเรียน นิสิต และนักศึกษา เข้าร่วมการแข่งขัน BDI Young Innovator Hackathon\nชิงถ้วยพระราชทาน สมเด็จพระกนิษฐาธิราชเจ้า กรมสมเด็จพระเทพรัตนราชสุดา ฯ สยามบรมราชกุมารี',
         ctaPrimary: 'ลงทะเบียนเลย',
         ctaSecondary: 'ดูกำหนดการ',
@@ -1083,7 +1083,7 @@ function HomePage() {
                     {showLobby && <TeamContent user={user} />}
                     {showProfile && <ProfileContent user={user} />}
                     <div style={{ textAlign: 'center', padding: 20, fontSize: '0.8rem', opacity: 0.6, marginTop: 'auto' }}>
-                        © 2026 Intelligent Living Hackathon 2026
+                        © 2026 BDI Young Innovator Hackathon
                     </div>
                 </div>
             ) : (
@@ -1235,8 +1235,8 @@ function HomePage() {
                         <div className="gt-bento">
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-purple"><Sparkles color="#fff" size={24} /></div>
-                                <h3>เวทีเกียรติยศระดับประเทศ ชิงถ้วยพระราชทาน</h3>
-                                <p>ก้าวสู่เวที Hackathon ที่ทรงคุณค่า พิสูจน์ความสามารถในการพัฒนาโซลูชัน AI และ Big Data ที่แก้ปัญหาสุขภาพและยกระดับคุณภาพชีวิตของคนในสังคมได้จริง พร้อมรับความภาคภูมิใจสูงสุดจากรางวัลถ้วยพระราชทาน</p>
+                                <h3>เวทีเกียรติยศระดับประเทศ ชิงถ้วยพระราชทาน กรมสมเด็จพระเทพฯ</h3>
+                                <p>ก้าวสู่เวที Hackathon ที่ทรงคุณค่า พิสูจน์ความสามารถในการพัฒนาโซลูชัน AI และ Big Data ที่แก้ปัญหาสุขภาพและยกระดับคุณภาพชีวิตของคนในสังคมได้จริง พร้อมรับความภาคภูมิใจสูงสุดจากรางวัลถ้วยพระราชทาน สมเด็จพระกนิษฐาธิราชเจ้า กรมสมเด็จพระเทพรัตนราชสุดา ฯ สยามบรมราชกุมารี</p>
                             </div>
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-pink"><Users color="#fff" size={24} /></div>
@@ -1578,7 +1578,7 @@ function HomePage() {
                             <div className="gt-footer-inner">
                                 <div>
                                     <div className="gt-logo" style={{ marginBottom: 14 }}>
-                                        <Home size={20} /> BDI Hackathon 2026: Intelligent Living
+                                        <Home size={20} /> BDI Young Innovator Hackathon: Intelligent Living
                                     </div>
                                     <p className="gt-footer-contact" style={{ color: 'var(--gt-footer-text)', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
                                         <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px' }} />
