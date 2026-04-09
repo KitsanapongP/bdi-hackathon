@@ -47,6 +47,7 @@ import {
     formatThaiDate,
     SYSTEM_WINDOW_STATUS,
 } from '../../lib/systemWindow';
+import { USER_MANUAL_PATH } from '../../lib/userManual';
 import ConfirmModal from '../../components/ConfirmModal';
 import './Team.css';
 import './Register.css';
@@ -914,6 +915,16 @@ export default function TeamContent({ user }) {
                                         <p>ดูคำเชิญที่ได้รับจากทีมอื่น</p>
                                     </div>
                                 </div>
+                            </div>
+                            <div style={{ marginTop: 18, display: 'flex', justifyContent: 'center' }}>
+                                <a
+                                    href={USER_MANUAL_PATH}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ color: '#60a5fa', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                                >
+                                    คู่มือการเข้าร่วมกิจกรรม <ExternalLink size={14} />
+                                </a>
                             </div>
                         </div>
                     )}

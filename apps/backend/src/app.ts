@@ -136,6 +136,17 @@ export function buildApp(ctx: AppContext) {
   });
 
   app.register(fastifyStatic, {
+    root: path.join(process.cwd(), 'public', 'content', 'user_manuals'),
+    prefix: '/static/content/user_manuals/',
+    decorateReply: false,
+    cacheControl: true,
+    maxAge: '7d',
+    immutable: false,
+    etag: true,
+    lastModified: true,
+  });
+
+  app.register(fastifyStatic, {
     root: path.join(process.cwd(), 'public', 'content', 'venues'),
     prefix: '/static/content/venues/',
     decorateReply: false,

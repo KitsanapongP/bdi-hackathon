@@ -12,11 +12,13 @@ import {
     LogIn,
     LogOut,
     Facebook,
+    ExternalLink,
 } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 import GameShapes from '../../components/GameShapes';
 import { apiUrl } from '../../lib/api';
 import { getCachedCoOrganizerSponsors, setCachedCoOrganizerSponsors } from '../../lib/contentCache';
+import { USER_MANUAL_PATH } from '../../lib/userManual';
 import './Home.css';
 
 function normalizeWebsiteUrl(url) {
@@ -324,6 +326,9 @@ function HomeShell({ children }) {
                                 <h4>Support</h4>
                                 <Link to="/home/contact">ติดต่อสอบถาม</Link>
                                 <Link to="/home/faqs">FAQs</Link>
+                                <a href={USER_MANUAL_PATH} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    คู่มือการเข้าร่วมกิจกรรม <ExternalLink size={14} />
+                                </a>
                             </div>
                             <div className="gt-footer-col">
                                 <h4>Follow us</h4>
