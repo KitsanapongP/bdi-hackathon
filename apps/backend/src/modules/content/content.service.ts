@@ -21,6 +21,9 @@ import type {
     ContentRewardAdmin,
     ContentSponsor,
     ContentSponsorAdmin,
+    ContentSponsorGroup,
+    ContentSponsorGroupAdmin,
+    ContentSponsorGroupWithSponsors,
     ContentVenue,
     ContentVenueAdmin,
     ContentVenueCategory,
@@ -109,9 +112,53 @@ const DEFAULT_SPONSOR_TIER = {
     nameEn: 'Co-Organizer',
 };
 
+const DEFAULT_SPONSOR_GROUP_CODE = 'technology_partner';
+
 function normalizeTierCode(tierCode?: string | null): string {
     const normalized = (tierCode || '').trim();
     return normalized || DEFAULT_SPONSOR_TIER.code;
+}
+
+function normalizeSponsorGroupCode(groupCode?: string | null): string {
+    const normalized = (groupCode || '').trim();
+    return normalized || DEFAULT_SPONSOR_GROUP_CODE;
+}
+
+function toSponsorGroupResponse(row: any): ContentSponsorGroup {
+    return {
+        id: row.sponsor_group_id,
+        code: row.group_code,
+        nameTh: row.group_name_th,
+        nameEn: row.group_name_en,
+        sortOrder: row.sort_order,
+    };
+}
+
+function toSponsorPublicResponse(row: any): ContentSponsor {
+    const sponsorGroup = row.sponsor_group_id
+        ? {
+            id: row.sponsor_group_id,
+            code: row.group_code || '',
+            nameTh: row.group_name_th || '',
+            nameEn: row.group_name_en || '',
+            sortOrder: Number(row.group_sort_order ?? 0),
+        }
+        : null;
+
+    return {
+        id: row.sponsor_id,
+        nameTh: row.sponsor_name_th,
+        nameEn: row.sponsor_name_en,
+        logoStorageKey: row.logo_storage_key,
+        logoUrl: row.logo_storage_key,
+        websiteUrl: row.website_url,
+        tierCode: row.tier_code,
+        tierNameTh: row.tier_name_th,
+        tierNameEn: row.tier_name_en,
+        sponsorGroupId: row.sponsor_group_id ?? null,
+        sponsorGroup,
+        sortOrder: row.sort_order,
+    };
 }
 
 function normalizeSponsorLogoStorageKey(logoInput: string, tierCode?: string | null): string {
@@ -1142,17 +1189,26 @@ export async function deleteRewardAdmin(db: DB, rewardId: number): Promise<void>
 export async function getSponsors(db: DB, tierCode?: string): Promise<ContentSponsor[]> {
     const sponsors = await repo.getEnabledSponsors(db, tierCode);
 
-    return sponsors.map((sponsor) => ({
-        id: sponsor.sponsor_id,
-        nameTh: sponsor.sponsor_name_th,
-        nameEn: sponsor.sponsor_name_en,
-        logoStorageKey: sponsor.logo_storage_key,
-        logoUrl: sponsor.logo_storage_key,
-        websiteUrl: sponsor.website_url,
-        tierCode: sponsor.tier_code,
-        tierNameTh: sponsor.tier_name_th,
-        tierNameEn: sponsor.tier_name_en,
-        sortOrder: sponsor.sort_order,
+    return sponsors.map(toSponsorPublicResponse);
+}
+
+export async function getSponsorGroupsWithSponsors(db: DB): Promise<ContentSponsorGroupWithSponsors[]> {
+    const [groups, sponsors] = await Promise.all([
+        repo.getEnabledSponsorGroups(db),
+        repo.getEnabledSponsors(db),
+    ]);
+
+    const sponsorsByGroupId = new Map<number, ContentSponsor[]>();
+    for (const sponsor of sponsors) {
+        if (!sponsor.sponsor_group_id) continue;
+        const list = sponsorsByGroupId.get(sponsor.sponsor_group_id) ?? [];
+        list.push(toSponsorPublicResponse(sponsor));
+        sponsorsByGroupId.set(sponsor.sponsor_group_id, list);
+    }
+
+    return groups.map((group) => ({
+        ...toSponsorGroupResponse(group),
+        sponsors: sponsorsByGroupId.get(group.sponsor_group_id) ?? [],
     }));
 }
 
@@ -1162,6 +1218,16 @@ export async function getCarousels(db: DB): Promise<ContentCarouselSlide[]> {
 }
 
 function toSponsorAdminResponse(row: any): ContentSponsorAdmin {
+    const sponsorGroup = row.sponsor_group_id
+        ? {
+            id: row.sponsor_group_id,
+            code: row.group_code || '',
+            nameTh: row.group_name_th || '',
+            nameEn: row.group_name_en || '',
+            sortOrder: Number(row.group_sort_order ?? 0),
+        }
+        : null;
+
     return {
         id: row.sponsor_id,
         name: row.sponsor_name_en,
@@ -1174,7 +1240,103 @@ function toSponsorAdminResponse(row: any): ContentSponsorAdmin {
         tierCode: row.tier_code,
         tierNameTh: row.tier_name_th,
         tierNameEn: row.tier_name_en,
+        sponsorGroupId: row.sponsor_group_id ?? null,
+        sponsorGroup,
     };
+}
+
+function toSponsorGroupAdminResponse(row: any): ContentSponsorGroupAdmin {
+    return {
+        ...toSponsorGroupResponse(row),
+        isActive: row.is_enabled === 1,
+    };
+}
+
+export async function getAllSponsorGroupsAdmin(db: DB): Promise<ContentSponsorGroupAdmin[]> {
+    const groups = await repo.getAllSponsorGroups(db);
+    return groups.map(toSponsorGroupAdminResponse);
+}
+
+export async function createSponsorGroupAdmin(
+    db: DB,
+    data: {
+        code: string;
+        nameTh: string;
+        nameEn: string;
+        sortOrder: number;
+        isActive: boolean;
+    }
+): Promise<ContentSponsorGroupAdmin> {
+    const nameTh = data.nameTh.trim();
+    const nameEn = data.nameEn.trim();
+    if (!nameTh || !nameEn) {
+        throw new BadRequestError('ต้องระบุชื่อกลุ่มภาษาไทยและอังกฤษ');
+    }
+
+    const createdId = await repo.createSponsorGroup(db, {
+        code: normalizeSponsorGroupCode(data.code),
+        nameTh,
+        nameEn,
+        sortOrder: Number(data.sortOrder),
+        isEnabled: data.isActive,
+    });
+
+    const created = await repo.getSponsorGroupById(db, createdId);
+    if (!created) {
+        throw new NotFoundError('ไม่พบข้อมูลกลุ่มภาคีที่เพิ่งสร้าง');
+    }
+
+    return toSponsorGroupAdminResponse(created);
+}
+
+export async function updateSponsorGroupAdmin(
+    db: DB,
+    groupId: number,
+    data: {
+        code?: string;
+        nameTh?: string;
+        nameEn?: string;
+        sortOrder?: number;
+        isActive?: boolean;
+    }
+): Promise<ContentSponsorGroupAdmin> {
+    const existing = await repo.getSponsorGroupById(db, groupId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูลกลุ่มภาคีนี้');
+    }
+
+    if (data.nameTh !== undefined && !data.nameTh.trim()) {
+        throw new BadRequestError('nameTh ต้องไม่ว่าง');
+    }
+
+    if (data.nameEn !== undefined && !data.nameEn.trim()) {
+        throw new BadRequestError('nameEn ต้องไม่ว่าง');
+    }
+
+    await repo.updateSponsorGroup(db, groupId, {
+        code: data.code !== undefined ? normalizeSponsorGroupCode(data.code) : undefined,
+        nameTh: data.nameTh !== undefined ? data.nameTh.trim() : undefined,
+        nameEn: data.nameEn !== undefined ? data.nameEn.trim() : undefined,
+        sortOrder: data.sortOrder,
+        isEnabled: data.isActive,
+    });
+
+    const updated = await repo.getSponsorGroupById(db, groupId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบข้อมูลกลุ่มภาคีหลังการอัปเดต');
+    }
+
+    return toSponsorGroupAdminResponse(updated);
+}
+
+export async function reorderSponsorGroupsAdmin(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
+    await repo.updateSponsorGroupsOrder(
+        db,
+        updates.map((update) => ({
+            id: Number(update.id),
+            sortOrder: Number(update.sortOrder),
+        }))
+    );
 }
 
 export async function getAllSponsorsAdmin(db: DB): Promise<ContentSponsorAdmin[]> {
@@ -1202,11 +1364,20 @@ export async function createSponsorAdmin(
         tierCode?: string | null;
         tierNameTh?: string | null;
         tierNameEn?: string | null;
+        sponsorGroupId?: number | null;
     }
 ): Promise<ContentSponsorAdmin> {
     const tierCode = normalizeTierCode(data.tierCode);
     const nameEn = data.name.trim();
     const nameTh = (data.nameTh || '').trim() || nameEn;
+    const sponsorGroupId = data.sponsorGroupId ?? null;
+
+    if (sponsorGroupId !== null) {
+        const group = await repo.getSponsorGroupById(db, sponsorGroupId);
+        if (!group) {
+            throw new BadRequestError('sponsorGroupId ไม่ถูกต้อง');
+        }
+    }
 
     const sponsorId = await repo.createSponsor(db, {
         nameEn,
@@ -1216,6 +1387,7 @@ export async function createSponsorAdmin(
         tierCode,
         tierNameTh: (data.tierNameTh || '').trim() || DEFAULT_SPONSOR_TIER.nameTh,
         tierNameEn: (data.tierNameEn || '').trim() || DEFAULT_SPONSOR_TIER.nameEn,
+        sponsorGroupId,
         sortOrder: data.displayOrder,
         isEnabled: data.isActive,
     });
@@ -1237,6 +1409,7 @@ export async function updateSponsorAdmin(
         tierCode?: string | null;
         tierNameTh?: string | null;
         tierNameEn?: string | null;
+        sponsorGroupId?: number | null;
     }
 ): Promise<ContentSponsorAdmin> {
     const existing = await repo.getSponsorById(db, sponsorId);
@@ -1252,6 +1425,7 @@ export async function updateSponsorAdmin(
         tierCode?: string | null | undefined;
         tierNameTh?: string | null | undefined;
         tierNameEn?: string | null | undefined;
+        sponsorGroupId?: number | null | undefined;
         sortOrder?: number | undefined;
         isEnabled?: boolean | undefined;
     } = {};
@@ -1262,6 +1436,15 @@ export async function updateSponsorAdmin(
     if (data.tierCode !== undefined) updatePayload.tierCode = normalizeTierCode(data.tierCode);
     if (data.tierNameTh !== undefined) updatePayload.tierNameTh = (data.tierNameTh || '').trim() || null;
     if (data.tierNameEn !== undefined) updatePayload.tierNameEn = (data.tierNameEn || '').trim() || null;
+    if (data.sponsorGroupId !== undefined) {
+        if (data.sponsorGroupId !== null) {
+            const group = await repo.getSponsorGroupById(db, data.sponsorGroupId);
+            if (!group) {
+                throw new BadRequestError('sponsorGroupId ไม่ถูกต้อง');
+            }
+        }
+        updatePayload.sponsorGroupId = data.sponsorGroupId;
+    }
     if (data.displayOrder !== undefined) updatePayload.sortOrder = data.displayOrder;
     if (data.isActive !== undefined) updatePayload.isEnabled = data.isActive;
 

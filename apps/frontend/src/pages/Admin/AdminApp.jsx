@@ -1284,10 +1284,21 @@ function DashboardPage() {
 
 function StaticSponsorsPage() {
   const { pushToast } = useAdminToast()
+  const [groupItems, setGroupItems] = useState([])
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [groupDrawerOpen, setGroupDrawerOpen] = useState(false)
+  const [editingGroupId, setEditingGroupId] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [groupErrors, setGroupErrors] = useState({})
+  const [groupForm, setGroupForm] = useState({
+    code: '',
+    nameTh: '',
+    nameEn: '',
+    sortOrder: 1,
+    isActive: true,
+  })
   const [errors, setErrors] = useState({})
   const [form, setForm] = useState({
     sponsorNameEn: '',
@@ -1296,6 +1307,7 @@ function StaticSponsorsPage() {
     tierCode: 'co_organizer',
     tierNameTh: 'ผู้ร่วมจัด',
     tierNameEn: 'Co-Organizer',
+    sponsorGroupId: null,
     sortOrder: 1,
     isEnabled: true,
     logoStorageKey: '',
@@ -1324,6 +1336,10 @@ function StaticSponsorsPage() {
             tierCode: item.tierCode,
             tierNameTh: item.tierNameTh,
             tierNameEn: item.tierNameEn,
+            sponsorGroupId: item.sponsorGroupId,
+            sponsorGroup: item.sponsorGroup,
+            sponsorGroupNameTh: item.sponsorGroup?.nameTh || '',
+            sponsorGroupNameEn: item.sponsorGroup?.nameEn || '',
           }))
         )
       }
@@ -1335,9 +1351,99 @@ function StaticSponsorsPage() {
     }
   }, [pushToast])
 
+  const fetchSponsorGroups = useCallback(async () => {
+    try {
+      const response = await fetch(apiUrl('/api/admin/sponsor-groups'), { credentials: 'include' })
+      const data = await response.json()
+      if (data.ok) {
+        setGroupItems(data.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch sponsor groups:', err)
+      pushToast({ type: 'error', title: 'ไม่สามารถโหลดข้อมูลกลุ่มภาคีได้' })
+    }
+  }, [pushToast])
+
   useEffect(() => {
     fetchSponsors()
-  }, [fetchSponsors])
+    fetchSponsorGroups()
+  }, [fetchSponsors, fetchSponsorGroups])
+
+  const openCreateGroup = () => {
+    setEditingGroupId(null)
+    setGroupErrors({})
+    setGroupForm({
+      code: '',
+      nameTh: '',
+      nameEn: '',
+      sortOrder: groupItems.length + 1,
+      isActive: true,
+    })
+    setGroupDrawerOpen(true)
+  }
+
+  const openEditGroup = (group) => {
+    setEditingGroupId(group.id)
+    setGroupErrors({})
+    setGroupForm({
+      code: group.code || '',
+      nameTh: group.nameTh || '',
+      nameEn: group.nameEn || '',
+      sortOrder: group.sortOrder,
+      isActive: group.isActive !== false,
+    })
+    setGroupDrawerOpen(true)
+  }
+
+  const validateGroup = () => {
+    const next = {}
+    if (!groupForm.code.trim()) next.code = 'กรุณากรอก group_code'
+    if (!groupForm.nameTh.trim()) next.nameTh = 'กรุณากรอกชื่อกลุ่ม (TH)'
+    if (!groupForm.nameEn.trim()) next.nameEn = 'กรุณากรอกชื่อกลุ่ม (EN)'
+    setGroupErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const onSubmitGroup = async () => {
+    if (!validateGroup()) return
+
+    const payload = {
+      code: groupForm.code.trim(),
+      nameTh: groupForm.nameTh.trim(),
+      nameEn: groupForm.nameEn.trim(),
+      sortOrder: Number(groupForm.sortOrder),
+      isActive: groupForm.isActive,
+    }
+
+    try {
+      const response = await fetch(
+        apiUrl(editingGroupId ? `/api/admin/sponsor-groups/${editingGroupId}` : '/api/admin/sponsor-groups'),
+        {
+          method: editingGroupId ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        }
+      )
+      const data = await response.json()
+
+      if (!data.ok) {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+        return
+      }
+
+      pushToast({
+        title: editingGroupId ? 'อัปเดตกลุ่มภาคีสำเร็จ' : 'เพิ่มกลุ่มภาคีสำเร็จ',
+        description: payload.nameTh,
+      })
+      fetchSponsorGroups()
+      fetchSponsors()
+      setGroupDrawerOpen(false)
+    } catch (err) {
+      console.error('Failed to save sponsor group:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการบันทึกกลุ่มภาคี' })
+    }
+  }
 
   const openCreate = () => {
     setEditingId(null)
@@ -1349,6 +1455,7 @@ function StaticSponsorsPage() {
       tierCode: 'co_organizer',
       tierNameTh: 'ผู้ร่วมจัด',
       tierNameEn: 'Co-Organizer',
+      sponsorGroupId: groupItems[0]?.id ?? null,
       sortOrder: items.length + 1,
       isEnabled: true,
       logoStorageKey: '',
@@ -1370,6 +1477,7 @@ function StaticSponsorsPage() {
       tierCode: item.tierCode || 'co_organizer',
       tierNameTh: item.tierNameTh || 'ผู้ร่วมจัด',
       tierNameEn: item.tierNameEn || 'Co-Organizer',
+      sponsorGroupId: item.sponsorGroupId ?? null,
       sortOrder: item.displayOrder,
       isEnabled: item.isActive,
       logoStorageKey: item.logo || '',
@@ -1412,6 +1520,9 @@ function StaticSponsorsPage() {
       tierCode: form.tierCode.trim(),
       tierNameTh: form.tierNameTh.trim() || null,
       tierNameEn: form.tierNameEn.trim() || null,
+      sponsorGroupId: form.sponsorGroupId !== null && form.sponsorGroupId !== undefined
+        ? Number(form.sponsorGroupId)
+        : null,
     }
 
     const uploadLogoIfNeeded = async (sponsorId) => {
@@ -1524,23 +1635,190 @@ function StaticSponsorsPage() {
     }
   }
 
+  const moveGroup = async (id, direction) => {
+    const index = groupItems.findIndex((item) => item.id === id)
+    if (index === -1) return
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (swapIndex < 0 || swapIndex >= groupItems.length) return
+
+    const next = [...groupItems]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    const reordered = next.map((item, idx) => ({ ...item, sortOrder: idx + 1 }))
+    setGroupItems(reordered)
+
+    try {
+      const updates = reordered.map((item) => ({ id: item.id, sortOrder: item.sortOrder }))
+      await fetch(apiUrl('/api/admin/sponsor-groups/reorder'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ updates }),
+      })
+      fetchSponsors()
+    } catch (err) {
+      console.error('Failed to reorder sponsor groups:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับกลุ่มภาคี' })
+      fetchSponsorGroups()
+    }
+  }
+
   return (
     <div className="admin-ui-stack">
       <SectionHeading
         title="Static Content: Sponsors"
         description=""
         right={
-          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
-            <Plus size={15} />
-            Add Sponsor
-          </button>
+          <div className="admin-ui-row-actions">
+            <button type="button" className="admin-ui-btn" onClick={openCreateGroup}>
+              <Plus size={15} />
+              Add Group
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
+              <Plus size={15} />
+              Add Sponsor
+            </button>
+          </div>
         }
       />
 
       <AdminDataTable
         loading={loading}
-        rows={[...items].sort((a, b) => a.displayOrder - b.displayOrder)}
-        searchKeys={['name', 'link']}
+        rows={[...groupItems].sort((a, b) => a.sortOrder - b.sortOrder)}
+        searchKeys={['nameTh', 'nameEn', 'code']}
+        searchPlaceholder="ค้นหาชื่อกลุ่มภาคี"
+        filters={[
+          { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+          { label: 'Active', value: 'active', predicate: (row) => row.isActive },
+          { label: 'Inactive', value: 'inactive', predicate: (row) => !row.isActive },
+        ]}
+        columns={[
+          {
+            key: 'name',
+            label: 'Sponsor Group',
+            render: (row) => (
+              <div>
+                <strong>{row.nameTh}</strong>
+                <span>{row.nameEn}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'code',
+            label: 'Group Code',
+          },
+          {
+            key: 'sortOrder',
+            label: 'Group Order',
+          },
+          {
+            key: 'isActive',
+            label: 'Status',
+            render: (row) => <StatusBadge status={row.isActive ? 'APPROVED' : 'RETURNED'} label={row.isActive ? 'Enable' : 'Disable'} />,
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="admin-ui-row-actions">
+                <button type="button" onClick={() => moveGroup(row.id, 'up')} aria-label="move up group">
+                  <ArrowUp size={14} />
+                </button>
+                <button type="button" onClick={() => moveGroup(row.id, 'down')} aria-label="move down group">
+                  <ArrowDown size={14} />
+                </button>
+                <button type="button" onClick={() => openEditGroup(row)} aria-label="edit group">
+                  <Pencil size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <DetailDrawer
+        open={groupDrawerOpen}
+        onClose={() => setGroupDrawerOpen(false)}
+        title={editingGroupId ? 'Edit Sponsor Group' : 'Create Sponsor Group'}
+        subtitle="จัดการชื่อกลุ่มและลำดับการแสดงผล"
+      >
+        <div className="admin-ui-form">
+          <label htmlFor="sponsor-group-code">
+            group_code *
+            <input
+              id="sponsor-group-code"
+              value={groupForm.code}
+              onChange={(event) => setGroupForm((prev) => ({ ...prev, code: event.target.value }))}
+            />
+            {groupErrors.code ? <small>{groupErrors.code}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-group-name-th">
+            group_name_th *
+            <input
+              id="sponsor-group-name-th"
+              value={groupForm.nameTh}
+              onChange={(event) => setGroupForm((prev) => ({ ...prev, nameTh: event.target.value }))}
+            />
+            {groupErrors.nameTh ? <small>{groupErrors.nameTh}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-group-name-en">
+            group_name_en *
+            <input
+              id="sponsor-group-name-en"
+              value={groupForm.nameEn}
+              onChange={(event) => setGroupForm((prev) => ({ ...prev, nameEn: event.target.value }))}
+            />
+            {groupErrors.nameEn ? <small>{groupErrors.nameEn}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-group-order">
+            sort_order
+            <input
+              id="sponsor-group-order"
+              type="number"
+              min={1}
+              value={groupForm.sortOrder}
+              onChange={(event) => setGroupForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+            />
+          </label>
+
+          <div className="admin-ui-toggle-row">
+            <label htmlFor="sponsor-group-active" className="admin-ui-toggle-label">
+              Status
+            </label>
+            <label className="admin-ui-toggle">
+              <input
+                type="checkbox"
+                checked={groupForm.isActive}
+                onChange={(event) => setGroupForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+              />
+              <span className="admin-ui-toggle-switch"></span>
+              <span className="admin-ui-toggle-text">{groupForm.isActive ? 'Enabled' : 'Disabled'}</span>
+            </label>
+          </div>
+
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setGroupDrawerOpen(false)}>
+              ยกเลิก
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={onSubmitGroup}>
+              <Save size={14} />
+              บันทึกกลุ่ม
+            </button>
+          </div>
+        </div>
+      </DetailDrawer>
+
+      <AdminDataTable
+        loading={loading}
+        rows={[...items].sort((a, b) => {
+          const leftGroupOrder = Number(a.sponsorGroup?.sortOrder ?? 999999)
+          const rightGroupOrder = Number(b.sponsorGroup?.sortOrder ?? 999999)
+          if (leftGroupOrder !== rightGroupOrder) return leftGroupOrder - rightGroupOrder
+          return a.displayOrder - b.displayOrder
+        })}
+        searchKeys={['name', 'link', 'sponsorGroupNameTh', 'sponsorGroupNameEn']}
         searchPlaceholder="ค้นหาชื่อ sponsor หรือลิงก์"
         filters={[
           { label: 'ทั้งหมด', value: 'all', predicate: () => true },
@@ -1574,6 +1852,11 @@ function StaticSponsorsPage() {
                 <span>-</span>
               )
             ),
+          },
+          {
+            key: 'sponsorGroup',
+            label: 'Group',
+            render: (row) => <span>{row.sponsorGroup?.nameTh || '-'}</span>,
           },
           {
             key: 'displayOrder',
@@ -1669,6 +1952,25 @@ function StaticSponsorsPage() {
               value={form.tierNameEn}
               onChange={(event) => setForm((prev) => ({ ...prev, tierNameEn: event.target.value }))}
             />
+          </label>
+
+          <label htmlFor="sponsor-group-id">
+            sponsor_group
+            <select
+              id="sponsor-group-id"
+              value={form.sponsorGroupId ?? ''}
+              onChange={(event) => setForm((prev) => ({
+                ...prev,
+                sponsorGroupId: event.target.value ? Number(event.target.value) : null,
+              }))}
+            >
+              <option value="">-</option>
+              {groupItems.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.nameTh} ({group.nameEn})
+                </option>
+              ))}
+            </select>
           </label>
 
           <label htmlFor="sponsor-order">

@@ -198,6 +198,60 @@ export async function handleGetAllSponsorsAdmin(req: FastifyRequest, reply: Fast
     }
 }
 
+export async function handleGetAllSponsorGroupsAdmin(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const groups = await contentService.getAllSponsorGroupsAdmin(req.server.ctx.db);
+        return reply.send(ok(groups));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleCreateSponsorGroupAdmin(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const result = await contentService.createSponsorGroupAdmin(req.server.ctx.db, req.body as any);
+        return reply.status(201).send(ok(result, 'เพิ่มกลุ่มภาคีสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateSponsorGroupAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+        return reply.status(400).send({ ok: false, message: 'ID ไม่ถูกต้อง' });
+    }
+
+    try {
+        const result = await contentService.updateSponsorGroupAdmin(req.server.ctx.db, id, req.body as any);
+        return reply.send(ok(result, 'อัปเดตกลุ่มภาคีสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleReorderSponsorGroupsAdmin(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const body = req.body as { updates: { id: number; sortOrder: number }[] };
+        await contentService.reorderSponsorGroupsAdmin(req.server.ctx.db, body.updates);
+        return reply.send(ok({ success: true }, 'จัดลำดับกลุ่มภาคีสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
 export async function handleCreateSponsorAdmin(req: FastifyRequest, reply: FastifyReply) {
     try {
         const result = await contentService.createSponsorAdmin(req.server.ctx.db, req.body as any);
