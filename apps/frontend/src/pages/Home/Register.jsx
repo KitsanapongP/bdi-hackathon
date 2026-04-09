@@ -22,11 +22,8 @@ import {
 } from '../../lib/systemWindow';
 
 const EDUCATION_OPTIONS = [
-    { value: 'secondary', label: 'มัธยมศึกษาตอนต้น' },
     { value: 'high_school', label: 'มัธยมศึกษาตอนปลาย' },
     { value: 'bachelor', label: 'ปริญญาตรี' },
-    { value: 'master', label: 'ปริญญาโท' },
-    { value: 'doctorate', label: 'ปริญญาเอก' },
 ];
 
 const GENDER_OPTIONS = [

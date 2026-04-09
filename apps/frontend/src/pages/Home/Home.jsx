@@ -1343,7 +1343,7 @@ function HomePage() {
                                     <span className="gt-eligibility-item-icon"><Activity size={18} /></span>
                                     <div className="gt-eligibility-item-body">
                                         <h4>สถานะผู้สมัคร</h4>
-                                        <p>สมาชิกในทีมต้องเป็นนักเรียนระดับมัธยมศึกษา หรือนักศึกษาระดับอุดมศึกษาจากสถาบันการศึกษาในประเทศไทย</p>
+                                        <p>สมาชิกในทีมต้องเป็นนักเรียนระดับมัธยมศึกษาตอนปลาย หรือนักศึกษาระดับอุดมศึกษา (ระดับปริญญาตรี) จากสถาบันการศึกษาในประเทศไทย</p>
                                     </div>
                                 </li>
                                 <li className="gt-eligibility-item">
