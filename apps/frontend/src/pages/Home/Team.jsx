@@ -98,6 +98,17 @@ const getSocialPlatformLabel = (platformCode) => {
     return SOCIAL_PLATFORM_LABELS[key] || platformCode || 'ลิงก์';
 };
 
+const SUBMISSION_STAGE_LABELS = {
+    pre_selection: 'ก่อนคัดเลือก',
+    training: 'อบรม (หลังได้รับการคัดเลือก)',
+    onsite: 'onsite (ในงาน hackathon)',
+};
+
+const getSubmissionStageLabel = (stageCode) => {
+    const key = String(stageCode || '').toLowerCase();
+    return SUBMISSION_STAGE_LABELS[key] || stageCode || '-';
+};
+
 const formatDate = (dateStr) => {
     if (!dateStr) return '';
     if (!dateStr.includes('T')) return dateStr;
@@ -2004,6 +2015,8 @@ export default function TeamContent({ user }) {
                         const requiredClass = task.isRequired ? 'required' : 'optional';
                         const requiredLabel = task.isRequired ? 'บังคับ' : 'ไม่บังคับ';
                         const isTaskLocked = isWorksLocked || !task.isSubmissionOpen || task.isDeadlinePassed;
+                        const stageLabel = getSubmissionStageLabel(task.stage);
+                        const descriptionText = String(task.description || '').trim();
 
                         return (
                             <div key={task.teamSubmissionTaskId} className="gl-team-info-card">
@@ -2013,15 +2026,18 @@ export default function TeamContent({ user }) {
                                     </span>
                                     <div className="sub-task-header-badges">
                                         <span className={`sub-task-required ${requiredClass}`}>{requiredLabel}</span>
+                                        <span className="sub-task-required stage"><Info size={12} /> ขั้นตอน: {stageLabel}</span>
                                         {!task.isSubmissionOpen && <span className="sub-task-required warning"><Lock size={12} /> งานนี้ปิดการส่งแล้ว</span>}
                                         {task.isDeadlinePassed && <span className="sub-task-required warning"><Clock size={12} /> หมดเวลาส่ง</span>}
                                     </div>
                                 </div>
 
-                                {task.deadlineAt && !task.isDeadlinePassed && (
-                                    <div className="sub-task-hint-row">
-                                        <span className="sub-task-required info"><Clock size={12} /> กำหนดส่ง: {formatDateTime(task.deadlineAt)}</span>
-                                    </div>
+                                <div className="sub-task-hint-row">
+                                    <span className="sub-task-required info"><Clock size={12} /> กำหนดส่ง: {formatDateTime(task.deadlineAt)}</span>
+                                </div>
+
+                                {descriptionText && (
+                                    <p className="sub-task-description">{descriptionText}</p>
                                 )}
 
                                 {task.taskType === 'link' ? (

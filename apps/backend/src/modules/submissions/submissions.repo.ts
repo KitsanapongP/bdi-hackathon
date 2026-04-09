@@ -35,15 +35,18 @@ export async function getSubmissionTaskById(db: DB, submissionTaskId: number): P
 
 export async function getTeamSubmissionTasks(db: DB, teamId: number): Promise<TeamSubmissionTaskWithMetaRow[]> {
     const [rows] = await db.query<TeamSubmissionTaskWithMetaRow[]>(
-        `SELECT
-            tst.*,
-            st.task_name,
-            st.task_type,
-            st.is_required,
-            st.is_default AS task_is_default,
-            st.allowed_extensions,
-            st.sort_order,
-            st.is_enabled AS task_is_enabled
+         `SELECT
+             tst.*,
+             st.task_name,
+             st.description AS task_description,
+             st.task_type,
+             st.stage,
+             st.is_required,
+             st.is_default AS task_is_default,
+             st.allowed_extensions,
+             st.sort_order,
+             st.deadline_at AS task_deadline_at,
+             st.is_enabled AS task_is_enabled
          FROM team_submission_tasks tst
          JOIN submission_tasks st
            ON st.submission_task_id = tst.submission_task_id
@@ -59,15 +62,18 @@ export async function getTeamSubmissionTasks(db: DB, teamId: number): Promise<Te
 
 export async function getTeamSubmissionTaskById(db: DB, teamSubmissionTaskId: number): Promise<TeamSubmissionTaskWithMetaRow | null> {
     const [rows] = await db.query<TeamSubmissionTaskWithMetaRow[]>(
-        `SELECT
-            tst.*,
-            st.task_name,
-            st.task_type,
-            st.is_required,
-            st.is_default AS task_is_default,
-            st.allowed_extensions,
-            st.sort_order,
-            st.is_enabled AS task_is_enabled
+         `SELECT
+             tst.*,
+             st.task_name,
+             st.description AS task_description,
+             st.task_type,
+             st.stage,
+             st.is_required,
+             st.is_default AS task_is_default,
+             st.allowed_extensions,
+             st.sort_order,
+             st.deadline_at AS task_deadline_at,
+             st.is_enabled AS task_is_enabled
          FROM team_submission_tasks tst
          JOIN submission_tasks st
            ON st.submission_task_id = tst.submission_task_id

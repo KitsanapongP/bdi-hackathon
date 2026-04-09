@@ -652,10 +652,13 @@ export async function listSubmissionTasksAdmin(db: DB): Promise<AdminSubmissionT
         SELECT
             st.submission_task_id,
             st.task_name,
+            st.description,
             st.task_type,
+            st.stage,
             st.is_required,
             st.allowed_extensions,
             st.sort_order,
+            st.deadline_at,
             st.is_enabled,
             st.is_default,
             st.created_by_user_id,
@@ -670,10 +673,13 @@ export async function listSubmissionTasksAdmin(db: DB): Promise<AdminSubmissionT
         GROUP BY
             st.submission_task_id,
             st.task_name,
+            st.description,
             st.task_type,
+            st.stage,
             st.is_required,
             st.allowed_extensions,
             st.sort_order,
+            st.deadline_at,
             st.is_enabled,
             st.is_default,
             st.created_by_user_id,
@@ -688,23 +694,29 @@ export async function createSubmissionTaskAdmin(
     db: DB,
     data: {
         taskName: string;
+        description: string | null;
         taskType: 'link' | 'file';
+        stage: 'pre_selection' | 'training' | 'onsite';
         isRequired: boolean;
         allowedExtensions: string | null;
         sortOrder: number;
+        deadlineAt: string | null;
         createdByUserId: number;
     }
 ): Promise<number> {
     const [result] = await db.query<ResultSetHeader>(
         `INSERT INTO submission_tasks
-            (task_name, task_type, is_required, allowed_extensions, sort_order, is_enabled, is_default, created_by_user_id)
-         VALUES (:taskName, :taskType, :isRequired, :allowedExtensions, :sortOrder, 1, 0, :createdByUserId)`,
+            (task_name, description, task_type, stage, is_required, allowed_extensions, sort_order, deadline_at, is_enabled, is_default, created_by_user_id)
+         VALUES (:taskName, :description, :taskType, :stage, :isRequired, :allowedExtensions, :sortOrder, :deadlineAt, 1, 0, :createdByUserId)`,
         {
             taskName: data.taskName,
+            description: data.description,
             taskType: data.taskType,
+            stage: data.stage,
             isRequired: data.isRequired ? 1 : 0,
             allowedExtensions: data.allowedExtensions,
             sortOrder: data.sortOrder,
+            deadlineAt: data.deadlineAt,
             createdByUserId: data.createdByUserId,
         }
     );
@@ -716,10 +728,13 @@ export async function getSubmissionTaskByIdAdmin(db: DB, submissionTaskId: numbe
         SELECT
             st.submission_task_id,
             st.task_name,
+            st.description,
             st.task_type,
+            st.stage,
             st.is_required,
             st.allowed_extensions,
             st.sort_order,
+            st.deadline_at,
             st.is_enabled,
             st.is_default,
             st.created_by_user_id,
@@ -735,10 +750,13 @@ export async function getSubmissionTaskByIdAdmin(db: DB, submissionTaskId: numbe
         GROUP BY
             st.submission_task_id,
             st.task_name,
+            st.description,
             st.task_type,
+            st.stage,
             st.is_required,
             st.allowed_extensions,
             st.sort_order,
+            st.deadline_at,
             st.is_enabled,
             st.is_default,
             st.created_by_user_id,
@@ -781,7 +799,6 @@ export async function bulkAssignSubmissionTaskToTeamsAdmin(
         submissionTaskId: number;
         assignedByUserId: number;
         assignedSource: 'admin_team' | 'admin_status';
-        deadlineAt: string | null;
         isSubmissionOpen: boolean;
         teamIds: number[];
     }
@@ -791,7 +808,6 @@ export async function bulkAssignSubmissionTaskToTeamsAdmin(
     const values = data.teamIds.map((teamId) => [
         teamId,
         data.submissionTaskId,
-        data.deadlineAt,
         data.isSubmissionOpen ? 1 : 0,
         data.assignedByUserId,
         data.assignedSource,
@@ -799,12 +815,11 @@ export async function bulkAssignSubmissionTaskToTeamsAdmin(
 
     await db.query(
         `INSERT INTO team_submission_tasks
-            (team_id, submission_task_id, deadline_at, is_submission_open, assigned_by_user_id, assigned_source)
+            (team_id, submission_task_id, is_submission_open, assigned_by_user_id, assigned_source)
          VALUES ?
          ON DUPLICATE KEY UPDATE
             deleted_at = NULL,
             updated_at = NOW(),
-            deadline_at = VALUES(deadline_at),
             is_submission_open = VALUES(is_submission_open),
             assigned_by_user_id = VALUES(assigned_by_user_id),
             assigned_source = VALUES(assigned_source)`,

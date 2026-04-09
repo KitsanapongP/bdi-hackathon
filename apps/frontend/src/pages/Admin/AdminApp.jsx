@@ -6599,13 +6599,21 @@ function SelectionPage() {
 
 function SubmissionTasksPage() {
   const { pushToast } = useAdminToast()
+  const SUBMISSION_STAGE_OPTIONS = [
+    { value: 'pre_selection', label: 'ก่อนคัดเลือก' },
+    { value: 'training', label: 'อบรม (หลังได้รับการคัดเลือก)' },
+    { value: 'onsite', label: 'onsite (ในงาน hackathon)' },
+  ]
+  const getStageLabel = (stage) => SUBMISSION_STAGE_OPTIONS.find((item) => item.value === stage)?.label || stage || '-'
   const [rows, setRows] = useState([])
   const [teamOptions, setTeamOptions] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     taskName: '',
+    description: '',
     taskType: 'link',
+    stage: 'pre_selection',
     isRequired: false,
     allowedExtensions: '.pdf,.csv',
     sortOrder: 0,
@@ -6661,7 +6669,9 @@ function SubmissionTasksPage() {
       setSaving(true)
       const payloadBody = {
         taskName: form.taskName,
+        description: form.description.trim() || null,
         taskType: form.taskType,
+        stage: form.stage,
         isRequired: form.isRequired,
         allowedExtensions: form.taskType === 'file' ? form.allowedExtensions : null,
         sortOrder: Number(form.sortOrder) || 0,
@@ -6682,6 +6692,7 @@ function SubmissionTasksPage() {
       setForm((prev) => ({
         ...prev,
         taskName: '',
+        description: '',
         teamIds: [],
       }))
       load()
@@ -6716,11 +6727,28 @@ function SubmissionTasksPage() {
             <input value={form.taskName} onChange={(event) => setForm((prev) => ({ ...prev, taskName: event.target.value }))} />
           </label>
           <label>
+            ขั้นตอน
+            <select value={form.stage} onChange={(event) => setForm((prev) => ({ ...prev, stage: event.target.value }))}>
+              {SUBMISSION_STAGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label>
             Type
             <select value={form.taskType} onChange={(event) => setForm((prev) => ({ ...prev, taskType: event.target.value }))}>
               <option value="link">link</option>
               <option value="file">file</option>
             </select>
+          </label>
+          <label style={{ gridColumn: '1 / -1' }}>
+            Description (optional)
+            <textarea
+              value={form.description}
+              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+              rows={3}
+              placeholder="อธิบายโจทย์หรือสิ่งที่ทีมต้องส่ง"
+            />
           </label>
           <label>
             Sort order
@@ -6795,11 +6823,21 @@ function SubmissionTasksPage() {
       <AdminDataTable
         rows={rows.map((row) => ({ ...row, id: row.submissionTaskId }))}
         loading={loading}
-        searchKeys={['taskName', 'taskType']}
+        searchKeys={['taskName', 'taskType', 'description', 'stage']}
         searchPlaceholder="ค้นหาชื่องาน"
         columns={[
           { key: 'taskName', label: 'Task Name' },
+          {
+            key: 'stage',
+            label: 'ขั้นตอน',
+            render: (row) => getStageLabel(row.stage),
+          },
           { key: 'taskType', label: 'Type' },
+          {
+            key: 'description',
+            label: 'Description',
+            render: (row) => row.description || '-',
+          },
           {
             key: 'isRequired',
             label: 'Required',

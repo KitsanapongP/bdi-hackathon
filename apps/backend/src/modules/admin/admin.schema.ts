@@ -227,7 +227,9 @@ export const updateGlobalSelectionDeadlineSchema = z.object({
 
 export const createSubmissionTaskSchema = z.object({
     taskName: z.string().trim().min(1, 'กรุณาระบุชื่องาน'),
+    description: z.string().trim().nullable().optional(),
     taskType: z.enum(['link', 'file']),
+    stage: z.enum(['pre_selection', 'training', 'onsite']).optional(),
     isRequired: z.boolean().optional(),
     allowedExtensions: z.string().trim().nullable().optional(),
     sortOrder: z.number().int().min(0).optional(),

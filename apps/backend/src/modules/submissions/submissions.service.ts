@@ -43,11 +43,11 @@ function isTaskDeadlinePassed(deadlineAt: Date | string | null): boolean {
     return date.getTime() < Date.now();
 }
 
-function assertTaskSubmissionOpen(task: { is_submission_open: number; deadline_at: Date | string | null }): void {
+function assertTaskSubmissionOpen(task: { is_submission_open: number; task_deadline_at?: Date | string | null }): void {
     if (task.is_submission_open !== 1) {
         throw new BadRequestError('งานนี้ถูกปิดการส่งชั่วคราว');
     }
-    if (isTaskDeadlinePassed(task.deadline_at)) {
+    if (isTaskDeadlinePassed(task.task_deadline_at ?? null)) {
         throw new BadRequestError('หมดเวลาการส่งงานนี้แล้ว');
     }
 }
@@ -117,15 +117,17 @@ export async function getSubmissionData(db: DB, teamId: number, userId: number) 
             teamSubmissionTaskId: task.team_submission_task_id,
             submissionTaskId: task.submission_task_id,
             taskName: task.task_name,
+            description: task.task_description,
             taskType: task.task_type,
+            stage: task.stage,
             isRequired: task.is_required === 1,
             isDefault: task.task_is_default === 1,
             allowedExtensions: parseAllowedExtensions(task.allowed_extensions),
             sortOrder: task.sort_order,
             linkUrl: task.link_url,
-            deadlineAt: task.deadline_at,
+            deadlineAt: task.task_deadline_at,
             isSubmissionOpen: task.is_submission_open === 1,
-            isDeadlinePassed: isTaskDeadlinePassed(task.deadline_at),
+            isDeadlinePassed: isTaskDeadlinePassed(task.task_deadline_at),
             files: fileMap.get(task.team_submission_task_id) ?? [],
         })),
         advisors,

@@ -163,10 +163,13 @@ export interface ExportSubmissionFileRow {
 export interface AdminSubmissionTaskRow {
     submission_task_id: number;
     task_name: string;
+    description: string | null;
     task_type: 'link' | 'file';
+    stage: 'pre_selection' | 'training' | 'onsite';
     is_required: number;
     allowed_extensions: string | null;
     sort_order: number;
+    deadline_at: Date | null;
     is_enabled: number;
     is_default: number;
     created_by_user_id: number | null;

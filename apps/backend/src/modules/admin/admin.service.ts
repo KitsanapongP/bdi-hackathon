@@ -761,10 +761,13 @@ function toSubmissionTaskResponse(row: AdminSubmissionTaskRow) {
     return {
         submissionTaskId: row.submission_task_id,
         taskName: row.task_name,
+        description: row.description,
         taskType: row.task_type,
+        stage: row.stage,
         isRequired: row.is_required === 1,
         allowedExtensions: row.allowed_extensions,
         sortOrder: row.sort_order,
+        deadlineAt: row.deadline_at,
         isEnabled: row.is_enabled === 1,
         isDefault: row.is_default === 1,
         createdByUserId: row.created_by_user_id,
@@ -783,7 +786,9 @@ export async function createSubmissionTaskAdmin(
     db: DB,
     input: {
         taskName: string;
+        description?: string | null | undefined;
         taskType: 'link' | 'file';
+        stage?: 'pre_selection' | 'training' | 'onsite' | undefined;
         isRequired?: boolean | undefined;
         allowedExtensions?: string | null | undefined;
         sortOrder?: number | undefined;
@@ -809,10 +814,13 @@ export async function createSubmissionTaskAdmin(
 
     const submissionTaskId = await repo.createSubmissionTaskAdmin(db, {
         taskName: input.taskName.trim(),
+        description: input.description?.trim() || null,
         taskType: input.taskType,
+        stage: input.stage ?? 'pre_selection',
         isRequired: Boolean(input.isRequired),
         allowedExtensions,
         sortOrder: Number.isFinite(Number(input.sortOrder)) ? Math.trunc(Number(input.sortOrder)) : 0,
+        deadlineAt: normalizedDeadline,
         createdByUserId: adminUserId,
     });
 
@@ -825,7 +833,6 @@ export async function createSubmissionTaskAdmin(
         submissionTaskId,
         assignedByUserId: adminUserId,
         assignedSource,
-        deadlineAt: normalizedDeadline,
         isSubmissionOpen: input.isSubmissionOpen ?? true,
         teamIds: teamIdsToAssign,
     });

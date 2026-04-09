@@ -3825,6 +3825,12 @@
     border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
+.sub-task-required.stage {
+    color: #67e8f9;
+    background: rgba(34, 211, 238, 0.14);
+    border: 1px solid rgba(34, 211, 238, 0.34);
+}
+
 .sub-task-required.warning {
     color: #fda4af;
     background: rgba(244, 63, 94, 0.14);
@@ -3834,6 +3840,14 @@
 .sub-task-link-cell,
 .sub-task-file-cell {
     min-width: 360px;
+}
+
+.sub-task-description {
+    margin: 0 0 10px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.86rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
 }
 
 @media (max-width: 600px) {
