@@ -13,6 +13,11 @@ export async function handleGetSponsors(req: FastifyRequest<{ Querystring: { tie
     return reply.send(ok(sponsors));
 }
 
+export async function handleGetSponsorGroups(req: FastifyRequest, reply: FastifyReply) {
+    const groups = await service.getSponsorGroupsWithSponsors(req.server.ctx.db);
+    return reply.send(ok(groups));
+}
+
 export async function handleGetCarousels(req: FastifyRequest, reply: FastifyReply) {
     const carousels = await service.getCarousels(req.server.ctx.db);
     return reply.send(ok(carousels));

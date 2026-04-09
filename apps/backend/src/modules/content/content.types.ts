@@ -53,10 +53,39 @@ export type ContentSponsorRow = {
     tier_code: string | null;
     tier_name_th: string | null;
     tier_name_en: string | null;
+    sponsor_group_id: number | null;
     sort_order: number;
     is_enabled: number;
     created_at: string;
     updated_at: string;
+    group_code?: string | null;
+    group_name_th?: string | null;
+    group_name_en?: string | null;
+    group_sort_order?: number | null;
+    group_is_enabled?: number | null;
+};
+
+export type ContentSponsorGroupRow = {
+    sponsor_group_id: number;
+    group_code: string;
+    group_name_th: string;
+    group_name_en: string;
+    sort_order: number;
+    is_enabled: number;
+    created_at: string;
+    updated_at: string;
+};
+
+export type ContentSponsorGroup = {
+    id: number;
+    code: string;
+    nameTh: string;
+    nameEn: string;
+    sortOrder: number;
+};
+
+export type ContentSponsorGroupWithSponsors = ContentSponsorGroup & {
+    sponsors: ContentSponsor[];
 };
 
 export type ContentSponsor = {
@@ -69,6 +98,8 @@ export type ContentSponsor = {
     tierCode: string | null;
     tierNameTh: string | null;
     tierNameEn: string | null;
+    sponsorGroupId: number | null;
+    sponsorGroup: ContentSponsorGroup | null;
     sortOrder: number;
 };
 
@@ -84,6 +115,12 @@ export type ContentSponsorAdmin = {
     tierCode: string | null;
     tierNameTh: string | null;
     tierNameEn: string | null;
+    sponsorGroupId: number | null;
+    sponsorGroup: ContentSponsorGroup | null;
+};
+
+export type ContentSponsorGroupAdmin = ContentSponsorGroup & {
+    isActive: boolean;
 };
 
 export type ContentDatasetRow = {

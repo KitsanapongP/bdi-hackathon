@@ -13,6 +13,10 @@ import {
     handleUpdateRewardAdmin,
     handleDeleteRewardAdmin,
     handleGetAllSponsorsAdmin,
+    handleGetAllSponsorGroupsAdmin,
+    handleCreateSponsorGroupAdmin,
+    handleUpdateSponsorGroupAdmin,
+    handleReorderSponsorGroupsAdmin,
     handleCreateSponsorAdmin,
     handleUpdateSponsorAdmin,
     handleDeleteSponsorAdmin,
@@ -77,6 +81,10 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.delete('/rewards/:id', handleDeleteRewardAdmin);
 
     fastify.get('/sponsors', handleGetAllSponsorsAdmin);
+    fastify.get('/sponsor-groups', handleGetAllSponsorGroupsAdmin);
+    fastify.post('/sponsor-groups', handleCreateSponsorGroupAdmin);
+    fastify.patch('/sponsor-groups/:id', handleUpdateSponsorGroupAdmin);
+    fastify.put('/sponsor-groups/reorder', handleReorderSponsorGroupsAdmin);
     fastify.post('/sponsors', handleCreateSponsorAdmin);
     fastify.patch('/sponsors/:id', handleUpdateSponsorAdmin);
     fastify.post('/sponsors/:id/logo', handleUploadSponsorLogoAdmin);

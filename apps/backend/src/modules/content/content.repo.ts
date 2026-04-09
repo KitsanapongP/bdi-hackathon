@@ -12,6 +12,7 @@ import type {
     ContentPageRow,
     ContentParticipationPeriodCountRow,
     ContentRewardRow,
+    ContentSponsorGroupRow,
     ContentSponsorRow,
 } from './content.types.js';
 
@@ -140,14 +141,18 @@ export async function deleteReward(db: DB, rewardId: number): Promise<void> {
 
 export async function getEnabledSponsors(db: DB, tierCode?: string): Promise<ContentSponsorRow[]> {
     const query = tierCode
-        ? `SELECT *
-           FROM content_sponsors
-           WHERE is_enabled = 1 AND tier_code = ?
-           ORDER BY sort_order ASC, sponsor_id ASC`
-        : `SELECT *
-           FROM content_sponsors
-           WHERE is_enabled = 1
-           ORDER BY sort_order ASC, sponsor_id ASC`;
+        ? `SELECT s.*, g.group_code, g.group_name_th, g.group_name_en,
+                  g.sort_order AS group_sort_order, g.is_enabled AS group_is_enabled
+           FROM content_sponsors s
+           LEFT JOIN content_sponsor_groups g ON g.sponsor_group_id = s.sponsor_group_id
+           WHERE s.is_enabled = 1 AND s.tier_code = ? AND (g.is_enabled = 1 OR s.sponsor_group_id IS NULL)
+           ORDER BY COALESCE(g.sort_order, 999999) ASC, s.sort_order ASC, s.sponsor_id ASC`
+        : `SELECT s.*, g.group_code, g.group_name_th, g.group_name_en,
+                  g.sort_order AS group_sort_order, g.is_enabled AS group_is_enabled
+           FROM content_sponsors s
+           LEFT JOIN content_sponsor_groups g ON g.sponsor_group_id = s.sponsor_group_id
+           WHERE s.is_enabled = 1 AND (g.is_enabled = 1 OR s.sponsor_group_id IS NULL)
+           ORDER BY COALESCE(g.sort_order, 999999) ASC, s.sort_order ASC, s.sponsor_id ASC`;
 
     const params = tierCode ? [tierCode] : [];
     const [rows] = await db.query<RowDataPacket[]>(query, params);
@@ -453,18 +458,121 @@ export async function updateVenueImagesOrderAdmin(
 
 export async function getAllSponsors(db: DB): Promise<ContentSponsorRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT * FROM content_sponsors ORDER BY sort_order ASC, sponsor_id ASC`
+        `SELECT s.*, g.group_code, g.group_name_th, g.group_name_en,
+                g.sort_order AS group_sort_order, g.is_enabled AS group_is_enabled
+         FROM content_sponsors s
+         LEFT JOIN content_sponsor_groups g ON g.sponsor_group_id = s.sponsor_group_id
+         ORDER BY COALESCE(g.sort_order, 999999) ASC, s.sort_order ASC, s.sponsor_id ASC`
     );
     return rows as ContentSponsorRow[];
 }
 
 export async function getSponsorById(db: DB, sponsorId: number): Promise<ContentSponsorRow | null> {
     const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT * FROM content_sponsors WHERE sponsor_id = ?`,
+        `SELECT s.*, g.group_code, g.group_name_th, g.group_name_en,
+                g.sort_order AS group_sort_order, g.is_enabled AS group_is_enabled
+         FROM content_sponsors s
+         LEFT JOIN content_sponsor_groups g ON g.sponsor_group_id = s.sponsor_group_id
+         WHERE s.sponsor_id = ?`,
         [sponsorId]
     );
     const result = rows as ContentSponsorRow[];
     return result[0] || null;
+}
+
+export async function getEnabledSponsorGroups(db: DB): Promise<ContentSponsorGroupRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_sponsor_groups
+         WHERE is_enabled = 1
+         ORDER BY sort_order ASC, sponsor_group_id ASC`
+    );
+
+    return rows as ContentSponsorGroupRow[];
+}
+
+export async function getAllSponsorGroups(db: DB): Promise<ContentSponsorGroupRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_sponsor_groups
+         ORDER BY sort_order ASC, sponsor_group_id ASC`
+    );
+
+    return rows as ContentSponsorGroupRow[];
+}
+
+export async function getSponsorGroupById(db: DB, groupId: number): Promise<ContentSponsorGroupRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT * FROM content_sponsor_groups WHERE sponsor_group_id = ?`,
+        [groupId]
+    );
+
+    const result = rows as ContentSponsorGroupRow[];
+    return result[0] || null;
+}
+
+export async function createSponsorGroup(
+    db: DB,
+    data: {
+        code: string;
+        nameTh: string;
+        nameEn: string;
+        sortOrder: number;
+        isEnabled: boolean;
+    }
+): Promise<number> {
+    const [result] = await db.query(
+        `INSERT INTO content_sponsor_groups
+         (group_code, group_name_th, group_name_en, sort_order, is_enabled)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+            data.code,
+            data.nameTh,
+            data.nameEn,
+            data.sortOrder,
+            data.isEnabled ? 1 : 0,
+        ]
+    );
+
+    return (result as any).insertId;
+}
+
+export async function updateSponsorGroup(
+    db: DB,
+    groupId: number,
+    data: {
+        code?: string | undefined;
+        nameTh?: string | undefined;
+        nameEn?: string | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+    }
+): Promise<void> {
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (data.code !== undefined) { fields.push('group_code = ?'); values.push(data.code); }
+    if (data.nameTh !== undefined) { fields.push('group_name_th = ?'); values.push(data.nameTh); }
+    if (data.nameEn !== undefined) { fields.push('group_name_en = ?'); values.push(data.nameEn); }
+    if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
+    if (data.isEnabled !== undefined) { fields.push('is_enabled = ?'); values.push(data.isEnabled ? 1 : 0); }
+
+    if (fields.length === 0) return;
+
+    values.push(groupId);
+    await db.query(
+        `UPDATE content_sponsor_groups SET ${fields.join(', ')} WHERE sponsor_group_id = ?`,
+        values
+    );
+}
+
+export async function updateSponsorGroupsOrder(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
+    for (const update of updates) {
+        await db.query(
+            `UPDATE content_sponsor_groups SET sort_order = ? WHERE sponsor_group_id = ?`,
+            [update.sortOrder, update.id]
+        );
+    }
 }
 
 export async function createSponsor(
@@ -477,14 +585,15 @@ export async function createSponsor(
         tierCode?: string | null;
         tierNameTh?: string | null;
         tierNameEn?: string | null;
+        sponsorGroupId?: number | null;
         sortOrder: number;
         isEnabled: boolean;
     }
 ): Promise<number> {
     const [result] = await db.query(
         `INSERT INTO content_sponsors 
-         (sponsor_name_th, sponsor_name_en, logo_storage_key, website_url, tier_code, tier_name_th, tier_name_en, sort_order, is_enabled) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (sponsor_name_th, sponsor_name_en, logo_storage_key, website_url, tier_code, tier_name_th, tier_name_en, sponsor_group_id, sort_order, is_enabled) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             data.nameTh,
             data.nameEn,
@@ -493,6 +602,7 @@ export async function createSponsor(
             data.tierCode || null,
             data.tierNameTh || null,
             data.tierNameEn || null,
+            data.sponsorGroupId ?? null,
             data.sortOrder,
             data.isEnabled ? 1 : 0,
         ]
@@ -511,6 +621,7 @@ export async function updateSponsor(
         tierCode?: string | null | undefined;
         tierNameTh?: string | null | undefined;
         tierNameEn?: string | null | undefined;
+        sponsorGroupId?: number | null | undefined;
         sortOrder?: number | undefined;
         isEnabled?: boolean | undefined;
     }
@@ -525,6 +636,7 @@ export async function updateSponsor(
     if (data.tierCode !== undefined) { fields.push('tier_code = ?'); values.push(data.tierCode); }
     if (data.tierNameTh !== undefined) { fields.push('tier_name_th = ?'); values.push(data.tierNameTh); }
     if (data.tierNameEn !== undefined) { fields.push('tier_name_en = ?'); values.push(data.tierNameEn); }
+    if (data.sponsorGroupId !== undefined) { fields.push('sponsor_group_id = ?'); values.push(data.sponsorGroupId); }
     if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
     if (data.isEnabled !== undefined) { fields.push('is_enabled = ?'); values.push(data.isEnabled ? 1 : 0); }
 
