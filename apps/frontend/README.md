@@ -37,15 +37,17 @@ The app will build request URLs as `${VITE_API_BASE_URL}/api/...`.
 You can control when the process highlight moves between steps via env vars:
 
 ```bash
-VITE_PROCESS_STEP4_HIGHLIGHT_START_DATE=2026-06-21
-VITE_PROCESS_STEP5_HIGHLIGHT_START_DATE=2026-07-03
+VITE_PROCESS_STEP2_HIGHLIGHT_START_DATE=2026-05-24
+VITE_PROCESS_STEP3_HIGHLIGHT_START_DATE=2026-06-14
+VITE_PROCESS_STEP4_HIGHLIGHT_START_DATE=2026-07-03
 ```
 
 Behavior:
 
-- Before `STEP4` date: highlight step 1-3
+- Before `STEP2` date: highlight step 1
+- On/after `STEP2` date: highlight step 1-2
+- On/after `STEP3` date: fade step 1-2, highlight step 3
 - On/after `STEP4` date: fade step 1-3, highlight step 4
-- On/after `STEP5` date: fade step 1-4, highlight step 5
 
 ## SPA routing on refresh (fixes 404 on `/home`)
 

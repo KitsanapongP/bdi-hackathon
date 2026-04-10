@@ -20,6 +20,8 @@ import {
 const SALT_ROUNDS = 10;
 const VERIFICATION_CODE_EXPIRES_IN_SECONDS = 5 * 60;
 const VERIFICATION_MAX_ATTEMPTS = 5;
+const REGISTER_OTP_SUBJECT = 'รหัสยืนยันการสมัครสมาชิก';
+const REGISTER_OTP_LOG_MESSAGE = 'registration_verification_email';
 const requireModule = createRequire(import.meta.url);
 
 /** Convert a DB row to a safe user object */
@@ -192,14 +194,14 @@ function buildAuthEmailHtml(input: {
     `;
 }
 
-async function sendRegistrationVerificationEmail(email: string, code: string, verifyLink: string): Promise<void> {
+async function sendRegistrationVerificationEmail(email: string, code: string, verifyLink: string): Promise<string | null> {
     const { transporter, reason } = getTransporter();
     if (!transporter) {
         throw new AppError(`ระบบอีเมลยังไม่พร้อมใช้งาน (${reason})`, 500);
     }
 
     const fromEmail = process.env['SMTP_FROM']?.trim() || process.env['SMTP_USER']?.trim() || 'noreply@hackathon.local';
-    const subject = 'รหัสยืนยันการสมัครสมาชิก';
+    const subject = REGISTER_OTP_SUBJECT;
     const html = buildAuthEmailHtml({
         eventTitle: 'ยืนยันการสมัครสมาชิก',
         headline: 'รหัสยืนยันสำหรับลงทะเบียน',
@@ -209,12 +211,46 @@ async function sendRegistrationVerificationEmail(email: string, code: string, ve
         verifyLink,
     });
 
-    await transporter.sendMail({
+    const result = await transporter.sendMail({
         from: fromEmail,
         to: email,
         subject,
         html,
     });
+
+    return result?.messageId ? String(result.messageId) : null;
+}
+
+async function safeCreateAuthEmailLog(
+    db: DB,
+    data: {
+        eventCode: 'REGISTER_OTP' | 'REGISTER_OTP_RESEND';
+        registrationId: number | null;
+        pendingUserId: number | null;
+        recipientEmail: string;
+        status: 'queued' | 'sent' | 'failed' | 'skipped' | 'read';
+        providerMessageId?: string | null;
+        errorMessage?: string | null;
+        sentAt?: Date | null;
+    },
+): Promise<void> {
+    try {
+        await repo.createAuthEmailLog(db, {
+            eventCode: data.eventCode,
+            channel: 'email',
+            registrationId: data.registrationId,
+            pendingUserId: data.pendingUserId,
+            recipientEmail: data.recipientEmail,
+            subjectText: REGISTER_OTP_SUBJECT,
+            messageText: REGISTER_OTP_LOG_MESSAGE,
+            status: data.status,
+            providerMessageId: data.providerMessageId ?? null,
+            errorMessage: data.errorMessage ?? null,
+            sentAt: data.sentAt ?? null,
+        });
+    } catch (error) {
+        console.error('[auth-email-log] unable to create auth email log', error);
+    }
 }
 
 async function ensureUniqueIdentity(db: DB, email: string, userName: string): Promise<void> {
@@ -389,7 +425,36 @@ export async function requestRegistrationVerification(
         expiresAt,
     });
 
-    await sendRegistrationVerificationEmail(normalizedEmail, verificationCode, buildRegisterVerifyLink(verificationLinkToken, meta.origin));
+    const savedPending = await repo.findPendingRegistrationByEmail(db, normalizedEmail);
+    const registrationId = savedPending?.registration_id ?? null;
+    const pendingUserIdForLog = savedPending?.pending_user_id ?? pendingUserId;
+
+    try {
+        const providerMessageId = await sendRegistrationVerificationEmail(
+            normalizedEmail,
+            verificationCode,
+            buildRegisterVerifyLink(verificationLinkToken, meta.origin),
+        );
+        await safeCreateAuthEmailLog(db, {
+            eventCode: 'REGISTER_OTP',
+            registrationId,
+            pendingUserId: pendingUserIdForLog,
+            recipientEmail: normalizedEmail,
+            status: 'sent',
+            providerMessageId,
+            sentAt: new Date(),
+        });
+    } catch (error: any) {
+        await safeCreateAuthEmailLog(db, {
+            eventCode: 'REGISTER_OTP',
+            registrationId,
+            pendingUserId: pendingUserIdForLog,
+            recipientEmail: normalizedEmail,
+            status: 'failed',
+            errorMessage: String(error?.message || error),
+        });
+        throw error;
+    }
 
     return {
         email: normalizedEmail,
@@ -436,7 +501,32 @@ export async function resendRegistrationVerification(
         expiresAt,
     });
 
-    await sendRegistrationVerificationEmail(normalizedEmail, code, buildRegisterVerifyLink(verificationLinkToken, meta?.origin));
+    try {
+        const providerMessageId = await sendRegistrationVerificationEmail(
+            normalizedEmail,
+            code,
+            buildRegisterVerifyLink(verificationLinkToken, meta?.origin),
+        );
+        await safeCreateAuthEmailLog(db, {
+            eventCode: 'REGISTER_OTP_RESEND',
+            registrationId: pending.registration_id,
+            pendingUserId: pending.pending_user_id,
+            recipientEmail: normalizedEmail,
+            status: 'sent',
+            providerMessageId,
+            sentAt: new Date(),
+        });
+    } catch (error: any) {
+        await safeCreateAuthEmailLog(db, {
+            eventCode: 'REGISTER_OTP_RESEND',
+            registrationId: pending.registration_id,
+            pendingUserId: pending.pending_user_id,
+            recipientEmail: normalizedEmail,
+            status: 'failed',
+            errorMessage: String(error?.message || error),
+        });
+        throw error;
+    }
 
     return {
         email: normalizedEmail,
