@@ -1,8 +1,71 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ExternalLink } from 'lucide-react';
 import HomeShell from './HomeShell';
 import './InfoPages.css';
+import aboutPoster from '../../assets/images/about/bdi-young-innovation-hackathon-posterjpg.jpg';
+import hackathonCriteriaPdf from '../../assets/documents/about/hackathon-criteria.pdf';
 
 function AboutPage() {
+    const [isPosterPreviewOpen, setIsPosterPreviewOpen] = useState(false);
+
+    useEffect(() => {
+        if (!isPosterPreviewOpen) return undefined;
+
+        const handleKeydown = (event) => {
+            if (event.key === 'Escape') {
+                setIsPosterPreviewOpen(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeydown);
+        return () => {
+            window.removeEventListener('keydown', handleKeydown);
+        };
+    }, [isPosterPreviewOpen]);
+
+    const posterLightbox = isPosterPreviewOpen ? (
+        <div
+            className="gt-hero-carousel-lightbox"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Poster preview"
+            onClick={() => setIsPosterPreviewOpen(false)}
+        >
+            <div className="gt-hero-carousel-lightbox-panel gt-about-lightbox-panel" onClick={(event) => event.stopPropagation()}>
+                <div className="gt-hero-carousel-lightbox-topbar">
+                    <p className="gt-hero-carousel-lightbox-title">โปสเตอร์กิจกรรม BDI Young Innovator Hackathon</p>
+                    <div className="gt-hero-carousel-lightbox-topbar-actions">
+                        <a
+                            className="gt-hero-carousel-lightbox-btn"
+                            href={aboutPoster}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            ดาวน์โหลด
+                        </a>
+                        <button
+                            type="button"
+                            className="gt-hero-carousel-lightbox-close"
+                            onClick={() => setIsPosterPreviewOpen(false)}
+                            aria-label="Close image preview"
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
+
+                <img
+                    className="gt-hero-carousel-lightbox-image gt-about-lightbox-image"
+                    src={aboutPoster}
+                    alt="โปสเตอร์กิจกรรม BDI Young Innovator Hackathon"
+                    loading="eager"
+                />
+            </div>
+        </div>
+    ) : null;
+
     return (
         <HomeShell>
             <main className="gt-info-main gt-container">
@@ -10,6 +73,21 @@ function AboutPage() {
                     <h1>เกี่ยวกับกิจกรรม</h1>
 
                     <div className="gt-info-content">
+                        <figure className="gt-about-poster">
+                            <button
+                                type="button"
+                                className="gt-about-poster-trigger"
+                                onClick={() => setIsPosterPreviewOpen(true)}
+                                aria-label="ดูโปสเตอร์ขนาดใหญ่"
+                            >
+                                <img
+                                    src={aboutPoster}
+                                    alt="โปสเตอร์กิจกรรม BDI Young Innovator Hackathon"
+                                    loading="lazy"
+                                />
+                            </button>
+                        </figure>
+
                         <h2><strong>การแข่งขัน BDI Young Innovator Hackathon</strong></h2>
                         <p>ชิงถ้วยพระราชทาน สมเด็จพระกนิษฐาธิราชเจ้า กรมสมเด็จพระเทพรัตนราชสุดา ฯ สยามบรมราชกุมารี</p>
                         <p>ระหว่างวันที่ 3-5 กรกฎาคม 2569</p>
@@ -76,9 +154,25 @@ function AboutPage() {
                             แต่จะนำไปสู่การพัฒนากำลังคนด้านเทคโนโลยีดิจิทัล การสร้างเครือข่ายความร่วมมือทางวิชาการ
                             และการยกระดับขีดความสามารถในการใช้ AI และ Big Data ของประเทศไทยให้เติบโตอย่างยั่งยืน
                         </p>
+
+                        <h2>เกณฑ์การคัดเลือกและเกณฑ์การตัดสิน</h2>
+                        <p>
+                            หลังจากการรับสมัคร ผู้สมัครจะต้องส่ง Concept Deck รวมถึงประวัติส่วนตัวของสมาชิกในทีมทุกคน
+                            ภายในระยะเวลาก่อนวันที่ 3 มิถุนายน 2569 แล้วคณะกรรมการจะทำการประเมินหรือให้คะแนนตามเกณฑ์ใน{' '}
+                            <a
+                                className="gt-about-criteria-link"
+                                href={hackathonCriteriaPdf}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                ลิงก์นี้ <ExternalLink size={16} aria-hidden="true" />
+                            </a>
+                        </p>
+
                     </div>
                 </section>
             </main>
+            {typeof document !== 'undefined' && posterLightbox ? createPortal(posterLightbox, document.body) : null}
         </HomeShell>
     );
 }
