@@ -73,7 +73,11 @@ function SponsorsPage() {
                             {groups.map((group) => {
                                 const sponsors = Array.isArray(group?.sponsors) ? group.sponsors : [];
                                 if (sponsors.length === 0) return null;
-                                const isUngroupedGroup = group?.code === 'ungrouped' || group?.id === 0;
+                                const isUngroupedGroup =
+                                    group?.code === 'ungrouped'
+                                    || Number(group?.id) === 0
+                                    || group?.nameTh === 'ภาคีที่ไม่ได้อยู่ในกลุ่ม'
+                                    || group?.nameEn === 'Ungrouped Partners';
 
                                 return (
                                     <section key={group.id} className="gt-sponsors-page-group">

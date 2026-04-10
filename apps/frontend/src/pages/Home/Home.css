@@ -1330,6 +1330,9 @@ section.gt-hero {
 
 .gt-schedule-table-wrap {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
 }
 
 .gt-schedule-table {
@@ -3008,6 +3011,51 @@ section.gt-hero {
     }
 }
 
+@media (pointer: coarse) and (orientation: portrait) and (min-width: 769px) and (max-width: 920px) {
+    .gt-hero-carousel {
+        padding-inline: 10px;
+    }
+
+    .gt-hero-carousel-stage {
+        width: 100%;
+        height: clamp(260px, 46vw, 360px);
+        overflow: hidden;
+        border-radius: 22px;
+    }
+
+    .gt-hero-carousel-stage::before {
+        display: none;
+    }
+
+    .gt-hero-carousel-card {
+        top: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 22px;
+    }
+
+    .gt-hero-carousel-card::before {
+        display: none;
+    }
+
+    .gt-hero-carousel-card::after {
+        border-radius: 22px;
+    }
+
+    .gt-hero-carousel-card[data-offset='-2'],
+    .gt-hero-carousel-card[data-offset='2'],
+    .gt-hero-carousel-card[data-offset='-1'],
+    .gt-hero-carousel-card[data-offset='1'] {
+        display: none;
+    }
+
+    .gt-hero-carousel-image {
+        object-fit: contain;
+        object-position: center;
+        background: #0f172a;
+    }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    POINTER-EVENTS PASS-THROUGH
    Allows clicking / tapping GameShapes through the content layer.
@@ -3022,6 +3070,8 @@ section.gt-hero {
 .gt-page .gt-banner,
 .gt-page .gt-card,
 .gt-page .gt-schedule-item,
+.gt-page .gt-schedule-table-wrap,
+.gt-page .gt-schedule-table,
 .gt-page button,
 .gt-page a,
 .gt-page input,
