@@ -89,9 +89,6 @@ function SponsorsPage() {
 
                                                 const card = (
                                                     <article className="gt-sponsor-page-card">
-                                                        {isUngroupedGroup ? (
-                                                            <p className="gt-sponsor-page-name gt-sponsor-page-name-top">{sponsorName}</p>
-                                                        ) : null}
                                                         <div className="gt-sponsor-page-logo-wrap">
                                                             <img
                                                                 src={apiUrl(sponsor.logoUrl)}
@@ -101,7 +98,7 @@ function SponsorsPage() {
                                                                 decoding="async"
                                                             />
                                                         </div>
-                                                        {isUngroupedGroup ? null : <p className="gt-sponsor-page-name">{sponsorName}</p>}
+                                                        <p className="gt-sponsor-page-name">{sponsorName}</p>
                                                     </article>
                                                 );
 

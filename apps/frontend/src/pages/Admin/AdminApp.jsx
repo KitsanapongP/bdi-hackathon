@@ -1819,7 +1819,7 @@ function StaticSponsorsPage() {
           if (leftGroupOrder !== rightGroupOrder) return leftGroupOrder - rightGroupOrder
           return a.displayOrder - b.displayOrder
         })}
-        searchKeys={['name', 'link', 'sponsorGroupNameTh', 'sponsorGroupNameEn']}
+        searchKeys={['nameTh', 'name', 'link', 'sponsorGroupNameTh', 'sponsorGroupNameEn']}
         searchPlaceholder="ค้นหาชื่อ sponsor หรือลิงก์"
         filters={[
           { label: 'ทั้งหมด', value: 'all', predicate: () => true },
@@ -1832,9 +1832,9 @@ function StaticSponsorsPage() {
             label: 'Logo + Name',
             render: (row) => (
               <div className="admin-ui-inline-logo">
-                <img src={apiUrl(row.logo)} alt={row.name} loading="lazy" decoding="async" />
+                <img src={apiUrl(row.logo)} alt={row.nameTh || row.name} loading="lazy" decoding="async" />
                 <div>
-                  <strong>{row.name}</strong>
+                  <strong>{row.nameTh || row.name}</strong>
                   <span>{row.logoMeta?.type || '-'}</span>
                 </div>
               </div>
