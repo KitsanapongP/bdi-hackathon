@@ -357,6 +357,10 @@
     text-align: center;
 }
 
+.gt-sponsor-page-name-top {
+    margin: 0 0 10px;
+}
+
 .gt-dataset-bullets {
     margin: 0;
     padding-left: 22px;
