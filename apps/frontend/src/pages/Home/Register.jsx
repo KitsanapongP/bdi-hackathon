@@ -553,8 +553,8 @@ function RegisterPage() {
                                     <br />
                                     <strong>{pendingVerificationEmail}</strong>
                                 </p>
-                                <p className="gr-verify-text" style={{ marginTop: 4 }}>
-                                    หากไม่พบอีเมล ให้ไปเช็คจดหมายขยะ (Spam/Junk)
+                                <p className="gr-verify-text" style={{ marginTop: 4, color: '#dc2626' }}>
+                                    หากไม่พบอีเมล กรุณาตรวจสอบในจดหมายขยะ (Spam/Junk)
                                 </p>
                                 <p className="gr-verify-timer">
                                     หมดอายุใน <strong>{formatVerificationCountdown(verificationCountdown)}</strong>
