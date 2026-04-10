@@ -1199,17 +1199,40 @@ export async function getSponsorGroupsWithSponsors(db: DB): Promise<ContentSpons
     ]);
 
     const sponsorsByGroupId = new Map<number, ContentSponsor[]>();
+    const ungroupedSponsors: ContentSponsor[] = [];
     for (const sponsor of sponsors) {
-        if (!sponsor.sponsor_group_id) continue;
+        const sponsorResponse = toSponsorPublicResponse(sponsor);
+
+        if (!sponsor.sponsor_group_id) {
+            ungroupedSponsors.push(sponsorResponse);
+            continue;
+        }
+
         const list = sponsorsByGroupId.get(sponsor.sponsor_group_id) ?? [];
-        list.push(toSponsorPublicResponse(sponsor));
+        list.push(sponsorResponse);
         sponsorsByGroupId.set(sponsor.sponsor_group_id, list);
     }
 
-    return groups.map((group) => ({
+    const groupedSponsors = groups.map((group) => ({
         ...toSponsorGroupResponse(group),
         sponsors: sponsorsByGroupId.get(group.sponsor_group_id) ?? [],
     }));
+
+    if (ungroupedSponsors.length === 0) {
+        return groupedSponsors;
+    }
+
+    return [
+        {
+            id: 0,
+            code: 'ungrouped',
+            nameTh: 'ภาคีที่ไม่ได้อยู่ในกลุ่ม',
+            nameEn: 'Ungrouped Partners',
+            sortOrder: -1,
+            sponsors: ungroupedSponsors,
+        },
+        ...groupedSponsors,
+    ];
 }
 
 export async function getCarousels(db: DB): Promise<ContentCarouselSlide[]> {

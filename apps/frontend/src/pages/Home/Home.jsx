@@ -78,26 +78,16 @@ const competitionSteps = [
     },
     {
         number: '02',
-        date: '',
-        title: 'สร้างทีมและกรอกข้อมูลที่จำเป็น',
-        items: [
-            'สมาชิกทุกคนแนบเอกสารระบุตัวตน',
-            'กรอกข้อมูลอาจารย์ที่ปรึกษา (ถ้ามี)',
-        ],
-    },
-    {
-        number: '03',
         date: '24 พฤษภาคม - 3 มิถุนายน 2569',
         title: 'ส่งทีมเข้าร่วมการพิจารณา',
         items: [
             'สมาชิกทุกคนตรวจสอบความถูกต้องของข้อมูลอีกครั้ง',
-            'หัวหน้าทีมส่งรายชื่อสมาชิกเข้าร่วมการพิจารณา',
-            'หลังจากส่งรายชื่อจะไม่สามารถแก้ไขข้อมูลได้',
-            'ต้องส่งทีมเข้าร่วมการพิจารณาภายในวันที่ 3 มิถุนายน 2569 เท่านั้น',
+            'หัวหน้าทีมส่งโครงร่างพร้อมวีดีโอนำเสนอไม่เกิน 3 นาที',
+            'ต้องส่งทีมเข้าร่วมการพิจารณาภายในวันที่ 3 มิถุนายน 2569 ก่อนเที่ยงคืน',
         ],
     },
     {
-        number: '04',
+        number: '03',
         date: '',
         title: 'การพิจารณาและประกาศผล',
         items: [
@@ -106,7 +96,7 @@ const competitionSteps = [
         ],
     },
     {
-        number: '05',
+        number: '04',
         date: '3 - 5 กรกฎาคม 2569',
         title: 'เข้าร่วมกิจกรรม',
         items: [
@@ -1278,22 +1268,22 @@ function HomePage() {
                     <section id="process" className="gt-section gt-container" style={{ paddingTop: '20px' }}>
                         <div className="gt-section-header gt-reveal">
                             <h2>ขั้นตอนการเข้าร่วมกิจกรรม</h2>
-                            <p>5 ขั้นตอน สู่การเข้าร่วมกิจกรรม Hackathon</p>
+                            <p>4 ขั้นตอน สู่การเข้าร่วมกิจกรรม Hackathon</p>
                         </div>
                         <div className="gt-process-steps gt-reveal">
                             {competitionSteps.map((step) => {
                                 const stepIndex = Number(step.number);
                                 const isActive =
                                     processHighlightPhase === 'early'
-                                        ? stepIndex <= 3
+                                        ? stepIndex <= 2
                                         : processHighlightPhase === 'review'
-                                            ? stepIndex === 4
-                                            : stepIndex === 5;
+                                            ? stepIndex === 3
+                                            : stepIndex === 4;
                                 const isDim =
                                     processHighlightPhase === 'review'
-                                        ? stepIndex <= 3
+                                        ? stepIndex <= 2
                                         : processHighlightPhase === 'final'
-                                            ? stepIndex <= 4
+                                            ? stepIndex <= 3
                                             : false;
                                 const stepStateClass = isActive ? 'is-active' : isDim ? 'is-dim' : 'is-normal';
 

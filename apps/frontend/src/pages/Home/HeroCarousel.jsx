@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+const MOBILE_CAROUSEL_QUERY =
+  '(max-width: 768px), (pointer: coarse) and (orientation: portrait) and (max-width: 920px)'
+
 function getRelativeOffset(index, activeIndex, total) {
   let diff = index - activeIndex
   if (diff > total / 2) diff -= total
@@ -31,13 +34,13 @@ function HeroCarousel({ slides = [] }) {
   const suppressTapRef = useRef(false)
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') return false
-    return window.matchMedia('(max-width: 768px)').matches
+    return window.matchMedia(MOBILE_CAROUSEL_QUERY).matches
   })
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
 
-    const mediaQuery = window.matchMedia('(max-width: 768px)')
+    const mediaQuery = window.matchMedia(MOBILE_CAROUSEL_QUERY)
     const handleChange = (event) => setIsMobileViewport(event.matches)
 
     setIsMobileViewport(mediaQuery.matches)

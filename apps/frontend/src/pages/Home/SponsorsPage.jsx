@@ -73,28 +73,41 @@ function SponsorsPage() {
                             {groups.map((group) => {
                                 const sponsors = Array.isArray(group?.sponsors) ? group.sponsors : [];
                                 if (sponsors.length === 0) return null;
+                                const isUngroupedGroup =
+                                    group?.code === 'ungrouped'
+                                    || Number(group?.id) === 0
+                                    || group?.nameTh === 'ภาคีที่ไม่ได้อยู่ในกลุ่ม'
+                                    || group?.nameEn === 'Ungrouped Partners';
 
                                 return (
                                     <section key={group.id} className="gt-sponsors-page-group">
-                                        <h2>{group.nameTh || group.nameEn || '-'}</h2>
+                                        {isUngroupedGroup ? null : <h2>{group.nameTh || group.nameEn || '-'}</h2>}
                                         <div className="gt-sponsors-page-grid">
                                             {sponsors.map((sponsor) => {
                                                 const websiteUrl = normalizeWebsiteUrl(sponsor.websiteUrl);
+                                                const sponsorName = sponsor.nameTh || sponsor.nameEn || '-';
+
+                                                const card = (
+                                                    <article className="gt-sponsor-page-card">
+                                                        {isUngroupedGroup ? (
+                                                            <p className="gt-sponsor-page-name gt-sponsor-page-name-top">{sponsorName}</p>
+                                                        ) : null}
+                                                        <div className="gt-sponsor-page-logo-wrap">
+                                                            <img
+                                                                src={apiUrl(sponsor.logoUrl)}
+                                                                alt={sponsor.nameEn || sponsor.nameTh || 'Partner'}
+                                                                className="gt-sponsor-page-logo"
+                                                                loading="lazy"
+                                                                decoding="async"
+                                                            />
+                                                        </div>
+                                                        {isUngroupedGroup ? null : <p className="gt-sponsor-page-name">{sponsorName}</p>}
+                                                    </article>
+                                                );
 
                                                 if (!websiteUrl) {
                                                     return (
-                                                        <article key={sponsor.id} className="gt-sponsor-page-card">
-                                                            <div className="gt-sponsor-page-logo-wrap">
-                                                                <img
-                                                                    src={apiUrl(sponsor.logoUrl)}
-                                                                    alt={sponsor.nameEn || sponsor.nameTh || 'Partner'}
-                                                                    className="gt-sponsor-page-logo"
-                                                                    loading="lazy"
-                                                                    decoding="async"
-                                                                />
-                                                            </div>
-                                                            <p className="gt-sponsor-page-name">{sponsor.nameTh || sponsor.nameEn || '-'}</p>
-                                                        </article>
+                                                        <React.Fragment key={sponsor.id}>{card}</React.Fragment>
                                                     );
                                                 }
 
@@ -106,18 +119,7 @@ function SponsorsPage() {
                                                         rel="noopener noreferrer"
                                                         className="gt-sponsor-page-link"
                                                     >
-                                                        <article className="gt-sponsor-page-card">
-                                                            <div className="gt-sponsor-page-logo-wrap">
-                                                                <img
-                                                                    src={apiUrl(sponsor.logoUrl)}
-                                                                    alt={sponsor.nameEn || sponsor.nameTh || 'Partner'}
-                                                                    className="gt-sponsor-page-logo"
-                                                                    loading="lazy"
-                                                                    decoding="async"
-                                                                />
-                                                            </div>
-                                                            <p className="gt-sponsor-page-name">{sponsor.nameTh || sponsor.nameEn || '-'}</p>
-                                                        </article>
+                                                        {card}
                                                     </a>
                                                 );
                                             })}
