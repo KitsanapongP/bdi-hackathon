@@ -14,6 +14,7 @@ import type {
     ExportTeamAdvisorRow,
     ExportTeamMemberRow,
     AdminSubmissionTaskRow,
+    AdminSubmissionTaskAssignedTeamRow,
     SelectionTeamRow,
 } from './admin.types.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
@@ -514,10 +515,10 @@ export async function getSubmissionFilesForExport(db: DB, teamIds: number[]): Pr
 
 export async function listSelectionTeams(
     db: DB,
-    status?: 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined',
+    status?: 'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined',
 ): Promise<SelectionTeamRow[]> {
     const params: Record<string, unknown> = {};
-    let whereClause = `WHERE t.deleted_at IS NULL AND t.status IN ('submitted','passed','failed','confirmed','not_joined')`;
+    let whereClause = `WHERE t.deleted_at IS NULL AND t.status IN ('forming','submitted','passed','failed','confirmed','not_joined')`;
     if (status) {
         whereClause += ` AND t.status = :status`;
         params.status = status;
@@ -765,6 +766,142 @@ export async function getSubmissionTaskByIdAdmin(db: DB, submissionTaskId: numbe
         LIMIT 1
     `, { submissionTaskId });
     return (rows[0] as AdminSubmissionTaskRow | undefined) ?? null;
+}
+
+export async function listAssignedTeamsBySubmissionTaskAdmin(
+    db: DB,
+    submissionTaskId: number,
+): Promise<AdminSubmissionTaskAssignedTeamRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT
+            t.team_id,
+            t.team_code,
+            t.team_name_th,
+            t.team_name_en,
+            t.status,
+            tst.is_submission_open
+         FROM team_submission_tasks tst
+         JOIN team_teams t
+           ON t.team_id = tst.team_id
+          AND t.deleted_at IS NULL
+         WHERE tst.submission_task_id = :submissionTaskId
+           AND tst.deleted_at IS NULL
+         ORDER BY t.team_name_th ASC, t.team_name_en ASC, t.team_id ASC`,
+        { submissionTaskId },
+    );
+
+    return rows as AdminSubmissionTaskAssignedTeamRow[];
+}
+
+export async function updateSubmissionTaskAdmin(
+    db: DB,
+    submissionTaskId: number,
+    patch: {
+        taskName?: string;
+        description?: string | null;
+        taskType?: 'link' | 'file';
+        stage?: 'pre_selection' | 'training' | 'onsite';
+        isRequired?: boolean;
+        allowedExtensions?: string | null;
+        sortOrder?: number;
+        deadlineAt?: string | null;
+        isEnabled?: boolean;
+    }
+): Promise<void> {
+    const updates: string[] = [];
+    const params: Record<string, unknown> = { submissionTaskId };
+
+    if (patch.taskName !== undefined) {
+        updates.push('task_name = :taskName');
+        params.taskName = patch.taskName;
+    }
+    if (patch.description !== undefined) {
+        updates.push('description = :description');
+        params.description = patch.description;
+    }
+    if (patch.taskType !== undefined) {
+        updates.push('task_type = :taskType');
+        params.taskType = patch.taskType;
+    }
+    if (patch.stage !== undefined) {
+        updates.push('stage = :stage');
+        params.stage = patch.stage;
+    }
+    if (patch.isRequired !== undefined) {
+        updates.push('is_required = :isRequired');
+        params.isRequired = patch.isRequired ? 1 : 0;
+    }
+    if (patch.allowedExtensions !== undefined) {
+        updates.push('allowed_extensions = :allowedExtensions');
+        params.allowedExtensions = patch.allowedExtensions;
+    }
+    if (patch.sortOrder !== undefined) {
+        updates.push('sort_order = :sortOrder');
+        params.sortOrder = patch.sortOrder;
+    }
+    if (patch.deadlineAt !== undefined) {
+        updates.push('deadline_at = :deadlineAt');
+        params.deadlineAt = patch.deadlineAt;
+    }
+    if (patch.isEnabled !== undefined) {
+        updates.push('is_enabled = :isEnabled');
+        params.isEnabled = patch.isEnabled ? 1 : 0;
+    }
+
+    if (updates.length === 0) return;
+
+    await db.query(
+        `UPDATE submission_tasks
+         SET ${updates.join(', ')},
+             updated_at = NOW()
+         WHERE submission_task_id = :submissionTaskId
+           AND deleted_at IS NULL`,
+        params,
+    );
+}
+
+export async function reorderSubmissionTasksAdmin(
+    db: DB,
+    updates: Array<{ submissionTaskId: number; sortOrder: number }>,
+): Promise<void> {
+    if (updates.length === 0) return;
+
+    for (const update of updates) {
+        await db.query(
+            `UPDATE submission_tasks
+             SET sort_order = :sortOrder,
+                 updated_at = NOW()
+             WHERE submission_task_id = :submissionTaskId
+               AND deleted_at IS NULL`,
+            {
+                submissionTaskId: update.submissionTaskId,
+                sortOrder: update.sortOrder,
+            },
+        );
+    }
+}
+
+export async function softDeleteSubmissionTaskAdmin(db: DB, submissionTaskId: number): Promise<void> {
+    await db.query(
+        `UPDATE submission_tasks
+         SET is_enabled = 0,
+             deleted_at = NOW(),
+             updated_at = NOW()
+         WHERE submission_task_id = :submissionTaskId
+           AND deleted_at IS NULL`,
+        { submissionTaskId },
+    );
+}
+
+export async function softDeleteTeamSubmissionTasksByTaskIdAdmin(db: DB, submissionTaskId: number): Promise<void> {
+    await db.query(
+        `UPDATE team_submission_tasks
+         SET deleted_at = NOW(),
+             updated_at = NOW()
+         WHERE submission_task_id = :submissionTaskId
+           AND deleted_at IS NULL`,
+        { submissionTaskId },
+    );
 }
 
 export async function listTeamIdsByStatusesAdmin(
