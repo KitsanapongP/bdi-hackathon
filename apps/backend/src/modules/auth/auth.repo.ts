@@ -353,6 +353,54 @@ export async function refreshPendingRegistrationCode(
     );
 }
 
+export async function createAuthEmailLog(
+    db: DB,
+    data: {
+        eventCode: 'REGISTER_OTP' | 'REGISTER_OTP_RESEND';
+        channel: 'email';
+        registrationId: number | null;
+        pendingUserId: number | null;
+        recipientEmail: string | null;
+        subjectText: string | null;
+        messageText: string | null;
+        status: 'queued' | 'sent' | 'failed' | 'skipped' | 'read';
+        providerMessageId?: string | null;
+        errorMessage?: string | null;
+        retryAfterAt?: Date | null;
+        retryCount?: number;
+        sentAt?: Date | null;
+    },
+): Promise<number> {
+    const [result] = await db.query<ResultSetHeader>(
+        `INSERT INTO auth_email_logs (
+            event_code, channel, registration_id, pending_user_id, recipient_email,
+            subject_text, message_text, status, provider_message_id, error_message,
+            retry_after_at, retry_count, sent_at, created_at, updated_at
+        ) VALUES (
+            :eventCode, :channel, :registrationId, :pendingUserId, :recipientEmail,
+            :subjectText, :messageText, :status, :providerMessageId, :errorMessage,
+            :retryAfterAt, :retryCount, :sentAt, NOW(), NOW()
+        )`,
+        {
+            eventCode: data.eventCode,
+            channel: data.channel,
+            registrationId: data.registrationId,
+            pendingUserId: data.pendingUserId,
+            recipientEmail: data.recipientEmail,
+            subjectText: data.subjectText,
+            messageText: data.messageText,
+            status: data.status,
+            providerMessageId: data.providerMessageId ?? null,
+            errorMessage: data.errorMessage ?? null,
+            retryAfterAt: data.retryAfterAt ?? null,
+            retryCount: data.retryCount ?? 0,
+            sentAt: data.sentAt ?? null,
+        },
+    );
+
+    return result.insertId;
+}
+
 export async function incrementPendingRegistrationAttempt(db: DB, registrationId: number): Promise<void> {
     await db.query(
         `UPDATE user_registration_verifications
