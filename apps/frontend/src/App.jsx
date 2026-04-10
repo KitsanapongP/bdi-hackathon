@@ -20,7 +20,7 @@ function App() {
   }, [location.pathname])
 
   useEffect(() => {
-    document.title = 'BDIkku-Hackathon'
+    document.title = 'BDI Young Innovator Hackathon'
   }, [])
 
   return (
