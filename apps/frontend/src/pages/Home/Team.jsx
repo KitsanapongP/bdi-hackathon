@@ -923,7 +923,7 @@ export default function TeamContent({ user }) {
                                     rel="noopener noreferrer"
                                     style={{ color: '#60a5fa', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                                 >
-                                    คู่มือการเข้าร่วมกิจกรรม <ExternalLink size={14} />
+                                    คู่มือการใช้งาน <ExternalLink size={14} />
                                 </a>
                             </div>
                         </div>

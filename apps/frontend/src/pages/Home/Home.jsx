@@ -1660,7 +1660,7 @@ function HomePage() {
                                         <Link to="/home/contact">ติดต่อสอบถาม</Link>
                                         <Link to="/home/faqs">FAQs</Link>
                                         <a href={USER_MANUAL_PATH} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            คู่มือการเข้าร่วมกิจกรรม <ExternalLink size={14} />
+                                            คู่มือการใช้งาน <ExternalLink size={14} />
                                         </a>
                                     </div>
                                     <div className="gt-footer-col">
