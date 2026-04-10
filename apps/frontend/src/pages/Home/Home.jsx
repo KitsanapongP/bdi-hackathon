@@ -38,7 +38,7 @@ import {
     getCachedHomeCarouselSlides,
     setCachedHomeCarouselSlides,
 } from '../../lib/contentCache';
-import { USER_MANUAL_PATH } from '../../lib/userManual';
+import { HACKATHON_CRITERIA_PATH, USER_MANUAL_PATH } from '../../lib/userManual';
 
 /* Sponsor logos are loaded from content API */
 
@@ -60,8 +60,9 @@ const config = {
         footer: 'BDI Young Innovator Hackathon: Intelligent Living',
     },
     process: {
-        step4HighlightStartDate: import.meta.env.VITE_PROCESS_STEP4_HIGHLIGHT_START_DATE || '2026-06-21',
-        step5HighlightStartDate: import.meta.env.VITE_PROCESS_STEP5_HIGHLIGHT_START_DATE || '2026-07-03',
+        step2HighlightStartDate: import.meta.env.VITE_PROCESS_STEP2_HIGHLIGHT_START_DATE || '2026-05-24',
+        step3HighlightStartDate: import.meta.env.VITE_PROCESS_STEP3_HIGHLIGHT_START_DATE || import.meta.env.VITE_PROCESS_STEP4_HIGHLIGHT_START_DATE || '2026-06-14',
+        step4HighlightStartDate: import.meta.env.VITE_PROCESS_STEP4_HIGHLIGHT_START_DATE || import.meta.env.VITE_PROCESS_STEP5_HIGHLIGHT_START_DATE || '2026-07-03',
     },
 };
 
@@ -83,16 +84,21 @@ const competitionSteps = [
         items: [
             'สมาชิกทุกคนตรวจสอบความถูกต้องของข้อมูลอีกครั้ง',
             'หัวหน้าทีมส่งโครงร่างพร้อมวีดีโอนำเสนอไม่เกิน 3 นาที',
-            'ต้องส่งทีมเข้าร่วมการพิจารณาภายในวันที่ 3 มิถุนายน 2569 ก่อนเที่ยงคืน',
+            'ต้องส่งทีมเข้าร่วมการพิจารณาภายในวันที่ 3 มิถุนายน 2569 ก่อน 23:59 น.',
         ],
     },
     {
         number: '03',
-        date: '',
+        date: '14 มิถุนายน  - 18 มิถุนายน 2569',
         title: 'การพิจารณาและประกาศผล',
         items: [
             'คณะกรรมการพิจารณาทีมที่ผ่านคุณสมบัติ',
             'ประกาศรายชื่อทีมที่ผ่านการพิจารณาในวันที่ 14 มิถุนายน 2569',
+            'ทีมที่ผ่านการคัดเลือกยืนยันการเข้าร่วมแข่งขันภายในวันที่ 18 มิถุนายน 2569 ก่อน 23:59 น.',
+            {
+                label: 'เกณฑ์การคัดเลือกและเกณฑ์การตัดสิน',
+                href: HACKATHON_CRITERIA_PATH,
+            },
         ],
     },
     {
@@ -142,7 +148,7 @@ const STATIC_PRIZES = [
     },
 ];
 
-const THAI_DATE_IN_TEXT_PATTERN = /(\d{1,2}(?:\s*-\s*\d{1,2})?\s+[ก-๙]+\s+25\d{2})/g;
+const THAI_DATE_IN_TEXT_PATTERN = /(\d{1,2}(?:\s*-\s*\d{1,2})?\s+[ก-๙]+\s+25\d{2}|ก่อน\s*23:59\s*น\.)/g;
 
 function getHeroCountdown(targetDate, nowMs = Date.now()) {
     if (!(targetDate instanceof Date) || Number.isNaN(targetDate.getTime())) {
@@ -185,14 +191,61 @@ function formatHeroCountdownValue(unit, value) {
 
 function emphasizeThaiDateInText(text) {
     if (typeof text !== 'string') return text;
-    const parts = text.split(THAI_DATE_IN_TEXT_PATTERN);
-    if (parts.length === 1) return text;
+    const matches = Array.from(text.matchAll(THAI_DATE_IN_TEXT_PATTERN));
+    if (!matches.length) return text;
 
-    return parts.map((part, index) =>
-        index % 2 === 1
-            ? <strong key={`date-${index}`}>{part}</strong>
-            : <React.Fragment key={`text-${index}`}>{part}</React.Fragment>
-    );
+    const nodes = [];
+    let cursor = 0;
+
+    matches.forEach((match, index) => {
+        const start = match.index ?? 0;
+        const highlightedText = match[0] || '';
+        if (!highlightedText) return;
+
+        if (start > cursor) {
+            nodes.push(<React.Fragment key={`text-${index}`}>{text.slice(cursor, start)}</React.Fragment>);
+        }
+
+        nodes.push(<strong key={`date-${index}`}>{highlightedText}</strong>);
+        cursor = start + highlightedText.length;
+    });
+
+    if (cursor < text.length) {
+        nodes.push(<React.Fragment key="text-tail">{text.slice(cursor)}</React.Fragment>);
+    }
+
+    return nodes;
+}
+
+function renderCompetitionStepItem(item, key) {
+    if (typeof item === 'string') {
+        return <li key={key}>{emphasizeThaiDateInText(item)}</li>;
+    }
+
+    if (item && typeof item === 'object' && item.href && item.label) {
+        return (
+            <li key={key}>
+                <a
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        color: '#2563eb',
+                        textDecoration: 'underline',
+                        textUnderlineOffset: 2,
+                    }}
+                >
+                    {item.label}
+                    <ExternalLink size={14} />
+                </a>
+            </li>
+        );
+    }
+
+    return null;
 }
 
 function parseThaiDateOnly(raw) {
@@ -496,17 +549,19 @@ function HomePage() {
     const [heroCountdown, setHeroCountdown] = useState(() => getHeroCountdown(HERO_COUNTDOWN_TARGET_DATE));
 
     const processHighlightPhase = useMemo(() => {
+        const step2Start = new Date(`${config.process.step2HighlightStartDate}T00:00:00+07:00`);
+        const step3Start = new Date(`${config.process.step3HighlightStartDate}T00:00:00+07:00`);
         const step4Start = new Date(`${config.process.step4HighlightStartDate}T00:00:00+07:00`);
-        const step5Start = new Date(`${config.process.step5HighlightStartDate}T00:00:00+07:00`);
         const now = new Date();
 
+        const hasStep2Date = !Number.isNaN(step2Start.getTime());
+        const hasStep3Date = !Number.isNaN(step3Start.getTime());
         const hasStep4Date = !Number.isNaN(step4Start.getTime());
-        const hasStep5Date = !Number.isNaN(step5Start.getTime());
 
-        if (!hasStep4Date) return 'early';
-        if (hasStep5Date && now >= step5Start) return 'final';
-        if (now >= step4Start) return 'review';
-        return 'early';
+        if (hasStep4Date && now >= step4Start) return 'onsite';
+        if (hasStep3Date && now >= step3Start) return 'review';
+        if (hasStep2Date && now >= step2Start) return 'submission';
+        return 'registration';
     }, []);
 
     useEffect(() => {
@@ -1274,17 +1329,19 @@ function HomePage() {
                             {competitionSteps.map((step) => {
                                 const stepIndex = Number(step.number);
                                 const isActive =
-                                    processHighlightPhase === 'early'
-                                        ? stepIndex <= 2
-                                        : processHighlightPhase === 'review'
+                                    processHighlightPhase === 'registration'
+                                        ? stepIndex === 1
+                                        : processHighlightPhase === 'submission'
+                                            ? stepIndex <= 2
+                                            : processHighlightPhase === 'review'
                                             ? stepIndex === 3
                                             : stepIndex === 4;
                                 const isDim =
                                     processHighlightPhase === 'review'
-                                        ? stepIndex <= 2
-                                        : processHighlightPhase === 'final'
-                                            ? stepIndex <= 3
-                                            : false;
+                                            ? stepIndex <= 2
+                                            : processHighlightPhase === 'onsite'
+                                                ? stepIndex <= 3
+                                                : false;
                                 const stepStateClass = isActive ? 'is-active' : isDim ? 'is-dim' : 'is-normal';
 
                                 return (
@@ -1294,9 +1351,7 @@ function HomePage() {
                                         <div className="gt-step-body">
                                             <h3>{step.title}</h3>
                                             <ul className="gt-step-list">
-                                                {step.items.map((item, itemIndex) => (
-                                                    <li key={`${step.number}-${itemIndex}`}>{emphasizeThaiDateInText(item)}</li>
-                                                ))}
+                                                {step.items.map((item, itemIndex) => renderCompetitionStepItem(item, `${step.number}-${itemIndex}`))}
                                             </ul>
                                         </div>
                                     </div>

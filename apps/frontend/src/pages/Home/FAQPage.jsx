@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import HomeShell from './HomeShell';
+import { HACKATHON_CRITERIA_PATH } from '../../lib/userManual';
 import './InfoPages.css';
 
 const faqItems = [
@@ -19,7 +20,7 @@ const faqItems = [
         answer: (
             <>
                 หลังจากการรับสมัคร ผู้สมัครจะต้องส่ง Concept Deck รวมถึงประวัติส่วนตัวของสมาชิกในทีมทุกคน ภายในระยะเวลาก่อนวันที่ 3 มิถุนายน 2569 แล้วคณะกรรมการจะทำการประเมินหรือให้คะแนนตามเกณฑ์ใน{' '}
-                <a className="gt-faq-link" href="#" onClick={(event) => event.preventDefault()}>
+                <a className="gt-faq-link" href={HACKATHON_CRITERIA_PATH} target="_blank" rel="noopener noreferrer">
                     ลิงก์นี้
                 </a>
             </>
