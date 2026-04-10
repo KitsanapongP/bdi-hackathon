@@ -282,6 +282,18 @@
     white-space: pre-line;
 }
 
+.gt-faq-answer a,
+.gt-faq-link {
+    color: #2563eb;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.gt-faq-answer a:hover,
+.gt-faq-link:hover {
+    color: #1d4ed8;
+}
+
 .gt-sponsors-page-groups {
     display: grid;
     gap: 28px;
