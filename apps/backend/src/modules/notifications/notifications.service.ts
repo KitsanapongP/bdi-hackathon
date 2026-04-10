@@ -119,7 +119,7 @@ function buildStandardEmailHtml(input: {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; color: #0f172a; line-height: 1.6;">
       <div style="padding: 18px 20px; background: #0b2545; color: #ffffff; border-radius: 12px 12px 0 0;">
-        <div style="font-size: 12px; letter-spacing: 0.08em; opacity: 0.9; text-transform: uppercase;">Intelligent Living Hackathon 2026</div>
+        <div style="font-size: 12px; letter-spacing: 0.08em; opacity: 0.9; text-transform: uppercase;">BDI Young Innovator Hackathon: Intelligent Living</div>
         <h2 style="margin: 8px 0 0 0; font-size: 20px;">${escapeHtml(input.eventTitle)}</h2>
       </div>
       <div style="padding: 20px; border: 1px solid #dbe3ef; border-top: 0; border-radius: 0 0 12px 12px; background: #ffffff;">
@@ -127,7 +127,7 @@ function buildStandardEmailHtml(input: {
         <p style="margin: 0 0 16px 0; color: #243b53;">${textToHtml(input.message)}</p>
         ${detailsSection}
         <p style="margin: 0; font-size: 13px; color: #627d98;">
-          อีเมลฉบับนี้ส่งจากเว็บไซต์ Intelligent Living Hackathon 2026 กรุณาอย่าตอบกลับอีเมลอัตโนมัติฉบับนี้
+          อีเมลฉบับนี้ส่งจากเว็บไซต์ BDI Young Innovator Hackathon: Intelligent Living กรุณาอย่าตอบกลับอีเมลอัตโนมัติฉบับนี้
         </p>
       </div>
     </div>
