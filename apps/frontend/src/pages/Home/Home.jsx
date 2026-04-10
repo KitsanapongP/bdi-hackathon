@@ -1645,7 +1645,7 @@ function HomePage() {
                                         <Phone size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px', marginTop: '8px' }} />
                                         โทรศัพท์ 043 009 700 ต่อ 51018 (คุณแพรว)<br />
                                         <Mail size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px', marginTop: '8px' }} />
-                                        Email : computing.kku@kku.ac.th
+                                        Email : khwunch@kku.ac.th
                                     </p>
                                 </div>
                                 <div className="gt-footer-cols">
