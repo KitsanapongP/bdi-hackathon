@@ -723,7 +723,6 @@ function ParticipationTrendChart({ rows, mode }) {
                                 style={{ cursor: futureFlags[index] ? 'default' : 'pointer' }}
                                 onMouseEnter={() => setHoverIndex(index)}
                                 onMouseMove={() => setHoverIndex(index)}
-                                onClick={() => setHoverIndex(index)}
                             />
                         </g>
                     );

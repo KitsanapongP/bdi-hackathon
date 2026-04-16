@@ -1402,6 +1402,11 @@ section.gt-hero {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
     gap: 16px;
+    min-width: 0;
+}
+
+.gt-participation-wrap>* {
+    min-width: 0;
 }
 
 .gt-participation-graph {
@@ -1412,6 +1417,10 @@ section.gt-hero {
     -webkit-backdrop-filter: blur(10px);
     box-shadow: 0 14px 34px -24px rgba(15, 23, 42, 0.55);
     padding: 12px;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .gt-participation-graph-users {
@@ -1442,6 +1451,7 @@ section.gt-hero {
     align-items: flex-end;
     justify-content: space-between;
     gap: 12px;
+    min-width: 0;
 }
 
 .gt-participation-graph-users h3,
@@ -1453,6 +1463,8 @@ section.gt-hero {
 .gt-participation-graph-teams .gt-participation-stat-wrap {
     margin-top: 0;
     flex-shrink: 0;
+    margin-left: auto;
+    min-width: 0;
 }
 
 .gt-participation-graph-users .gt-participation-stat-loading,
@@ -1614,6 +1626,8 @@ section.gt-hero {
 
 .gt-participation-chart-scroll {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow-x: visible;
     overflow-y: visible;
 }
@@ -1622,6 +1636,18 @@ section.gt-hero {
     position: relative;
     width: 100%;
     min-width: 0;
+    box-sizing: border-box;
+}
+
+@media (min-width: 961px) {
+    .gt-participation-chart-scroll {
+        overflow-x: visible;
+    }
+
+    .gt-participation-chart-track {
+        width: 100%;
+        min-width: 0;
+    }
 }
 
 .gt-participation-chart {
@@ -2488,16 +2514,7 @@ section.gt-hero {
 
 @media (max-width: 1040px) {
     .gt-participation-wrap {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .gt-participation-graph-users,
-    .gt-participation-graph-teams {
-        grid-column: span 1;
-    }
-
-    .gt-participation-graph-trend {
-        grid-column: 1 / -1;
+        grid-template-columns: 1fr;
     }
 }
 
@@ -2810,7 +2827,7 @@ section.gt-hero {
     .gt-participation-graph-teams h3 {
         font-size: 0.95rem;
         line-height: 1.35;
-        max-width: 68%;
+        max-width: 58%;
     }
 
     .gt-participation-graph-users .gt-participation-stat-wrap,
@@ -2818,10 +2835,11 @@ section.gt-hero {
         margin-top: 0;
         gap: 6px;
         flex-shrink: 0;
+        margin-left: auto;
     }
 
     .gt-participation-stat-number {
-        font-size: clamp(1.85rem, 10vw, 2.7rem);
+        font-size: clamp(1.5rem, 8.3vw, 2.25rem);
         line-height: 0.92;
     }
 
@@ -2860,7 +2878,8 @@ section.gt-hero {
         overflow-x: auto;
         overflow-y: visible;
         -webkit-overflow-scrolling: touch;
-        touch-action: pan-x;
+        touch-action: pan-x pinch-zoom;
+        overscroll-behavior-x: contain;
     }
 
     .gt-participation-chart-track {
