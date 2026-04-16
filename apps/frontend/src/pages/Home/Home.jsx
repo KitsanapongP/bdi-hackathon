@@ -638,7 +638,9 @@ function ParticipationTrendChart({ rows, mode }) {
     return (
         <>
             {floatingTooltipNode}
-            <div className="gt-participation-chart-shell" ref={chartShellRef}>
+            <div className="gt-participation-chart-shell">
+            <div className="gt-participation-chart-scroll">
+            <div className="gt-participation-chart-track" ref={chartShellRef}>
             <svg
                 className="gt-participation-chart"
                 viewBox={`0 0 ${width} ${height}`}
@@ -721,7 +723,7 @@ function ParticipationTrendChart({ rows, mode }) {
                                 style={{ cursor: futureFlags[index] ? 'default' : 'pointer' }}
                                 onMouseEnter={() => setHoverIndex(index)}
                                 onMouseMove={() => setHoverIndex(index)}
-                                onTouchStart={() => setHoverIndex(index)}
+                                onClick={() => setHoverIndex(index)}
                             />
                         </g>
                     );
@@ -756,11 +758,13 @@ function ParticipationTrendChart({ rows, mode }) {
                         className={`gt-participation-axis-btn ${isFutureTrendPeriod(row?.periodStart, mode) ? 'is-future' : ''} ${activeIndex === index ? 'is-active' : ''}`}
                         onMouseEnter={() => setHoverIndex(index)}
                         onMouseLeave={clearHover}
-                        onTouchStart={() => setHoverIndex(index)}
+                        onClick={() => setHoverIndex(index)}
                     >
                         {formatTrendPeriodLabel(row.periodStart, mode, chartStartDate, chartEndDate)}
                     </span>
                 ))}
+            </div>
+            </div>
             </div>
             </div>
         </>
