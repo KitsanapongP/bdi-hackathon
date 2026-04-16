@@ -1609,12 +1609,31 @@ section.gt-hero {
 
 .gt-participation-chart-shell {
     width: 100%;
+    position: relative;
 }
 
 .gt-participation-chart {
     display: block;
     width: 100%;
-    height: 150px;
+    height: 186px;
+}
+
+.gt-participation-y-labels {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.gt-participation-y-labels span {
+    position: absolute;
+    transform: translate(-100%, -50%);
+    margin-left: -10px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    color: rgba(148, 163, 184, 0.96);
+    white-space: nowrap;
 }
 
 .gt-participation-axis {
@@ -1625,9 +1644,72 @@ section.gt-hero {
     font-weight: 600;
 }
 
-.gt-participation-axis span {
+.gt-participation-axis .gt-participation-axis-btn {
+    display: block;
+    background: transparent;
+    padding: 2px 4px;
     text-align: center;
     white-space: nowrap;
+    color: inherit;
+    font: inherit;
+    border-radius: 8px;
+    cursor: default;
+}
+
+.gt-participation-axis .gt-participation-axis-btn:hover {
+    color: var(--gt-text);
+    background: color-mix(in srgb, var(--gt-primary) 12%, transparent);
+}
+
+.gt-participation-axis .gt-participation-axis-btn.is-active {
+    color: var(--gt-text);
+    background: color-mix(in srgb, var(--gt-primary) 14%, transparent);
+}
+
+.gt-participation-axis .gt-participation-axis-btn.is-future {
+    color: color-mix(in srgb, var(--gt-text-muted) 72%, transparent);
+    font-style: italic;
+}
+
+.gt-participation-tooltip {
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--gt-border) 84%, #000);
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.92));
+    padding: 7px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 0.74rem;
+    color: #dbeafe;
+    pointer-events: none;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.35);
+    width: max-content;
+    max-width: min(360px, calc(100vw - 20px));
+}
+
+.gt-participation-tooltip-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1005;
+}
+
+.gt-participation-tooltip.is-floating {
+    position: absolute;
+    transform: translateX(-50%);
+}
+
+.gt-participation-tooltip.is-floating.is-start {
+    transform: translateX(0);
+}
+
+.gt-participation-tooltip.is-floating.is-end {
+    transform: translateX(-100%);
+}
+
+.gt-participation-tooltip strong {
+    color: #ffffff;
+    font-weight: 700;
 }
 
 .gt-participation-chart-empty,
@@ -2759,7 +2841,17 @@ section.gt-hero {
     }
 
     .gt-participation-chart {
-        height: 132px;
+        height: 168px;
+    }
+
+    .gt-participation-y-labels span {
+        font-size: 11px;
+    }
+
+    .gt-participation-tooltip {
+        font-size: 0.7rem;
+        max-width: min(300px, calc(100vw - 14px));
+        gap: 3px 8px;
     }
 
     .gt-participation-updated {

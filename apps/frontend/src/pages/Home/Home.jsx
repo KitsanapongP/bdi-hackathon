@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     Activity,
@@ -112,8 +113,8 @@ const competitionSteps = [
     },
 ];
 
-const REGISTRATION_PERIOD_START = '2026-04-01';
-const REGISTRATION_PERIOD_END = '2026-05-31';
+const REGISTRATION_PERIOD_START = '2026-04-10';
+const REGISTRATION_PERIOD_END = '2026-06-03';
 
 // ปรับวัน/เวลาสิ้นสุดของ Countdown ได้ที่ค่านี้ (รูปแบบ ISO 8601 + เวลาไทย)
 const HERO_COUNTDOWN_TARGET_ISO = '2026-07-03T23:59:59+07:00';
@@ -261,6 +262,33 @@ function addDays(date, days) {
     return next;
 }
 
+function startOfDay(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addMonths(date, months) {
+    return new Date(date.getFullYear(), date.getMonth() + months, 1);
+}
+
+function startOfMonth(date) {
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function startOfWeekMonday(date) {
+    const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const day = dayStart.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    dayStart.setDate(dayStart.getDate() + diff);
+    return dayStart;
+}
+
+function formatIsoDateOnly(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 function endOfMonth(date) {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
@@ -269,6 +297,14 @@ function formatShortThaiDate(date) {
     return date.toLocaleDateString('th-TH', {
         day: 'numeric',
         month: 'short',
+    });
+}
+
+function formatShortThaiDateWithYear(date) {
+    return date.toLocaleDateString('th-TH', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
     });
 }
 
@@ -287,13 +323,31 @@ function formatThaiDateRange(startDate, endDate) {
     return `${formatShortThaiDate(startDate)}-${formatShortThaiDate(endDate)}`;
 }
 
+function formatThaiDateRangeWithYear(startDate, endDate) {
+    if (startDate.getTime() === endDate.getTime()) {
+        return formatShortThaiDateWithYear(startDate);
+    }
+
+    const sameYear = startDate.getFullYear() === endDate.getFullYear();
+    if (sameYear && startDate.getMonth() === endDate.getMonth()) {
+        return `${startDate.toLocaleDateString('th-TH', { day: 'numeric' })}-${endDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    }
+
+    if (sameYear) {
+        return `${formatShortThaiDate(startDate)}-${endDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    }
+
+    return `${formatShortThaiDateWithYear(startDate)}-${formatShortThaiDateWithYear(endDate)}`;
+}
+
 function formatCompactNumber(value) {
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return '-';
     return numeric.toLocaleString('th-TH');
 }
 
-function formatTrendPeriodLabel(periodStart, mode, chartStartDate, chartEndDate) {
+function formatTrendPeriodLabel(periodStart, mode, chartStartDate, chartEndDate, options = {}) {
+    const { includeYear = false } = options;
     if (!periodStart) return '-';
 
     const parsed = parseThaiDateOnly(periodStart);
@@ -302,7 +356,7 @@ function formatTrendPeriodLabel(periodStart, mode, chartStartDate, chartEndDate)
     if (mode === 'monthly') {
         return parsed.toLocaleDateString('th-TH', {
             month: 'short',
-            year: '2-digit',
+            year: includeYear ? 'numeric' : '2-digit',
         });
     }
 
@@ -311,7 +365,49 @@ function formatTrendPeriodLabel(periodStart, mode, chartStartDate, chartEndDate)
     const effectiveStart = chartStartDate && naturalRangeStart < chartStartDate ? chartStartDate : naturalRangeStart;
     const effectiveEnd = chartEndDate && naturalRangeEnd > chartEndDate ? chartEndDate : naturalRangeEnd;
 
-    return formatThaiDateRange(effectiveStart, effectiveEnd);
+    return includeYear
+        ? formatThaiDateRangeWithYear(effectiveStart, effectiveEnd)
+        : formatThaiDateRange(effectiveStart, effectiveEnd);
+}
+
+function buildTrendRowsWithLabels(rawRows, mode, rangeStart, rangeEnd) {
+    if (!rangeStart || !rangeEnd) return Array.isArray(rawRows) ? rawRows : [];
+
+    const rowMap = new Map(
+        (Array.isArray(rawRows) ? rawRows : []).map((row) => [
+            String(row?.periodStart || ''),
+            {
+                periodStart: String(row?.periodStart || ''),
+                interestedParticipants: Number(row?.interestedParticipants) || 0,
+                totalTeams: Number(row?.totalTeams) || 0,
+            },
+        ])
+    );
+
+    const rows = [];
+    if (mode === 'monthly') {
+        let cursor = startOfMonth(rangeStart);
+        const endCursor = startOfMonth(rangeEnd);
+
+        while (cursor <= endCursor) {
+            const key = formatIsoDateOnly(cursor);
+            const found = rowMap.get(key);
+            rows.push(found || { periodStart: key, interestedParticipants: 0, totalTeams: 0 });
+            cursor = addMonths(cursor, 1);
+        }
+
+        return rows;
+    }
+
+    let cursor = startOfWeekMonday(rangeStart);
+    while (cursor <= rangeEnd) {
+        const key = formatIsoDateOnly(cursor);
+        const found = rowMap.get(key);
+        rows.push(found || { periodStart: key, interestedParticipants: 0, totalTeams: 0 });
+        cursor = addDays(cursor, 7);
+    }
+
+    return rows;
 }
 
 function normalizeWebsiteUrl(url) {
@@ -322,92 +418,352 @@ function normalizeWebsiteUrl(url) {
     return `https://${trimmed}`;
 }
 
-function buildBarGeometry(values, width, height, paddingX, paddingY, maxValue, offsetX, barWidth, stepX) {
-    const usableHeight = Math.max(1, height - (paddingY * 2));
-    const safeMax = Math.max(1, maxValue);
-    const baseline = height - paddingY;
+function getNiceScale(maxValue, fixedTickCount = 6) {
+    const safeMax = Math.max(1, Number(maxValue) || 0);
 
-    return values.map((value, index) => {
-        const ratio = Math.max(0, Number(value)) / safeMax;
-        const barHeight = ratio * usableHeight;
-        const x = paddingX + (stepX * index) + offsetX;
-        const y = baseline - barHeight;
+    const niceNum = (range, shouldRound) => {
+        const exponent = Math.floor(Math.log10(range));
+        const fraction = range / (10 ** exponent);
+        let niceFraction;
 
-        return {
-            x,
-            y,
+        if (shouldRound) {
+            if (fraction < 1.5) niceFraction = 1;
+            else if (fraction < 3) niceFraction = 2;
+            else if (fraction < 7) niceFraction = 5;
+            else niceFraction = 10;
+        } else {
+            if (fraction <= 1) niceFraction = 1;
+            else if (fraction <= 2) niceFraction = 2;
+            else if (fraction <= 5) niceFraction = 5;
+            else niceFraction = 10;
+        }
+
+        return niceFraction * (10 ** exponent);
+    };
+
+    const tickCount = Math.max(2, Math.trunc(fixedTickCount) || 6);
+    const step = Math.max(1, niceNum(safeMax / (tickCount - 1), false));
+    const axisMax = step * (tickCount - 1);
+
+    return {
+        axisMax,
+        tickStep: step,
+        tickCount,
+    };
+}
+
+function buildBarGeometry(participantValues, teamValues, chartMeta, barWidth, innerGap) {
+    const {
+        baselineY,
+        plotHeight,
+        axisMax,
+        chartPaddingLeft,
+        slotWidth,
+        futureFlags,
+    } = chartMeta;
+
+    const participantBars = [];
+    const teamBars = [];
+
+    for (let index = 0; index < participantValues.length; index += 1) {
+        const slotX = chartPaddingLeft + (slotWidth * index);
+        const isFuture = Boolean(futureFlags?.[index]);
+
+        const participantHeight = Math.max(0, Math.min(1, (Number(participantValues[index]) || 0) / axisMax)) * plotHeight;
+        const teamHeight = Math.max(0, Math.min(1, (Number(teamValues[index]) || 0) / axisMax)) * plotHeight;
+
+        const hasParticipantBar = !isFuture && participantHeight > 0;
+        const hasTeamBar = !isFuture && teamHeight > 0;
+
+        const centeredX = slotX + ((slotWidth - barWidth) / 2);
+        const groupedStartX = slotX + ((slotWidth - ((barWidth * 2) + innerGap)) / 2);
+
+        const participantX = hasParticipantBar && hasTeamBar ? groupedStartX : centeredX;
+        const teamX = hasParticipantBar && hasTeamBar ? groupedStartX + barWidth + innerGap : centeredX;
+
+        participantBars.push({
+            x: participantX,
+            y: baselineY - participantHeight,
             width: barWidth,
-            height: barHeight,
-        };
-    });
+            height: participantHeight,
+            isFuture,
+            isVisible: hasParticipantBar,
+        });
+
+        teamBars.push({
+            x: teamX,
+            y: baselineY - teamHeight,
+            width: barWidth,
+            height: teamHeight,
+            isFuture,
+            isVisible: hasTeamBar,
+        });
+    }
+
+    return {
+        participantBars,
+        teamBars,
+    };
+}
+
+function isFutureTrendPeriod(periodStart, mode, nowDate = new Date()) {
+    const rowStart = parseThaiDateOnly(periodStart);
+    if (!rowStart) return false;
+
+    if (mode === 'monthly') {
+        return rowStart > startOfMonth(nowDate);
+    }
+
+    return rowStart > startOfDay(nowDate);
+}
+
+function getTrendRowKey(row, index) {
+    return `${row?.periodStart || 'period'}-${index}`;
 }
 
 function ParticipationTrendChart({ rows, mode }) {
+    const [hoveredIndex, setHoveredIndex] = useState(-1);
+    const [floatingTooltip, setFloatingTooltip] = useState(null);
+    const chartShellRef = useRef(null);
+
+    const width = 960;
+    const height = 226;
+    const chartPaddingLeft = 72;
+    const chartPaddingRight = 18;
+    const chartPaddingTop = 12;
+    const chartPaddingBottom = 26;
+    const participantValues = rows.map((row) => Number(row.interestedParticipants) || 0);
+    const teamValues = rows.map((row) => Number(row.totalTeams) || 0);
+    const maxValue = Math.max(...participantValues, ...teamValues, 1);
+    const { axisMax, tickStep, tickCount } = getNiceScale(maxValue, 6);
+
+    const plotWidth = Math.max(1, width - chartPaddingLeft - chartPaddingRight);
+    const plotHeight = Math.max(1, height - chartPaddingTop - chartPaddingBottom);
+    const baselineY = chartPaddingTop + plotHeight;
+    const slotCount = Math.max(rows.length, 1);
+    const slotWidth = plotWidth / slotCount;
+    const innerGap = Math.max(2, slotWidth * 0.14);
+    const barWidth = Math.min(20, Math.max(4, ((slotWidth - innerGap) * 0.5)));
+    const futureFlags = rows.map((row) => isFutureTrendPeriod(row?.periodStart, mode));
+
+    const chartMeta = {
+        baselineY,
+        plotHeight,
+        axisMax,
+        chartPaddingLeft,
+        slotWidth,
+        futureFlags,
+    };
+    const { participantBars, teamBars } = buildBarGeometry(participantValues, teamValues, chartMeta, barWidth, innerGap);
+
+    const yTicks = Array.from({ length: tickCount }, (_, index) => {
+        const value = tickStep * index;
+        const y = baselineY - ((value / axisMax) * plotHeight);
+        return { value, y };
+    });
+
+    const activeIndex = hoveredIndex;
+    const tooltipIndex = hoveredIndex;
+
+    const axisPaddingLeftPercent = (chartPaddingLeft / width) * 100;
+    const axisPaddingRightPercent = (chartPaddingRight / width) * 100;
+    const chartStartDate = parseThaiDateOnly(REGISTRATION_PERIOD_START);
+    const chartEndDate = parseThaiDateOnly(REGISTRATION_PERIOD_END);
+
+    const tooltipRow = tooltipIndex >= 0 ? rows[tooltipIndex] : null;
+
+    const setHoverIndex = (index) => {
+        if (futureFlags[index]) {
+            clearHover();
+            return;
+        }
+
+        if (!chartShellRef.current || typeof window === 'undefined') {
+            setHoveredIndex(index);
+            return;
+        }
+
+        const rect = chartShellRef.current.getBoundingClientRect();
+        const anchorPercent = ((chartPaddingLeft + (slotWidth * index) + (slotWidth / 2)) / width);
+        const anchorX = rect.left + (rect.width * anchorPercent);
+        const top = rect.top + 8;
+        const safeMaxWidth = Math.min(360, Math.max(220, window.innerWidth - 20));
+        const sideThreshold = (safeMaxWidth / 2) + 14;
+        const align = anchorX <= sideThreshold
+            ? 'start'
+            : anchorX >= window.innerWidth - sideThreshold
+                ? 'end'
+                : 'center';
+
+        setHoveredIndex(index);
+        setFloatingTooltip({
+            left: Math.round(anchorX),
+            top: Math.round(top),
+            align,
+            maxWidth: safeMaxWidth,
+        });
+    };
+
+    const clearHover = () => {
+        setHoveredIndex(-1);
+        setFloatingTooltip(null);
+    };
+
+    const floatingTooltipNode = (tooltipRow && floatingTooltip && typeof document !== 'undefined')
+        ? createPortal(
+            <div className="gt-participation-tooltip-layer" aria-hidden="true">
+                <div
+                    className={`gt-participation-tooltip is-floating is-${floatingTooltip.align}`}
+                    style={{
+                        left: `${floatingTooltip.left}px`,
+                        top: `${floatingTooltip.top}px`,
+                        maxWidth: `${floatingTooltip.maxWidth}px`,
+                    }}
+                    role="status"
+                    aria-live="polite"
+                >
+                    <strong>{formatTrendPeriodLabel(tooltipRow.periodStart, mode, chartStartDate, chartEndDate, { includeYear: true })}</strong>
+                    <span>ผู้ลงทะเบียน {formatCompactNumber(tooltipRow.interestedParticipants)} คน</span>
+                    <span>ทีมที่ส่งโครงร่าง {formatCompactNumber(tooltipRow.totalTeams)} ทีม</span>
+                </div>
+            </div>,
+            document.body,
+        )
+        : null;
+
     if (!rows.length) {
         return <div className="gt-participation-chart-empty">ยังไม่มีข้อมูลแนวโน้ม</div>;
     }
 
-    const width = 960;
-    const height = 174;
-    const paddingX = 20;
-    const paddingY = 14;
-    const participantValues = rows.map((row) => Number(row.interestedParticipants) || 0);
-    const teamValues = rows.map((row) => Number(row.totalTeams) || 0);
-    const maxValue = Math.max(...participantValues, ...teamValues, 1);
-
-    const usableWidth = Math.max(1, width - (paddingX * 2));
-    const groupCount = Math.max(rows.length, 1);
-    const stepX = usableWidth / groupCount;
-    const innerGap = Math.max(1.5, stepX * 0.08);
-    const barWidth = Math.min(14, Math.max(2, ((stepX - innerGap) * 0.42)));
-    const groupWidth = (barWidth * 2) + innerGap;
-    const startOffset = (stepX - groupWidth) / 2;
-
-    const participantBars = buildBarGeometry(participantValues, width, height, paddingX, paddingY, maxValue, startOffset, barWidth, stepX);
-    const teamBars = buildBarGeometry(teamValues, width, height, paddingX, paddingY, maxValue, startOffset + barWidth + innerGap, barWidth, stepX);
-
-    const axisPaddingPercent = (paddingX / width) * 100;
-    const chartStartDate = parseThaiDateOnly(REGISTRATION_PERIOD_START);
-    const chartEndDate = parseThaiDateOnly(REGISTRATION_PERIOD_END);
-
     return (
-        <div className="gt-participation-chart-shell">
-            <svg className="gt-participation-chart" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" role="img" aria-label="กราฟแท่งผู้สมัครและทีม">
+        <>
+            {floatingTooltipNode}
+            <div className="gt-participation-chart-shell" ref={chartShellRef}>
+            <svg
+                className="gt-participation-chart"
+                viewBox={`0 0 ${width} ${height}`}
+                preserveAspectRatio="none"
+                role="img"
+                aria-label="กราฟแท่งแนวโน้มผู้สมัครและทีม"
+                onMouseLeave={clearHover}
+            >
                 <defs>
                     <linearGradient id="gt-participation-users-fill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgba(124, 58, 237, 0.34)" />
-                        <stop offset="100%" stopColor="rgba(124, 58, 237, 0.02)" />
+                        <stop offset="0%" stopColor="rgba(124, 58, 237, 0.72)" />
+                        <stop offset="100%" stopColor="rgba(124, 58, 237, 0.34)" />
                     </linearGradient>
                     <linearGradient id="gt-participation-teams-fill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgba(59, 130, 246, 0.26)" />
-                        <stop offset="100%" stopColor="rgba(59, 130, 246, 0.02)" />
+                        <stop offset="0%" stopColor="rgba(59, 130, 246, 0.68)" />
+                        <stop offset="100%" stopColor="rgba(59, 130, 246, 0.3)" />
                     </linearGradient>
                 </defs>
 
-                <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="rgba(148, 163, 184, 0.42)" strokeWidth="1" />
+                {yTicks.map((tick) => (
+                    <g key={`tick-${tick.value}`}>
+                        <line
+                            x1={chartPaddingLeft}
+                            y1={tick.y}
+                            x2={width - chartPaddingRight}
+                            y2={tick.y}
+                            stroke={tick.value === 0 ? 'rgba(148, 163, 184, 0.48)' : 'rgba(148, 163, 184, 0.2)'}
+                            strokeWidth="1"
+                        />
+                    </g>
+                ))}
 
                 {participantBars.map((bar, index) => (
-                    <rect key={`participants-${index}`} x={bar.x} y={bar.y} width={bar.width} height={bar.height} rx="2.8" fill="url(#gt-participation-users-fill)" stroke="rgba(124, 58, 237, 0.9)" strokeWidth="1" />
+                    !bar.isVisible ? null : (
+                        <rect
+                            key={`participants-${index}`}
+                            x={bar.x}
+                            y={bar.y}
+                            width={bar.width}
+                            height={bar.height}
+                            rx="3"
+                            fill="url(#gt-participation-users-fill)"
+                            stroke="#7c3aed"
+                            strokeWidth="1.2"
+                            opacity={activeIndex === index ? 1 : 0.93}
+                            pointerEvents="none"
+                        />
+                    )
                 ))}
                 {teamBars.map((bar, index) => (
-                    <rect key={`teams-${index}`} x={bar.x} y={bar.y} width={bar.width} height={bar.height} rx="2.8" fill="url(#gt-participation-teams-fill)" stroke="rgba(59, 130, 246, 0.9)" strokeWidth="1" />
+                    !bar.isVisible ? null : (
+                        <rect
+                            key={`teams-${index}`}
+                            x={bar.x}
+                            y={bar.y}
+                            width={bar.width}
+                            height={bar.height}
+                            rx="3"
+                            fill="url(#gt-participation-teams-fill)"
+                            stroke="#3b82f6"
+                            strokeWidth="1.2"
+                            opacity={activeIndex === index ? 1 : 0.93}
+                            pointerEvents="none"
+                        />
+                    )
                 ))}
+
+                {rows.map((row, index) => {
+                    const slotX = chartPaddingLeft + (slotWidth * index);
+
+                    return (
+                        <g key={getTrendRowKey(row, index)}>
+                            <rect
+                                x={slotX}
+                                y={chartPaddingTop}
+                                width={slotWidth}
+                                height={plotHeight}
+                                fill="rgba(0, 0, 0, 0.001)"
+                                pointerEvents="all"
+                                style={{ cursor: futureFlags[index] ? 'default' : 'pointer' }}
+                                onMouseEnter={() => setHoverIndex(index)}
+                                onMouseMove={() => setHoverIndex(index)}
+                                onTouchStart={() => setHoverIndex(index)}
+                            />
+                        </g>
+                    );
+                })}
             </svg>
+
+            <div className="gt-participation-y-labels" aria-hidden="true">
+                {yTicks.map((tick) => (
+                    <span
+                        key={`y-label-${tick.value}`}
+                        style={{
+                            left: `${(chartPaddingLeft / width) * 100}%`,
+                            top: `${(tick.y / height) * 100}%`,
+                        }}
+                    >
+                        {formatCompactNumber(Math.round(tick.value))}
+                    </span>
+                ))}
+            </div>
+
             <div
                 className="gt-participation-axis gt-participation-axis-grid"
                 style={{
                     gridTemplateColumns: `repeat(${rows.length}, minmax(0, 1fr))`,
-                    paddingLeft: `${axisPaddingPercent}%`,
-                    paddingRight: `${axisPaddingPercent}%`,
+                    paddingLeft: `${axisPaddingLeftPercent}%`,
+                    paddingRight: `${axisPaddingRightPercent}%`,
                 }}
             >
                 {rows.map((row, index) => (
-                    <span key={`${row.periodStart || 'period'}-${index}`}>
+                    <span
+                        key={getTrendRowKey(row, index)}
+                        className={`gt-participation-axis-btn ${isFutureTrendPeriod(row?.periodStart, mode) ? 'is-future' : ''} ${activeIndex === index ? 'is-active' : ''}`}
+                        onMouseEnter={() => setHoverIndex(index)}
+                        onMouseLeave={clearHover}
+                        onTouchStart={() => setHoverIndex(index)}
+                    >
                         {formatTrendPeriodLabel(row.periodStart, mode, chartStartDate, chartEndDate)}
                     </span>
                 ))}
             </div>
-        </div>
+            </div>
+        </>
     );
 }
 
@@ -759,19 +1115,21 @@ function HomePage() {
 
     const participationTrendRows = useMemo(() => {
         const rows = participationOverview?.trend?.[participationMode];
-        if (!Array.isArray(rows)) return [];
+        const normalizedRows = Array.isArray(rows) ? rows : [];
 
         const rangeStart = parseThaiDateOnly(REGISTRATION_PERIOD_START);
         const rangeEnd = parseThaiDateOnly(REGISTRATION_PERIOD_END);
-        if (!rangeStart || !rangeEnd) return rows;
+        if (!rangeStart || !rangeEnd) return normalizedRows;
 
-        return rows.filter((row) => {
+        const scopedRows = normalizedRows.filter((row) => {
             const rowStart = parseThaiDateOnly(row?.periodStart);
             if (!rowStart) return false;
 
             const rowEnd = participationMode === 'weekly' ? addDays(rowStart, 6) : endOfMonth(rowStart);
             return rowEnd >= rangeStart && rowStart <= rangeEnd;
         });
+
+        return buildTrendRowsWithLabels(scopedRows, participationMode, rangeStart, rangeEnd);
     }, [participationMode, participationOverview]);
 
     const participationUpdatedAtLabel = useMemo(() => {
@@ -783,6 +1141,7 @@ function HomePage() {
         return parsed.toLocaleString('th-TH', {
             day: 'numeric',
             month: 'short',
+            year: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
         });
@@ -1185,7 +1544,7 @@ function HomePage() {
                                     <article className="gt-participation-graph gt-participation-graph-users">
                                         <h3>
                                             <Users size={17} />
-                                            จำนวนคนที่สนใจเข้าร่วม
+                                            จำนวนผู้ลงทะเบียน
                                         </h3>
                                         {participationLoading ? (
                                             <div className="gt-participation-stat-loading" />
@@ -1200,7 +1559,7 @@ function HomePage() {
                                     <article className="gt-participation-graph gt-participation-graph-teams">
                                         <h3>
                                             <Target size={17} />
-                                            จำนวนทีมทั้งหมด
+                                            จำนวนทีมที่ส่งโครงร่าง
                                         </h3>
                                         {participationLoading ? (
                                             <div className="gt-participation-stat-loading" />
@@ -1216,7 +1575,7 @@ function HomePage() {
                                         <div className="gt-participation-trend-head">
                                             <h3>
                                                 <Activity size={17} />
-                                                จำนวนคนที่สมัคร และจำนวนทีมที่ถูกสร้างขึ้นมา ({trendModeLabel})
+                                                จำนวนผู้ลงทะเบียน และจำนวนทีมที่ส่งโครงร่าง ({trendModeLabel})
                                             </h3>
                                             <div className="gt-participation-mode" role="tablist" aria-label="โหมดการแสดงผลแนวโน้ม">
                                                 {[
@@ -1236,8 +1595,8 @@ function HomePage() {
                                         </div>
 
                                         <div className="gt-participation-legend">
-                                            <span><i className="users-dot" /> ผู้สนใจเข้าร่วม</span>
-                                            <span><i className="teams-dot" /> ทีมที่สร้างแล้ว</span>
+                                            <span><i className="users-dot" /> ผู้ลงทะเบียน</span>
+                                            <span><i className="teams-dot" /> ทีมที่ส่งโครงร่าง</span>
                                         </div>
 
                                         {participationLoading ? (
