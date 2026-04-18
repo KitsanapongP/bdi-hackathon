@@ -4,7 +4,7 @@ import { ExternalLink } from 'lucide-react';
 import HomeShell from './HomeShell';
 import './InfoPages.css';
 import aboutPoster from '../../assets/images/about/bdi-young-innovation-hackathon-posterjpg.jpg';
-import hackathonCriteriaPdf from '../../assets/documents/about/hackathon-criteria.pdf';
+import { HACKATHON_CRITERIA_PATH } from '../../lib/userManual';
 
 function AboutPage() {
     const [isPosterPreviewOpen, setIsPosterPreviewOpen] = useState(false);
@@ -161,7 +161,7 @@ function AboutPage() {
                             ภายในระยะเวลาก่อนวันที่ 3 มิถุนายน 2569 แล้วคณะกรรมการจะทำการประเมินหรือให้คะแนนตามเกณฑ์ใน{' '}
                             <a
                                 className="gt-about-criteria-link"
-                                href={hackathonCriteriaPdf}
+                                href={HACKATHON_CRITERIA_PATH}
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
