@@ -481,6 +481,13 @@ body:has(.gr-page) {
     color: var(--gt-text);
 }
 
+.gr-email-requirement {
+    margin: 6px 2px 0;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    color: #b91c1c;
+}
+
 .gr-input {
     width: 100%;
     padding: 11px 14px;
@@ -547,6 +554,11 @@ body:has(.gr-page) {
     text-align: center;
     color: var(--gt-text);
     line-height: 1.5;
+}
+
+.gr-verify-alert-text {
+    margin-top: 4px;
+    color: #dc2626;
 }
 
 .gr-verify-timer {

@@ -553,8 +553,10 @@ function RegisterPage() {
                                     <br />
                                     <strong>{pendingVerificationEmail}</strong>
                                 </p>
-                                <p className="gr-verify-text" style={{ marginTop: 4, color: '#dc2626' }}>
+                                <p className="gr-verify-text gr-verify-alert-text">
                                     หากไม่พบอีเมล กรุณาตรวจสอบในจดหมายขยะ (Spam/Junk)
+                                    <br />
+                                    หากยังไม่พบ กรุณาตรวจสอบอีเมลที่กรอกไว้อีกครั้งว่าถูกต้องหรือไม่
                                 </p>
                                 <p className="gr-verify-timer">
                                     หมดอายุใน <strong>{formatVerificationCountdown(verificationCountdown)}</strong>
@@ -648,7 +650,7 @@ function RegisterPage() {
                                             const value = e.target.value.replace(/\D/g, '').slice(0, 10);
                                             setRegPhone(value);
                                         }} required disabled={registerActionDisabled} minLength={9} maxLength={10} /></div>
-                                        <div className="gr-input-group"><label>อีเมล (Email)</label><input type="email" name="registerEmail" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="somchai.jaidee@kku.ac.th" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required disabled={registerActionDisabled} /></div>
+                                        <div className="gr-input-group"><label>อีเมล (Email)</label><input type="email" name="registerEmail" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="somchai.jaidee@kku.ac.th" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required disabled={registerActionDisabled} /><p className="gr-email-requirement"><strong>** กรุณาใช้อีเมลจริงสำหรับการยืนยันตัวตน **</strong></p></div>
                                         <div className="gr-input-group"><label>รหัสผ่าน (Password)</label><div className="gr-password-wrap"><input type={showRegPass ? 'text' : 'password'} name="registerPassword" autoComplete="new-password" data-lpignore="true" className="gr-input" placeholder="อย่างน้อย 8 ตัว และมีทั้งตัวอักษรกับตัวเลข" value={regPass} onChange={(e) => setRegPass(e.target.value)} required disabled={registerActionDisabled} minLength={8} /><button type="button" className="gr-password-toggle" onClick={() => setShowRegPass(!showRegPass)} tabIndex={-1} disabled={registerActionDisabled}>{showRegPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
                                         <div className="gr-input-group gr-grid-span-2"><label>ยืนยันรหัสผ่าน (Confirm Password)</label><div className="gr-password-wrap"><input type={showRegConfirmPass ? 'text' : 'password'} name="registerConfirmPassword" autoComplete="new-password" data-lpignore="true" className="gr-input" placeholder="ยืนยันรหัสผ่านอีกครั้ง" value={regConfirmPass} onChange={(e) => setRegConfirmPass(e.target.value)} required disabled={registerActionDisabled} minLength={8} /><button type="button" className="gr-password-toggle" onClick={() => setShowRegConfirmPass(!showRegConfirmPass)} tabIndex={-1} disabled={registerActionDisabled}>{showRegConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
                                     </div>
