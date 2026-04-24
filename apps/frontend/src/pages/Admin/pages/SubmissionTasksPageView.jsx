@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, Menu, Pencil, RefreshCw, Save, Search, Trash2, Users, X } from 'lucide-react'
-import { apiUrl } from '../../lib/api'
+import { apiUrl } from '../../../lib/api'
 import './SubmissionTasksPage.css'
 
 function formatDateTime(value) {
@@ -24,25 +24,39 @@ function formatDateInput(value) {
   return offsetDate.toISOString().slice(0, 16)
 }
 
-export default function SubmissionTasksPage({ pushToast }) {
-  const STAGE_OPTIONS = [
-    { value: 'pre_selection', label: 'ก่อนคัดเลือก' },
-    { value: 'training', label: 'ช่วงอบรมหลังคัดเลือก' },
-    { value: 'onsite', label: 'ช่วงแข่งขันหน้างาน' },
-  ]
-  const TYPE_OPTIONS = [
-    { value: 'link', label: 'ลิงก์' },
-    { value: 'file', label: 'ไฟล์' },
-  ]
-  const ASSIGN_STATUS_OPTIONS = [
-    { value: 'forming', label: 'กำลังจัดทีม' },
-    { value: 'submitted', label: 'ส่งทีมเข้าคัดเลือกแล้ว' },
-    { value: 'passed', label: 'ผ่านคัดเลือก' },
-    { value: 'failed', label: 'ไม่ผ่านคัดเลือก' },
-    { value: 'confirmed', label: 'ยืนยันเข้าร่วมแล้ว' },
-    { value: 'not_joined', label: 'ไม่เข้าร่วม' },
-  ]
+const STAGE_OPTIONS = [
+  { value: 'pre_selection', label: 'ก่อนคัดเลือก' },
+  { value: 'training', label: 'ช่วงอบรมหลังคัดเลือก' },
+  { value: 'onsite', label: 'ช่วงแข่งขันหน้างาน' },
+]
 
+const TYPE_OPTIONS = [
+  { value: 'link', label: 'ลิงก์' },
+  { value: 'file', label: 'ไฟล์' },
+]
+
+const ASSIGN_STATUS_OPTIONS = [
+  { value: 'forming', label: 'กำลังจัดทีม' },
+  { value: 'submitted', label: 'ส่งทีมเข้าคัดเลือกแล้ว' },
+  { value: 'passed', label: 'ผ่านคัดเลือก' },
+  { value: 'failed', label: 'ไม่ผ่านคัดเลือก' },
+  { value: 'confirmed', label: 'ยืนยันเข้าร่วมแล้ว' },
+  { value: 'not_joined', label: 'ไม่เข้าร่วม' },
+]
+
+function getStageLabel(value) {
+  return STAGE_OPTIONS.find((item) => item.value === value)?.label || value || '-'
+}
+
+function getTypeLabel(value) {
+  return TYPE_OPTIONS.find((item) => item.value === value)?.label || value || '-'
+}
+
+function getTeamStatusLabel(status) {
+  return ASSIGN_STATUS_OPTIONS.find((item) => item.value === status)?.label || status || '-'
+}
+
+export default function SubmissionTasksPage({ pushToast }) {
   const [rows, setRows] = useState([])
   const [teamOptions, setTeamOptions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -72,10 +86,6 @@ export default function SubmissionTasksPage({ pushToast }) {
   })
 
   const hasAssignmentTargets = form.teamStatuses.length > 0 || form.teamIds.length > 0
-
-  const getStageLabel = (value) => STAGE_OPTIONS.find((item) => item.value === value)?.label || value || '-'
-  const getTypeLabel = (value) => TYPE_OPTIONS.find((item) => item.value === value)?.label || value || '-'
-  const getTeamStatusLabel = (status) => ASSIGN_STATUS_OPTIONS.find((item) => item.value === status)?.label || status || '-'
 
   const resetForm = useCallback(() => {
     setEditingTaskId(null)

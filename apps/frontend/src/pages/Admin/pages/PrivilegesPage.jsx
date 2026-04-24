@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Camera, CameraOff, Check, Pencil, QrCode, RefreshCw, RotateCcw, Save, ScanLine, Trash2 } from 'lucide-react'
 import jsQR from 'jsqr'
-import { apiUrl } from '../../lib/api'
+import { apiUrl } from '../../../lib/api'
+import AdminDataTable from '../shared/AdminDataTable'
+import SectionHeading from '../shared/SectionHeading'
 import './PrivilegesPage.css'
 
-export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTable }) {
+export default function PrivilegesPage({ pushToast }) {
   const [templates, setTemplates] = useState([])
   const [claims, setClaims] = useState([])
   const [loading, setLoading] = useState(true)
@@ -85,7 +87,11 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
     }
 
     if (videoRef.current) {
-      try { videoRef.current.pause() } catch {}
+      try {
+        videoRef.current.pause()
+      } catch (error) {
+        void error
+      }
       videoRef.current.srcObject = null
     }
 
@@ -103,7 +109,9 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
 
   useEffect(() => {
     if (!scannerSupported) return
-    loadCameraDevices().catch(() => {})
+    loadCameraDevices().catch((error) => {
+      void error
+    })
   }, [scannerSupported, loadCameraDevices])
 
   useEffect(() => () => releaseCamera(), [releaseCamera])
@@ -120,7 +128,9 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
       const parts = parsed.pathname.split('/').filter(Boolean)
       const lastPart = parts[parts.length - 1]
       if (lastPart && lastPart.length >= 8) return decodeURIComponent(lastPart.trim())
-    } catch {}
+    } catch (error) {
+      void error
+    }
     return raw
   }, [])
 
@@ -222,7 +232,9 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
               const detected = await detector.detect(videoRef.current)
               if (detected?.length) detectedToken = extractTokenFromScan(detected[0]?.rawValue)
             }
-          } catch {}
+          } catch (error) {
+            void error
+          }
 
           if (!detectedToken) detectedToken = decodeQrFromVideoFrame()
           if (detectedToken) {
@@ -329,7 +341,11 @@ export default function PrivilegesPage({ pushToast, SectionHeading, AdminDataTab
 
   const scanClaim = async () => {
     if (!scanToken.trim()) return
-    try { await scanClaimByToken(scanToken) } catch {}
+    try {
+      await scanClaimByToken(scanToken)
+    } catch (error) {
+      void error
+    }
   }
 
   const redeemClaim = async () => {

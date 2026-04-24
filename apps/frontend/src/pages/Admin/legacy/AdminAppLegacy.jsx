@@ -1,0 +1,7495 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  Navigate,
+  NavLink,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+} from 'react-router-dom'
+import {
+  ArrowDown,
+  ArrowUp,
+  Building2,
+  Camera,
+  CameraOff,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  Clock3,
+  Contact,
+  Crown,
+  Download,
+  Eye,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  FileType2,
+  Filter,
+  FolderArchive,
+  Gift,
+  Globe,
+  History,
+  LayoutDashboard,
+  Link2,
+  ListChecks,
+  Lock,
+  LogOut,
+  Mail,
+  MapPin,
+  Menu,
+  Pencil,
+  Phone,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  QrCode,
+  Save,
+  ScanLine,
+  ScrollText,
+  Search,
+  Settings,
+  ShieldAlert,
+  Trash2,
+  TriangleAlert,
+  Upload,
+  UserRoundCheck,
+  UserRoundX,
+  Users,
+  X,
+} from 'lucide-react'
+import ThemeToggle from '../../../components/ThemeToggle'
+import GameShapes from '../../../components/GameShapes'
+import { apiUrl } from '../../../lib/api'
+import {
+  AdminSessionContext,
+  AdminToastContext,
+  useAdminSession,
+  useAdminToast,
+} from '../shared/adminContexts'
+import PrivilegesPage from '../pages/PrivilegesPage'
+import SubmissionTasksPageView from '../pages/SubmissionTasksPageView'
+import {
+  approvedTeamsSeed,
+  auditLogsSeed,
+  dashboardDeadlines,
+  returnedTeamsSeed,
+  rewardsSeed,
+  reviewTeamDetailsSeed,
+  reviewTeamsSeed,
+  settingsSeed,
+  winnersSeed,
+} from './adminMockData.legacy'
+
+const adminNavGroups = [
+  {
+    title: 'Dashboard',
+    links: [
+      {
+        to: '/admin',
+        label: 'ภาพรวม',
+        icon: LayoutDashboard,
+      },
+    ],
+  },
+  {
+    title: 'Static Website',
+    links: [
+      {
+        to: '/admin/static/sponsors',
+        label: 'Sponsors',
+        icon: Building2,
+      },
+      {
+        to: '/admin/static/carousels',
+        label: 'Carousel',
+        icon: FileImage,
+      },
+      {
+        to: '/admin/static/rewards',
+        label: 'Rewards',
+        icon: Gift,
+      },
+      {
+        to: '/admin/static/about',
+        label: 'About',
+        icon: FileText,
+      },
+      {
+        to: '/admin/static/schedule',
+        label: 'Schedule',
+        icon: Clock3,
+      },
+      {
+        to: '/admin/static/venues',
+        label: 'Venues',
+        icon: MapPin,
+      },
+      {
+        to: '/admin/static/contacts',
+        label: 'Contacts',
+        icon: Contact,
+      },
+      {
+        to: '/admin/static/winners',
+        label: 'Winners',
+        icon: Crown,
+      },
+    ],
+  },
+  {
+    title: 'Team Review',
+    links: [
+      {
+        to: '/admin/selection',
+        label: 'Selection Result',
+        icon: ListChecks,
+      },
+      {
+        to: '/admin/submission-tasks',
+        label: 'Submission Tasks',
+        icon: FileText,
+      },
+      {
+        to: '/admin/review/queue',
+        label: 'Review Queue',
+        icon: ClipboardCheck,
+      },
+      {
+        to: '/admin/review/returned',
+        label: 'Returned / Waiting Fix',
+        icon: RotateCcw,
+      },
+      {
+        to: '/admin/review/approved',
+        label: 'Approved Teams',
+        icon: CheckCircle2,
+      },
+    ],
+  },
+  {
+    title: 'System',
+    links: [
+      {
+        to: '/admin/notifications',
+        label: 'Notifications',
+        icon: Mail,
+      },
+      {
+        to: '/admin/privileges',
+        label: 'Privileges',
+        icon: QrCode,
+      },
+      {
+        to: '/admin/audit',
+        label: 'Audit Logs',
+        icon: ScrollText,
+      },
+      {
+        to: '/admin/settings',
+        label: 'Settings',
+        icon: Settings,
+      },
+    ],
+  },
+]
+
+const teamStateLabel = {
+  DRAFT: 'DRAFT',
+  SUBMITTED: 'SUBMITTED',
+  IN_REVIEW: 'IN_REVIEW',
+  RETURNED: 'RETURNED',
+  READY_TO_RESUBMIT: 'READY_TO_RESUBMIT',
+  APPROVED: 'APPROVED',
+}
+
+const memberStateLabel = {
+  PENDING: 'PENDING',
+  NEED_FIX: 'NEED_FIX',
+  RESUBMITTED: 'RESUBMITTED',
+  APPROVED: 'APPROVED',
+}
+
+const scheduleAudienceLabel = {
+  public: 'Public',
+  all_users: 'All Users',
+  approved_teams: 'Approved Teams',
+  specific_teams: 'Specific Teams',
+}
+
+function getStatusTone(status) {
+  if (status === 'APPROVED' || status === 'ENABLED') return 'success'
+  if (status === 'NEED_FIX' || status === 'RETURNED' || status === 'DISABLED') return 'danger'
+  if (status === 'RESUBMITTED' || status === 'READY_TO_RESUBMIT') return 'warning'
+  if (status === 'IN_REVIEW') return 'info'
+  return 'neutral'
+}
+
+function formatDateTime(value) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleString('th-TH', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatDateInput(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return offsetDate.toISOString().slice(0, 16)
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 B'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+}
+
+function normalizeTimeInput(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  return raw.length >= 5 ? raw.slice(0, 5) : raw
+}
+
+function toTimePayload(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  return raw.length === 5 ? `${raw}:00` : raw
+}
+
+function normalizeAdminMe(payload) {
+  const possible = payload?.data || payload
+  const isAdmin =
+    possible?.is_admin === true ||
+    possible?.isAdmin === true ||
+    possible?.accessRole === 'admin' ||
+    possible?.user?.accessRole === 'admin'
+
+  const user =
+    possible?.user ||
+    (possible?.email || possible?.userName
+      ? {
+          userName: possible?.userName || 'Admin',
+          email: possible?.email || '-',
+        }
+      : null)
+
+  return { isAdmin, user }
+}
+
+const dashboardStatusOptions = [
+  { value: 'submitted', label: 'Submitted', color: '#3b82f6' },
+  { value: 'passed', label: 'Passed', color: '#10b981' },
+  { value: 'failed', label: 'Failed', color: '#ef4444' },
+]
+
+const genderLabelMap = {
+  male: 'Male',
+  female: 'Female',
+  other: 'Not specified / Other',
+  unknown: 'Unknown',
+}
+
+function DashboardDonut({ values }) {
+  const total = values.reduce((sum, item) => sum + item.count, 0)
+  if (!total) {
+    return <div className="admin-ui-donut-empty">No data</div>
+  }
+
+  let current = 0
+  const segments = values
+    .map((item) => {
+      const start = current
+      const end = current + (item.count / total) * 360
+      current = end
+      return `${item.color} ${start}deg ${end}deg`
+    })
+    .join(', ')
+
+  return (
+    <div className="admin-ui-donut-wrap">
+      <div className="admin-ui-donut" style={{ background: `conic-gradient(${segments})` }}>
+        <div>
+          <strong>{total}</strong>
+          <span>teams</span>
+        </div>
+      </div>
+      <div className="admin-ui-donut-legend">
+        {values.map((item) => (
+          <div key={item.key}>
+            <span style={{ backgroundColor: item.color }} />
+            <strong>{item.label}</strong>
+            <small>{item.count}</small>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function DashboardBars({ rows, max = 0, valueKey = 'count', labelKey = 'label' }) {
+  const maxValue = max || rows.reduce((acc, row) => Math.max(acc, row[valueKey]), 0)
+  return (
+    <div className="admin-ui-chart-bars">
+      {rows.map((row) => (
+        <div key={row[labelKey]}>
+          <span>{row[labelKey]}</span>
+          <div>
+            <i style={{ width: `${maxValue ? Math.max(6, (row[valueKey] / maxValue) * 100) : 0}%` }} />
+          </div>
+          <strong>{row[valueKey]}</strong>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function StatusBadge({ status, label }) {
+  return (
+    <span className={`admin-ui-status admin-ui-status-${getStatusTone(status)}`}>
+      {label || teamStateLabel[status] || memberStateLabel[status] || status}
+    </span>
+  )
+}
+
+function AdminToastViewport({ toasts, onClose }) {
+  return (
+    <div className="admin-ui-toast-wrap" aria-live="polite">
+      {toasts.map((toast) => (
+        <div key={toast.id} className={`admin-ui-toast admin-ui-toast-${toast.type}`}>
+          <div className="admin-ui-toast-text">
+            <strong>{toast.title}</strong>
+            {toast.description ? <span>{toast.description}</span> : null}
+          </div>
+          <button type="button" onClick={() => onClose(toast.id)} aria-label="close toast">
+            <X size={14} />
+          </button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function AdminDataTable({
+  rows,
+  columns,
+  searchKeys = [],
+  searchPlaceholder = 'ค้นหา',
+  filters = [],
+  pageSize: initialPageSize = 25,
+  emptyMessage = 'ไม่มีข้อมูล',
+  defaultFilter = 'all',
+  toolbarExtra = null,
+  loading = false,
+}) {
+  const [search, setSearch] = useState('')
+  const [activeFilter, setActiveFilter] = useState(defaultFilter)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(initialPageSize)
+
+  const filteredRows = useMemo(() => {
+    const keyword = search.trim().toLowerCase()
+    const filterDef = filters.find((item) => item.value === activeFilter)
+    return rows.filter((row) => {
+      if (keyword) {
+        const matched = searchKeys.some((key) => String(row[key] ?? '').toLowerCase().includes(keyword))
+        if (!matched) return false
+      }
+      if (!filterDef || typeof filterDef.predicate !== 'function') return true
+      return filterDef.predicate(row)
+    })
+  }, [rows, search, searchKeys, filters, activeFilter])
+
+  const totalPages = pageSize === -1 ? 1 : Math.max(1, Math.ceil(filteredRows.length / pageSize))
+  const effectivePageSize = pageSize === -1 ? filteredRows.length : pageSize
+
+  useEffect(() => {
+    if (pageSize === -1) return
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages, pageSize])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, activeFilter, pageSize])
+
+  const pagedRows = useMemo(() => {
+    if (pageSize === -1) return filteredRows
+    const start = (page - 1) * pageSize
+    return filteredRows.slice(start, start + pageSize)
+  }, [filteredRows, page, pageSize])
+
+  return (
+    <div className="admin-ui-table-card">
+      <div className="admin-ui-table-tools">
+        <div className="admin-ui-table-search">
+          <Search size={16} />
+          <input
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value)
+            }}
+            placeholder={searchPlaceholder}
+          />
+        </div>
+        {filters.length ? (
+          <div className="admin-ui-filter-row">
+            <Filter size={15} />
+            {filters.map((filter) => (
+              <button
+                type="button"
+                key={filter.value}
+                className={filter.value === activeFilter ? 'active' : ''}
+                onClick={() => {
+                  setActiveFilter(filter.value)
+                }}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {toolbarExtra}
+      </div>
+
+      <div className="admin-ui-table-wrap">
+        <table className="admin-ui-table">
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th key={column.key}>{column.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={columns.length}>
+                  <div className="admin-ui-table-empty">กำลังโหลด...</div>
+                </td>
+              </tr>
+            ) : pagedRows.length ? (
+              pagedRows.map((row) => (
+                <tr key={row.id || row.teamId || row.memberId}>
+                  {columns.map((column) => (
+                    <td key={`${row.id || row.teamId || row.memberId}-${column.key}`}>
+                      {typeof column.render === 'function' ? column.render(row) : row[column.key]}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={columns.length}>
+                  <div className="admin-ui-table-empty">{emptyMessage}</div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="admin-ui-table-pager">
+        <div className="admin-ui-page-size-selector">
+          <span>Rows:</span>
+          <select
+            value={pageSize}
+            onChange={(event) => {
+              setPageSize(event.target.value === 'all' ? -1 : Number(event.target.value))
+            }}
+          >
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+        <span>
+          {pageSize === -1
+            ? `${filteredRows.length} rows`
+            : `Page ${page} / ${totalPages} (${filteredRows.length} rows)`}
+        </span>
+        <div>
+          <button type="button" disabled={page === 1} onClick={() => setPage((prev) => prev - 1)}>
+            <ChevronLeft size={16} />
+          </button>
+          <button type="button" disabled={pageSize === -1 || page === totalPages} onClick={() => setPage((prev) => prev + 1)}>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DetailDrawer({ open, title, subtitle, onClose, children }) {
+  useEffect(() => {
+    if (!open) return undefined
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open, onClose])
+
+  if (!open) return null
+
+  return (
+    <div className="admin-ui-drawer-layer" role="dialog" aria-modal="true">
+      <button type="button" className="admin-ui-drawer-backdrop" onClick={onClose} aria-label="close drawer" />
+      <aside className="admin-ui-drawer">
+        <header>
+          <div>
+            <h3>{title}</h3>
+            {subtitle ? <p>{subtitle}</p> : null}
+          </div>
+          <button type="button" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </header>
+        <div className="admin-ui-drawer-body">{children}</div>
+      </aside>
+    </div>
+  )
+}
+
+function FileListViewer({ files, teamCode, memberName }) {
+  const { pushToast } = useAdminToast()
+  const [selectedFileId, setSelectedFileId] = useState(files[0]?.fileId ?? null)
+  const selectedFile = files.find((item) => item.fileId === selectedFileId) || files[0]
+
+  useEffect(() => {
+    setSelectedFileId(files[0]?.fileId ?? null)
+  }, [files])
+
+  return (
+    <div className="admin-ui-file-viewer">
+      <div className="admin-ui-file-header">
+        <h4>Verification Files</h4>
+        <div>
+          <button
+            type="button"
+            onClick={() =>
+              pushToast({
+                type: 'info',
+                title: 'กำลังเตรียม zip',
+                description: `ดาวน์โหลดโฟลเดอร์ทีม ${teamCode}`,
+              })
+            }
+          >
+            <FolderArchive size={14} />
+            Team Folder (.zip)
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              pushToast({
+                type: 'info',
+                title: 'กำลังเตรียม zip',
+                description: `ดาวน์โหลดโฟลเดอร์สมาชิก ${memberName}`,
+              })
+            }
+          >
+            <FolderArchive size={14} />
+            Member Folder (.zip)
+          </button>
+        </div>
+      </div>
+
+      <div className="admin-ui-file-list">
+        {files.map((file) => (
+          <button
+            type="button"
+            key={file.fileId}
+            className={file.fileId === selectedFile?.fileId ? 'active' : ''}
+            onClick={() => setSelectedFileId(file.fileId)}
+          >
+            <div>
+              <strong>{file.filename}</strong>
+              <span>
+                {file.type} • {formatFileSize(file.size)}
+              </span>
+              <span>uploaded: {formatDateTime(file.uploadedAt)}</span>
+            </div>
+            <div className="admin-ui-file-actions">
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  pushToast({
+                    type: 'success',
+                    title: 'Preview ready',
+                    description: `${file.filename}`,
+                  })
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.stopPropagation()
+                    pushToast({
+                      type: 'success',
+                      title: 'Preview ready',
+                      description: `${file.filename}`,
+                    })
+                  }
+                }}
+              >
+                <Eye size={14} />
+              </span>
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  pushToast({
+                    type: 'info',
+                    title: 'Download started',
+                    description: file.filename,
+                  })
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.stopPropagation()
+                    pushToast({
+                      type: 'info',
+                      title: 'Download started',
+                      description: file.filename,
+                    })
+                  }
+                }}
+              >
+                <Download size={14} />
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="admin-ui-file-preview">
+        <h5>Inline Preview</h5>
+        {selectedFile ? (
+          <div className="admin-ui-file-preview-box">
+            {selectedFile.type.startsWith('image/') ? <FileImage size={28} /> : null}
+            {selectedFile.type.includes('pdf') ? <FileType2 size={28} /> : null}
+            {selectedFile.type.includes('spreadsheet') ? <FileSpreadsheet size={28} /> : null}
+            {!selectedFile.type.startsWith('image/') &&
+            !selectedFile.type.includes('pdf') &&
+            !selectedFile.type.includes('spreadsheet') ? (
+              <FileText size={28} />
+            ) : null}
+            <strong>{selectedFile.filename}</strong>
+            <span>{selectedFile.type}</span>
+            <small>หน้านี้เป็น UI mockup สำหรับ flow preview/download</small>
+          </div>
+        ) : (
+          <div className="admin-ui-file-preview-box">
+            <span>ไม่มีไฟล์</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SectionHeading({ title, description, right = null }) {
+  return (
+    <header className="admin-ui-section-head">
+      <div>
+        <h2>{title}</h2>
+        {description ? <p>{description}</p> : null}
+      </div>
+      {right}
+    </header>
+  )
+}
+
+function AdminGuard({ children }) {
+  const [state, setState] = useState({
+    loading: true,
+    allowed: false,
+    user: null,
+    demoMode: false,
+  })
+
+  useEffect(() => {
+    let active = true
+
+    async function run() {
+      try {
+        const response = await fetch(apiUrl('/api/admin/me'), { credentials: 'include' })
+        const payload = await response.json().catch(() => ({}))
+        const normalized = normalizeAdminMe(payload)
+        if (!active) return
+
+        if (response.ok && normalized.isAdmin) {
+          const userData = normalized.user || payload.user
+          if (userData) {
+            localStorage.setItem('gt_user', JSON.stringify(userData))
+          }
+          setState({
+            loading: false,
+            allowed: true,
+            user: userData,
+            demoMode: false,
+          })
+          return
+        }
+
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('gt_user')
+        }
+      } catch {
+        localStorage.removeItem('gt_user')
+      }
+
+      setState({
+        loading: false,
+        allowed: false,
+        user: null,
+        demoMode: false,
+      })
+    }
+
+    run()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  if (state.loading) {
+    return (
+      <div className="admin-ui-gate-screen">
+        <RefreshCw size={20} className="spin" />
+        <span>Checking admin capability...</span>
+      </div>
+    )
+  }
+
+  if (!state.allowed) {
+    return <Navigate to="/home" replace />
+  }
+
+  return (
+    <AdminSessionContext.Provider value={{ adminUser: state.user, demoMode: state.demoMode }}>
+      {children}
+    </AdminSessionContext.Provider>
+  )
+}
+
+function AdminLayout({ navGroups = adminNavGroups }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { adminUser, demoMode } = useAdminSession()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [toasts, setToasts] = useState([])
+
+  useEffect(() => setMobileOpen(false), [location.pathname])
+
+  const pushToast = useCallback((toast) => {
+    const id = `${Date.now()}-${Math.random()}`
+    const next = {
+      id,
+      type: toast.type || 'success',
+      title: toast.title || '',
+      description: toast.description || '',
+    }
+    setToasts((prev) => [...prev, next])
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((item) => item.id !== id))
+    }, 3200)
+  }, [])
+
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((item) => item.id !== id))
+  }, [])
+
+  const pageLabel = useMemo(() => {
+    const map = {
+      '/admin': 'Admin Dashboard',
+      '/admin/static/sponsors': 'Static Website / Sponsors',
+      '/admin/static/carousels': 'Static Website / Carousel',
+      '/admin/static/rewards': 'Static Website / Rewards',
+      '/admin/static/about': 'Static Website / About',
+      '/admin/static/schedule': 'Static Website / Schedule',
+      '/admin/static/venues': 'Static Website / Venues',
+      '/admin/static/contacts': 'Static Website / Contacts',
+      '/admin/static/winners': 'Static Website / Winners',
+      '/admin/review/queue': 'Team Review / Queue',
+      '/admin/review/returned': 'Team Review / Returned',
+      '/admin/review/approved': 'Team Review / Approved',
+      '/admin/selection': 'Team Selection',
+      '/admin/submission-tasks': 'Submission Tasks',
+      '/admin/notifications': 'Notification Settings',
+      '/admin/privileges': 'Privileges',
+      '/admin/audit': 'Audit Logs',
+      '/admin/settings': 'Settings',
+    }
+    if (location.pathname.startsWith('/admin/review/teams/')) return 'Team Review / Detail'
+    return map[location.pathname] || 'Admin'
+  }, [location.pathname])
+
+  const handleLogout = async () => {
+    try {
+      await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' })
+    } catch {
+      // no-op for mockup
+    }
+    localStorage.removeItem('gt_user')
+    navigate('/home', { replace: true })
+  }
+
+  return (
+    <AdminToastContext.Provider value={{ pushToast }}>
+      <div className="admin-ui-page">
+        <GameShapes
+          shapeCount={22}
+          sizeRange={[20, 42]}
+          depthLayers={2}
+          interactionRadius={95}
+          minDistance={120}
+          seed={15}
+        />
+
+        <div className={`admin-ui-shell ${mobileOpen ? 'mobile-open' : ''}`}>
+          <aside className="admin-ui-sidebar">
+            <div className="admin-ui-brand">
+              <div className="admin-ui-brand-icon">
+                <ShieldAlert size={18} />
+              </div>
+              <div>
+                <strong>Hackathon Admin</strong>
+                <span>Management Console</span>
+              </div>
+            </div>
+
+            <nav>
+              {navGroups.map((group) => (
+                <div key={group.title} className="admin-ui-nav-group">
+                  <span>{group.title}</span>
+                  {group.links.map((link) => (
+                    <NavLink
+                      key={link.to}
+                      to={link.to}
+                      end={link.to === '/admin'}
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                    >
+                      <link.icon size={16} />
+                      {link.label}
+                    </NavLink>
+                  ))}
+                </div>
+              ))}
+            </nav>
+          </aside>
+
+          <div className="admin-ui-main">
+            <header className="admin-ui-topbar">
+              <button type="button" className="admin-ui-menu-btn" onClick={() => setMobileOpen((prev) => !prev)}>
+                {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+              </button>
+              <div className="admin-ui-topbar-title">
+                <h1>{pageLabel}</h1>
+                {demoMode ? (
+                  <span>
+                    <TriangleAlert size={14} />
+                    Demo gate: backend `/api/admin/me` ยังไม่เชื่อม
+                  </span>
+                ) : null}
+              </div>
+              <div className="admin-ui-topbar-right">
+                <ThemeToggle />
+                <div className="admin-ui-user-chip">
+                  <strong>{adminUser?.userName || adminUser?.name || 'Admin User'}</strong>
+                  <span>{adminUser?.email || '-'}</span>
+                </div>
+                <button type="button" onClick={handleLogout} className="admin-ui-logout-btn">
+                  <LogOut size={14} />
+                  Logout
+                </button>
+              </div>
+            </header>
+
+            <main className="admin-ui-content">
+              <Outlet />
+            </main>
+          </div>
+        </div>
+        <AdminToastViewport toasts={toasts} onClose={removeToast} />
+      </div>
+    </AdminToastContext.Provider>
+  )
+}
+
+function DashboardPage() {
+  const { pushToast } = useAdminToast()
+  const [selectedStatuses, setSelectedStatuses] = useState(['submitted', 'passed'])
+  const [days, setDays] = useState(30)
+  const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const [overview, setOverview] = useState(null)
+
+  const fetchOverview = useCallback(async () => {
+    try {
+      setLoading(true)
+      const query = new URLSearchParams({
+        statuses: selectedStatuses.join(','),
+        days: String(days),
+      })
+      const response = await fetch(apiUrl(`/api/admin/dashboard/overview?${query.toString()}`), {
+        credentials: 'include',
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.message || 'ไม่สามารถโหลดข้อมูลได้')
+      }
+      setOverview(payload.data)
+    } catch (error) {
+      console.error(error)
+      setOverview(null)
+      pushToast({ type: 'error', title: 'โหลด dashboard ไม่สำเร็จ' })
+    } finally {
+      setLoading(false)
+    }
+  }, [days, pushToast, selectedStatuses])
+
+  useEffect(() => {
+    fetchOverview()
+  }, [fetchOverview])
+
+  const handleExportSubmittedTeams = useCallback(async () => {
+    try {
+      setExporting(true)
+      pushToast({
+        title: 'กำลังเริ่ม Export',
+        description: 'ระบบจะดึงเฉพาะทีมที่สถานะ submitted เท่านั้น',
+      })
+
+      const response = await fetch(apiUrl('/api/admin/exports/submitted-verification-bundle'), {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload?.message || 'ไม่สามารถ export ได้')
+      }
+
+      const blob = await response.blob()
+      const disposition = response.headers.get('content-disposition') || ''
+      const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+      const fileName = encodedName ? decodeURIComponent(encodedName) : `verification_export_${Date.now()}.zip`
+
+      const downloadUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = downloadUrl
+      anchor.download = fileName
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(downloadUrl)
+
+      pushToast({
+        title: 'Export สำเร็จ',
+        description: 'ไฟล์จะมีเฉพาะทีมสถานะ submitted พร้อมข้อมูลสมาชิกแต่ละทีม',
+      })
+    } catch (error) {
+      pushToast({ type: 'error', title: error?.message || 'ไม่สามารถ export ได้' })
+    } finally {
+      setExporting(false)
+    }
+  }, [pushToast])
+
+  const statusCards = useMemo(() => {
+    const map = new Map((overview?.statusCounts || []).map((item) => [item.status, item.count]))
+    return dashboardStatusOptions.map((item) => ({
+      id: item.value,
+      label: item.label,
+      value: map.get(item.value) || 0,
+      color: item.color,
+    }))
+  }, [overview])
+
+  const teamSizeRows = useMemo(
+    () => (overview?.teamSizeBuckets || []).map((item) => ({ label: `${item.bucket} members`, count: item.count })),
+    [overview]
+  )
+
+  const genderRows = useMemo(
+    () =>
+      (overview?.genderCounts || [])
+        .map((item) => ({ label: genderLabelMap[item.gender] || item.gender, count: item.count }))
+        .filter((item) => item.count > 0),
+    [overview]
+  )
+
+  const provinceRows = useMemo(
+    () => (overview?.provinceCounts || []).slice(0, 8).map((item) => ({ label: item.province, count: item.count })),
+    [overview]
+  )
+
+  const duplicateRows = overview?.duplicateNames || []
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Admin Dashboard"
+        description="ภาพรวมทีมตามสถานะ, demographic, และตรวจชื่อซ้ำของผู้ส่งเข้าพิจารณา (ปุ่ม Export จะดึงเฉพาะทีม status = submitted)"
+        right={
+          <div className="admin-ui-headmin-ui-actions">
+            <button type="button" className="admin-ui-btn" onClick={fetchOverview}>
+              <RefreshCw size={15} />
+              Refresh
+            </button>
+            <button
+              type="button"
+              className="admin-ui-btn admin-ui-btn-primary"
+              onClick={handleExportSubmittedTeams}
+              disabled={exporting}
+              title="Export เฉพาะทีมสถานะ submitted"
+            >
+              <FolderArchive size={15} />
+              {exporting ? 'กำลัง Export...' : 'Export Submitted Teams'}
+            </button>
+          </div>
+        }
+      />
+
+      <section className="admin-ui-panel">
+        <div className="admin-ui-dashboard-filters">
+          <strong>Status filter</strong>
+          <div className="admin-ui-chip-row">
+            {dashboardStatusOptions.map((option) => {
+              const active = selectedStatuses.includes(option.value)
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`admin-ui-chip-btn ${active ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedStatuses((prev) => {
+                      if (prev.includes(option.value)) {
+                        if (prev.length === 1) return prev
+                        return prev.filter((status) => status !== option.value)
+                      }
+                      return [...prev, option.value]
+                    })
+                  }}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+          <label className="admin-ui-days-filter">
+            Trend days
+            <select value={days} onChange={(event) => setDays(Number(event.target.value))}>
+              <option value={14}>14</option>
+              <option value={30}>30</option>
+              <option value={60}>60</option>
+              <option value={90}>90</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section className="admin-ui-stat-grid">
+        {[
+          {
+            id: 'teamsCreated',
+            label: 'Teams Created',
+            value: overview?.totals?.teamsCreated ?? 0,
+            trend: 'ทีมที่ถูกสร้างทั้งหมด',
+            tone: 'info',
+          },
+          {
+            id: 'filtered',
+            label: 'Teams In Selected Statuses',
+            value: overview?.totals?.teamsInSelectedStatuses ?? 0,
+            trend: `filter: ${selectedStatuses.join(', ')}`,
+            tone: 'warn',
+          },
+          {
+            id: 'submittedOrApproved',
+            label: 'Submitted + Approved',
+            value: overview?.totals?.submittedOrApproved ?? 0,
+            trend: 'ตรงกับโจทย์ทีมที่ส่งเข้าพิจารณา',
+            tone: 'success',
+          },
+          {
+            id: 'members',
+            label: 'Members In Selection',
+            value: overview?.totals?.totalMembersInSelectedStatuses ?? 0,
+            trend: `${duplicateRows.length} duplicate-name groups`,
+            tone: 'neutral',
+          },
+        ].map((item) => (
+          <article key={item.id} className={`admin-ui-stat-card ${item.tone} ${loading ? 'is-loading' : ''}`}>
+            <span>{item.label}</span>
+            <strong>{loading ? '-' : item.value}</strong>
+            <small>{item.trend}</small>
+          </article>
+        ))}
+      </section>
+
+      <section className="admin-ui-two-col">
+        <article className="admin-ui-panel">
+          <h3>
+            <Filter size={17} />
+            Team Status Distribution
+          </h3>
+          <DashboardDonut
+            values={statusCards.map((item) => ({
+              key: item.id,
+              label: item.label,
+              count: item.value,
+              color: item.color,
+            }))}
+          />
+        </article>
+
+        <article className="admin-ui-panel">
+          <h3>
+            <Users size={17} />
+            Team Size Distribution
+          </h3>
+          <DashboardBars rows={teamSizeRows} />
+        </article>
+      </section>
+
+      <section className="admin-ui-two-col">
+        <article className="admin-ui-panel">
+          <h3>
+            <Users size={17} />
+            Gender Breakdown
+          </h3>
+          <DashboardBars rows={genderRows} />
+        </article>
+
+        <article className="admin-ui-panel">
+          <h3>
+            <Globe size={17} />
+            Top Provinces
+          </h3>
+          <DashboardBars rows={provinceRows} />
+        </article>
+      </section>
+
+      <section className="admin-ui-panel">
+        <h3>
+          <Clock3 size={17} />
+          Status Trend (Last {days} Days)
+        </h3>
+        <div className="admin-ui-trend-grid">
+          {(overview?.submissionTrend || []).slice(-14).map((row) => {
+            const total = row.submitted + row.passed + row.failed
+            return (
+              <div key={row.date}>
+                <div>
+                  <i style={{ height: `${Math.max(4, row.submitted * 8)}px`, background: '#3b82f6' }} />
+                  <i style={{ height: `${Math.max(4, row.passed * 8)}px`, background: '#10b981' }} />
+                  <i style={{ height: `${Math.max(4, row.failed * 8)}px`, background: '#ef4444' }} />
+                </div>
+                <strong>{total}</strong>
+                <span>{row.date.slice(5)}</span>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="admin-ui-panel">
+        <h3>
+          <ShieldAlert size={17} />
+          Duplicate Real Names
+        </h3>
+        <div className="admin-ui-duplicate-list">
+          {duplicateRows.length ? (
+            duplicateRows.slice(0, 10).map((group) => (
+              <div key={group.normalizedName}>
+                <div>
+                  <strong>{group.fullNameTh || group.fullNameEn || group.normalizedName}</strong>
+                  <span>{group.count} records</span>
+                </div>
+                <small>
+                  {group.members
+                    .map((member) => `${member.userName} (${member.teamCode}, ${member.status})`)
+                    .join(' | ')}
+                </small>
+              </div>
+            ))
+          ) : (
+            <div className="admin-ui-table-empty">ไม่พบชื่อซ้ำในสถานะที่เลือก</div>
+          )}
+        </div>
+      </section>
+
+      <section className="admin-ui-panel">
+        <h3>
+          <History size={17} />
+          Recent Audit Activity
+        </h3>
+        <div className="admin-ui-list-mini">
+          {auditLogsSeed.slice(0, 4).map((item) => (
+            <div key={item.id}>
+              <strong>{item.actionType}</strong>
+              <span>
+                {item.actor} • {formatDateTime(item.createdAt)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="admin-ui-panel">
+        <h3>
+          <ListChecks size={17} />
+          Upcoming Deadlines
+        </h3>
+        <div className="admin-ui-timeline-mini">
+          {dashboardDeadlines.map((item) => (
+            <div key={item.id}>
+              <div>
+                <strong>{item.name}</strong>
+                <span>{formatDateTime(item.at)}</span>
+              </div>
+              <StatusBadge status={item.status === 'upcoming' ? 'IN_REVIEW' : 'SUBMITTED'} />
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function StaticSponsorsPage() {
+  const { pushToast } = useAdminToast()
+  const [groupItems, setGroupItems] = useState([])
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [groupDrawerOpen, setGroupDrawerOpen] = useState(false)
+  const [editingGroupId, setEditingGroupId] = useState(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [groupErrors, setGroupErrors] = useState({})
+  const [groupForm, setGroupForm] = useState({
+    code: '',
+    nameTh: '',
+    nameEn: '',
+    sortOrder: 1,
+    isActive: true,
+  })
+  const [errors, setErrors] = useState({})
+  const [form, setForm] = useState({
+    sponsorNameEn: '',
+    sponsorNameTh: '',
+    websiteUrl: '',
+    tierCode: 'co_organizer',
+    tierNameTh: 'ผู้ร่วมจัด',
+    tierNameEn: 'Co-Organizer',
+    sponsorGroupId: null,
+    sortOrder: 1,
+    isEnabled: true,
+    logoStorageKey: '',
+    logoFile: null,
+    logoFileName: '',
+    logoType: '',
+    logoSize: 0,
+  })
+
+  const fetchSponsors = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(apiUrl('/api/admin/sponsors'), { credentials: 'include' })
+      const data = await response.json()
+      if (data.ok) {
+        setItems(
+          data.data.map((item) => ({
+            id: item.id,
+            name: item.name,
+            nameTh: item.nameTh,
+            link: item.link,
+            displayOrder: item.displayOrder,
+            isActive: item.isActive,
+            logo: item.logo,
+            logoMeta: item.logoMeta,
+            tierCode: item.tierCode,
+            tierNameTh: item.tierNameTh,
+            tierNameEn: item.tierNameEn,
+            sponsorGroupId: item.sponsorGroupId,
+            sponsorGroup: item.sponsorGroup,
+            sponsorGroupNameTh: item.sponsorGroup?.nameTh || '',
+            sponsorGroupNameEn: item.sponsorGroup?.nameEn || '',
+          }))
+        )
+      }
+    } catch (err) {
+      console.error('Failed to fetch sponsors:', err)
+      pushToast({ type: 'error', title: 'ไม่สามารถโหลดข้อมูล sponsor ได้' })
+    } finally {
+      setLoading(false)
+    }
+  }, [pushToast])
+
+  const fetchSponsorGroups = useCallback(async () => {
+    try {
+      const response = await fetch(apiUrl('/api/admin/sponsor-groups'), { credentials: 'include' })
+      const data = await response.json()
+      if (data.ok) {
+        setGroupItems(data.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch sponsor groups:', err)
+      pushToast({ type: 'error', title: 'ไม่สามารถโหลดข้อมูลกลุ่มภาคีได้' })
+    }
+  }, [pushToast])
+
+  useEffect(() => {
+    fetchSponsors()
+    fetchSponsorGroups()
+  }, [fetchSponsors, fetchSponsorGroups])
+
+  const openCreateGroup = () => {
+    setEditingGroupId(null)
+    setGroupErrors({})
+    setGroupForm({
+      code: '',
+      nameTh: '',
+      nameEn: '',
+      sortOrder: groupItems.length + 1,
+      isActive: true,
+    })
+    setGroupDrawerOpen(true)
+  }
+
+  const openEditGroup = (group) => {
+    setEditingGroupId(group.id)
+    setGroupErrors({})
+    setGroupForm({
+      code: group.code || '',
+      nameTh: group.nameTh || '',
+      nameEn: group.nameEn || '',
+      sortOrder: group.sortOrder,
+      isActive: group.isActive !== false,
+    })
+    setGroupDrawerOpen(true)
+  }
+
+  const validateGroup = () => {
+    const next = {}
+    if (!groupForm.code.trim()) next.code = 'กรุณากรอก group_code'
+    if (!groupForm.nameTh.trim()) next.nameTh = 'กรุณากรอกชื่อกลุ่ม (TH)'
+    if (!groupForm.nameEn.trim()) next.nameEn = 'กรุณากรอกชื่อกลุ่ม (EN)'
+    setGroupErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const onSubmitGroup = async () => {
+    if (!validateGroup()) return
+
+    const payload = {
+      code: groupForm.code.trim(),
+      nameTh: groupForm.nameTh.trim(),
+      nameEn: groupForm.nameEn.trim(),
+      sortOrder: Number(groupForm.sortOrder),
+      isActive: groupForm.isActive,
+    }
+
+    try {
+      const response = await fetch(
+        apiUrl(editingGroupId ? `/api/admin/sponsor-groups/${editingGroupId}` : '/api/admin/sponsor-groups'),
+        {
+          method: editingGroupId ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        }
+      )
+      const data = await response.json()
+
+      if (!data.ok) {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+        return
+      }
+
+      pushToast({
+        title: editingGroupId ? 'อัปเดตกลุ่มภาคีสำเร็จ' : 'เพิ่มกลุ่มภาคีสำเร็จ',
+        description: payload.nameTh,
+      })
+      fetchSponsorGroups()
+      fetchSponsors()
+      setGroupDrawerOpen(false)
+    } catch (err) {
+      console.error('Failed to save sponsor group:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการบันทึกกลุ่มภาคี' })
+    }
+  }
+
+  const openCreate = () => {
+    setEditingId(null)
+    setErrors({})
+    setForm({
+      sponsorNameEn: '',
+      sponsorNameTh: '',
+      websiteUrl: '',
+      tierCode: 'co_organizer',
+      tierNameTh: 'ผู้ร่วมจัด',
+      tierNameEn: 'Co-Organizer',
+      sponsorGroupId: groupItems[0]?.id ?? null,
+      sortOrder: items.length + 1,
+      isEnabled: true,
+      logoStorageKey: '',
+      logoFile: null,
+      logoFileName: '',
+      logoType: '',
+      logoSize: 0,
+    })
+    setDrawerOpen(true)
+  }
+
+  const openEdit = (item) => {
+    setEditingId(item.id)
+    setErrors({})
+    setForm({
+      sponsorNameEn: item.name || '',
+      sponsorNameTh: item.nameTh || '',
+      websiteUrl: item.link || '',
+      tierCode: item.tierCode || 'co_organizer',
+      tierNameTh: item.tierNameTh || 'ผู้ร่วมจัด',
+      tierNameEn: item.tierNameEn || 'Co-Organizer',
+      sponsorGroupId: item.sponsorGroupId ?? null,
+      sortOrder: item.displayOrder,
+      isEnabled: item.isActive,
+      logoStorageKey: item.logo || '',
+      logoFile: null,
+      logoFileName: item.logo?.split('/').pop() || '',
+      logoType: item.logoMeta?.type || '',
+      logoSize: (item.logoMeta?.sizeKb || 0) * 1024,
+    })
+    setDrawerOpen(true)
+  }
+
+  const tierFolder = (form.tierCode || 'co_organizer').replace(/_/g, '-')
+  const previewLogoStorageKey = form.logoFileName
+    ? `/static/content/sponsors/${tierFolder}/${form.logoFileName}`
+    : form.logoStorageKey
+
+  const validate = () => {
+    const next = {}
+    if (!form.sponsorNameEn.trim()) next.sponsorNameEn = 'กรุณากรอก sponsor_name_en'
+    if (!form.sponsorNameTh.trim()) next.sponsorNameTh = 'กรุณากรอก sponsor_name_th'
+    if (!form.tierCode.trim()) next.tierCode = 'กรุณากรอก tier_code'
+    if (!editingId && !form.logoFile) next.logo = 'กรุณาอัปโหลดโลโก้'
+    if (form.logoFile && !form.logoFileName.trim()) next.logoFileName = 'กรุณาตั้งชื่อไฟล์ก่อนอัปโหลด'
+    if (form.logoType && !['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'].includes(form.logoType)) {
+      next.logo = 'รองรับเฉพาะ PNG/JPG/WEBP/SVG'
+    }
+    if (form.logoSize > 4 * 1024 * 1024) next.logo = 'ไฟล์ต้องไม่เกิน 4 MB'
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const onSubmit = async () => {
+    if (!validate()) return
+    const payload = {
+      name: form.sponsorNameEn.trim(),
+      nameTh: form.sponsorNameTh.trim(),
+      link: form.websiteUrl.trim() || null,
+      displayOrder: Number(form.sortOrder),
+      isActive: form.isEnabled,
+      tierCode: form.tierCode.trim(),
+      tierNameTh: form.tierNameTh.trim() || null,
+      tierNameEn: form.tierNameEn.trim() || null,
+      sponsorGroupId: form.sponsorGroupId !== null && form.sponsorGroupId !== undefined
+        ? Number(form.sponsorGroupId)
+        : null,
+    }
+
+    const uploadLogoIfNeeded = async (sponsorId) => {
+      if (!form.logoFile) return
+      const formData = new FormData()
+      formData.append('file', form.logoFile)
+      formData.append('fileName', form.logoFileName.trim())
+      formData.append('tierCode', form.tierCode.trim())
+
+      const uploadResponse = await fetch(apiUrl(`/api/admin/sponsors/${sponsorId}/logo`), {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+      const uploadData = await uploadResponse.json()
+      if (!uploadData.ok) {
+        throw new Error(uploadData.message || 'อัปโหลดโลโก้ไม่สำเร็จ')
+      }
+    }
+
+    try {
+      if (editingId) {
+        const response = await fetch(apiUrl(`/api/admin/sponsors/${editingId}`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        })
+        const data = await response.json()
+        if (data.ok) {
+          await uploadLogoIfNeeded(editingId)
+          pushToast({ title: 'อัปเดต Sponsor สำเร็จ', description: form.sponsorNameEn })
+          fetchSponsors()
+        } else {
+          pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+        }
+      } else {
+        const response = await fetch(apiUrl('/api/admin/sponsors'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            ...payload,
+            logo: previewLogoStorageKey,
+          }),
+        })
+        const data = await response.json()
+        if (data.ok) {
+          await uploadLogoIfNeeded(data.data.id)
+          pushToast({ title: 'เพิ่ม Sponsor สำเร็จ', description: form.sponsorNameEn })
+          fetchSponsors()
+        } else {
+          pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+        }
+      }
+    } catch (err) {
+      console.error('Failed to save sponsor:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการบันทึก' })
+    }
+    setDrawerOpen(false)
+  }
+
+  const remove = async (id) => {
+    const target = items.find((item) => item.id === id)
+    try {
+      const response = await fetch(apiUrl(`/api/admin/sponsors/${id}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await response.json()
+      if (data.ok) {
+        pushToast({
+          type: 'warning',
+          title: 'ลบ Sponsor แล้ว',
+          description: target?.name || '',
+        })
+        fetchSponsors()
+      } else {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+      }
+    } catch (err) {
+      console.error('Failed to delete sponsor:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการลบ' })
+    }
+  }
+
+  const moveItem = async (id, direction) => {
+    const index = items.findIndex((item) => item.id === id)
+    if (index === -1) return
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (swapIndex < 0 || swapIndex >= items.length) return
+
+    const next = [...items]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    const reordered = next.map((item, idx) => ({ ...item, displayOrder: idx + 1 }))
+    setItems(reordered)
+
+    try {
+      const updates = reordered.map((item) => ({ id: item.id, displayOrder: item.displayOrder }))
+      await fetch(apiUrl('/api/admin/sponsors/reorder'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ updates }),
+      })
+    } catch (err) {
+      console.error('Failed to reorder sponsors:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับ' })
+      fetchSponsors()
+    }
+  }
+
+  const moveGroup = async (id, direction) => {
+    const index = groupItems.findIndex((item) => item.id === id)
+    if (index === -1) return
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (swapIndex < 0 || swapIndex >= groupItems.length) return
+
+    const next = [...groupItems]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    const reordered = next.map((item, idx) => ({ ...item, sortOrder: idx + 1 }))
+    setGroupItems(reordered)
+
+    try {
+      const updates = reordered.map((item) => ({ id: item.id, sortOrder: item.sortOrder }))
+      await fetch(apiUrl('/api/admin/sponsor-groups/reorder'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ updates }),
+      })
+      fetchSponsors()
+    } catch (err) {
+      console.error('Failed to reorder sponsor groups:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับกลุ่มภาคี' })
+      fetchSponsorGroups()
+    }
+  }
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Static Content: Sponsors"
+        description=""
+        right={
+          <div className="admin-ui-row-actions">
+            <button type="button" className="admin-ui-btn" onClick={openCreateGroup}>
+              <Plus size={15} />
+              Add Group
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
+              <Plus size={15} />
+              Add Sponsor
+            </button>
+          </div>
+        }
+      />
+
+      <AdminDataTable
+        loading={loading}
+        rows={[...groupItems].sort((a, b) => a.sortOrder - b.sortOrder)}
+        searchKeys={['nameTh', 'nameEn', 'code']}
+        searchPlaceholder="ค้นหาชื่อกลุ่มภาคี"
+        filters={[
+          { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+          { label: 'Active', value: 'active', predicate: (row) => row.isActive },
+          { label: 'Inactive', value: 'inactive', predicate: (row) => !row.isActive },
+        ]}
+        columns={[
+          {
+            key: 'name',
+            label: 'Sponsor Group',
+            render: (row) => (
+              <div>
+                <strong>{row.nameTh}</strong>
+                <span>{row.nameEn}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'code',
+            label: 'Group Code',
+          },
+          {
+            key: 'sortOrder',
+            label: 'Group Order',
+          },
+          {
+            key: 'isActive',
+            label: 'Status',
+            render: (row) => <StatusBadge status={row.isActive ? 'APPROVED' : 'RETURNED'} label={row.isActive ? 'Enable' : 'Disable'} />,
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="admin-ui-row-actions">
+                <button type="button" onClick={() => moveGroup(row.id, 'up')} aria-label="move up group">
+                  <ArrowUp size={14} />
+                </button>
+                <button type="button" onClick={() => moveGroup(row.id, 'down')} aria-label="move down group">
+                  <ArrowDown size={14} />
+                </button>
+                <button type="button" onClick={() => openEditGroup(row)} aria-label="edit group">
+                  <Pencil size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <DetailDrawer
+        open={groupDrawerOpen}
+        onClose={() => setGroupDrawerOpen(false)}
+        title={editingGroupId ? 'Edit Sponsor Group' : 'Create Sponsor Group'}
+        subtitle="จัดการชื่อกลุ่มและลำดับการแสดงผล"
+      >
+        <div className="admin-ui-form">
+          <label htmlFor="sponsor-group-code">
+            group_code *
+            <input
+              id="sponsor-group-code"
+              value={groupForm.code}
+              onChange={(event) => setGroupForm((prev) => ({ ...prev, code: event.target.value }))}
+            />
+            {groupErrors.code ? <small>{groupErrors.code}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-group-name-th">
+            group_name_th *
+            <input
+              id="sponsor-group-name-th"
+              value={groupForm.nameTh}
+              onChange={(event) => setGroupForm((prev) => ({ ...prev, nameTh: event.target.value }))}
+            />
+            {groupErrors.nameTh ? <small>{groupErrors.nameTh}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-group-name-en">
+            group_name_en *
+            <input
+              id="sponsor-group-name-en"
+              value={groupForm.nameEn}
+              onChange={(event) => setGroupForm((prev) => ({ ...prev, nameEn: event.target.value }))}
+            />
+            {groupErrors.nameEn ? <small>{groupErrors.nameEn}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-group-order">
+            sort_order
+            <input
+              id="sponsor-group-order"
+              type="number"
+              min={1}
+              value={groupForm.sortOrder}
+              onChange={(event) => setGroupForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+            />
+          </label>
+
+          <div className="admin-ui-toggle-row">
+            <label htmlFor="sponsor-group-active" className="admin-ui-toggle-label">
+              Status
+            </label>
+            <label className="admin-ui-toggle">
+              <input
+                type="checkbox"
+                checked={groupForm.isActive}
+                onChange={(event) => setGroupForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+              />
+              <span className="admin-ui-toggle-switch"></span>
+              <span className="admin-ui-toggle-text">{groupForm.isActive ? 'Enabled' : 'Disabled'}</span>
+            </label>
+          </div>
+
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setGroupDrawerOpen(false)}>
+              ยกเลิก
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={onSubmitGroup}>
+              <Save size={14} />
+              บันทึกกลุ่ม
+            </button>
+          </div>
+        </div>
+      </DetailDrawer>
+
+      <AdminDataTable
+        loading={loading}
+        rows={[...items].sort((a, b) => {
+          const leftGroupOrder = Number(a.sponsorGroup?.sortOrder ?? 999999)
+          const rightGroupOrder = Number(b.sponsorGroup?.sortOrder ?? 999999)
+          if (leftGroupOrder !== rightGroupOrder) return leftGroupOrder - rightGroupOrder
+          return a.displayOrder - b.displayOrder
+        })}
+        searchKeys={['nameTh', 'name', 'link', 'sponsorGroupNameTh', 'sponsorGroupNameEn']}
+        searchPlaceholder="ค้นหาชื่อ sponsor หรือลิงก์"
+        filters={[
+          { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+          { label: 'Active', value: 'active', predicate: (row) => row.isActive },
+          { label: 'Inactive', value: 'inactive', predicate: (row) => !row.isActive },
+        ]}
+        columns={[
+          {
+            key: 'logo',
+            label: 'Logo + Name',
+            render: (row) => (
+              <div className="admin-ui-inline-logo">
+                <img src={apiUrl(row.logo)} alt={row.nameTh || row.name} loading="lazy" decoding="async" />
+                <div>
+                  <strong>{row.nameTh || row.name}</strong>
+                  <span>{row.logoMeta?.type || '-'}</span>
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: 'link',
+            label: 'Link',
+            render: (row) => (
+              row.link ? (
+                <a href={row.link} target="_blank" rel="noreferrer" className="admin-ui-link">
+                  <Link2 size={13} />
+                  {row.link}
+                </a>
+              ) : (
+                <span>-</span>
+              )
+            ),
+          },
+          {
+            key: 'sponsorGroup',
+            label: 'Group',
+            render: (row) => <span>{row.sponsorGroup?.nameTh || '-'}</span>,
+          },
+          {
+            key: 'displayOrder',
+            label: 'Display Order',
+          },
+          {
+            key: 'isActive',
+            label: 'Status',
+            render: (row) => <StatusBadge status={row.isActive ? 'APPROVED' : 'RETURNED'} label={row.isActive ? 'Enable' : 'Disable'} />,
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="admin-ui-row-actions">
+                <button type="button" onClick={() => moveItem(row.id, 'up')} aria-label="move up">
+                  <ArrowUp size={14} />
+                </button>
+                <button type="button" onClick={() => moveItem(row.id, 'down')} aria-label="move down">
+                  <ArrowDown size={14} />
+                </button>
+                <button type="button" onClick={() => openEdit(row)} aria-label="edit">
+                  <Pencil size={14} />
+                </button>
+                <button type="button" onClick={() => remove(row.id)} aria-label="delete">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <DetailDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={editingId ? 'Edit Sponsor' : 'Create Sponsor'}
+        subtitle="รองรับการอัปโหลดโลโก้และตรวจสอบไฟล์ภาพ"
+      >
+        <div className="admin-ui-form">
+          <label htmlFor="sponsor-name-en">
+            sponsor_name_en *
+            <input
+              id="sponsor-name-en"
+              value={form.sponsorNameEn}
+              onChange={(event) => setForm((prev) => ({ ...prev, sponsorNameEn: event.target.value }))}
+            />
+            {errors.sponsorNameEn ? <small>{errors.sponsorNameEn}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-name-th">
+            sponsor_name_th *
+            <input
+              id="sponsor-name-th"
+              value={form.sponsorNameTh}
+              onChange={(event) => setForm((prev) => ({ ...prev, sponsorNameTh: event.target.value }))}
+            />
+            {errors.sponsorNameTh ? <small>{errors.sponsorNameTh}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-website-url">
+            website_url
+            <input
+              id="sponsor-website-url"
+              value={form.websiteUrl}
+              onChange={(event) => setForm((prev) => ({ ...prev, websiteUrl: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="sponsor-tier-code">
+            tier_code *
+            <input
+              id="sponsor-tier-code"
+              value={form.tierCode}
+              onChange={(event) => setForm((prev) => ({ ...prev, tierCode: event.target.value }))}
+            />
+            {errors.tierCode ? <small>{errors.tierCode}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-tier-name-th">
+            tier_name_th
+            <input
+              id="sponsor-tier-name-th"
+              value={form.tierNameTh}
+              onChange={(event) => setForm((prev) => ({ ...prev, tierNameTh: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="sponsor-tier-name-en">
+            tier_name_en
+            <input
+              id="sponsor-tier-name-en"
+              value={form.tierNameEn}
+              onChange={(event) => setForm((prev) => ({ ...prev, tierNameEn: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="sponsor-group-id">
+            sponsor_group
+            <select
+              id="sponsor-group-id"
+              value={form.sponsorGroupId ?? ''}
+              onChange={(event) => setForm((prev) => ({
+                ...prev,
+                sponsorGroupId: event.target.value ? Number(event.target.value) : null,
+              }))}
+            >
+              <option value="">-</option>
+              {groupItems.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.nameTh} ({group.nameEn})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label htmlFor="sponsor-order">
+            sort_order
+            <input
+              id="sponsor-order"
+              type="number"
+              min={1}
+              value={form.sortOrder}
+              onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="sponsor-logo">
+            Logo Upload {editingId ? '(optional)' : '*'}
+            <input
+              id="sponsor-logo"
+              type="file"
+              accept="image/*"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (!file) return
+                setForm((prev) => ({
+                  ...prev,
+                  logoFile: file,
+                  logoFileName: file.name,
+                  logoType: file.type,
+                  logoSize: file.size,
+                }))
+              }}
+            />
+            {form.logoFileName ? (
+              <span className="admin-ui-file-chip">
+                <Upload size={13} />
+                {form.logoFileName}
+              </span>
+            ) : null}
+            {errors.logo ? <small>{errors.logo}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-logo-file-name">
+            Logo File Name
+            <input
+              id="sponsor-logo-file-name"
+              value={form.logoFileName}
+              placeholder="example-logo.png"
+              onChange={(event) => setForm((prev) => ({ ...prev, logoFileName: event.target.value }))}
+            />
+            {errors.logoFileName ? <small>{errors.logoFileName}</small> : null}
+          </label>
+
+          <label htmlFor="sponsor-logo-key">
+            logo_storage_key
+            <input
+              id="sponsor-logo-key"
+              value={previewLogoStorageKey}
+              readOnly
+            />
+          </label>
+
+          <div className="admin-ui-toggle-row">
+            <label htmlFor="sponsor-active" className="admin-ui-toggle-label">
+              Status
+            </label>
+            <label className="admin-ui-toggle">
+              <input
+                type="checkbox"
+                checked={form.isEnabled}
+                onChange={(event) => setForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
+              />
+              <span className="admin-ui-toggle-switch"></span>
+              <span className="admin-ui-toggle-text">{form.isEnabled ? 'Enabled' : 'Disabled'}</span>
+            </label>
+          </div>
+
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setDrawerOpen(false)}>
+              ยกเลิก
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={onSubmit}>
+              <Save size={14} />
+              บันทึก
+            </button>
+          </div>
+        </div>
+      </DetailDrawer>
+    </div>
+  )
+}
+
+function StaticCarouselsPage() {
+  const { pushToast } = useAdminToast()
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [errors, setErrors] = useState({})
+  const [form, setForm] = useState({
+    titleTh: '',
+    titleEn: '',
+    descriptionTh: '',
+    descriptionEn: '',
+    imageStorageKey: '',
+    imageFile: null,
+    imageFileName: '',
+    imageType: '',
+    imageSize: 0,
+    imageAltTh: '',
+    imageAltEn: '',
+    targetUrl: '',
+    openInNewTab: true,
+    sortOrder: 1,
+    isEnabled: true,
+    startAt: '',
+    endAt: '',
+  })
+
+  const fetchCarousels = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(apiUrl('/api/admin/carousels'), { credentials: 'include' })
+      const data = await response.json()
+      if (data.ok) {
+        setItems(
+          data.data.map((item) => ({
+            id: item.id,
+            titleTh: item.titleTh || '',
+            titleEn: item.titleEn || '',
+            descriptionTh: item.descriptionTh || '',
+            descriptionEn: item.descriptionEn || '',
+            imageStorageKey: item.imageStorageKey || item.imageUrl || '',
+            imageUrl: item.imageUrl || item.imageStorageKey || '',
+            imageAltTh: item.imageAltTh || '',
+            imageAltEn: item.imageAltEn || '',
+            targetUrl: item.targetUrl || '',
+            openInNewTab: item.openInNewTab !== false,
+            sortOrder: item.sortOrder || 0,
+            isEnabled: item.isEnabled !== false,
+            startAt: item.startAt || null,
+            endAt: item.endAt || null,
+          }))
+        )
+      }
+    } catch (err) {
+      console.error('Failed to fetch carousels:', err)
+      pushToast({ type: 'error', title: 'ไม่สามารถโหลดข้อมูล carousel ได้' })
+    } finally {
+      setLoading(false)
+    }
+  }, [pushToast])
+
+  useEffect(() => {
+    fetchCarousels()
+  }, [fetchCarousels])
+
+  const openCreate = () => {
+    const nextSortOrder = items.length
+      ? Math.max(...items.map((item) => Number(item.sortOrder) || 0)) + 1
+      : 1
+
+    setEditingId(null)
+    setErrors({})
+    setForm({
+      titleTh: '',
+      titleEn: '',
+      descriptionTh: '',
+      descriptionEn: '',
+      imageStorageKey: '',
+      imageFile: null,
+      imageFileName: '',
+      imageType: '',
+      imageSize: 0,
+      imageAltTh: '',
+      imageAltEn: '',
+      targetUrl: '',
+      openInNewTab: true,
+      sortOrder: nextSortOrder,
+      isEnabled: true,
+      startAt: '',
+      endAt: '',
+    })
+    setDrawerOpen(true)
+  }
+
+  const openEdit = (item) => {
+    setEditingId(item.id)
+    setErrors({})
+    setForm({
+      titleTh: item.titleTh || '',
+      titleEn: item.titleEn || '',
+      descriptionTh: item.descriptionTh || '',
+      descriptionEn: item.descriptionEn || '',
+      imageStorageKey: item.imageStorageKey || '',
+      imageFile: null,
+      imageFileName: item.imageStorageKey?.split('/').pop() || '',
+      imageType: '',
+      imageSize: 0,
+      imageAltTh: item.imageAltTh || '',
+      imageAltEn: item.imageAltEn || '',
+      targetUrl: item.targetUrl || '',
+      openInNewTab: item.openInNewTab !== false,
+      sortOrder: item.sortOrder || 0,
+      isEnabled: item.isEnabled !== false,
+      startAt: formatDateInput(item.startAt),
+      endAt: formatDateInput(item.endAt),
+    })
+    setDrawerOpen(true)
+  }
+
+  const previewImageStorageKey = form.imageFileName
+    ? `/static/content/carousels/${form.imageFileName}`
+    : form.imageStorageKey
+
+  const validate = () => {
+    const next = {}
+
+    if (!form.titleTh.trim() && !form.titleEn.trim()) {
+      next.title = 'กรุณากรอก title อย่างน้อย 1 ภาษา'
+    }
+
+    if (!editingId && !form.imageFile && !previewImageStorageKey.trim()) {
+      next.image = 'กรุณาอัปโหลดรูปภาพหรือระบุ imageStorageKey'
+    }
+
+    if (form.imageFile && !form.imageFileName.trim()) {
+      next.imageFileName = 'กรุณาตั้งชื่อไฟล์ก่อนอัปโหลด'
+    }
+
+    if (form.imageType && !['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'].includes(form.imageType)) {
+      next.image = 'รองรับเฉพาะ PNG/JPG/WEBP/SVG'
+    }
+
+    if (form.imageSize > 8 * 1024 * 1024) {
+      next.image = 'ไฟล์ต้องไม่เกิน 8 MB'
+    }
+
+    if (form.targetUrl.trim()) {
+      try {
+        const parsedUrl = new URL(form.targetUrl.trim())
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+          next.targetUrl = 'targetUrl ต้องขึ้นต้นด้วย http:// หรือ https://'
+        }
+      } catch {
+        next.targetUrl = 'targetUrl ไม่ถูกต้อง'
+      }
+    }
+
+    if (form.startAt && form.endAt) {
+      const start = new Date(form.startAt).getTime()
+      const end = new Date(form.endAt).getTime()
+      if (!Number.isNaN(start) && !Number.isNaN(end) && start > end) {
+        next.endAt = 'endAt ต้องมากกว่าหรือเท่ากับ startAt'
+      }
+    }
+
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const onSubmit = async () => {
+    if (!validate()) return
+
+    const payload = {
+      titleTh: form.titleTh.trim() || null,
+      titleEn: form.titleEn.trim() || null,
+      descriptionTh: form.descriptionTh.trim() || null,
+      descriptionEn: form.descriptionEn.trim() || null,
+      imageStorageKey: previewImageStorageKey.trim(),
+      imageAltTh: form.imageAltTh.trim() || null,
+      imageAltEn: form.imageAltEn.trim() || null,
+      targetUrl: form.targetUrl.trim() || null,
+      openInNewTab: Boolean(form.openInNewTab),
+      sortOrder: Math.max(0, Number(form.sortOrder) || 0),
+      isEnabled: Boolean(form.isEnabled),
+      startAt: form.startAt ? new Date(form.startAt).toISOString() : null,
+      endAt: form.endAt ? new Date(form.endAt).toISOString() : null,
+    }
+
+    const uploadImageIfNeeded = async (slideId) => {
+      if (!form.imageFile) return
+      const formData = new FormData()
+      formData.append('file', form.imageFile)
+      formData.append('fileName', form.imageFileName.trim())
+
+      const uploadResponse = await fetch(apiUrl(`/api/admin/carousels/${slideId}/image`), {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+      const uploadData = await uploadResponse.json()
+      if (!uploadData.ok) {
+        throw new Error(uploadData.message || 'อัปโหลดรูปภาพไม่สำเร็จ')
+      }
+    }
+
+    try {
+      if (editingId) {
+        const response = await fetch(apiUrl(`/api/admin/carousels/${editingId}`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        })
+        const data = await response.json()
+        if (data.ok) {
+          await uploadImageIfNeeded(editingId)
+          pushToast({ title: 'อัปเดต Carousel สำเร็จ', description: form.titleTh || form.titleEn })
+          await fetchCarousels()
+        } else {
+          pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+        }
+      } else {
+        const response = await fetch(apiUrl('/api/admin/carousels'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        })
+        const data = await response.json()
+        if (data.ok) {
+          await uploadImageIfNeeded(data.data.id)
+          pushToast({ title: 'เพิ่ม Carousel สำเร็จ', description: form.titleTh || form.titleEn })
+          await fetchCarousels()
+        } else {
+          pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+        }
+      }
+    } catch (err) {
+      console.error('Failed to save carousel:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการบันทึก' })
+    }
+
+    setDrawerOpen(false)
+  }
+
+  const remove = async (id) => {
+    const target = items.find((item) => item.id === id)
+    try {
+      const response = await fetch(apiUrl(`/api/admin/carousels/${id}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await response.json()
+      if (data.ok) {
+        pushToast({
+          type: 'warning',
+          title: 'ลบ Carousel แล้ว',
+          description: target?.titleTh || target?.titleEn || '',
+        })
+        await fetchCarousels()
+      } else {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+      }
+    } catch (err) {
+      console.error('Failed to delete carousel:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการลบ' })
+    }
+  }
+
+  const moveItem = async (id, direction) => {
+    const sorted = [...items].sort((a, b) => a.sortOrder - b.sortOrder)
+    const index = sorted.findIndex((item) => item.id === id)
+    if (index < 0) return
+
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (swapIndex < 0 || swapIndex >= sorted.length) return
+
+    const next = [...sorted]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    const reordered = next.map((item, idx) => ({ ...item, sortOrder: idx + 1 }))
+    setItems(reordered)
+
+    try {
+      const updates = reordered.map((item) => ({ id: item.id, sortOrder: item.sortOrder }))
+      await fetch(apiUrl('/api/admin/carousels/reorder'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ updates }),
+      })
+    } catch (err) {
+      console.error('Failed to reorder carousels:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับ' })
+      fetchCarousels()
+    }
+  }
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Static Content: Carousel"
+        description="จัดการภาพสไลด์หน้าแรก พร้อม URL, publish window, และลำดับการแสดงผล"
+        right={
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
+            <Plus size={15} />
+            Add Slide
+          </button>
+        }
+      />
+
+      <AdminDataTable
+        loading={loading}
+        rows={[...items].sort((a, b) => a.sortOrder - b.sortOrder)}
+        searchKeys={['titleTh', 'titleEn', 'targetUrl', 'descriptionTh', 'descriptionEn']}
+        searchPlaceholder="ค้นหา title / description / target URL"
+        filters={[
+          { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+          { label: 'Enabled', value: 'active', predicate: (row) => row.isEnabled },
+          { label: 'Disabled', value: 'inactive', predicate: (row) => !row.isEnabled },
+        ]}
+        columns={[
+          {
+            key: 'image',
+            label: 'Image + Title',
+            render: (row) => (
+              <div className="admin-ui-inline-banner">
+                <img src={apiUrl(row.imageUrl || row.imageStorageKey)} alt={row.titleTh || row.titleEn || 'carousel'} loading="lazy" decoding="async" />
+                <div className="admin-ui-col-stack">
+                  <strong>{row.titleTh || row.titleEn || '-'}</strong>
+                  <span>{row.titleEn && row.titleTh ? row.titleEn : row.descriptionTh || row.descriptionEn || '-'}</span>
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: 'targetUrl',
+            label: 'Target URL',
+            render: (row) => (
+              row.targetUrl ? (
+                <a href={row.targetUrl} target="_blank" rel="noreferrer" className="admin-ui-link">
+                  <Link2 size={13} />
+                  {row.targetUrl}
+                </a>
+              ) : (
+                <span>-</span>
+              )
+            ),
+          },
+          {
+            key: 'publishWindow',
+            label: 'Publish Window',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <strong>{formatDateTime(row.startAt)}</strong>
+                <span>{formatDateTime(row.endAt)}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'sortOrder',
+            label: 'Order',
+          },
+          {
+            key: 'isEnabled',
+            label: 'Status',
+            render: (row) => <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} />,
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="admin-ui-row-actions">
+                <button type="button" onClick={() => moveItem(row.id, 'up')} aria-label="move up">
+                  <ArrowUp size={14} />
+                </button>
+                <button type="button" onClick={() => moveItem(row.id, 'down')} aria-label="move down">
+                  <ArrowDown size={14} />
+                </button>
+                <button type="button" onClick={() => openEdit(row)} aria-label="edit">
+                  <Pencil size={14} />
+                </button>
+                <button type="button" onClick={() => remove(row.id)} aria-label="delete">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <DetailDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={editingId ? 'Edit Carousel Slide' : 'Create Carousel Slide'}
+        subtitle="รองรับ image upload, URL click-through, และช่วงเวลาเผยแพร่"
+      >
+        <div className="admin-ui-form">
+          <label htmlFor="carousel-title-th">
+            title_th
+            <input
+              id="carousel-title-th"
+              value={form.titleTh}
+              onChange={(event) => setForm((prev) => ({ ...prev, titleTh: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="carousel-title-en">
+            title_en
+            <input
+              id="carousel-title-en"
+              value={form.titleEn}
+              onChange={(event) => setForm((prev) => ({ ...prev, titleEn: event.target.value }))}
+            />
+            {errors.title ? <small>{errors.title}</small> : null}
+          </label>
+
+          <label htmlFor="carousel-description-th">
+            description_th
+            <textarea
+              id="carousel-description-th"
+              rows={3}
+              value={form.descriptionTh}
+              onChange={(event) => setForm((prev) => ({ ...prev, descriptionTh: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="carousel-description-en">
+            description_en
+            <textarea
+              id="carousel-description-en"
+              rows={3}
+              value={form.descriptionEn}
+              onChange={(event) => setForm((prev) => ({ ...prev, descriptionEn: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="carousel-image-upload">
+            Image Upload {editingId ? '(optional)' : '*'}
+            <input
+              id="carousel-image-upload"
+              type="file"
+              accept="image/*"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (!file) return
+                setForm((prev) => ({
+                  ...prev,
+                  imageFile: file,
+                  imageFileName: file.name,
+                  imageType: file.type,
+                  imageSize: file.size,
+                }))
+              }}
+            />
+            {form.imageFileName ? (
+              <span className="admin-ui-file-chip">
+                <Upload size={13} />
+                {form.imageFileName}
+              </span>
+            ) : null}
+            {errors.image ? <small>{errors.image}</small> : null}
+          </label>
+
+          <label htmlFor="carousel-image-file-name">
+            Image File Name
+            <input
+              id="carousel-image-file-name"
+              value={form.imageFileName}
+              placeholder="hero-slide-01.jpg"
+              onChange={(event) => setForm((prev) => ({ ...prev, imageFileName: event.target.value }))}
+            />
+            {errors.imageFileName ? <small>{errors.imageFileName}</small> : null}
+          </label>
+
+          <label htmlFor="carousel-image-storage-key">
+            image_storage_key
+            <input
+              id="carousel-image-storage-key"
+              value={previewImageStorageKey}
+              readOnly
+            />
+          </label>
+
+          <label htmlFor="carousel-image-alt-th">
+            image_alt_th
+            <input
+              id="carousel-image-alt-th"
+              value={form.imageAltTh}
+              onChange={(event) => setForm((prev) => ({ ...prev, imageAltTh: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="carousel-image-alt-en">
+            image_alt_en
+            <input
+              id="carousel-image-alt-en"
+              value={form.imageAltEn}
+              onChange={(event) => setForm((prev) => ({ ...prev, imageAltEn: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="carousel-target-url">
+            target_url
+            <input
+              id="carousel-target-url"
+              value={form.targetUrl}
+              placeholder="https://example.com"
+              onChange={(event) => setForm((prev) => ({ ...prev, targetUrl: event.target.value }))}
+            />
+            {errors.targetUrl ? <small>{errors.targetUrl}</small> : null}
+          </label>
+
+          <div className="admin-ui-toggle-row">
+            <label htmlFor="carousel-open-in-new-tab" className="admin-ui-toggle-label">
+              open_in_new_tab
+            </label>
+            <label className="admin-ui-toggle">
+              <input
+                id="carousel-open-in-new-tab"
+                type="checkbox"
+                checked={form.openInNewTab}
+                onChange={(event) => setForm((prev) => ({ ...prev, openInNewTab: event.target.checked }))}
+              />
+              <span className="admin-ui-toggle-switch"></span>
+              <span className="admin-ui-toggle-text">{form.openInNewTab ? 'Open New Tab' : 'Open Same Tab'}</span>
+            </label>
+          </div>
+
+          <label htmlFor="carousel-sort-order">
+            sort_order
+            <input
+              id="carousel-sort-order"
+              type="number"
+              min={0}
+              value={form.sortOrder}
+              onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="carousel-start-at">
+            start_at
+            <input
+              id="carousel-start-at"
+              type="datetime-local"
+              value={form.startAt}
+              onChange={(event) => setForm((prev) => ({ ...prev, startAt: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="carousel-end-at">
+            end_at
+            <input
+              id="carousel-end-at"
+              type="datetime-local"
+              value={form.endAt}
+              onChange={(event) => setForm((prev) => ({ ...prev, endAt: event.target.value }))}
+            />
+            {errors.endAt ? <small>{errors.endAt}</small> : null}
+          </label>
+
+          <div className="admin-ui-toggle-row">
+            <label htmlFor="carousel-is-enabled" className="admin-ui-toggle-label">
+              Status
+            </label>
+            <label className="admin-ui-toggle">
+              <input
+                id="carousel-is-enabled"
+                type="checkbox"
+                checked={form.isEnabled}
+                onChange={(event) => setForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
+              />
+              <span className="admin-ui-toggle-switch"></span>
+              <span className="admin-ui-toggle-text">{form.isEnabled ? 'Enabled' : 'Disabled'}</span>
+            </label>
+          </div>
+
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setDrawerOpen(false)}>
+              ยกเลิก
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={onSubmit}>
+              <Save size={14} />
+              บันทึก
+            </button>
+          </div>
+        </div>
+      </DetailDrawer>
+    </div>
+  )
+}
+
+function StaticRewardsPage() {
+  const { pushToast } = useAdminToast()
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [form, setForm] = useState({
+    rank: 1,
+    title: '',
+    titleTh: '',
+    amount: '',
+    currency: 'THB',
+    prizeTextTh: '',
+    prizeTextEn: '',
+    descriptionTh: '',
+    descriptionEn: '',
+    isActive: true,
+  })
+
+  const [errors, setErrors] = useState({})
+
+  const fetchRewards = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(apiUrl('/api/admin/rewards'), { credentials: 'include' })
+      const data = await response.json()
+      if (data.ok) {
+        setItems(
+          data.data.map((item) => ({
+            id: item.id,
+            rank: item.rank,
+            title: item.title,
+            titleTh: item.titleTh,
+            amount: item.amount,
+            currency: item.currency,
+            prizeTextTh: item.prizeTextTh,
+            prizeTextEn: item.prizeTextEn,
+            descriptionTh: item.descriptionTh,
+            descriptionEn: item.descriptionEn,
+            sortOrder: item.sortOrder,
+            isActive: item.isActive,
+          }))
+        )
+      }
+    } catch (err) {
+      console.error('Failed to fetch rewards:', err)
+      pushToast({ type: 'error', title: 'ไม่สามารถโหลดข้อมูลรางวัลได้' })
+    } finally {
+      setLoading(false)
+    }
+  }, [pushToast])
+
+  useEffect(() => {
+    fetchRewards()
+  }, [fetchRewards])
+
+  const openCreate = () => {
+    setEditingId(null)
+    setForm({
+      rank: items.length + 1,
+      title: '',
+      titleTh: '',
+      amount: '',
+      currency: 'THB',
+      prizeTextTh: '',
+      prizeTextEn: '',
+      descriptionTh: '',
+      descriptionEn: '',
+      isActive: true,
+    })
+    setErrors({})
+    setDrawerOpen(true)
+  }
+
+  const openEdit = (item) => {
+    setEditingId(item.id)
+    setForm({
+      rank: item.rank,
+      title: item.title,
+      titleTh: item.titleTh || '',
+      amount: item.amount ?? '',
+      currency: item.currency ?? 'THB',
+      prizeTextTh: item.prizeTextTh || '',
+      prizeTextEn: item.prizeTextEn || '',
+      descriptionTh: item.descriptionTh || '',
+      descriptionEn: item.descriptionEn || '',
+      isActive: item.isActive,
+    })
+    setErrors({})
+    setDrawerOpen(true)
+  }
+
+  const validate = () => {
+    const next = {}
+    if (!form.title.trim()) next.title = 'กรุณากรอกหัวข้อรางวัล'
+    if (Number(form.amount) <= 0) next.amount = 'จำนวนเงินต้องมากกว่า 0'
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const save = async () => {
+    if (!validate()) return
+
+    const payload = {
+      rank: String(form.rank),
+      title: form.title.trim(),
+      titleTh: form.titleTh.trim() || form.title.trim(),
+      amount: form.amount ? Number(form.amount) : null,
+      currency: form.currency.trim() || null,
+      prizeTextTh: form.prizeTextTh.trim() || null,
+      prizeTextEn: form.prizeTextEn.trim() || null,
+      descriptionTh: form.descriptionTh.trim() || null,
+      descriptionEn: form.descriptionEn.trim() || null,
+      isActive: form.isActive,
+    }
+
+    try {
+      const url = editingId
+        ? apiUrl(`/api/admin/rewards/${editingId}`)
+        : apiUrl('/api/admin/rewards')
+      const method = editingId ? 'PATCH' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+
+      const data = await response.json()
+      if (data.ok) {
+        pushToast({ title: editingId ? 'อัปเดตรางวัลสำเร็จ' : 'เพิ่มรางวัลสำเร็จ' })
+        await fetchRewards()
+      } else {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+      }
+    } catch (err) {
+      console.error('Failed to save reward:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการบันทึก' })
+    }
+    setDrawerOpen(false)
+  }
+
+  const remove = async (id) => {
+    try {
+      const response = await fetch(apiUrl(`/api/admin/rewards/${id}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await response.json()
+      if (data.ok) {
+        pushToast({ type: 'warning', title: 'ลบรางวัลแล้ว' })
+        await fetchRewards()
+      } else {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาด' })
+      }
+    } catch (err) {
+      console.error('Failed to delete reward:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการลบ' })
+    }
+  }
+
+  const moveItem = async (id, direction) => {
+    const sorted = [...items].sort((a, b) => (a.sortOrder || a.rank) - (b.sortOrder || b.rank))
+    const index = sorted.findIndex((item) => item.id === id)
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (index < 0 || swapIndex < 0 || swapIndex >= sorted.length) return
+
+    const itemA = sorted[index]
+    const itemB = sorted[swapIndex]
+
+    try {
+      await Promise.all([
+        fetch(apiUrl(`/api/admin/rewards/${itemA.id}`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ sortOrder: itemB.sortOrder || itemB.rank }),
+        }),
+        fetch(apiUrl(`/api/admin/rewards/${itemB.id}`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ sortOrder: itemA.sortOrder || itemA.rank }),
+        }),
+      ])
+      await fetchRewards()
+    } catch (err) {
+      console.error('Failed to reorder rewards:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการเรียงลำดับ' })
+    }
+  }
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Static Content: Rewards"
+        description=""
+        right={
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
+            <Plus size={15} />
+            Add Reward
+          </button>
+        }
+      />
+
+      <AdminDataTable
+        rows={[...items].sort((a, b) => (a.sortOrder || a.rank) - (b.sortOrder || b.rank))}
+        searchKeys={['title', 'titleTh', 'descriptionTh', 'descriptionEn']}
+        searchPlaceholder="ค้นหา reward title / description"
+        filters={[
+          { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+          { label: 'Enabled', value: 'active', predicate: (row) => row.isActive },
+          { label: 'Disabled', value: 'inactive', predicate: (row) => !row.isActive },
+        ]}
+        columns={[
+          { key: 'rank', label: 'Rank' },
+          {
+            key: 'title',
+            label: 'Title',
+            render: (row) => (
+              <div>
+                <div>{row.titleTh || row.title}</div>
+                {(row.titleTh && row.title) && <div className="admin-ui-text-muted">{row.title}</div>}
+              </div>
+            ),
+          },
+          {
+            key: 'amount',
+            label: 'Amount',
+            render: (row) => row.amount ? Number(row.amount).toLocaleString('th-TH') : '-',
+          },
+          {
+            key: 'currency',
+            label: 'Currency',
+            render: (row) => row.currency || '-',
+          },
+          {
+            key: 'sortOrder',
+            label: 'Order',
+          },
+          {
+            key: 'isActive',
+            label: 'Status',
+            render: (row) => <StatusBadge status={row.isActive ? 'ENABLED' : 'DISABLED'} />,
+          },
+          {
+            key: 'actions',
+            label: '',
+            render: (row) => (
+              <div className="admin-ui-row-actions">
+                <button type="button" onClick={() => moveItem(row.id, 'up')} aria-label="move up">
+                  <ArrowUp size={14} />
+                </button>
+                <button type="button" onClick={() => moveItem(row.id, 'down')} aria-label="move down">
+                  <ArrowDown size={14} />
+                </button>
+                <button type="button" onClick={() => openEdit(row)} aria-label="edit">
+                  <Pencil size={14} />
+                </button>
+                <button type="button" onClick={() => remove(row.id)} aria-label="delete">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <DetailDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={editingId ? 'Edit Reward' : 'Create Reward'}
+        subtitle="ฟอร์มมี required validation และคง format ที่พร้อมต่อ API"
+      >
+        <div className="admin-ui-form">
+          <label htmlFor="reward-rank">
+            Rank
+            <input
+              id="reward-rank"
+              type="number"
+              min={1}
+              value={form.rank}
+              onChange={(event) => setForm((prev) => ({ ...prev, rank: event.target.value }))}
+            />
+          </label>
+          <label htmlFor="reward-title">
+            Title (English) *
+            <input
+              id="reward-title"
+              value={form.title}
+              onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+            />
+            {errors.title ? <small>{errors.title}</small> : null}
+          </label>
+          <label htmlFor="reward-title-th">
+            Title (Thai)
+            <input
+              id="reward-title-th"
+              value={form.titleTh}
+              onChange={(event) => setForm((prev) => ({ ...prev, titleTh: event.target.value }))}
+            />
+          </label>
+          <label htmlFor="reward-amount">
+            Amount *
+            <input
+              id="reward-amount"
+              type="number"
+              min={0}
+              value={form.amount}
+              onChange={(event) => setForm((prev) => ({ ...prev, amount: event.target.value }))}
+            />
+            {errors.amount ? <small>{errors.amount}</small> : null}
+          </label>
+          <label htmlFor="reward-currency">
+            Currency
+            <input
+              id="reward-currency"
+              value={form.currency}
+              onChange={(event) => setForm((prev) => ({ ...prev, currency: event.target.value.toUpperCase() }))}
+            />
+          </label>
+          <label htmlFor="reward-prize-text-th">
+            Prize Text (Thai)
+            <input
+              id="reward-prize-text-th"
+              value={form.prizeTextTh}
+              placeholder="เช่น พร้อมถ้วย, โล่ + ของรางวัล"
+              onChange={(event) => setForm((prev) => ({ ...prev, prizeTextTh: event.target.value }))}
+            />
+          </label>
+          <label htmlFor="reward-prize-text-en">
+            Prize Text (English)
+            <input
+              id="reward-prize-text-en"
+              value={form.prizeTextEn}
+              placeholder="e.g. with trophy, shield + prize"
+              onChange={(event) => setForm((prev) => ({ ...prev, prizeTextEn: event.target.value }))}
+            />
+          </label>
+          <label htmlFor="reward-description-th">
+            Description (Thai)
+            <textarea
+              id="reward-description-th"
+              rows={3}
+              value={form.descriptionTh}
+              onChange={(event) => setForm((prev) => ({ ...prev, descriptionTh: event.target.value }))}
+            />
+          </label>
+          <label htmlFor="reward-description-en">
+            Description (English)
+            <textarea
+              id="reward-description-en"
+              rows={3}
+              value={form.descriptionEn}
+              onChange={(event) => setForm((prev) => ({ ...prev, descriptionEn: event.target.value }))}
+            />
+          </label>
+          <div className="admin-ui-toggle-row">
+            <label htmlFor="reward-active" className="admin-ui-toggle-label">
+              Status
+            </label>
+            <label className="admin-ui-toggle">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+              />
+              <span className="admin-ui-toggle-switch"></span>
+              <span className="admin-ui-toggle-text">{form.isActive ? 'Enabled' : 'Disabled'}</span>
+            </label>
+          </div>
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setDrawerOpen(false)}>
+              ยกเลิก
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={save}>
+              <Save size={14} />
+              บันทึก
+            </button>
+          </div>
+        </div>
+      </DetailDrawer>
+    </div>
+  )
+}
+
+function renderMarkdownSimple(text) {
+  return text.split('\n').map((line, index) => {
+    if (line.startsWith('# ')) return <h3 key={`${line}-${index}`}>{line.slice(2)}</h3>
+    if (line.startsWith('## ')) return <h4 key={`${line}-${index}`}>{line.slice(3)}</h4>
+    if (line.startsWith('- ')) return <li key={`${line}-${index}`}>{line.slice(2)}</li>
+    if (!line.trim()) return <br key={`${line}-${index}`} />
+    return <p key={`${line}-${index}`}>{line}</p>
+  })
+}
+
+function StaticAboutPage() {
+  const { pushToast } = useAdminToast()
+  const [contentTh, setContentTh] = useState('')
+  const [contentEn, setContentEn] = useState('')
+  const [tab, setTab] = useState('editor')
+  const [lang, setLang] = useState('th')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  const fetchAboutPage = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(apiUrl('/api/admin/pages/ABOUT'), { credentials: 'include' })
+      const payload = await response.json()
+
+      if (!payload?.ok || !payload?.data) {
+        throw new Error(payload?.message || 'ไม่สามารถโหลด About content ได้')
+      }
+
+      setContentTh(payload.data.contentHtmlTh || '')
+      setContentEn(payload.data.contentHtmlEn || '')
+    } catch (err) {
+      console.error('Failed to fetch ABOUT page:', err)
+      pushToast({ type: 'error', title: err?.message || 'ไม่สามารถโหลด About content ได้' })
+    } finally {
+      setLoading(false)
+    }
+  }, [pushToast])
+
+  useEffect(() => {
+    fetchAboutPage()
+  }, [fetchAboutPage])
+
+  const saveAboutPage = useCallback(async () => {
+    try {
+      setSaving(true)
+      const response = await fetch(apiUrl('/api/admin/pages/ABOUT'), {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contentHtmlTh: contentTh,
+          contentHtmlEn: contentEn,
+        }),
+      })
+
+      const payload = await response.json()
+      if (!payload?.ok) {
+        throw new Error(payload?.message || 'บันทึก About content ไม่สำเร็จ')
+      }
+
+      pushToast({
+        title: 'บันทึก About content แล้ว',
+        description: 'ข้อมูลหน้า About ถูกอัปเดตลงฐานข้อมูลเรียบร้อย',
+      })
+    } catch (err) {
+      console.error('Failed to save ABOUT page:', err)
+      pushToast({ type: 'error', title: err?.message || 'บันทึก About content ไม่สำเร็จ' })
+    } finally {
+      setSaving(false)
+    }
+  }, [contentEn, contentTh, pushToast])
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Static Content: About"
+        description="HTML editor + Preview mode รองรับ TH/EN (เชื่อม API แล้ว)"
+        right={
+          <button
+            type="button"
+            className="admin-ui-btn admin-ui-btn-primary"
+            onClick={saveAboutPage}
+            disabled={loading || saving}
+          >
+            <Save size={15} />
+            {saving ? 'Saving...' : 'Save About'}
+          </button>
+        }
+      />
+
+      <div className="admin-ui-tab-row">
+        <button type="button" className={tab === 'editor' ? 'active' : ''} onClick={() => setTab('editor')}>
+          Editor
+        </button>
+        <button type="button" className={tab === 'preview' ? 'active' : ''} onClick={() => setTab('preview')}>
+          Preview
+        </button>
+      </div>
+
+      <div className="admin-ui-tab-row">
+        <button type="button" className={lang === 'th' ? 'active' : ''} onClick={() => setLang('th')}>
+          ภาษาไทย
+        </button>
+        <button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>
+          English
+        </button>
+      </div>
+
+      {tab === 'editor' ? (
+        <article className="admin-ui-panel">
+          <label htmlFor="about-editor" className="admin-ui-label">
+            HTML Content ({lang.toUpperCase()})
+          </label>
+          <textarea
+            id="about-editor"
+            rows={16}
+            value={lang === 'th' ? contentTh : contentEn}
+            onChange={(event) => (lang === 'th' ? setContentTh(event.target.value) : setContentEn(event.target.value))}
+            disabled={loading}
+          />
+        </article>
+      ) : (
+        <article className="admin-ui-panel admin-ui-markdown-preview">
+          {loading ? (
+            <p>กำลังโหลดข้อมูล...</p>
+          ) : (
+            <div dangerouslySetInnerHTML={{ __html: (lang === 'th' ? contentTh : contentEn) || '<p>-</p>' }} />
+          )}
+        </article>
+      )}
+    </div>
+  )
+}
+
+function StaticContactsPage() {
+  const { pushToast } = useAdminToast()
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selectedContactId, setSelectedContactId] = useState(null)
+  const [contactDrawerOpen, setContactDrawerOpen] = useState(false)
+  const [channelDrawerOpen, setChannelDrawerOpen] = useState(false)
+  const [editingContactId, setEditingContactId] = useState(null)
+  const [editingChannelId, setEditingChannelId] = useState(null)
+  const [contactErrors, setContactErrors] = useState({})
+  const [channelErrors, setChannelErrors] = useState({})
+  const [contactForm, setContactForm] = useState({
+    contactCategory: 'event_inquiry',
+    displayNameTh: '',
+    displayNameEn: '',
+    roleTh: '',
+    roleEn: '',
+    organizationTh: '',
+    organizationEn: '',
+    departmentTh: '',
+    departmentEn: '',
+    bioTh: '',
+    bioEn: '',
+    avatarUrl: '',
+    avatarAltTh: '',
+    avatarAltEn: '',
+    isFeatured: false,
+    sortOrder: 1,
+    isEnabled: true,
+    publishedAt: '',
+  })
+  const [channelForm, setChannelForm] = useState({
+    channelType: 'email',
+    labelTh: '',
+    labelEn: '',
+    value: '',
+    url: '',
+    isPrimary: false,
+    sortOrder: 10,
+    isEnabled: true,
+  })
+
+  const sortedContacts = useMemo(
+    () => [...items].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id),
+    [items],
+  )
+
+  const selectedContact = useMemo(
+    () => sortedContacts.find((item) => item.id === selectedContactId) || null,
+    [selectedContactId, sortedContacts],
+  )
+
+  const selectedChannels = useMemo(() => {
+    if (!selectedContact) return []
+    return [...(selectedContact.channels || [])].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+  }, [selectedContact])
+
+  const fetchContacts = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(apiUrl('/api/admin/contacts'), { credentials: 'include' })
+      const data = await response.json()
+      if (data.ok) {
+        setItems(data.data || [])
+      } else {
+        pushToast({ type: 'error', title: data.message || 'ไม่สามารถโหลด contact ได้' })
+      }
+    } catch (err) {
+      console.error('Failed to fetch contacts:', err)
+      pushToast({ type: 'error', title: 'ไม่สามารถโหลด contact ได้' })
+    } finally {
+      setLoading(false)
+    }
+  }, [pushToast])
+
+  useEffect(() => {
+    fetchContacts()
+  }, [fetchContacts])
+
+  const openCreateContact = () => {
+    setEditingContactId(null)
+    setContactErrors({})
+    setContactForm({
+      contactCategory: 'event_inquiry',
+      displayNameTh: '',
+      displayNameEn: '',
+      roleTh: '',
+      roleEn: '',
+      organizationTh: '',
+      organizationEn: '',
+      departmentTh: '',
+      departmentEn: '',
+      bioTh: '',
+      bioEn: '',
+      avatarUrl: '',
+      avatarAltTh: '',
+      avatarAltEn: '',
+      isFeatured: false,
+      sortOrder: sortedContacts.length + 1,
+      isEnabled: true,
+      publishedAt: formatDateInput(new Date().toISOString()),
+    })
+    setContactDrawerOpen(true)
+  }
+
+  const openEditContact = (item) => {
+    setEditingContactId(item.id)
+    setContactErrors({})
+    setContactForm({
+      contactCategory: item.contactCategory || 'event_inquiry',
+      displayNameTh: item.displayNameTh || '',
+      displayNameEn: item.displayNameEn || '',
+      roleTh: item.roleTh || '',
+      roleEn: item.roleEn || '',
+      organizationTh: item.organizationTh || '',
+      organizationEn: item.organizationEn || '',
+      departmentTh: item.departmentTh || '',
+      departmentEn: item.departmentEn || '',
+      bioTh: item.bioTh || '',
+      bioEn: item.bioEn || '',
+      avatarUrl: item.avatarUrl || '',
+      avatarAltTh: item.avatarAltTh || '',
+      avatarAltEn: item.avatarAltEn || '',
+      isFeatured: Boolean(item.isFeatured),
+      sortOrder: item.sortOrder || 1,
+      isEnabled: Boolean(item.isEnabled),
+      publishedAt: formatDateInput(item.publishedAt),
+    })
+    setContactDrawerOpen(true)
+  }
+
+  const validateContact = () => {
+    const next = {}
+    if (!contactForm.contactCategory.trim()) next.contactCategory = 'กรุณาเลือกประเภทผู้ติดต่อ'
+    if (!contactForm.displayNameTh.trim()) next.displayNameTh = 'กรุณากรอก display_name_th'
+    if (!contactForm.displayNameEn.trim()) next.displayNameEn = 'กรุณากรอก display_name_en'
+    if (Number(contactForm.sortOrder) < 1) next.sortOrder = 'sort_order ต้องมากกว่าหรือเท่ากับ 1'
+    setContactErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const saveContact = async () => {
+    if (!validateContact()) return
+
+    const payload = {
+      contactCategory: contactForm.contactCategory.trim(),
+      displayNameTh: contactForm.displayNameTh.trim(),
+      displayNameEn: contactForm.displayNameEn.trim(),
+      roleTh: contactForm.roleTh.trim() || null,
+      roleEn: contactForm.roleEn.trim() || null,
+      organizationTh: contactForm.organizationTh.trim() || null,
+      organizationEn: contactForm.organizationEn.trim() || null,
+      departmentTh: contactForm.departmentTh.trim() || null,
+      departmentEn: contactForm.departmentEn.trim() || null,
+      bioTh: contactForm.bioTh.trim() || null,
+      bioEn: contactForm.bioEn.trim() || null,
+      avatarUrl: contactForm.avatarUrl.trim() || null,
+      avatarAltTh: contactForm.avatarAltTh.trim() || null,
+      avatarAltEn: contactForm.avatarAltEn.trim() || null,
+      isFeatured: contactForm.isFeatured,
+      sortOrder: Number(contactForm.sortOrder),
+      isEnabled: contactForm.isEnabled,
+      publishedAt: contactForm.publishedAt ? new Date(contactForm.publishedAt).toISOString() : null,
+    }
+
+    try {
+      const isEdit = Boolean(editingContactId)
+      const response = await fetch(
+        apiUrl(isEdit ? `/api/admin/contacts/${editingContactId}` : '/api/admin/contacts'),
+        {
+          method: isEdit ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        },
+      )
+      const data = await response.json()
+      if (!data.ok) {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาดในการบันทึก contact' })
+        return
+      }
+
+      if (!isEdit && data.data?.id) {
+        setSelectedContactId(data.data.id)
+      }
+      pushToast({ title: isEdit ? 'อัปเดตข้อมูล contact สำเร็จ' : 'เพิ่ม contact สำเร็จ' })
+      await fetchContacts()
+      setContactDrawerOpen(false)
+    } catch (err) {
+      console.error('Failed to save contact:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการบันทึก contact' })
+    }
+  }
+
+  const removeContact = async (id) => {
+    const target = items.find((item) => item.id === id)
+    try {
+      const response = await fetch(apiUrl(`/api/admin/contacts/${id}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await response.json()
+      if (!data.ok) {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาดในการลบ contact' })
+        return
+      }
+
+      if (selectedContactId === id) {
+        setSelectedContactId(null)
+      }
+      pushToast({ type: 'warning', title: 'ลบ contact แล้ว', description: target?.displayNameEn || '' })
+      await fetchContacts()
+    } catch (err) {
+      console.error('Failed to delete contact:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการลบ contact' })
+    }
+  }
+
+  const moveContact = async (id, direction) => {
+    const index = sortedContacts.findIndex((item) => item.id === id)
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (index < 0 || swapIndex < 0 || swapIndex >= sortedContacts.length) return
+
+    const next = [...sortedContacts]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    const reordered = next.map((item, idx) => ({ ...item, sortOrder: idx + 1 }))
+    setItems(reordered)
+
+    try {
+      const updates = reordered.map((item) => ({ id: item.id, sortOrder: item.sortOrder }))
+      const response = await fetch(apiUrl('/api/admin/contacts/reorder'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ updates }),
+      })
+      const data = await response.json()
+      if (!data.ok) {
+        throw new Error(data.message || 'จัดลำดับข้อมูลไม่สำเร็จ')
+      }
+    } catch (err) {
+      console.error('Failed to reorder contacts:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับ contact' })
+      await fetchContacts()
+    }
+  }
+
+  const openCreateChannel = () => {
+    if (!selectedContact) return
+    const nextSortOrder = selectedChannels.length ? selectedChannels[selectedChannels.length - 1].sortOrder + 10 : 10
+    setEditingChannelId(null)
+    setChannelErrors({})
+    setChannelForm({
+      channelType: 'email',
+      labelTh: '',
+      labelEn: '',
+      value: '',
+      url: '',
+      isPrimary: false,
+      sortOrder: nextSortOrder,
+      isEnabled: true,
+    })
+    setChannelDrawerOpen(true)
+  }
+
+  const openEditChannel = (channel) => {
+    if (!selectedContact) return
+    setEditingChannelId(channel.id)
+    setChannelErrors({})
+    setChannelForm({
+      channelType: channel.channelType,
+      labelTh: channel.labelTh || '',
+      labelEn: channel.labelEn || '',
+      value: channel.value || '',
+      url: channel.url || '',
+      isPrimary: Boolean(channel.isPrimary),
+      sortOrder: channel.sortOrder || 10,
+      isEnabled: Boolean(channel.isEnabled),
+    })
+    setChannelDrawerOpen(true)
+  }
+
+  const validateChannel = () => {
+    const next = {}
+    if (!channelForm.channelType.trim()) next.channelType = 'กรุณาเลือก channel_type'
+    if (!channelForm.value.trim()) next.value = 'กรุณากรอก value'
+    if (Number(channelForm.sortOrder) < 0) next.sortOrder = 'sort_order ต้องมากกว่าหรือเท่ากับ 0'
+    setChannelErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const saveChannel = async () => {
+    if (!validateChannel()) return
+    if (!selectedContact) return
+
+    const payload = {
+      channelType: channelForm.channelType.trim(),
+      labelTh: channelForm.labelTh.trim() || null,
+      labelEn: channelForm.labelEn.trim() || null,
+      value: channelForm.value.trim(),
+      url: channelForm.url.trim() || null,
+      isPrimary: channelForm.isPrimary,
+      sortOrder: Number(channelForm.sortOrder),
+      isEnabled: channelForm.isEnabled,
+    }
+
+    try {
+      const isEdit = Boolean(editingChannelId)
+      const response = await fetch(
+        apiUrl(
+          isEdit
+            ? `/api/admin/contacts/${selectedContact.id}/channels/${editingChannelId}`
+            : `/api/admin/contacts/${selectedContact.id}/channels`,
+        ),
+        {
+          method: isEdit ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        },
+      )
+      const data = await response.json()
+      if (!data.ok) {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาดในการบันทึกช่องทาง' })
+        return
+      }
+
+      pushToast({ title: isEdit ? 'อัปเดตช่องทางติดต่อสำเร็จ' : 'เพิ่มช่องทางติดต่อสำเร็จ' })
+      await fetchContacts()
+      setChannelDrawerOpen(false)
+    } catch (err) {
+      console.error('Failed to save channel:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการบันทึกช่องทาง' })
+    }
+  }
+
+  const removeChannel = async (channelId) => {
+    if (!selectedContact) return
+
+    try {
+      const response = await fetch(apiUrl(`/api/admin/contacts/${selectedContact.id}/channels/${channelId}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await response.json()
+      if (!data.ok) {
+        pushToast({ type: 'error', title: data.message || 'เกิดข้อผิดพลาดในการลบช่องทาง' })
+        return
+      }
+
+      pushToast({ type: 'warning', title: 'ลบช่องทางติดต่อแล้ว' })
+      await fetchContacts()
+    } catch (err) {
+      console.error('Failed to delete channel:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการลบช่องทาง' })
+    }
+  }
+
+  const moveChannel = async (channelId, direction) => {
+    if (!selectedContact) return
+
+    const index = selectedChannels.findIndex((item) => item.id === channelId)
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (index < 0 || swapIndex < 0 || swapIndex >= selectedChannels.length) return
+
+    const next = [...selectedChannels]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    const reordered = next.map((channel, idx) => ({ ...channel, sortOrder: (idx + 1) * 10 }))
+
+    setItems((prev) =>
+      prev.map((contact) =>
+        contact.id === selectedContact.id
+          ? {
+              ...contact,
+              channels: reordered,
+            }
+          : contact,
+      ),
+    )
+
+    try {
+      const updates = reordered.map((channel) => ({ id: channel.id, sortOrder: channel.sortOrder }))
+      const response = await fetch(apiUrl(`/api/admin/contacts/${selectedContact.id}/channels/reorder`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ updates }),
+      })
+      const data = await response.json()
+      if (!data.ok) {
+        throw new Error(data.message || 'จัดลำดับช่องทางติดต่อไม่สำเร็จ')
+      }
+    } catch (err) {
+      console.error('Failed to reorder channels:', err)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับช่องทาง' })
+      await fetchContacts()
+    }
+  }
+
+  const channelTypeOptions = ['email', 'phone', 'line', 'facebook', 'instagram', 'linkedin', 'x', 'website', 'map', 'other']
+  const contactCategoryOptions = [
+    { value: 'event_inquiry', label: 'ติดต่อสอบถามรายละเอียดการจัดงาน' },
+    { value: 'dataset_inquiry', label: 'ติดต่อสอบถามรายละเอียดชุดข้อมูล' },
+    { value: 'tech_it', label: 'ฝ่ายเทคนิคและสารสนเทศ' },
+    { value: 'facility', label: 'ฝ่ายอาคารสถานที่' },
+  ]
+
+  const getContactCategoryLabel = (category) => {
+    return contactCategoryOptions.find((item) => item.value === category)?.label || '-'
+  }
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Static Content: Contacts"
+        description="จัดการ content_contacts และ content_contact_channels ครบทุกคอลัมน์ พร้อมโฟลว์ที่แก้ไขง่าย"
+        right={
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateContact}>
+            <Plus size={15} />
+            Add Contact
+          </button>
+        }
+      />
+
+      <AdminDataTable
+        loading={loading}
+        rows={sortedContacts}
+        searchKeys={['contactCategory', 'displayNameTh', 'displayNameEn', 'roleTh', 'roleEn', 'organizationTh', 'organizationEn']}
+        searchPlaceholder="ค้นหาประเภท / display name / role / organization"
+        filters={[
+          { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+          { label: 'Enabled', value: 'enabled', predicate: (row) => row.isEnabled },
+          { label: 'Disabled', value: 'disabled', predicate: (row) => !row.isEnabled },
+          { label: 'Featured', value: 'featured', predicate: (row) => row.isFeatured },
+        ]}
+        columns={[
+          {
+            key: 'displayName',
+            label: 'Display Name / Role',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <strong>{row.displayNameTh || '-'}</strong>
+                <span>{row.displayNameEn || '-'}</span>
+                <span>{row.roleTh || row.roleEn || '-'}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'contactCategory',
+            label: 'Category',
+            render: (row) => getContactCategoryLabel(row.contactCategory),
+          },
+          {
+            key: 'organization',
+            label: 'Organization / Department',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <strong>{row.organizationTh || row.organizationEn || '-'}</strong>
+                <span>{row.organizationEn || '-'}</span>
+                <span>{row.departmentTh || row.departmentEn || '-'}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'channelsCount',
+            label: 'Channels',
+            render: (row) => (
+              <span className="admin-ui-icon-text">
+                <Contact size={13} />
+                {(row.channels || []).length}
+              </span>
+            ),
+          },
+          {
+            key: 'publishedAt',
+            label: 'Published At',
+            render: (row) => formatDateTime(row.publishedAt),
+          },
+          { key: 'sortOrder', label: 'Order' },
+          {
+            key: 'state',
+            label: 'Flags',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} />
+                {row.isFeatured ? <StatusBadge status="READY_TO_RESUBMIT" label="FEATURED" /> : <span className="admin-ui-text-muted">-</span>}
+              </div>
+            ),
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="admin-ui-row-actions">
+                <button type="button" onClick={() => moveContact(row.id, 'up')} aria-label="move up">
+                  <ArrowUp size={14} />
+                </button>
+                <button type="button" onClick={() => moveContact(row.id, 'down')} aria-label="move down">
+                  <ArrowDown size={14} />
+                </button>
+                <button type="button" onClick={() => openEditContact(row)} aria-label="edit">
+                  <Pencil size={14} />
+                </button>
+                <button type="button" onClick={() => removeContact(row.id)} aria-label="delete">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <article className="admin-ui-panel admin-ui-stack">
+        <div className="admin-ui-section-head">
+          <div>
+            <h3>Step 1: Select Contact</h3>
+            <p>เลือก contact ที่ต้องการ แล้วค่อยเพิ่มหรือแก้ไข channels ของ contact นั้น</p>
+          </div>
+        </div>
+        <div className="admin-ui-contact-selector-row">
+          <label htmlFor="channel-contact-select" className="admin-ui-label">
+            Selected Contact
+            <select
+              id="channel-contact-select"
+              value={selectedContact?.id || ''}
+              onChange={(event) => setSelectedContactId(Number(event.target.value) || null)}
+            >
+              <option value="">เลือก contact</option>
+              {sortedContacts.map((contact) => (
+                <option key={contact.id} value={contact.id}>
+                  {contact.id} - {contact.displayNameEn || contact.displayNameTh}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="admin-ui-chip-row">
+            {sortedContacts.map((contact) => (
+              <button
+                type="button"
+                key={contact.id}
+                className={`admin-ui-chip-btn ${selectedContact?.id === contact.id ? 'active' : ''}`}
+                onClick={() => setSelectedContactId((prev) => (prev === contact.id ? null : contact.id))}
+              >
+                {contact.displayNameEn || contact.displayNameTh}
+              </button>
+            ))}
+          </div>
+        </div>
+      </article>
+
+      <article className="admin-ui-panel admin-ui-stack">
+        <div className="admin-ui-section-head">
+          <div>
+            <h3>Contact Channels</h3>
+            <p>
+              {selectedContact
+                ? `กำลังแก้ไขช่องทางของ ${selectedContact.displayNameTh || selectedContact.displayNameEn}`
+                : 'เลือก contact เพื่อจัดการช่องทางการติดต่อ'}
+            </p>
+          </div>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateChannel} disabled={!selectedContact}>
+            <Plus size={15} />
+            Add Channel
+          </button>
+        </div>
+
+        {selectedContact ? (
+          <AdminDataTable
+            loading={loading}
+            rows={selectedChannels.map((channel) => ({ ...channel, contactId: selectedContact.id }))}
+            searchKeys={['channelType', 'labelTh', 'labelEn', 'value', 'url']}
+            searchPlaceholder="ค้นหา channel type / label / value"
+            filters={[
+              { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+              { label: 'Enabled', value: 'enabled', predicate: (row) => row.isEnabled },
+              { label: 'Disabled', value: 'disabled', predicate: (row) => !row.isEnabled },
+              { label: 'Primary', value: 'primary', predicate: (row) => row.isPrimary },
+            ]}
+            columns={[
+              {
+                key: 'channelType',
+                label: 'Type',
+                render: (row) => <strong>{row.channelType}</strong>,
+              },
+              {
+                key: 'labels',
+                label: 'Label TH/EN',
+                render: (row) => (
+                  <div className="admin-ui-col-stack">
+                    <span>{row.labelTh || '-'}</span>
+                    <span>{row.labelEn || '-'}</span>
+                  </div>
+                ),
+              },
+              {
+                key: 'value',
+                label: 'Value / URL',
+                render: (row) => (
+                  <div className="admin-ui-col-stack">
+                    <span>{row.value}</span>
+                    {row.url ? (
+                      <a className="admin-ui-link" href={row.url} target="_blank" rel="noreferrer">
+                        <Globe size={13} />
+                        {row.url}
+                      </a>
+                    ) : (
+                      <span className="admin-ui-text-muted">-</span>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: 'flags',
+                label: 'Flags',
+                render: (row) => (
+                  <div className="admin-ui-col-stack">
+                    <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} />
+                    {row.isPrimary ? <StatusBadge status="APPROVED" label="PRIMARY" /> : <span className="admin-ui-text-muted">-</span>}
+                  </div>
+                ),
+              },
+              { key: 'sortOrder', label: 'Order' },
+              {
+                key: 'actions',
+                label: 'Actions',
+                render: (row) => (
+                  <div className="admin-ui-row-actions">
+                    <button type="button" onClick={() => moveChannel(row.id, 'up')} aria-label="move up">
+                      <ArrowUp size={14} />
+                    </button>
+                    <button type="button" onClick={() => moveChannel(row.id, 'down')} aria-label="move down">
+                      <ArrowDown size={14} />
+                    </button>
+                    <button type="button" onClick={() => openEditChannel(row)} aria-label="edit">
+                      <Pencil size={14} />
+                    </button>
+                    <button type="button" onClick={() => removeChannel(row.id)} aria-label="delete">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ),
+              },
+            ]}
+          />
+        ) : (
+          <div className="admin-ui-table-empty">ยังไม่มี contact ให้กำหนดช่องทาง</div>
+        )}
+      </article>
+
+      <DetailDrawer
+        open={contactDrawerOpen}
+        onClose={() => setContactDrawerOpen(false)}
+        title={editingContactId ? 'Edit Contact' : 'Create Contact'}
+        subtitle="ตั้งค่าทุกคอลัมน์ของ content_contacts"
+      >
+        <div className="admin-ui-form">
+          <label htmlFor="contact-category">
+            contact_category
+            <select
+              id="contact-category"
+              value={contactForm.contactCategory}
+              onChange={(event) => setContactForm((prev) => ({ ...prev, contactCategory: event.target.value }))}
+            >
+              {contactCategoryOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {contactErrors.contactCategory ? <small>{contactErrors.contactCategory}</small> : null}
+          </label>
+
+          <label htmlFor="contact-display-name-th">
+            display_name_th *
+            <input
+              id="contact-display-name-th"
+              value={contactForm.displayNameTh}
+              onChange={(event) => setContactForm((prev) => ({ ...prev, displayNameTh: event.target.value }))}
+            />
+            {contactErrors.displayNameTh ? <small>{contactErrors.displayNameTh}</small> : null}
+          </label>
+
+          <label htmlFor="contact-display-name-en">
+            display_name_en *
+            <input
+              id="contact-display-name-en"
+              value={contactForm.displayNameEn}
+              onChange={(event) => setContactForm((prev) => ({ ...prev, displayNameEn: event.target.value }))}
+            />
+            {contactErrors.displayNameEn ? <small>{contactErrors.displayNameEn}</small> : null}
+          </label>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="contact-role-th">
+              role_th
+              <input
+                id="contact-role-th"
+                value={contactForm.roleTh}
+                onChange={(event) => setContactForm((prev) => ({ ...prev, roleTh: event.target.value }))}
+              />
+            </label>
+            <label htmlFor="contact-role-en">
+              role_en
+              <input
+                id="contact-role-en"
+                value={contactForm.roleEn}
+                onChange={(event) => setContactForm((prev) => ({ ...prev, roleEn: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="contact-organization-th">
+              organization_th
+              <input
+                id="contact-organization-th"
+                value={contactForm.organizationTh}
+                onChange={(event) => setContactForm((prev) => ({ ...prev, organizationTh: event.target.value }))}
+              />
+            </label>
+            <label htmlFor="contact-organization-en">
+              organization_en
+              <input
+                id="contact-organization-en"
+                value={contactForm.organizationEn}
+                onChange={(event) => setContactForm((prev) => ({ ...prev, organizationEn: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="contact-department-th">
+              department_th
+              <input
+                id="contact-department-th"
+                value={contactForm.departmentTh}
+                onChange={(event) => setContactForm((prev) => ({ ...prev, departmentTh: event.target.value }))}
+              />
+            </label>
+            <label htmlFor="contact-department-en">
+              department_en
+              <input
+                id="contact-department-en"
+                value={contactForm.departmentEn}
+                onChange={(event) => setContactForm((prev) => ({ ...prev, departmentEn: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <label htmlFor="contact-bio-th">
+            bio_th
+            <textarea
+              id="contact-bio-th"
+              rows={3}
+              value={contactForm.bioTh}
+              onChange={(event) => setContactForm((prev) => ({ ...prev, bioTh: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="contact-bio-en">
+            bio_en
+            <textarea
+              id="contact-bio-en"
+              rows={3}
+              value={contactForm.bioEn}
+              onChange={(event) => setContactForm((prev) => ({ ...prev, bioEn: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="contact-avatar-url">
+            avatar_url
+            <input
+              id="contact-avatar-url"
+              value={contactForm.avatarUrl}
+              onChange={(event) => setContactForm((prev) => ({ ...prev, avatarUrl: event.target.value }))}
+            />
+          </label>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="contact-avatar-alt-th">
+              avatar_alt_th
+              <input
+                id="contact-avatar-alt-th"
+                value={contactForm.avatarAltTh}
+                onChange={(event) => setContactForm((prev) => ({ ...prev, avatarAltTh: event.target.value }))}
+              />
+            </label>
+            <label htmlFor="contact-avatar-alt-en">
+              avatar_alt_en
+              <input
+                id="contact-avatar-alt-en"
+                value={contactForm.avatarAltEn}
+                onChange={(event) => setContactForm((prev) => ({ ...prev, avatarAltEn: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="contact-sort-order">
+              sort_order
+              <input
+                id="contact-sort-order"
+                type="number"
+                min={1}
+                value={contactForm.sortOrder}
+                onChange={(event) => setContactForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+              />
+              {contactErrors.sortOrder ? <small>{contactErrors.sortOrder}</small> : null}
+            </label>
+            <label htmlFor="contact-published-at">
+              published_at
+              <input
+                id="contact-published-at"
+                type="datetime-local"
+                value={contactForm.publishedAt}
+                onChange={(event) => setContactForm((prev) => ({ ...prev, publishedAt: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label className="admin-ui-check">
+              <input
+                type="checkbox"
+                checked={contactForm.isFeatured}
+                onChange={(event) => setContactForm((prev) => ({ ...prev, isFeatured: event.target.checked }))}
+              />
+              <span>is_featured</span>
+            </label>
+            <label className="admin-ui-check">
+              <input
+                type="checkbox"
+                checked={contactForm.isEnabled}
+                onChange={(event) => setContactForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
+              />
+              <span>is_enabled</span>
+            </label>
+          </div>
+
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setContactDrawerOpen(false)}>
+              ยกเลิก
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={saveContact}>
+              <Save size={14} />
+              บันทึก
+            </button>
+          </div>
+        </div>
+      </DetailDrawer>
+
+      <DetailDrawer
+        open={channelDrawerOpen}
+        onClose={() => setChannelDrawerOpen(false)}
+        title={editingChannelId ? 'Edit Contact Channel' : 'Create Contact Channel'}
+        subtitle={`ตั้งค่าช่องทางของ ${selectedContact?.displayNameEn || selectedContact?.displayNameTh || '-'}`}
+      >
+        <div className="admin-ui-form">
+          <label htmlFor="channel-type">
+            channel_type *
+            <select
+              id="channel-type"
+              value={channelForm.channelType}
+              onChange={(event) => setChannelForm((prev) => ({ ...prev, channelType: event.target.value }))}
+            >
+              {channelTypeOptions.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+            {channelErrors.channelType ? <small>{channelErrors.channelType}</small> : null}
+          </label>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="channel-label-th">
+              label_th
+              <input
+                id="channel-label-th"
+                value={channelForm.labelTh}
+                onChange={(event) => setChannelForm((prev) => ({ ...prev, labelTh: event.target.value }))}
+              />
+            </label>
+            <label htmlFor="channel-label-en">
+              label_en
+              <input
+                id="channel-label-en"
+                value={channelForm.labelEn}
+                onChange={(event) => setChannelForm((prev) => ({ ...prev, labelEn: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <label htmlFor="channel-value">
+            value *
+            <input
+              id="channel-value"
+              value={channelForm.value}
+              onChange={(event) => setChannelForm((prev) => ({ ...prev, value: event.target.value }))}
+            />
+            {channelErrors.value ? <small>{channelErrors.value}</small> : null}
+          </label>
+
+          <label htmlFor="channel-url">
+            url
+            <input
+              id="channel-url"
+              value={channelForm.url}
+              onChange={(event) => setChannelForm((prev) => ({ ...prev, url: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="channel-sort-order">
+            sort_order
+            <input
+              id="channel-sort-order"
+              type="number"
+              min={0}
+              value={channelForm.sortOrder}
+              onChange={(event) => setChannelForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+            />
+            {channelErrors.sortOrder ? <small>{channelErrors.sortOrder}</small> : null}
+          </label>
+
+          <div className="admin-ui-two-col">
+            <label className="admin-ui-check">
+              <input
+                type="checkbox"
+                checked={channelForm.isPrimary}
+                onChange={(event) => setChannelForm((prev) => ({ ...prev, isPrimary: event.target.checked }))}
+              />
+              <span>is_primary</span>
+            </label>
+            <label className="admin-ui-check">
+              <input
+                type="checkbox"
+                checked={channelForm.isEnabled}
+                onChange={(event) => setChannelForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
+              />
+              <span>is_enabled</span>
+            </label>
+          </div>
+
+          <div className="admin-ui-panel">
+            <h3>Preview</h3>
+            <p className="admin-ui-text-muted">{selectedContact?.displayNameEn || selectedContact?.displayNameTh || '-'}</p>
+            <div className="admin-ui-col-stack">
+              <span>{channelForm.channelType}</span>
+              <span>{channelForm.value || '-'}</span>
+              <span>{channelForm.url || '-'}</span>
+            </div>
+          </div>
+
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setChannelDrawerOpen(false)}>
+              ยกเลิก
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={saveChannel}>
+              <Save size={14} />
+              บันทึก
+            </button>
+          </div>
+        </div>
+      </DetailDrawer>
+    </div>
+  )
+}
+
+function StaticVenuesPage() {
+  const { pushToast } = useAdminToast()
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selectedVenueId, setSelectedVenueId] = useState(null)
+  const [venueDrawerOpen, setVenueDrawerOpen] = useState(false)
+  const [imageDrawerOpen, setImageDrawerOpen] = useState(false)
+  const [editingVenueId, setEditingVenueId] = useState(null)
+  const [editingImageId, setEditingImageId] = useState(null)
+  const [venueErrors, setVenueErrors] = useState({})
+  const [imageErrors, setImageErrors] = useState({})
+  const [venueForm, setVenueForm] = useState({
+    category: 'venue',
+    nameTh: '',
+    nameEn: '',
+    descriptionTh: '',
+    descriptionEn: '',
+    googleMapsUrl: '',
+    latitude: '',
+    longitude: '',
+    sortOrder: 0,
+    isEnabled: true,
+  })
+  const [imageForm, setImageForm] = useState({
+    imageStorageKey: '',
+    imageFile: null,
+    imageFileName: '',
+    imageType: '',
+    imageSize: 0,
+    imageAltTh: '',
+    imageAltEn: '',
+    sortOrder: 0,
+    isCover: false,
+    isEnabled: true,
+  })
+
+  const venueCategoryOptions = useMemo(
+    () => [
+      { value: 'venue', label: 'สถานที่จัดงาน' },
+      { value: 'accommodation', label: 'ที่พัก' },
+      { value: 'transportation', label: 'การเดินทาง' },
+      { value: 'attraction', label: 'สถานที่ท่องเที่ยว' },
+    ],
+    [],
+  )
+
+  const venueCategoryRank = useMemo(
+    () => ({
+      venue: 1,
+      accommodation: 2,
+      transportation: 3,
+      attraction: 4,
+    }),
+    [],
+  )
+
+  const getVenueCategoryLabel = useCallback(
+    (category) => venueCategoryOptions.find((item) => item.value === category)?.label || '-',
+    [venueCategoryOptions],
+  )
+
+  const sortedVenues = useMemo(
+    () =>
+      [...items].sort((a, b) => {
+        const rankA = venueCategoryRank[a.category] || 999
+        const rankB = venueCategoryRank[b.category] || 999
+        if (rankA !== rankB) return rankA - rankB
+        if (a.sortOrder !== b.sortOrder) return Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
+        return Number(a.id || 0) - Number(b.id || 0)
+      }),
+    [items, venueCategoryRank],
+  )
+
+  const selectedVenue = useMemo(
+    () => sortedVenues.find((item) => item.id === selectedVenueId) || null,
+    [selectedVenueId, sortedVenues],
+  )
+
+  const selectedImages = useMemo(() => {
+    if (!selectedVenue) return []
+    return [...(selectedVenue.images || [])].sort((a, b) => {
+      if (Number(a.isCover) !== Number(b.isCover)) return Number(b.isCover) - Number(a.isCover)
+      if (a.sortOrder !== b.sortOrder) return Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
+      return Number(a.id || 0) - Number(b.id || 0)
+    })
+  }, [selectedVenue])
+
+  const getNextVenueSortOrder = useCallback((category, rows) => {
+    const inCategory = rows.filter((item) => item.category === category)
+    if (!inCategory.length) return 0
+    return inCategory.reduce((max, item) => Math.max(max, Number(item.sortOrder) || 0), 0) + 1
+  }, [])
+
+  const fetchVenues = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(apiUrl('/api/admin/venues'), { credentials: 'include' })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.message || 'โหลดข้อมูลสถานที่ไม่สำเร็จ')
+      }
+
+      const rows = Array.isArray(payload.data) ? payload.data : []
+      setItems(rows)
+
+      if (rows.length === 0) {
+        setSelectedVenueId(null)
+      } else {
+        setSelectedVenueId((prev) => {
+          if (prev && rows.some((row) => row.id === prev)) return prev
+          return rows[0].id
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch venues:', error)
+      setItems([])
+      setSelectedVenueId(null)
+      pushToast({ type: 'error', title: error?.message || 'โหลดข้อมูลสถานที่ไม่สำเร็จ' })
+    } finally {
+      setLoading(false)
+    }
+  }, [pushToast])
+
+  useEffect(() => {
+    fetchVenues()
+  }, [fetchVenues])
+
+  const openCreateVenue = () => {
+    setEditingVenueId(null)
+    setVenueErrors({})
+    const category = 'venue'
+    setVenueForm({
+      category,
+      nameTh: '',
+      nameEn: '',
+      descriptionTh: '',
+      descriptionEn: '',
+      googleMapsUrl: '',
+      latitude: '',
+      longitude: '',
+      sortOrder: getNextVenueSortOrder(category, sortedVenues),
+      isEnabled: true,
+    })
+    setVenueDrawerOpen(true)
+  }
+
+  const openEditVenue = (venue) => {
+    setEditingVenueId(venue.id)
+    setVenueErrors({})
+    setVenueForm({
+      category: venue.category || 'venue',
+      nameTh: venue.nameTh || '',
+      nameEn: venue.nameEn || '',
+      descriptionTh: venue.descriptionTh || '',
+      descriptionEn: venue.descriptionEn || '',
+      googleMapsUrl: venue.googleMapsUrl || '',
+      latitude: venue.latitude === null || venue.latitude === undefined ? '' : String(venue.latitude),
+      longitude: venue.longitude === null || venue.longitude === undefined ? '' : String(venue.longitude),
+      sortOrder: Number(venue.sortOrder || 0),
+      isEnabled: Boolean(venue.isEnabled),
+    })
+    setVenueDrawerOpen(true)
+  }
+
+  const validateVenue = () => {
+    const next = {}
+    const googleMapsUrl = String(venueForm.googleMapsUrl || '').trim()
+    const latitudeRaw = String(venueForm.latitude || '').trim()
+    const longitudeRaw = String(venueForm.longitude || '').trim()
+
+    if (!venueForm.category.trim()) next.category = 'กรุณาเลือกหมวดหมู่'
+    if (!venueForm.nameTh.trim()) next.nameTh = 'กรุณากรอก venue_name_th'
+    if (googleMapsUrl) {
+      try {
+        new URL(googleMapsUrl)
+      } catch {
+        next.googleMapsUrl = 'google_maps_url ต้องเป็น URL ที่ถูกต้อง'
+      }
+    }
+    if ((latitudeRaw && !longitudeRaw) || (!latitudeRaw && longitudeRaw)) {
+      next.latitude = 'latitude และ longitude ต้องระบุคู่กัน'
+      next.longitude = 'latitude และ longitude ต้องระบุคู่กัน'
+    }
+    if (latitudeRaw) {
+      const latitude = Number(latitudeRaw)
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+        next.latitude = 'latitude ต้องอยู่ในช่วง -90 ถึง 90'
+      }
+    }
+    if (longitudeRaw) {
+      const longitude = Number(longitudeRaw)
+      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        next.longitude = 'longitude ต้องอยู่ในช่วง -180 ถึง 180'
+      }
+    }
+    if (Number(venueForm.sortOrder) < 0) next.sortOrder = 'sort_order ต้องมากกว่าหรือเท่ากับ 0'
+    setVenueErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const saveVenue = async () => {
+    if (!validateVenue()) return
+
+    const payload = {
+      category: venueForm.category.trim(),
+      nameTh: venueForm.nameTh.trim(),
+      nameEn: venueForm.nameEn.trim() || null,
+      descriptionTh: venueForm.descriptionTh.trim() || null,
+      descriptionEn: venueForm.descriptionEn.trim() || null,
+      googleMapsUrl: venueForm.googleMapsUrl.trim() || null,
+      latitude: String(venueForm.latitude || '').trim() === '' ? null : Number(venueForm.latitude),
+      longitude: String(venueForm.longitude || '').trim() === '' ? null : Number(venueForm.longitude),
+      sortOrder: Number(venueForm.sortOrder),
+      isEnabled: venueForm.isEnabled,
+    }
+
+    try {
+      const isEdit = Boolean(editingVenueId)
+      const response = await fetch(
+        apiUrl(isEdit ? `/api/admin/venues/${editingVenueId}` : '/api/admin/venues'),
+        {
+          method: isEdit ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        },
+      )
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.ok) {
+        pushToast({ type: 'error', title: data?.message || 'เกิดข้อผิดพลาดในการบันทึกสถานที่' })
+        return
+      }
+
+      if (!isEdit && data?.data?.id) {
+        setSelectedVenueId(data.data.id)
+      }
+      pushToast({ title: isEdit ? 'อัปเดตสถานที่สำเร็จ' : 'เพิ่มสถานที่สำเร็จ' })
+      await fetchVenues()
+      setVenueDrawerOpen(false)
+    } catch (error) {
+      console.error('Failed to save venue:', error)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการบันทึกสถานที่' })
+    }
+  }
+
+  const removeVenue = async (id) => {
+    const target = items.find((item) => item.id === id)
+    try {
+      const response = await fetch(apiUrl(`/api/admin/venues/${id}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.ok) {
+        pushToast({ type: 'error', title: data?.message || 'เกิดข้อผิดพลาดในการลบสถานที่' })
+        return
+      }
+
+      if (selectedVenueId === id) {
+        setSelectedVenueId(null)
+      }
+      pushToast({ type: 'warning', title: 'ลบสถานที่แล้ว', description: target?.nameTh || '' })
+      await fetchVenues()
+    } catch (error) {
+      console.error('Failed to delete venue:', error)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการลบสถานที่' })
+    }
+  }
+
+  const moveVenue = async (id, direction) => {
+    const index = sortedVenues.findIndex((item) => item.id === id)
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (index < 0 || swapIndex < 0 || swapIndex >= sortedVenues.length) return
+
+    const current = sortedVenues[index]
+    const target = sortedVenues[swapIndex]
+    if (!current || !target || current.category !== target.category) {
+      pushToast({ type: 'info', title: 'เลื่อนข้ามหมวดไม่ได้', description: 'จัดลำดับได้เฉพาะรายการในหมวดเดียวกัน' })
+      return
+    }
+
+    const next = [...sortedVenues]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+
+    const counters = {
+      venue: 0,
+      accommodation: 0,
+      transportation: 0,
+      attraction: 0,
+    }
+    const reordered = next.map((item) => {
+      counters[item.category] += 1
+      return {
+        ...item,
+        sortOrder: counters[item.category] - 1,
+      }
+    })
+    setItems(reordered)
+
+    try {
+      const updates = reordered.map((item) => ({ id: item.id, sortOrder: Number(item.sortOrder) || 0 }))
+      const response = await fetch(apiUrl('/api/admin/venues/reorder'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ updates }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.message || 'จัดลำดับข้อมูลไม่สำเร็จ')
+      }
+    } catch (error) {
+      console.error('Failed to reorder venues:', error)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับสถานที่' })
+      await fetchVenues()
+    }
+  }
+
+  const openCreateImage = () => {
+    if (!selectedVenue) return
+    const maxSort = selectedImages.reduce((max, item) => Math.max(max, Number(item.sortOrder) || 0), -1)
+    setEditingImageId(null)
+    setImageErrors({})
+    setImageForm({
+      imageStorageKey: '',
+      imageFile: null,
+      imageFileName: '',
+      imageType: '',
+      imageSize: 0,
+      imageAltTh: '',
+      imageAltEn: '',
+      sortOrder: maxSort + 1,
+      isCover: selectedImages.length === 0,
+      isEnabled: true,
+    })
+    setImageDrawerOpen(true)
+  }
+
+  const openEditImage = (image) => {
+    setEditingImageId(image.id)
+    setImageErrors({})
+    setImageForm({
+      imageStorageKey: image.imageStorageKey || image.imageUrl || '',
+      imageFile: null,
+      imageFileName: '',
+      imageType: '',
+      imageSize: 0,
+      imageAltTh: image.altTh || '',
+      imageAltEn: image.altEn || '',
+      sortOrder: Number(image.sortOrder || 0),
+      isCover: Boolean(image.isCover),
+      isEnabled: Boolean(image.isEnabled),
+    })
+    setImageDrawerOpen(true)
+  }
+
+  const validateImage = () => {
+    const next = {}
+    const hasUploadFile = Boolean(imageForm.imageFile)
+    if (!imageForm.imageStorageKey.trim() && !hasUploadFile) {
+      next.imageStorageKey = 'กรุณากรอก image_storage_key หรืออัปโหลดไฟล์รูป'
+    }
+
+    if (hasUploadFile && imageForm.imageType && !['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'].includes(imageForm.imageType)) {
+      next.imageFile = 'รองรับเฉพาะ PNG/JPG/WEBP/SVG'
+    }
+
+    if (hasUploadFile && imageForm.imageSize > 4 * 1024 * 1024) {
+      next.imageFile = 'ไฟล์ต้องไม่เกิน 4 MB'
+    }
+
+    if (Number(imageForm.sortOrder) < 0) next.sortOrder = 'sort_order ต้องมากกว่าหรือเท่ากับ 0'
+    setImageErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const saveImage = async () => {
+    if (!validateImage()) return
+    if (!selectedVenue) return
+
+    const categoryFolder = String(selectedVenue.category || 'venue').replace(/_/g, '-')
+    const derivedStorageKey = imageForm.imageFileName.trim()
+      ? `/static/content/venues/${categoryFolder}/${imageForm.imageFileName.trim()}`
+      : ''
+
+    const finalStorageKey = imageForm.imageStorageKey.trim() || derivedStorageKey
+
+    const payload = {
+      imageStorageKey: finalStorageKey,
+      imageAltTh: imageForm.imageAltTh.trim() || null,
+      imageAltEn: imageForm.imageAltEn.trim() || null,
+      sortOrder: Number(imageForm.sortOrder),
+      isCover: imageForm.isCover,
+      isEnabled: imageForm.isEnabled,
+    }
+
+    try {
+      const isEdit = Boolean(editingImageId)
+      const response = await fetch(
+        apiUrl(
+          isEdit
+            ? `/api/admin/venues/${selectedVenue.id}/images/${editingImageId}`
+            : `/api/admin/venues/${selectedVenue.id}/images`,
+        ),
+        {
+          method: isEdit ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        },
+      )
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.ok) {
+        pushToast({ type: 'error', title: data?.message || 'เกิดข้อผิดพลาดในการบันทึกรูป' })
+        return
+      }
+
+      const targetImageId = editingImageId || data?.data?.id
+      if (imageForm.imageFile && targetImageId) {
+        const formData = new FormData()
+        formData.append('file', imageForm.imageFile)
+        formData.append('fileName', imageForm.imageFileName.trim() || imageForm.imageFile.name)
+
+        const uploadResponse = await fetch(
+          apiUrl(`/api/admin/venues/${selectedVenue.id}/images/${targetImageId}/upload`),
+          {
+            method: 'POST',
+            credentials: 'include',
+            body: formData,
+          },
+        )
+        const uploadData = await uploadResponse.json().catch(() => ({}))
+        if (!uploadResponse.ok || !uploadData?.ok) {
+          pushToast({ type: 'error', title: uploadData?.message || 'อัปโหลดไฟล์รูปไม่สำเร็จ' })
+          return
+        }
+      }
+
+      pushToast({ title: isEdit ? 'อัปเดตรูปสถานที่สำเร็จ' : 'เพิ่มรูปสถานที่สำเร็จ' })
+      await fetchVenues()
+      setImageDrawerOpen(false)
+    } catch (error) {
+      console.error('Failed to save venue image:', error)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการบันทึกรูป' })
+    }
+  }
+
+  const removeImage = async (imageId) => {
+    if (!selectedVenue) return
+
+    try {
+      const response = await fetch(apiUrl(`/api/admin/venues/${selectedVenue.id}/images/${imageId}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.ok) {
+        pushToast({ type: 'error', title: data?.message || 'เกิดข้อผิดพลาดในการลบรูป' })
+        return
+      }
+
+      pushToast({ type: 'warning', title: 'ลบรูปสถานที่แล้ว' })
+      await fetchVenues()
+    } catch (error) {
+      console.error('Failed to delete venue image:', error)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการลบรูป' })
+    }
+  }
+
+  const moveImage = async (imageId, direction) => {
+    if (!selectedVenue) return
+
+    const index = selectedImages.findIndex((item) => item.id === imageId)
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (index < 0 || swapIndex < 0 || swapIndex >= selectedImages.length) return
+
+    const next = [...selectedImages]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    const reordered = next.map((image, idx) => ({
+      ...image,
+      sortOrder: idx,
+    }))
+
+    setItems((prev) =>
+      prev.map((venue) =>
+        venue.id === selectedVenue.id
+          ? {
+              ...venue,
+              images: reordered,
+            }
+          : venue,
+      ),
+    )
+
+    try {
+      const updates = reordered.map((image) => ({ id: image.id, sortOrder: Number(image.sortOrder) || 0 }))
+      const response = await fetch(apiUrl(`/api/admin/venues/${selectedVenue.id}/images/reorder`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ updates }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.message || 'จัดลำดับรูปภาพไม่สำเร็จ')
+      }
+    } catch (error) {
+      console.error('Failed to reorder venue images:', error)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับรูป' })
+      await fetchVenues()
+    }
+  }
+
+  const imageCategoryFolder = String(selectedVenue?.category || 'venue').replace(/_/g, '-')
+  const previewStorageKey = imageForm.imageStorageKey.trim() || (
+    imageForm.imageFileName.trim() ? `/static/content/venues/${imageCategoryFolder}/${imageForm.imageFileName.trim()}` : ''
+  )
+  const imagePreviewUrl = previewStorageKey ? apiUrl(previewStorageKey) : ''
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Static Content: Venues"
+        description="จัดการ content_venues และ content_venue_images แบบครบคอลัมน์ พร้อม flow ใช้งานง่าย"
+        right={
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateVenue}>
+            <Plus size={15} />
+            Add Venue
+          </button>
+        }
+      />
+
+      <AdminDataTable
+        loading={loading}
+        rows={sortedVenues}
+        searchKeys={['category', 'nameTh', 'nameEn', 'descriptionTh', 'descriptionEn', 'googleMapsUrl', 'latitude', 'longitude']}
+        searchPlaceholder="ค้นหา category / venue name / description"
+        filters={[
+          { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+          { label: 'สถานที่จัดงาน', value: 'venue', predicate: (row) => row.category === 'venue' },
+          { label: 'ที่พัก', value: 'accommodation', predicate: (row) => row.category === 'accommodation' },
+          { label: 'การเดินทาง', value: 'transportation', predicate: (row) => row.category === 'transportation' },
+          { label: 'ท่องเที่ยว', value: 'attraction', predicate: (row) => row.category === 'attraction' },
+          { label: 'Enabled', value: 'enabled', predicate: (row) => row.isEnabled },
+          { label: 'Disabled', value: 'disabled', predicate: (row) => !row.isEnabled },
+        ]}
+        columns={[
+          {
+            key: 'name',
+            label: 'Venue Name',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <strong>{row.nameTh || '-'}</strong>
+                <span>{row.nameEn || '-'}</span>
+                <span>{row.descriptionTh || row.descriptionEn || '-'}</span>
+                <span>{row.googleMapsUrl || (row.latitude !== null && row.longitude !== null ? `${row.latitude}, ${row.longitude}` : '-')}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'category',
+            label: 'Category',
+            render: (row) => getVenueCategoryLabel(row.category),
+          },
+          {
+            key: 'images',
+            label: 'Images',
+            render: (row) => (
+              <span className="admin-ui-icon-text">
+                <FileImage size={13} />
+                {(row.images || []).length}
+              </span>
+            ),
+          },
+          { key: 'sortOrder', label: 'sort_order' },
+          {
+            key: 'isEnabled',
+            label: 'is_enabled',
+            render: (row) => <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} />,
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="admin-ui-row-actions">
+                <button type="button" onClick={() => moveVenue(row.id, 'up')} aria-label="move up">
+                  <ArrowUp size={14} />
+                </button>
+                <button type="button" onClick={() => moveVenue(row.id, 'down')} aria-label="move down">
+                  <ArrowDown size={14} />
+                </button>
+                <button type="button" onClick={() => setSelectedVenueId(row.id)} aria-label="manage images">
+                  <Eye size={14} />
+                </button>
+                <button type="button" onClick={() => openEditVenue(row)} aria-label="edit venue">
+                  <Pencil size={14} />
+                </button>
+                <button type="button" onClick={() => removeVenue(row.id)} aria-label="delete venue">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <article className="admin-ui-panel admin-ui-stack">
+        <div className="admin-ui-section-head">
+          <div>
+            <h3>Step 1: Select Venue</h3>
+            <p>เลือกสถานที่ที่ต้องการก่อน แล้วค่อยจัดการรายการรูปภาพในสถานที่นั้น</p>
+          </div>
+        </div>
+
+        <div className="admin-ui-contact-selector-row">
+          <label htmlFor="venue-select" className="admin-ui-label">
+            Selected Venue
+            <select
+              id="venue-select"
+              value={selectedVenue?.id || ''}
+              onChange={(event) => setSelectedVenueId(Number(event.target.value) || null)}
+            >
+              <option value="">เลือกสถานที่</option>
+              {sortedVenues.map((venue) => (
+                <option key={venue.id} value={venue.id}>
+                  {venue.id} - {venue.nameTh || venue.nameEn}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="admin-ui-chip-row">
+            {sortedVenues.map((venue) => (
+              <button
+                type="button"
+                key={venue.id}
+                className={`admin-ui-chip-btn ${selectedVenue?.id === venue.id ? 'active' : ''}`}
+                onClick={() => setSelectedVenueId((prev) => (prev === venue.id ? null : venue.id))}
+              >
+                {venue.nameTh || venue.nameEn}
+              </button>
+            ))}
+          </div>
+        </div>
+      </article>
+
+      <article className="admin-ui-panel admin-ui-stack">
+        <div className="admin-ui-section-head">
+          <div>
+            <h3>Venue Images</h3>
+            <p>
+              {selectedVenue
+                ? `กำลังแก้ไขรูปของ ${selectedVenue.nameTh || selectedVenue.nameEn}`
+                : 'เลือกสถานที่ก่อนเพื่อจัดการรูปภาพ'}
+            </p>
+          </div>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateImage} disabled={!selectedVenue}>
+            <Plus size={15} />
+            Add Image
+          </button>
+        </div>
+
+        {selectedVenue ? (
+          <AdminDataTable
+            loading={loading}
+            rows={selectedImages}
+            searchKeys={['imageStorageKey', 'altTh', 'altEn']}
+            searchPlaceholder="ค้นหา image_storage_key / alt"
+            filters={[
+              { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+              { label: 'Cover', value: 'cover', predicate: (row) => row.isCover },
+              { label: 'Enabled', value: 'enabled', predicate: (row) => row.isEnabled },
+              { label: 'Disabled', value: 'disabled', predicate: (row) => !row.isEnabled },
+            ]}
+            columns={[
+              {
+                key: 'preview',
+                label: 'image_storage_key',
+                render: (row) => (
+                  <div className="admin-ui-inline-banner">
+                    <img src={apiUrl(row.imageUrl || row.imageStorageKey)} alt={row.altTh || row.altEn || 'venue'} loading="lazy" decoding="async" />
+                    <div className="admin-ui-col-stack">
+                      <strong className="admin-ui-truncate">{row.imageStorageKey}</strong>
+                      <span>ID: {row.id}</span>
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: 'alt',
+                label: 'Alt TH/EN',
+                render: (row) => (
+                  <div className="admin-ui-col-stack">
+                    <span>{row.altTh || '-'}</span>
+                    <span>{row.altEn || '-'}</span>
+                  </div>
+                ),
+              },
+              {
+                key: 'flags',
+                label: 'Flags',
+                render: (row) => (
+                  <div className="admin-ui-col-stack">
+                    <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} />
+                    {row.isCover ? <StatusBadge status="APPROVED" label="COVER" /> : <span className="admin-ui-text-muted">-</span>}
+                  </div>
+                ),
+              },
+              { key: 'sortOrder', label: 'sort_order' },
+              {
+                key: 'actions',
+                label: 'Actions',
+                render: (row) => (
+                  <div className="admin-ui-row-actions">
+                    <button type="button" onClick={() => moveImage(row.id, 'up')} aria-label="move up">
+                      <ArrowUp size={14} />
+                    </button>
+                    <button type="button" onClick={() => moveImage(row.id, 'down')} aria-label="move down">
+                      <ArrowDown size={14} />
+                    </button>
+                    <button type="button" onClick={() => openEditImage(row)} aria-label="edit image">
+                      <Pencil size={14} />
+                    </button>
+                    <button type="button" onClick={() => removeImage(row.id)} aria-label="delete image">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ),
+              },
+            ]}
+          />
+        ) : (
+          <div className="admin-ui-table-empty">ยังไม่มีสถานที่ให้จัดการรูปภาพ</div>
+        )}
+      </article>
+
+      <DetailDrawer
+        open={venueDrawerOpen}
+        onClose={() => setVenueDrawerOpen(false)}
+        title={editingVenueId ? 'Edit Venue' : 'Create Venue'}
+        subtitle="ตั้งค่าทุกคอลัมน์ของ content_venues"
+      >
+        <div className="admin-ui-form">
+          <label htmlFor="venue-category">
+            venue_category *
+            <select
+              id="venue-category"
+              value={venueForm.category}
+              onChange={(event) =>
+                setVenueForm((prev) => ({
+                  ...prev,
+                  category: event.target.value,
+                  sortOrder: editingVenueId ? prev.sortOrder : getNextVenueSortOrder(event.target.value, sortedVenues),
+                }))
+              }
+            >
+              {venueCategoryOptions.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            {venueErrors.category ? <small>{venueErrors.category}</small> : null}
+          </label>
+
+          <label htmlFor="venue-name-th">
+            venue_name_th *
+            <input
+              id="venue-name-th"
+              value={venueForm.nameTh}
+              onChange={(event) => setVenueForm((prev) => ({ ...prev, nameTh: event.target.value }))}
+            />
+            {venueErrors.nameTh ? <small>{venueErrors.nameTh}</small> : null}
+          </label>
+
+          <label htmlFor="venue-name-en">
+            venue_name_en
+            <input
+              id="venue-name-en"
+              value={venueForm.nameEn}
+              onChange={(event) => setVenueForm((prev) => ({ ...prev, nameEn: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="venue-description-th">
+            description_th
+            <textarea
+              id="venue-description-th"
+              rows={3}
+              value={venueForm.descriptionTh}
+              onChange={(event) => setVenueForm((prev) => ({ ...prev, descriptionTh: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="venue-description-en">
+            description_en
+            <textarea
+              id="venue-description-en"
+              rows={3}
+              value={venueForm.descriptionEn}
+              onChange={(event) => setVenueForm((prev) => ({ ...prev, descriptionEn: event.target.value }))}
+            />
+          </label>
+
+          <label htmlFor="venue-sort-order">
+            sort_order
+            <input
+              id="venue-sort-order"
+              type="number"
+              min={0}
+              value={venueForm.sortOrder}
+              onChange={(event) => setVenueForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+            />
+            {venueErrors.sortOrder ? <small>{venueErrors.sortOrder}</small> : null}
+          </label>
+
+          <label htmlFor="venue-google-maps-url">
+            google_maps_url
+            <input
+              id="venue-google-maps-url"
+              value={venueForm.googleMapsUrl}
+              onChange={(event) => setVenueForm((prev) => ({ ...prev, googleMapsUrl: event.target.value }))}
+              placeholder="https://www.google.com/maps?q=13.7563,100.5018"
+            />
+            {venueErrors.googleMapsUrl ? <small>{venueErrors.googleMapsUrl}</small> : null}
+          </label>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="venue-latitude">
+              latitude
+              <input
+                id="venue-latitude"
+                value={venueForm.latitude}
+                onChange={(event) => setVenueForm((prev) => ({ ...prev, latitude: event.target.value }))}
+                placeholder="13.7563000"
+              />
+              {venueErrors.latitude ? <small>{venueErrors.latitude}</small> : null}
+            </label>
+            <label htmlFor="venue-longitude">
+              longitude
+              <input
+                id="venue-longitude"
+                value={venueForm.longitude}
+                onChange={(event) => setVenueForm((prev) => ({ ...prev, longitude: event.target.value }))}
+                placeholder="100.5018000"
+              />
+              {venueErrors.longitude ? <small>{venueErrors.longitude}</small> : null}
+            </label>
+          </div>
+
+          <label className="admin-ui-check">
+            <input
+              type="checkbox"
+              checked={venueForm.isEnabled}
+              onChange={(event) => setVenueForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
+            />
+            <span>is_enabled</span>
+          </label>
+
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setVenueDrawerOpen(false)}>
+              ยกเลิก
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={saveVenue}>
+              <Save size={14} />
+              บันทึก
+            </button>
+          </div>
+        </div>
+      </DetailDrawer>
+
+      <DetailDrawer
+        open={imageDrawerOpen}
+        onClose={() => setImageDrawerOpen(false)}
+        title={editingImageId ? 'Edit Venue Image' : 'Create Venue Image'}
+        subtitle={`ตั้งค่าคอลัมน์ใน content_venue_images ของ ${selectedVenue?.nameTh || selectedVenue?.nameEn || '-'}`}
+      >
+        <div className="admin-ui-form">
+          <label htmlFor="venue-image-storage-key">
+            image_storage_key *
+            <input
+              id="venue-image-storage-key"
+              value={imageForm.imageStorageKey}
+              onChange={(event) => setImageForm((prev) => ({ ...prev, imageStorageKey: event.target.value }))}
+            />
+            {imageErrors.imageStorageKey ? <small>{imageErrors.imageStorageKey}</small> : null}
+          </label>
+
+          <label htmlFor="venue-image-file">
+            Upload image file
+            <input
+              id="venue-image-file"
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              onChange={(event) => {
+                const file = event.target.files?.[0] || null
+                setImageForm((prev) => ({
+                  ...prev,
+                  imageFile: file,
+                  imageFileName: file ? file.name : '',
+                  imageType: file?.type || '',
+                  imageSize: file?.size || 0,
+                }))
+              }}
+            />
+            {imageErrors.imageFile ? <small>{imageErrors.imageFile}</small> : null}
+          </label>
+
+          {imageForm.imageFile ? (
+            <span className="admin-ui-file-chip">
+              <FileImage size={13} />
+              {imageForm.imageFile.name} • {formatFileSize(imageForm.imageSize)}
+            </span>
+          ) : null}
+
+          <label htmlFor="venue-image-file-name">
+            upload_file_name (optional)
+            <input
+              id="venue-image-file-name"
+              value={imageForm.imageFileName}
+              onChange={(event) => setImageForm((prev) => ({ ...prev, imageFileName: event.target.value }))}
+              placeholder="เช่น hotel-lobby.jpg"
+            />
+          </label>
+
+          {selectedVenue ? (
+            <p className="admin-ui-text-muted">
+              upload path: <code>/static/content/venues/{String(selectedVenue.category || '').replace(/_/g, '-')}</code>
+            </p>
+          ) : null}
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="venue-image-alt-th">
+              image_alt_th
+              <input
+                id="venue-image-alt-th"
+                value={imageForm.imageAltTh}
+                onChange={(event) => setImageForm((prev) => ({ ...prev, imageAltTh: event.target.value }))}
+              />
+            </label>
+            <label htmlFor="venue-image-alt-en">
+              image_alt_en
+              <input
+                id="venue-image-alt-en"
+                value={imageForm.imageAltEn}
+                onChange={(event) => setImageForm((prev) => ({ ...prev, imageAltEn: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <label htmlFor="venue-image-sort-order">
+            sort_order
+            <input
+              id="venue-image-sort-order"
+              type="number"
+              min={0}
+              value={imageForm.sortOrder}
+              onChange={(event) => setImageForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+            />
+            {imageErrors.sortOrder ? <small>{imageErrors.sortOrder}</small> : null}
+          </label>
+
+          <div className="admin-ui-two-col">
+            <label className="admin-ui-check">
+              <input
+                type="checkbox"
+                checked={imageForm.isCover}
+                onChange={(event) => setImageForm((prev) => ({ ...prev, isCover: event.target.checked }))}
+              />
+              <span>is_cover</span>
+            </label>
+            <label className="admin-ui-check">
+              <input
+                type="checkbox"
+                checked={imageForm.isEnabled}
+                onChange={(event) => setImageForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
+              />
+              <span>is_enabled</span>
+            </label>
+          </div>
+
+          <div className="admin-ui-file-preview">
+            <h5>Preview</h5>
+            <div className="admin-ui-file-preview-box admin-ui-venue-image-preview">
+              {imagePreviewUrl ? (
+                <img
+                  src={imagePreviewUrl}
+                  alt={imageForm.imageAltTh || imageForm.imageAltEn || 'venue preview'}
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <span>ระบุ image_storage_key เพื่อดูตัวอย่าง</span>
+              )}
+            </div>
+          </div>
+
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setImageDrawerOpen(false)}>
+              ยกเลิก
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={saveImage}>
+              <Save size={14} />
+              บันทึก
+            </button>
+          </div>
+        </div>
+      </DetailDrawer>
+    </div>
+  )
+}
+
+function StaticSchedulePage() {
+  const { pushToast } = useAdminToast()
+  const [loading, setLoading] = useState(true)
+  const [bundle, setBundle] = useState({
+    schedules: [],
+    days: [],
+    tracks: [],
+    items: [],
+  })
+  const [activeDayFilter, setActiveDayFilter] = useState('all')
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [savingScheduleId, setSavingScheduleId] = useState(null)
+  const [errors, setErrors] = useState({})
+  const [form, setForm] = useState({
+    dayId: '',
+    trackId: '',
+    startTime: '09:00',
+    endTime: '10:00',
+    titleTh: '',
+    titleEn: '',
+    descriptionTh: '',
+    descriptionEn: '',
+    locationTh: '',
+    locationEn: '',
+    speakerTh: '',
+    speakerEn: '',
+    audience: 'public',
+    sortOrder: 0,
+    isHighlight: false,
+    isEnabled: true,
+    displayDateLabelTh: '',
+    displayDateLabelEn: '',
+    displayTimeLabelTh: '',
+    displayTimeLabelEn: '',
+  })
+
+  const schedules = useMemo(() => bundle.schedules || [], [bundle.schedules])
+  const days = useMemo(() => [...(bundle.days || [])].sort((a, b) => {
+    const dayCompare = String(a.dayDate || '').localeCompare(String(b.dayDate || ''))
+    if (dayCompare !== 0) return dayCompare
+    return Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
+  }), [bundle.days])
+  const tracks = useMemo(() => bundle.tracks || [], [bundle.tracks])
+  const items = useMemo(() => bundle.items || [], [bundle.items])
+
+  const dayMap = useMemo(() => new Map(days.map((day) => [day.id, day])), [days])
+  const trackMap = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks])
+  const scheduleMap = useMemo(() => new Map(schedules.map((schedule) => [schedule.id, schedule])), [schedules])
+
+  const fetchScheduleBundle = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(apiUrl('/api/admin/schedules'), { credentials: 'include' })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.message || 'โหลดข้อมูล schedule ไม่สำเร็จ')
+      }
+      setBundle({
+        schedules: payload?.data?.schedules || [],
+        days: payload?.data?.days || [],
+        tracks: payload?.data?.tracks || [],
+        items: payload?.data?.items || [],
+      })
+    } catch (err) {
+      console.error('Failed to fetch schedule bundle:', err)
+      pushToast({ type: 'error', title: err?.message || 'โหลดข้อมูล schedule ไม่สำเร็จ' })
+    } finally {
+      setLoading(false)
+    }
+  }, [pushToast])
+
+  useEffect(() => {
+    fetchScheduleBundle()
+  }, [fetchScheduleBundle])
+
+  const buildFormFromItem = useCallback((item) => ({
+    dayId: String(item.dayId || ''),
+    trackId: item.trackId ? String(item.trackId) : '',
+    startTime: normalizeTimeInput(item.startTime),
+    endTime: normalizeTimeInput(item.endTime),
+    titleTh: item.titleTh || '',
+    titleEn: item.titleEn || '',
+    descriptionTh: item.descriptionTh || '',
+    descriptionEn: item.descriptionEn || '',
+    locationTh: item.locationTh || '',
+    locationEn: item.locationEn || '',
+    speakerTh: item.speakerTh || '',
+    speakerEn: item.speakerEn || '',
+    audience: item.audience || 'public',
+    sortOrder: Number(item.sortOrder || 0),
+    isHighlight: Boolean(item.isHighlight),
+    isEnabled: Boolean(item.isEnabled),
+    displayDateLabelTh: item.displayDateLabelTh || '',
+    displayDateLabelEn: item.displayDateLabelEn || '',
+    displayTimeLabelTh: item.displayTimeLabelTh || '',
+    displayTimeLabelEn: item.displayTimeLabelEn || '',
+  }), [])
+
+  const openCreate = useCallback(() => {
+    const preferredDay = days.find((item) => item.isEnabled) || days[0]
+    setEditingId(null)
+    setErrors({})
+    setForm({
+      dayId: preferredDay ? String(preferredDay.id) : '',
+      trackId: '',
+      startTime: '09:00',
+      endTime: '10:00',
+      titleTh: '',
+      titleEn: '',
+      descriptionTh: '',
+      descriptionEn: '',
+      locationTh: '',
+      locationEn: '',
+      speakerTh: '',
+      speakerEn: '',
+      audience: 'public',
+      sortOrder: 0,
+      isHighlight: false,
+      isEnabled: true,
+      displayDateLabelTh: '',
+      displayDateLabelEn: '',
+      displayTimeLabelTh: '',
+      displayTimeLabelEn: '',
+    })
+    setDrawerOpen(true)
+  }, [days])
+
+  const openEdit = useCallback((item) => {
+    setEditingId(item.id)
+    setErrors({})
+    setForm(buildFormFromItem(item))
+    setDrawerOpen(true)
+  }, [buildFormFromItem])
+
+  const selectedDay = dayMap.get(Number(form.dayId)) || null
+  const trackOptions = useMemo(() => {
+    if (!selectedDay) return []
+    return tracks.filter((track) => track.scheduleId === selectedDay.scheduleId)
+  }, [selectedDay, tracks])
+
+  useEffect(() => {
+    if (!form.trackId) return
+    const trackExists = trackOptions.some((track) => String(track.id) === String(form.trackId))
+    if (trackExists) return
+    setForm((prev) => ({ ...prev, trackId: '' }))
+  }, [trackOptions, form.trackId])
+
+  const validate = useCallback(() => {
+    const next = {}
+    if (!form.dayId) next.dayId = 'กรุณาเลือกวันกำหนดการ'
+    if (!form.startTime) next.startTime = 'กรุณากรอกเวลาเริ่ม'
+    if (!form.endTime) next.endTime = 'กรุณากรอกเวลาสิ้นสุด'
+    if (!form.titleTh.trim()) next.titleTh = 'กรุณากรอกหัวข้อภาษาไทย'
+    if (!form.titleEn.trim()) next.titleEn = 'กรุณากรอกหัวข้อภาษาอังกฤษ'
+
+    if (form.startTime && form.endTime && form.startTime >= form.endTime) {
+      next.endTime = 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น'
+    }
+
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }, [form])
+
+  const save = useCallback(async () => {
+    if (!validate()) return
+
+    const payload = {
+      dayId: Number(form.dayId),
+      trackId: form.trackId ? Number(form.trackId) : null,
+      startTime: toTimePayload(form.startTime),
+      endTime: toTimePayload(form.endTime),
+      titleTh: form.titleTh.trim(),
+      titleEn: form.titleEn.trim(),
+      descriptionTh: form.descriptionTh.trim() || null,
+      descriptionEn: form.descriptionEn.trim() || null,
+      locationTh: form.locationTh.trim() || null,
+      locationEn: form.locationEn.trim() || null,
+      speakerTh: form.speakerTh.trim() || null,
+      speakerEn: form.speakerEn.trim() || null,
+      audience: form.audience,
+      sortOrder: Number(form.sortOrder || 0),
+      isHighlight: form.isHighlight,
+      isEnabled: form.isEnabled,
+      displayDateLabelTh: form.displayDateLabelTh.trim() || null,
+      displayDateLabelEn: form.displayDateLabelEn.trim() || null,
+      displayTimeLabelTh: form.displayTimeLabelTh.trim() || null,
+      displayTimeLabelEn: form.displayTimeLabelEn.trim() || null,
+    }
+
+    const isEdit = Boolean(editingId)
+
+    try {
+      const response = await fetch(
+        apiUrl(isEdit ? `/api/admin/schedules/items/${editingId}` : '/api/admin/schedules/items'),
+        {
+          method: isEdit ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        }
+      )
+      const result = await response.json().catch(() => ({}))
+
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.message || 'บันทึกรายการกำหนดการไม่สำเร็จ')
+      }
+
+      pushToast({
+        title: isEdit ? 'อัปเดตกำหนดการแล้ว' : 'เพิ่มกำหนดการแล้ว',
+        description: payload.titleEn,
+      })
+      setDrawerOpen(false)
+      await fetchScheduleBundle()
+    } catch (err) {
+      console.error('Failed to save schedule item:', err)
+      pushToast({ type: 'error', title: err?.message || 'บันทึกไม่สำเร็จ' })
+    }
+  }, [editingId, fetchScheduleBundle, form, pushToast, validate])
+
+  const remove = useCallback(async (id) => {
+    const target = items.find((item) => item.id === id)
+    try {
+      const response = await fetch(apiUrl(`/api/admin/schedules/items/${id}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.message || 'ลบรายการไม่สำเร็จ')
+      }
+      pushToast({
+        type: 'warning',
+        title: 'ลบกำหนดการแล้ว',
+        description: target?.titleEn || '',
+      })
+      await fetchScheduleBundle()
+    } catch (err) {
+      console.error('Failed to delete schedule item:', err)
+      pushToast({ type: 'error', title: err?.message || 'ลบรายการไม่สำเร็จ' })
+    }
+  }, [fetchScheduleBundle, items, pushToast])
+
+  const updateScheduleViewType = useCallback(async (scheduleId, tableType) => {
+    try {
+      setSavingScheduleId(scheduleId)
+      const response = await fetch(apiUrl(`/api/admin/schedules/${scheduleId}/view-type`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ tableType }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.message || 'อัปเดตรูปแบบตารางไม่สำเร็จ')
+      }
+
+      setBundle((prev) => ({
+        ...prev,
+        schedules: (prev.schedules || []).map((schedule) =>
+          schedule.id === scheduleId ? { ...schedule, tableType } : schedule
+        ),
+      }))
+      pushToast({ title: 'อัปเดตรูปแบบตารางแล้ว' })
+    } catch (err) {
+      console.error('Failed to update schedule view type:', err)
+      pushToast({ type: 'error', title: err?.message || 'อัปเดตรูปแบบตารางไม่สำเร็จ' })
+    } finally {
+      setSavingScheduleId(null)
+    }
+  }, [pushToast])
+
+  const rows = useMemo(
+    () =>
+      items.map((item) => {
+        const day = dayMap.get(item.dayId)
+        const track = item.trackId ? trackMap.get(item.trackId) : null
+        const schedule = day ? scheduleMap.get(day.scheduleId) : null
+        const dayLabel = [day?.dayNameEn || day?.dayNameTh, day?.dayDate].filter(Boolean).join(' • ')
+
+        return {
+          ...item,
+          dayLabel,
+          scheduleLabel: schedule?.nameEn || schedule?.nameTh || '-',
+          tableType: schedule?.tableType || 'onsite_timetable',
+          trackLabel: track ? track.trackNameEn || track.trackNameTh : 'Default Track',
+          timeLabel: `${normalizeTimeInput(item.startTime)} - ${normalizeTimeInput(item.endTime)}`,
+        }
+      }),
+    [items, dayMap, trackMap, scheduleMap]
+  )
+
+  const dayFilters = useMemo(
+    () => [
+      { label: 'All Days', value: 'all' },
+      ...days.map((day) => ({
+        label: day.dayNameEn || day.dayNameTh || day.dayDate,
+        value: String(day.id),
+      })),
+    ],
+    [days]
+  )
+
+  const filteredRows = useMemo(() => {
+    if (activeDayFilter === 'all') return rows
+    return rows.filter((row) => String(row.dayId) === activeDayFilter)
+  }, [rows, activeDayFilter])
+
+  const stats = useMemo(() => {
+    const activeItems = items.filter((item) => item.isEnabled).length
+    const highlighted = items.filter((item) => item.isHighlight).length
+    const usedDays = new Set(items.map((item) => item.dayId)).size
+    return {
+      total: items.length,
+      activeItems,
+      highlighted,
+      usedDays,
+    }
+  }, [items])
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Static Content: Schedule"
+        description="จัดการรายการกำหนดการจากตาราง event_schedule_items พร้อมตัวกรองรายวันและการแสดงผลครบทุกข้อมูล"
+        right={
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={fetchScheduleBundle}>
+              <RefreshCw size={15} />
+              Refresh
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
+              <Plus size={15} />
+              Add Session
+            </button>
+          </div>
+        }
+      />
+
+      <section className="admin-ui-stat-grid">
+        <article className="admin-ui-stat-card">
+          <span>Items</span>
+          <strong>{stats.total}</strong>
+          <small>sessions in schedule</small>
+        </article>
+        <article className="admin-ui-stat-card success">
+          <span>Enabled</span>
+          <strong>{stats.activeItems}</strong>
+          <small>visible on website</small>
+        </article>
+        <article className="admin-ui-stat-card info">
+          <span>Highlight</span>
+          <strong>{stats.highlighted}</strong>
+          <small>featured sessions</small>
+        </article>
+        <article className="admin-ui-stat-card warn">
+          <span>Active Days</span>
+          <strong>{stats.usedDays}</strong>
+          <small>days with sessions</small>
+        </article>
+      </section>
+
+      <div className="admin-ui-chip-row">
+        {dayFilters.map((filter) => (
+          <button
+            key={filter.value}
+            type="button"
+            className={`admin-ui-chip-btn ${activeDayFilter === filter.value ? 'active' : ''}`}
+            onClick={() => setActiveDayFilter(filter.value)}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+
+      <section className="admin-ui-panel">
+        <h4>Schedule Table Type</h4>
+        <div className="admin-ui-two-col">
+          {schedules.map((schedule) => (
+            <label key={schedule.id}>
+              {schedule.nameTh || schedule.nameEn || `Schedule #${schedule.id}`}
+              <select
+                value={schedule.tableType || 'onsite_timetable'}
+                disabled={savingScheduleId === schedule.id}
+                onChange={(event) => updateScheduleViewType(schedule.id, event.target.value)}
+              >
+                <option value="onsite_timetable">Onsite Timetable (เวลา + หัวข้อ)</option>
+                <option value="milestone">Milestone (วันที่ + กิจกรรม)</option>
+              </select>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <AdminDataTable
+        loading={loading}
+        rows={filteredRows}
+        searchKeys={['titleTh', 'titleEn', 'locationTh', 'locationEn', 'speakerTh', 'speakerEn', 'dayLabel', 'trackLabel', 'displayDateLabelTh', 'displayTimeLabelTh']}
+        searchPlaceholder="ค้นหาหัวข้อ, วิทยากร, สถานที่"
+        filters={[
+          { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+          { label: 'Enabled', value: 'enabled', predicate: (row) => row.isEnabled },
+          { label: 'Disabled', value: 'disabled', predicate: (row) => !row.isEnabled },
+          { label: 'Highlight', value: 'highlight', predicate: (row) => row.isHighlight },
+        ]}
+        columns={[
+          {
+            key: 'timeLabel',
+            label: 'Time',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <strong>{row.timeLabel}</strong>
+                <span>Sort #{row.sortOrder}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'dayLabel',
+            label: 'Day / Track',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <strong>{row.dayLabel || '-'}</strong>
+                <span>{row.trackLabel}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'titleEn',
+            label: 'Session',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <strong>{row.titleEn}</strong>
+                <span>{row.titleTh}</span>
+                <span>{row.locationEn || row.locationTh || '-'}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'audience',
+            label: 'Audience / State',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <span>{scheduleAudienceLabel[row.audience] || row.audience}</span>
+                <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} label={row.isEnabled ? 'Enabled' : 'Disabled'} />
+                {row.isHighlight ? <StatusBadge status="RESUBMITTED" label="Highlight" /> : null}
+              </div>
+            ),
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="admin-ui-row-actions">
+                <button type="button" onClick={() => openEdit(row)} aria-label="edit">
+                  <Pencil size={14} />
+                </button>
+                <button type="button" onClick={() => remove(row.id)} aria-label="delete">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <DetailDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={editingId ? 'Edit Schedule Session' : 'Create Schedule Session'}
+        subtitle="ข้อมูลจะถูก sync เข้าตาราง event_schedule_items และแสดงผลในหน้า Home"
+      >
+        <div className="admin-ui-form">
+          <div className="admin-ui-two-col">
+            <label htmlFor="schedule-day">
+              Day *
+              <select
+                id="schedule-day"
+                value={form.dayId}
+                onChange={(event) => setForm((prev) => ({ ...prev, dayId: event.target.value }))}
+              >
+                <option value="">เลือกวัน</option>
+                {days.map((day) => (
+                  <option key={day.id} value={day.id}>
+                    {day.dayNameEn || day.dayNameTh || day.dayDate} ({day.dayDate})
+                  </option>
+                ))}
+              </select>
+              {errors.dayId ? <small>{errors.dayId}</small> : null}
+            </label>
+
+            <label htmlFor="schedule-track">
+              Track
+              <select
+                id="schedule-track"
+                value={form.trackId}
+                onChange={(event) => setForm((prev) => ({ ...prev, trackId: event.target.value }))}
+              >
+                <option value="">Default Track</option>
+                {trackOptions.map((track) => (
+                  <option key={track.id} value={track.id}>
+                    {track.trackNameEn || track.trackNameTh}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="schedule-start-time">
+              Start Time *
+              <input
+                id="schedule-start-time"
+                type="time"
+                value={form.startTime}
+                onChange={(event) => setForm((prev) => ({ ...prev, startTime: event.target.value }))}
+              />
+              {errors.startTime ? <small>{errors.startTime}</small> : null}
+            </label>
+
+            <label htmlFor="schedule-end-time">
+              End Time *
+              <input
+                id="schedule-end-time"
+                type="time"
+                value={form.endTime}
+                onChange={(event) => setForm((prev) => ({ ...prev, endTime: event.target.value }))}
+              />
+              {errors.endTime ? <small>{errors.endTime}</small> : null}
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="schedule-display-date-label-th">
+              display_date_label_th (override)
+              <input
+                id="schedule-display-date-label-th"
+                value={form.displayDateLabelTh}
+                onChange={(event) => setForm((prev) => ({ ...prev, displayDateLabelTh: event.target.value }))}
+                placeholder="เช่น 14 มิ.ย. - 18 มิ.ย."
+              />
+            </label>
+
+            <label htmlFor="schedule-display-time-label-th">
+              display_time_label_th (override)
+              <input
+                id="schedule-display-time-label-th"
+                value={form.displayTimeLabelTh}
+                onChange={(event) => setForm((prev) => ({ ...prev, displayTimeLabelTh: event.target.value }))}
+                placeholder="เช่น 15.30 เป็นต้นไป ถึงเที่ยงคืน"
+              />
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="schedule-title-th">
+              title_th *
+              <input
+                id="schedule-title-th"
+                value={form.titleTh}
+                onChange={(event) => setForm((prev) => ({ ...prev, titleTh: event.target.value }))}
+              />
+              {errors.titleTh ? <small>{errors.titleTh}</small> : null}
+            </label>
+
+            <label htmlFor="schedule-title-en">
+              title_en *
+              <input
+                id="schedule-title-en"
+                value={form.titleEn}
+                onChange={(event) => setForm((prev) => ({ ...prev, titleEn: event.target.value }))}
+              />
+              {errors.titleEn ? <small>{errors.titleEn}</small> : null}
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="schedule-location-th">
+              location_th
+              <input
+                id="schedule-location-th"
+                value={form.locationTh}
+                onChange={(event) => setForm((prev) => ({ ...prev, locationTh: event.target.value }))}
+              />
+            </label>
+
+            <label htmlFor="schedule-location-en">
+              location_en
+              <input
+                id="schedule-location-en"
+                value={form.locationEn}
+                onChange={(event) => setForm((prev) => ({ ...prev, locationEn: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="schedule-speaker-th">
+              speaker_th
+              <input
+                id="schedule-speaker-th"
+                value={form.speakerTh}
+                onChange={(event) => setForm((prev) => ({ ...prev, speakerTh: event.target.value }))}
+              />
+            </label>
+
+            <label htmlFor="schedule-speaker-en">
+              speaker_en
+              <input
+                id="schedule-speaker-en"
+                value={form.speakerEn}
+                onChange={(event) => setForm((prev) => ({ ...prev, speakerEn: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="schedule-audience">
+              audience
+              <select
+                id="schedule-audience"
+                value={form.audience}
+                onChange={(event) => setForm((prev) => ({ ...prev, audience: event.target.value }))}
+              >
+                {Object.entries(scheduleAudienceLabel).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label htmlFor="schedule-sort-order">
+              sort_order
+              <input
+                id="schedule-sort-order"
+                type="number"
+                min={0}
+                value={form.sortOrder}
+                onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label htmlFor="schedule-description-th">
+              description_th
+              <textarea
+                id="schedule-description-th"
+                rows={3}
+                value={form.descriptionTh}
+                onChange={(event) => setForm((prev) => ({ ...prev, descriptionTh: event.target.value }))}
+              />
+            </label>
+
+            <label htmlFor="schedule-description-en">
+              description_en
+              <textarea
+                id="schedule-description-en"
+                rows={3}
+                value={form.descriptionEn}
+                onChange={(event) => setForm((prev) => ({ ...prev, descriptionEn: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <div className="admin-ui-two-col">
+            <label className="admin-ui-check">
+              <input
+                type="checkbox"
+                checked={form.isHighlight}
+                onChange={(event) => setForm((prev) => ({ ...prev, isHighlight: event.target.checked }))}
+              />
+              <span>is_highlight</span>
+            </label>
+
+            <label className="admin-ui-check">
+              <input
+                type="checkbox"
+                checked={form.isEnabled}
+                onChange={(event) => setForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
+              />
+              <span>is_enabled</span>
+            </label>
+          </div>
+
+          <div className="admin-ui-panel">
+            <h3>Preview</h3>
+            <div className="admin-ui-col-stack">
+              <strong>{form.titleEn || '-'}</strong>
+              <span>{form.titleTh || '-'}</span>
+              <span>
+                {form.startTime || '--:--'} - {form.endTime || '--:--'}
+              </span>
+              <span>{selectedDay?.dayDate || '-'}</span>
+              <span>{scheduleAudienceLabel[form.audience] || form.audience}</span>
+            </div>
+          </div>
+
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setDrawerOpen(false)}>
+              Cancel
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={save}>
+              <Save size={14} />
+              Save
+            </button>
+          </div>
+        </div>
+      </DetailDrawer>
+    </div>
+  )
+}
+
+function StaticWinnersPage() {
+  const { pushToast } = useAdminToast()
+  const [items, setItems] = useState(winnersSeed)
+  const [season, setSeason] = useState('all')
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [errors, setErrors] = useState({})
+  const [form, setForm] = useState({
+    season: new Date().getFullYear(),
+    rank: 1,
+    team: '',
+    projectTitle: '',
+    description: '',
+    demoLink: '',
+    imageName: '',
+    isPublished: false,
+  })
+
+  const availableSeasons = useMemo(
+    () => [...new Set(items.map((item) => item.season))].sort((a, b) => b - a),
+    [items],
+  )
+
+  const filtered = season === 'all' ? items : items.filter((item) => String(item.season) === season)
+
+  const openCreate = () => {
+    setEditingId(null)
+    setForm({
+      season: new Date().getFullYear(),
+      rank: 1,
+      team: '',
+      projectTitle: '',
+      description: '',
+      demoLink: '',
+      imageName: '',
+      isPublished: false,
+    })
+    setErrors({})
+    setDrawerOpen(true)
+  }
+
+  const openEdit = (item) => {
+    setEditingId(item.id)
+    setForm({
+      season: item.season,
+      rank: item.rank,
+      team: item.team,
+      projectTitle: item.projectTitle,
+      description: item.description,
+      demoLink: item.demoLink,
+      imageName: item.image?.split('/').pop() || '',
+      isPublished: item.isPublished,
+    })
+    setErrors({})
+    setDrawerOpen(true)
+  }
+
+  const validate = () => {
+    const next = {}
+    if (!form.team.trim()) next.team = 'กรุณากรอกชื่อทีม'
+    if (!form.projectTitle.trim()) next.projectTitle = 'กรุณากรอกชื่อผลงาน'
+    if (!form.demoLink.trim()) next.demoLink = 'กรุณากรอก demo link'
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const save = () => {
+    if (!validate()) return
+    if (editingId) {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === editingId
+            ? {
+                ...item,
+                season: Number(form.season),
+                rank: Number(form.rank),
+                team: form.team.trim(),
+                projectTitle: form.projectTitle.trim(),
+                description: form.description.trim(),
+                demoLink: form.demoLink.trim(),
+                isPublished: form.isPublished,
+              }
+            : item,
+        ),
+      )
+      pushToast({ title: 'อัปเดต Winners สำเร็จ' })
+    } else {
+      setItems((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          season: Number(form.season),
+          rank: Number(form.rank),
+          team: form.team.trim(),
+          projectTitle: form.projectTitle.trim(),
+          description: form.description.trim(),
+          demoLink: form.demoLink.trim(),
+          image: '/content/winners/mock.jpg',
+          isPublished: form.isPublished,
+        },
+      ])
+      pushToast({ title: 'เพิ่ม Winner สำเร็จ' })
+    }
+    setDrawerOpen(false)
+  }
+
+  const togglePublish = (id) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, isPublished: !item.isPublished } : item)),
+    )
+    pushToast({
+      type: 'info',
+      title: 'สลับสถานะ publish แล้ว',
+    })
+  }
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Static Content: Winners"
+        description="จัดการผลการแข่งขันตาม season/year พร้อม publish/unpublish"
+        right={
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
+            <Plus size={15} />
+            Add Winner
+          </button>
+        }
+      />
+
+      <div className="admin-ui-season-filter">
+        <button type="button" className={season === 'all' ? 'active' : ''} onClick={() => setSeason('all')}>
+          All Seasons
+        </button>
+        {availableSeasons.map((year) => (
+          <button
+            type="button"
+            key={year}
+            className={String(year) === season ? 'active' : ''}
+            onClick={() => setSeason(String(year))}
+          >
+            {year}
+          </button>
+        ))}
+      </div>
+
+      <AdminDataTable
+        rows={[...filtered].sort((a, b) => a.season - b.season || a.rank - b.rank)}
+        searchKeys={['team', 'projectTitle', 'description']}
+        searchPlaceholder="ค้นหา team / project title"
+        columns={[
+          {
+            key: 'season',
+            label: 'Season',
+          },
+          {
+            key: 'rank',
+            label: 'Rank',
+          },
+          {
+            key: 'team',
+            label: 'Team',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <strong>{row.team}</strong>
+                <span>{row.projectTitle}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'description',
+            label: 'Description',
+            render: (row) => <span className="admin-ui-truncate">{row.description}</span>,
+          },
+          {
+            key: 'demoLink',
+            label: 'Demo',
+            render: (row) => (
+              <a className="admin-ui-link" href={row.demoLink} target="_blank" rel="noreferrer">
+                <Link2 size={13} />
+                Demo Link
+              </a>
+            ),
+          },
+          {
+            key: 'publish',
+            label: 'Publish',
+            render: (row) => (
+              <button type="button" className="admin-ui-pill-btn" onClick={() => togglePublish(row.id)}>
+                {row.isPublished ? (
+                  <>
+                    <Check size={13} />
+                    Published
+                  </>
+                ) : (
+                  <>
+                    <Eye size={13} />
+                    Draft
+                  </>
+                )}
+              </button>
+            ),
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="admin-ui-row-actions">
+                <button type="button" onClick={() => openEdit(row)} aria-label="edit">
+                  <Pencil size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setItems((prev) => prev.filter((item) => item.id !== row.id))
+                    pushToast({ type: 'warning', title: 'ลบ Winner แล้ว' })
+                  }}
+                  aria-label="delete"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <DetailDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={editingId ? 'Edit Winner' : 'Create Winner'}
+      >
+        <div className="admin-ui-form">
+          <label htmlFor="winner-season">
+            Season (Year)
+            <input
+              id="winner-season"
+              type="number"
+              value={form.season}
+              onChange={(event) => setForm((prev) => ({ ...prev, season: event.target.value }))}
+            />
+          </label>
+          <label htmlFor="winner-rank">
+            Rank
+            <input
+              id="winner-rank"
+              type="number"
+              min={1}
+              value={form.rank}
+              onChange={(event) => setForm((prev) => ({ ...prev, rank: event.target.value }))}
+            />
+          </label>
+          <label htmlFor="winner-team">
+            Team *
+            <input
+              id="winner-team"
+              value={form.team}
+              onChange={(event) => setForm((prev) => ({ ...prev, team: event.target.value }))}
+            />
+            {errors.team ? <small>{errors.team}</small> : null}
+          </label>
+          <label htmlFor="winner-project">
+            Project Title *
+            <input
+              id="winner-project"
+              value={form.projectTitle}
+              onChange={(event) => setForm((prev) => ({ ...prev, projectTitle: event.target.value }))}
+            />
+            {errors.projectTitle ? <small>{errors.projectTitle}</small> : null}
+          </label>
+          <label htmlFor="winner-description">
+            Description
+            <textarea
+              id="winner-description"
+              rows={3}
+              value={form.description}
+              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+            />
+          </label>
+          <label htmlFor="winner-link">
+            Demo Link *
+            <input
+              id="winner-link"
+              value={form.demoLink}
+              onChange={(event) => setForm((prev) => ({ ...prev, demoLink: event.target.value }))}
+            />
+            {errors.demoLink ? <small>{errors.demoLink}</small> : null}
+          </label>
+          <label htmlFor="winner-image">
+            Images
+            <input
+              id="winner-image"
+              type="file"
+              accept="image/*"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (!file) return
+                setForm((prev) => ({ ...prev, imageName: file.name }))
+              }}
+            />
+            {form.imageName ? (
+              <span className="admin-ui-file-chip">
+                <Upload size={13} />
+                {form.imageName}
+              </span>
+            ) : null}
+          </label>
+          <label className="admin-ui-check">
+            <input
+              type="checkbox"
+              checked={form.isPublished}
+              onChange={(event) => setForm((prev) => ({ ...prev, isPublished: event.target.checked }))}
+            />
+            <span>Publish now</span>
+          </label>
+
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => setDrawerOpen(false)}>
+              ยกเลิก
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={save}>
+              <Save size={14} />
+              บันทึก
+            </button>
+          </div>
+        </div>
+      </DetailDrawer>
+    </div>
+  )
+}
+
+function ReviewQueuePage() {
+  const navigate = useNavigate()
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Team Review: Queue"
+        description="คิวตรวจสอบทีม พร้อม filter/search/pagination สำหรับรีวิวเร็ว"
+      />
+      <AdminDataTable
+        rows={reviewTeamsSeed}
+        searchKeys={['teamCode', 'teamName', 'university']}
+        searchPlaceholder="ค้นหา team_code, team_name, university"
+        filters={[
+          { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+          { label: 'SUBMITTED', value: 'submitted', predicate: (row) => row.teamState === 'SUBMITTED' },
+          { label: 'RETURNED', value: 'returned', predicate: (row) => row.teamState === 'RETURNED' },
+          { label: 'READY_TO_RESUBMIT', value: 'ready', predicate: (row) => row.teamState === 'READY_TO_RESUBMIT' },
+          { label: 'APPROVED', value: 'approved', predicate: (row) => row.teamState === 'APPROVED' },
+        ]}
+        columns={[
+          {
+            key: 'team',
+            label: 'Team',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <strong>{row.teamCode}</strong>
+                <span>
+                  {row.teamName} • {row.university}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: 'counts',
+            label: 'Member States',
+            render: (row) => (
+              <div className="admin-ui-count-badges">
+                <span className="ok">A {row.counts.approved}</span>
+                <span className="warn">R {row.counts.resubmitted}</span>
+                <span className="danger">F {row.counts.needFix}</span>
+                <span>P {row.counts.pending}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'teamState',
+            label: 'Team State',
+            render: (row) => <StatusBadge status={row.teamState} />,
+          },
+          {
+            key: 'submittedAt',
+            label: 'Submitted At',
+            render: (row) => formatDateTime(row.submittedAt),
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="admin-ui-row-actions">
+                <button type="button" onClick={() => navigate(`/admin/review/teams/${row.teamId}`)}>
+                  <Eye size={14} />
+                </button>
+                <button type="button">
+                  <Lock size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+    </div>
+  )
+}
+
+function TeamReviewDetailPage() {
+  const params = useParams()
+  const { pushToast } = useAdminToast()
+  const teamId = Number(params.teamId)
+  const initialTeam = reviewTeamDetailsSeed[teamId]
+  const [team, setTeam] = useState(initialTeam || null)
+  const [selectedMemberId, setSelectedMemberId] = useState(initialTeam?.members[0]?.memberId || null)
+  const [bulkSelection, setBulkSelection] = useState([])
+  const [reason, setReason] = useState('')
+
+  useEffect(() => {
+    const next = reviewTeamDetailsSeed[teamId]
+    setTeam(next || null)
+    setSelectedMemberId(next?.members[0]?.memberId || null)
+    setBulkSelection([])
+    setReason('')
+  }, [teamId])
+
+  const selectedMember = team?.members.find((item) => item.memberId === selectedMemberId) || null
+  const allApproved = team?.members.every((member) => member.verifyState === 'APPROVED') || false
+
+  if (!team) {
+    return (
+      <div className="admin-ui-panel">
+        <h3>ไม่พบทีมที่ต้องการ</h3>
+        <p>กรุณากลับไปหน้า Review Queue</p>
+      </div>
+    )
+  }
+
+  const patchMemberState = (memberId, patch) => {
+    setTeam((prev) => {
+      if (!prev) return prev
+      const nextMembers = prev.members.map((member) =>
+        member.memberId === memberId
+          ? {
+              ...member,
+              ...patch,
+              lastUploadAt: patch.lastUploadAt || member.lastUploadAt,
+            }
+          : member,
+      )
+
+      const hasNeedFix = nextMembers.some((member) => member.verifyState === 'NEED_FIX')
+      const nextTeamState = nextMembers.every((member) => member.verifyState === 'APPROVED')
+        ? 'APPROVED'
+        : hasNeedFix
+          ? 'RETURNED'
+          : 'IN_REVIEW'
+
+      return {
+        ...prev,
+        members: nextMembers,
+        teamState: nextTeamState,
+      }
+    })
+  }
+
+  const approveMember = () => {
+    if (!selectedMember) return
+    patchMemberState(selectedMember.memberId, {
+      verifyState: 'APPROVED',
+      needFixReason: '',
+      needFixAt: null,
+    })
+    pushToast({
+      title: 'Approve member สำเร็จ',
+      description: selectedMember.fullName,
+    })
+  }
+
+  const returnMember = () => {
+    if (!selectedMember) return
+    if (!reason.trim()) {
+      pushToast({
+        type: 'warning',
+        title: 'กรุณาระบุ reason ก่อน Return',
+      })
+      return
+    }
+    patchMemberState(selectedMember.memberId, {
+      verifyState: 'NEED_FIX',
+      needFixReason: reason.trim(),
+      needFixAt: new Date().toISOString(),
+    })
+    pushToast({
+      type: 'warning',
+      title: 'ส่งกลับเพื่อแก้ไขแล้ว',
+      description: selectedMember.fullName,
+    })
+    setReason('')
+  }
+
+  const returnTeamBulk = () => {
+    if (!bulkSelection.length) {
+      pushToast({
+        type: 'warning',
+        title: 'ยังไม่ได้เลือกสมาชิก',
+      })
+      return
+    }
+    if (!reason.trim()) {
+      pushToast({
+        type: 'warning',
+        title: 'กรุณากรอก reason สำหรับ bulk return',
+      })
+      return
+    }
+    const now = new Date().toISOString()
+    setTeam((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        teamState: 'RETURNED',
+        members: prev.members.map((member) =>
+          bulkSelection.includes(member.memberId)
+            ? {
+                ...member,
+                verifyState: 'NEED_FIX',
+                needFixReason: reason.trim(),
+                needFixAt: now,
+              }
+            : member,
+        ),
+      }
+    })
+    setReason('')
+    setBulkSelection([])
+    pushToast({
+      type: 'warning',
+      title: 'Return team สำเร็จ',
+      description: `${bulkSelection.length} members marked as NEED_FIX`,
+    })
+  }
+
+  const approveTeam = () => {
+    if (!allApproved) {
+      pushToast({
+        type: 'warning',
+        title: 'ยังอนุมัติทีมไม่ได้',
+        description: 'ต้องให้ทุกคนเป็น APPROVED ก่อน',
+      })
+      return
+    }
+    setTeam((prev) => (prev ? { ...prev, teamState: 'APPROVED' } : prev))
+    pushToast({ title: 'Approve team สำเร็จ', description: team.teamName })
+  }
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title={`${team.teamCode} • ${team.teamName}`}
+        description={`State: ${team.teamState} • Submitted: ${formatDateTime(team.submittedAt)} • Lock owner: ${team.lockOwner}`}
+        right={
+          <div className="admin-ui-headmin-ui-actions">
+            <button type="button" className="admin-ui-btn" onClick={returnTeamBulk}>
+              <UserRoundX size={15} />
+              Return Team (Bulk)
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={approveTeam}>
+              <UserRoundCheck size={15} />
+              Approve Team
+            </button>
+          </div>
+        }
+      />
+
+      <div className="admin-ui-review-layout">
+        <aside className="admin-ui-review-members">
+          <h3>
+            <Users size={15} />
+            Members
+          </h3>
+          <div className="admin-ui-member-list">
+            {team.members.map((member) => (
+              <button
+                type="button"
+                key={member.memberId}
+                className={member.memberId === selectedMemberId ? 'active' : ''}
+                onClick={() => setSelectedMemberId(member.memberId)}
+              >
+                <label className="admin-ui-check-inline" onClick={(event) => event.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={bulkSelection.includes(member.memberId)}
+                    onChange={(event) => {
+                      if (event.target.checked) {
+                        setBulkSelection((prev) => [...prev, member.memberId])
+                      } else {
+                        setBulkSelection((prev) => prev.filter((id) => id !== member.memberId))
+                      }
+                    }}
+                  />
+                </label>
+                <div>
+                  <strong>{member.fullName}</strong>
+                  <span>{member.role}</span>
+                </div>
+                <StatusBadge status={member.verifyState} />
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <section className="admin-ui-review-detail">
+          {selectedMember ? (
+            <>
+              <article className="admin-ui-panel">
+                <h3>Member Profile</h3>
+                <div className="admin-ui-profile-grid">
+                  <div>
+                    <span>Full name</span>
+                    <strong>{selectedMember.fullName}</strong>
+                  </div>
+                  <div>
+                    <span>University</span>
+                    <strong>{selectedMember.university}</strong>
+                  </div>
+                  <div>
+                    <span>Email</span>
+                    <strong>{selectedMember.email}</strong>
+                  </div>
+                  <div>
+                    <span>Phone</span>
+                    <strong>{selectedMember.phone}</strong>
+                  </div>
+                  <div>
+                    <span>Need Fix At</span>
+                    <strong>{selectedMember.needFixAt ? formatDateTime(selectedMember.needFixAt) : '-'}</strong>
+                  </div>
+                  <div>
+                    <span>Last Upload At</span>
+                    <strong>{formatDateTime(selectedMember.lastUploadAt)}</strong>
+                  </div>
+                </div>
+
+                <label htmlFor="return-reason" className="admin-ui-label">
+                  Return Reason *
+                </label>
+                <textarea
+                  id="return-reason"
+                  rows={3}
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  placeholder="ระบุเหตุผลที่ต้องแก้ไขไฟล์"
+                />
+
+                <div className="admin-ui-form-actions">
+                  <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={approveMember}>
+                    <UserRoundCheck size={14} />
+                    Approve Member
+                  </button>
+                  <button type="button" className="admin-ui-btn" onClick={returnMember}>
+                    <UserRoundX size={14} />
+                    Return Member (Need Fix)
+                  </button>
+                </div>
+                {selectedMember.needFixReason ? (
+                  <p className="admin-ui-warning-text">
+                    Current reason: <strong>{selectedMember.needFixReason}</strong>
+                  </p>
+                ) : null}
+              </article>
+
+              <FileListViewer files={selectedMember.files} teamCode={team.teamCode} memberName={selectedMember.fullName} />
+            </>
+          ) : null}
+        </section>
+      </div>
+
+      <article className="admin-ui-panel">
+        <h3>Review Timeline</h3>
+        <div className="admin-ui-timeline-list">
+          {team.timeline.map((item) => (
+            <div key={item.id}>
+              <strong>{item.action}</strong>
+              <span>{item.detail}</span>
+              <small>
+                {item.actor} • {formatDateTime(item.at)}
+              </small>
+            </div>
+          ))}
+        </div>
+      </article>
+    </div>
+  )
+}
+
+function ReturnedMonitorPage() {
+  const navigate = useNavigate()
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Team Review: Returned Monitor"
+        description="ติดตามทีมที่ถูกส่งกลับและความคืบหน้าการ resubmission แบบ real-time"
+      />
+      <AdminDataTable
+        rows={returnedTeamsSeed}
+        searchKeys={['teamCode', 'teamName']}
+        searchPlaceholder="ค้นหา team_code / team_name"
+        filters={[
+          { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+          { label: 'RETURNED', value: 'returned', predicate: (row) => row.state === 'RETURNED' },
+          {
+            label: 'READY_TO_RESUBMIT',
+            value: 'ready',
+            predicate: (row) => row.state === 'READY_TO_RESUBMIT',
+          },
+        ]}
+        columns={[
+          {
+            key: 'team',
+            label: 'Team',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <strong>{row.teamCode}</strong>
+                <span>{row.teamName}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'needFixMembers',
+            label: 'Need Fix Members',
+            render: (row) => row.needFixMembers.join(', '),
+          },
+          {
+            key: 'needFixAt',
+            label: 'Need Fix At',
+            render: (row) => formatDateTime(row.needFixAt),
+          },
+          {
+            key: 'progress',
+            label: 'Resubmission Progress',
+            render: (row) => (
+              <div className="admin-ui-progress-wrap">
+                <div className="admin-ui-progress-bar">
+                  <span style={{ width: `${Math.round((row.changedMembers / row.totalNeedFixMembers) * 100)}%` }} />
+                </div>
+                <small>
+                  {row.changedMembers}/{row.totalNeedFixMembers} changed files
+                </small>
+              </div>
+            ),
+          },
+          {
+            key: 'state',
+            label: 'State',
+            render: (row) => <StatusBadge status={row.state} />,
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <button type="button" className="admin-ui-mini-btn" onClick={() => navigate(`/admin/review/teams/${row.teamId}`)}>
+                Open
+              </button>
+            ),
+          },
+        ]}
+      />
+    </div>
+  )
+}
+
+function ApprovedTeamsPage() {
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Team Review: Approved Teams"
+        description="รายชื่อทีมที่ APPROVED แล้ว พร้อมข้อมูลผู้อนุมัติและเวลาอนุมัติ"
+      />
+
+      <AdminDataTable
+        rows={approvedTeamsSeed}
+        searchKeys={['teamCode', 'teamName', 'university']}
+        searchPlaceholder="ค้นหา team"
+        columns={[
+          {
+            key: 'team',
+            label: 'Team',
+            render: (row) => (
+              <div className="admin-ui-col-stack">
+                <strong>{row.teamCode}</strong>
+                <span>
+                  {row.teamName} • {row.university}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: 'approvedAt',
+            label: 'Approved At',
+            render: (row) => formatDateTime(row.approvedAt),
+          },
+          {
+            key: 'approvedBy',
+            label: 'Approved By',
+          },
+          {
+            key: 'state',
+            label: 'State',
+            render: () => <StatusBadge status="APPROVED" />,
+          },
+        ]}
+      />
+    </div>
+  )
+}
+
+function SelectionPage() {
+  const { pushToast } = useAdminToast()
+  const [loading, setLoading] = useState(true)
+  const [rows, setRows] = useState([])
+  const [status, setStatus] = useState('submitted')
+  const [openAt, setOpenAt] = useState('')
+  const [closeAt, setCloseAt] = useState('')
+  const [savingWindow, setSavingWindow] = useState(false)
+  const [expiringSelection, setExpiringSelection] = useState(false)
+
+  const fetchRows = useCallback(async () => {
+    try {
+      setLoading(true)
+      const query = new URLSearchParams()
+      if (status) query.set('status', status)
+      const res = await fetch(apiUrl(`/api/admin/selection/teams?${query.toString()}`), { credentials: 'include' })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ไม่สามารถโหลดข้อมูลได้')
+      setRows(payload.data || [])
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'โหลดข้อมูล selection ไม่สำเร็จ' })
+    } finally {
+      setLoading(false)
+    }
+  }, [pushToast, status])
+
+  useEffect(() => {
+    fetchRows()
+  }, [fetchRows])
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await fetch(apiUrl('/api/admin/selection/global-deadline'), { credentials: 'include' })
+        const payload = await res.json()
+        if (!mounted) return
+        if (res.ok && payload?.ok) {
+          const openRaw = payload?.data?.openAt
+          const closeRaw = payload?.data?.closeAt
+          setOpenAt(formatDateInput(openRaw))
+          setCloseAt(formatDateInput(closeRaw))
+        }
+      } catch {
+        // no-op
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
+
+  const saveGlobalConfirmWindow = async () => {
+    const openMs = new Date(openAt).getTime()
+    const closeMs = new Date(closeAt).getTime()
+    if (!Number.isFinite(openMs) || !Number.isFinite(closeMs)) {
+      pushToast({ type: 'error', title: 'รูปแบบวันเวลาไม่ถูกต้อง' })
+      return
+    }
+    if (openMs > closeMs) {
+      pushToast({ type: 'error', title: 'วันเวลาเปิดต้องไม่มากกว่าวันเวลาปิด' })
+      return
+    }
+
+    try {
+      setSavingWindow(true)
+      const res = await fetch(apiUrl('/api/admin/selection/global-deadline'), {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ openAt, closeAt }),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'บันทึกข้อมูลไม่สำเร็จ')
+      pushToast({ title: 'บันทึก Global confirm window สำเร็จ' })
+      fetchRows()
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'บันทึก Global confirm window ไม่สำเร็จ' })
+    } finally {
+      setSavingWindow(false)
+    }
+  }
+
+  const setResult = async (teamId, nextStatus) => {
+    try {
+      const body = {
+        status: nextStatus,
+      }
+      const res = await fetch(apiUrl(`/api/admin/selection/teams/${teamId}/result`), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'อัปเดตข้อมูลไม่สำเร็จ')
+      pushToast({ title: 'บันทึกผลคัดเลือกสำเร็จ' })
+      fetchRows()
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'บันทึกผลคัดเลือกไม่สำเร็จ' })
+    }
+  }
+
+  const expireTimedOutSelectionTeams = async () => {
+    const confirmed = window.confirm('อัปเดตทีมที่หมดเวลายืนยันให้เป็น not_joined ตอนนี้ใช่หรือไม่?')
+    if (!confirmed) return
+    try {
+      setExpiringSelection(true)
+      const res = await fetch(apiUrl('/api/admin/selection/expire-not-joined'), {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'เปลี่ยนสถานะหมดอายุไม่สำเร็จ')
+      const updatedCount = Number(payload?.data?.updatedCount || 0)
+      pushToast({ title: `อัปเดตสถานะสำเร็จ ${updatedCount} ทีม` })
+      fetchRows()
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'อัปเดตทีมหมดเวลาไม่สำเร็จ' })
+    } finally {
+      setExpiringSelection(false)
+    }
+  }
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading title="Selection Result" description="ประกาศผลผ่าน/ไม่ผ่าน และกำหนดเวลาให้ทีมยืนยันเข้าร่วม" />
+      <article className="admin-ui-panel">
+        <div className="admin-ui-dashboard-filters">
+          <label>
+            Team status
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="submitted">submitted</option>
+              <option value="passed">passed</option>
+              <option value="failed">failed</option>
+              <option value="confirmed">confirmed</option>
+              <option value="not_joined">not_joined</option>
+            </select>
+          </label>
+          <label>
+            Confirm open at
+            <input type="datetime-local" value={openAt} onChange={(e) => setOpenAt(e.target.value)} />
+          </label>
+          <label>
+            Confirm close at
+            <input type="datetime-local" value={closeAt} onChange={(e) => setCloseAt(e.target.value)} />
+          </label>
+          <button
+            type="button"
+            className="admin-ui-btn admin-ui-btn-primary"
+            onClick={saveGlobalConfirmWindow}
+            disabled={savingWindow || !openAt || !closeAt}
+            title="บันทึกช่วงเวลาเปิด/ปิดการยืนยันสำหรับทุกทีมที่ passed"
+          >
+            {savingWindow ? 'Saving...' : 'Save Global window'}
+          </button>
+          <button
+            type="button"
+            className="admin-ui-btn"
+            onClick={() => { setOpenAt(''); setCloseAt('') }}
+            title="ล้างค่าเวลาเปิด/ปิดที่กรอกไว้"
+          >
+            Clear window
+          </button>
+          <button type="button" className="admin-ui-btn" onClick={fetchRows}>
+            <RefreshCw size={14} />
+            Refresh
+          </button>
+          <button
+            type="button"
+            className="admin-ui-btn"
+            onClick={expireTimedOutSelectionTeams}
+            disabled={expiringSelection}
+            title="อัปเดตทีม passed ที่หมดเวลายืนยันให้เป็น not_joined"
+          >
+            {expiringSelection ? 'Updating...' : 'Update expired teams'}
+          </button>
+        </div>
+      </article>
+
+      <AdminDataTable
+        rows={rows.map((r) => ({ ...r, id: r.team_id }))}
+        loading={loading}
+        searchKeys={['team_code', 'team_name_th', 'team_name_en', 'leader_name']}
+        searchPlaceholder="ค้นหา team code / team name / leader"
+        columns={[
+          { key: 'team_code', label: 'Team Code' },
+          {
+            key: 'team_name_th',
+            label: 'Team',
+            render: (row) => row.team_name_th || row.team_name_en,
+          },
+          { key: 'leader_name', label: 'Leader' },
+          { key: 'status', label: 'Status' },
+          {
+            key: 'confirmation_deadline_at',
+            label: 'Confirm Deadline',
+            render: (row) => formatDateTime(row.confirmation_deadline_at),
+          },
+          {
+            key: 'confirmed_at',
+            label: 'Confirmed At',
+            render: (row) => formatDateTime(row.confirmed_at),
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="admin-ui-inline-actions">
+                <button type="button" className="admin-ui-mini-btn" onClick={() => setResult(row.team_id, 'passed')}>
+                  Set passed
+                </button>
+                <button type="button" className="admin-ui-mini-btn" onClick={() => setResult(row.team_id, 'failed')}>
+                  Set failed
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+    </div>
+  )
+}
+
+function SubmissionTasksPage() {
+  const { pushToast } = useAdminToast()
+  return <SubmissionTasksPageView pushToast={pushToast} />
+}
+
+function NotificationSettingsPage() {
+  const { pushToast } = useAdminToast()
+  const [settings, setSettings] = useState([])
+  const [recipients, setRecipients] = useState([])
+  const [teamOptions, setTeamOptions] = useState([])
+  const [eventDrafts, setEventDrafts] = useState({})
+  const [customEmail, setCustomEmail] = useState({ teamId: '', subject: '', message: '' })
+  const [burstTestRecipientEmail, setBurstTestRecipientEmail] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [sendingBurstTest, setSendingBurstTest] = useState(false)
+  const [updatingRecipientUserId, setUpdatingRecipientUserId] = useState(null)
+
+  const loadSelectionTeamOptions = useCallback(async () => {
+    const statuses = ['submitted', 'passed', 'failed', 'confirmed', 'not_joined']
+    const responses = await Promise.all(
+      statuses.map(async (status) => {
+        const res = await fetch(apiUrl(`/api/admin/selection/teams?status=${status}`), { credentials: 'include' })
+        const payload = await res.json()
+        if (!res.ok || !payload?.ok) return []
+        return payload.data || []
+      }),
+    )
+
+    const dedup = new Map()
+    responses.flat().forEach((row) => {
+      if (!row?.team_id || dedup.has(row.team_id)) return
+      dedup.set(row.team_id, {
+        teamId: row.team_id,
+        label: `${row.team_name_th || row.team_name_en} [${row.team_code}]`,
+      })
+    })
+
+    setTeamOptions(Array.from(dedup.values()).sort((a, b) => a.label.localeCompare(b.label, 'th')))
+  }, [])
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true)
+      const [settingsRes, recipientsRes] = await Promise.all([
+        fetch(apiUrl('/api/notifications/admin/settings'), { credentials: 'include' }),
+        fetch(apiUrl('/api/notifications/admin/recipients'), { credentials: 'include' }),
+      ])
+      const settingsPayload = await settingsRes.json()
+      const recipientsPayload = await recipientsRes.json()
+      if (!settingsRes.ok || !settingsPayload?.ok) throw new Error(settingsPayload?.message || 'โหลดการตั้งค่าไม่สำเร็จ')
+      if (!recipientsRes.ok || !recipientsPayload?.ok) throw new Error(recipientsPayload?.message || 'โหลดรายชื่อผู้รับไม่สำเร็จ')
+
+      const settingsRows = settingsPayload.data || []
+      setSettings(settingsRows)
+      setRecipients(recipientsPayload.data || [])
+      setEventDrafts(
+        settingsRows.reduce((acc, row) => {
+          acc[row.eventCode] = {
+            customSubject: row.customSubject || '',
+            customMessage: row.customMessage || '',
+          }
+          return acc
+        }, {}),
+      )
+      await loadSelectionTeamOptions()
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'โหลด notification settings ไม่สำเร็จ' })
+    } finally {
+      setLoading(false)
+    }
+  }, [loadSelectionTeamOptions, pushToast])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const updateSetting = async (eventCode, patch, successTitle = 'บันทึกการตั้งค่าแจ้งเตือนสำเร็จ') => {
+    try {
+      const res = await fetch(apiUrl(`/api/notifications/admin/settings/${eventCode}`), {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'อัปเดตข้อมูลไม่สำเร็จ')
+      pushToast({ title: successTitle })
+      load()
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'บันทึกไม่สำเร็จ' })
+    }
+  }
+
+  const toggleRecipient = async (recipient) => {
+    try {
+      setUpdatingRecipientUserId(recipient.userId)
+      const res = await fetch(apiUrl(`/api/notifications/admin/recipients/${recipient.userId}`), {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !recipient.enabled }),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'อัปเดตรายชื่อผู้รับไม่สำเร็จ')
+      setRecipients((prev) => prev.map((row) => (row.userId === recipient.userId ? payload.data : row)))
+      pushToast({ title: 'อัปเดตรายชื่อผู้รับแจ้งเตือนสำเร็จ' })
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'อัปเดตผู้รับแจ้งเตือนไม่สำเร็จ' })
+    } finally {
+      setUpdatingRecipientUserId(null)
+    }
+  }
+
+  const saveEventMessage = (eventCode) => {
+    const draft = eventDrafts[eventCode] || { customSubject: '', customMessage: '' }
+    updateSetting(eventCode, {
+      customSubject: draft.customSubject?.trim() || null,
+      customMessage: draft.customMessage?.trim() || null,
+    }, 'บันทึกข้อความ template สำเร็จ')
+  }
+
+  const sendCustomEmail = async () => {
+    if (!customEmail.teamId || !customEmail.subject.trim() || !customEmail.message.trim()) {
+      pushToast({ type: 'error', title: 'กรุณาเลือกทีม หัวข้อ และข้อความให้ครบ' })
+      return
+    }
+
+    try {
+      setSending(true)
+      const res = await fetch(apiUrl('/api/notifications/admin/custom-email'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: Number(customEmail.teamId),
+          subject: customEmail.subject,
+          message: customEmail.message,
+        }),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ส่งข้อมูลไม่สำเร็จ')
+      pushToast({ title: `ส่งสำเร็จ (sent=${payload.data?.sent || 0}, failed=${payload.data?.failed || 0}, skipped=${payload.data?.skipped || 0})` })
+      setCustomEmail({ teamId: '', subject: '', message: '' })
+      load()
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'ส่งอีเมลไม่สำเร็จ' })
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const sendBurstTestEmail = async () => {
+    const email = burstTestRecipientEmail.trim()
+    if (!email) {
+      pushToast({ type: 'error', title: 'กรุณากรอกอีเมลปลายทางสำหรับทดสอบ' })
+      return
+    }
+
+    try {
+      setSendingBurstTest(true)
+      const res = await fetch(apiUrl('/api/notifications/admin/test-burst-email'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientEmail: email }),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ส่งอีเมลทดสอบแบบชุดไม่สำเร็จ')
+      pushToast({
+        title: `Burst test done (total=${payload.data?.total || 0}, sent=${payload.data?.sent || 0}, queued=${payload.data?.queued || 0}, failed=${payload.data?.failed || 0})`,
+      })
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'ส่ง burst test ไม่สำเร็จ' })
+    } finally {
+      setSendingBurstTest(false)
+    }
+  }
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading title="Notification Settings" description="ตั้งค่า event email, แก้ข้อความราย event และส่งเมล custom ถึงทีมที่เลือก" />
+
+      <article className="admin-ui-panel">
+        <h3>Admin Recipient List</h3>
+        <AdminDataTable
+          rows={recipients.map((r) => ({ ...r, id: r.userId }))}
+          loading={loading}
+          searchKeys={['displayName', 'userName', 'email']}
+          searchPlaceholder="ค้นหา admin จากชื่อ/username/email"
+          columns={[
+            { key: 'displayName', label: 'Name' },
+            { key: 'userName', label: 'Username' },
+            {
+              key: 'email',
+              label: 'Email',
+              render: (row) => row.email || '-',
+            },
+            {
+              key: 'enabled',
+              label: 'Receive Notification',
+              render: (row) => String(row.enabled),
+            },
+            {
+              key: 'actions',
+              label: 'Actions',
+              render: (row) => (
+                <button
+                  type="button"
+                  className="admin-ui-mini-btn"
+                  disabled={updatingRecipientUserId === row.userId}
+                  onClick={() => toggleRecipient(row)}
+                >
+                  {row.enabled ? 'Disable' : 'Enable'}
+                </button>
+              ),
+            },
+          ]}
+        />
+      </article>
+
+      <AdminDataTable
+        rows={settings.map((s) => ({ ...s, id: s.eventCode }))}
+        loading={loading}
+        searchKeys={['eventCode']}
+        searchPlaceholder="ค้นหา event code"
+        columns={[
+          { key: 'eventCode', label: 'Event' },
+          {
+            key: 'isEmailEnabled',
+            label: 'Email',
+            render: (row) => String(row.isEmailEnabled),
+          },
+          {
+            key: 'customSubject',
+            label: 'Custom Subject',
+            render: (row) => row.customSubject || '-',
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            render: (row) => (
+              <div className="admin-ui-inline-actions">
+                <button type="button" className="admin-ui-mini-btn" onClick={() => updateSetting(row.eventCode, { isEmailEnabled: !row.isEmailEnabled })}>
+                  Toggle Email
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <article className="admin-ui-panel">
+        <h3>Event Message Overrides</h3>
+        <div className="admin-ui-form">
+          {settings.map((row) => (
+            <div key={row.eventCode} className="admin-ui-panel" style={{ marginBottom: 12 }}>
+              <strong>{row.eventCode}</strong>
+              <label>
+                Subject Override
+                <input
+                  value={eventDrafts[row.eventCode]?.customSubject || ''}
+                  onChange={(e) => setEventDrafts((prev) => ({
+                    ...prev,
+                    [row.eventCode]: {
+                      customSubject: e.target.value,
+                      customMessage: prev[row.eventCode]?.customMessage || '',
+                    },
+                  }))}
+                  placeholder="ถ้าไม่กรอก จะใช้หัวข้อมาตรฐานของระบบ"
+                />
+              </label>
+              <label>
+                Message Override
+                <textarea
+                  rows={3}
+                  value={eventDrafts[row.eventCode]?.customMessage || ''}
+                  onChange={(e) => setEventDrafts((prev) => ({
+                    ...prev,
+                    [row.eventCode]: {
+                      customSubject: prev[row.eventCode]?.customSubject || '',
+                      customMessage: e.target.value,
+                    },
+                  }))}
+                  placeholder="รองรับตัวแปร เช่น {{team_name}}, {{team_code}}, {{member_names}}, {{actor_name}}"
+                />
+              </label>
+              <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={() => saveEventMessage(row.eventCode)}>
+                <Save size={14} />
+                Save Override
+              </button>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <article className="admin-ui-panel">
+        <h3>Send Custom Email To Team</h3>
+        <div className="admin-ui-form">
+          <label>
+            Team
+            <select
+              value={customEmail.teamId}
+              onChange={(e) => setCustomEmail((prev) => ({ ...prev, teamId: e.target.value }))}
+            >
+              <option value="">เลือกทีม</option>
+              {teamOptions.map((item) => (
+                <option key={item.teamId} value={item.teamId}>{item.label}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Subject
+            <input
+              value={customEmail.subject}
+              onChange={(e) => setCustomEmail((prev) => ({ ...prev, subject: e.target.value }))}
+              placeholder="หัวข้ออีเมล"
+            />
+          </label>
+          <label>
+            Message
+            <textarea
+              rows={5}
+              value={customEmail.message}
+              onChange={(e) => setCustomEmail((prev) => ({ ...prev, message: e.target.value }))}
+              placeholder="เนื้อความที่จะส่งถึงสมาชิกทีมที่เลือก"
+            />
+          </label>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={sending} onClick={sendCustomEmail}>
+            <Mail size={14} />
+            {sending ? 'Sending...' : 'Send Custom Email'}
+          </button>
+        </div>
+      </article>
+
+      <article className="admin-ui-panel">
+        <h3>SMTP Quota Burst Test (110 emails)</h3>
+        <div className="admin-ui-form">
+          <label>
+            Recipient Email
+            <input
+              type="email"
+              value={burstTestRecipientEmail}
+              onChange={(e) => setBurstTestRecipientEmail(e.target.value)}
+              placeholder="example@domain.com"
+            />
+          </label>
+          <button
+            type="button"
+            className="admin-ui-btn admin-ui-btn-primary"
+            disabled={sendingBurstTest || !burstTestRecipientEmail.trim()}
+            onClick={sendBurstTestEmail}
+          >
+            <Mail size={14} />
+            {sendingBurstTest ? 'Sending 110 emails...' : 'Send 110 Test Emails'}
+          </button>
+        </div>
+      </article>
+
+    </div>
+  )
+}
+
+function PrivilegesAdminPage() {
+  const { pushToast } = useAdminToast()
+  return <PrivilegesPage pushToast={pushToast} />
+}
+
+function AuditLogsPage() {
+  const [selectedLog, setSelectedLog] = useState(null)
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Audit Logs"
+        description="ติดตามการเปลี่ยนแปลงว่าใครแก้อะไร เมื่อไร"
+      />
+
+      <AdminDataTable
+        rows={auditLogsSeed}
+        searchKeys={['actor', 'actionType', 'entityType']}
+        searchPlaceholder="ค้นหา actor / action / entity"
+        filters={[
+          { label: 'ทั้งหมด', value: 'all', predicate: () => true },
+          {
+            label: 'Member Review',
+            value: 'member',
+            predicate: (row) => row.entityType.includes('member'),
+          },
+          {
+            label: 'Static Content',
+            value: 'content',
+            predicate: (row) => ['sponsor', 'reward', 'about', 'winner', 'contact'].includes(row.entityType),
+          },
+          {
+            label: 'Team',
+            value: 'team',
+            predicate: (row) => row.entityType === 'team',
+          },
+        ]}
+        columns={[
+          { key: 'actor', label: 'Actor' },
+          { key: 'actionType', label: 'Action Type' },
+          {
+            key: 'entity',
+            label: 'Entity',
+            render: (row) => `${row.entityType}:${row.entityId}`,
+          },
+          {
+            key: 'createdAt',
+            label: 'Created At',
+            render: (row) => formatDateTime(row.createdAt),
+          },
+          {
+            key: 'payload',
+            label: 'Payload',
+            render: (row) => (
+              <button type="button" className="admin-ui-mini-btn" onClick={() => setSelectedLog(row)}>
+                View JSON
+              </button>
+            ),
+          },
+        ]}
+      />
+
+      <DetailDrawer
+        open={Boolean(selectedLog)}
+        onClose={() => setSelectedLog(null)}
+        title={selectedLog?.actionType || ''}
+        subtitle={selectedLog ? `${selectedLog.entityType}:${selectedLog.entityId}` : ''}
+      >
+        <pre className="admin-ui-json-box">{selectedLog?.payload}</pre>
+      </DetailDrawer>
+    </div>
+  )
+}
+
+function SettingsPage() {
+  const { pushToast } = useAdminToast()
+  const [form, setForm] = useState(settingsSeed)
+  const [errors, setErrors] = useState({})
+
+  const validate = () => {
+    const next = {}
+    if (!form.teamSubmissionDeadline) next.teamSubmissionDeadline = 'กรุณากำหนด deadline'
+    if (!form.verificationDeadline) next.verificationDeadline = 'กรุณากำหนด deadline'
+    if (form.reviewLockTimeoutMinutes <= 0) next.reviewLockTimeoutMinutes = 'ต้องมากกว่า 0'
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const save = () => {
+    if (!validate()) return
+    pushToast({
+      title: 'บันทึก Site Settings แล้ว',
+      description: 'พร้อมเชื่อม API /api/admin/settings',
+    })
+  }
+
+  return (
+    <div className="admin-ui-stack">
+      <SectionHeading
+        title="Site Settings"
+        description="กำหนด deadline และ feature toggles ระดับระบบ"
+      />
+      <article className="admin-ui-panel">
+        <div className="admin-ui-form admin-ui-settings-form">
+          <label className="admin-ui-check">
+            <input
+              type="checkbox"
+              checked={form.registrationOpen}
+              onChange={(event) => setForm((prev) => ({ ...prev, registrationOpen: event.target.checked }))}
+            />
+            <span>เปิดรับสมัครทีม</span>
+          </label>
+          <label className="admin-ui-check">
+            <input
+              type="checkbox"
+              checked={form.allowTeamResubmission}
+              onChange={(event) => setForm((prev) => ({ ...prev, allowTeamResubmission: event.target.checked }))}
+            />
+            <span>อนุญาตส่งซ้ำหลัง RETURNED</span>
+          </label>
+
+          <label htmlFor="setting-lock-timeout">
+            Review Lock Timeout (minutes)
+            <input
+              id="setting-lock-timeout"
+              type="number"
+              min={1}
+              value={form.reviewLockTimeoutMinutes}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, reviewLockTimeoutMinutes: Number(event.target.value) }))
+              }
+            />
+            {errors.reviewLockTimeoutMinutes ? <small>{errors.reviewLockTimeoutMinutes}</small> : null}
+          </label>
+
+          <label htmlFor="setting-submission-deadline">
+            Team Submission Deadline
+            <input
+              id="setting-submission-deadline"
+              type="datetime-local"
+              value={formatDateInput(form.teamSubmissionDeadline)}
+              onChange={(event) => setForm((prev) => ({ ...prev, teamSubmissionDeadline: event.target.value }))}
+            />
+            {errors.teamSubmissionDeadline ? <small>{errors.teamSubmissionDeadline}</small> : null}
+          </label>
+
+          <label htmlFor="setting-verify-deadline">
+            Verification Deadline
+            <input
+              id="setting-verify-deadline"
+              type="datetime-local"
+              value={formatDateInput(form.verificationDeadline)}
+              onChange={(event) => setForm((prev) => ({ ...prev, verificationDeadline: event.target.value }))}
+            />
+            {errors.verificationDeadline ? <small>{errors.verificationDeadline}</small> : null}
+          </label>
+
+          <label htmlFor="setting-banner">
+            Maintenance Banner
+            <textarea
+              id="setting-banner"
+              rows={3}
+              value={form.maintenanceBanner}
+              onChange={(event) => setForm((prev) => ({ ...prev, maintenanceBanner: event.target.value }))}
+            />
+          </label>
+
+          <div className="admin-ui-form-actions">
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={save}>
+              <Save size={14} />
+              Save Settings
+            </button>
+          </div>
+        </div>
+      </article>
+    </div>
+  )
+}
+
+function AdminAppRoutes() {
+  return (
+    <Routes>
+      <Route element={<AdminLayout />}>
+        <Route index element={<DashboardPage />} />
+
+        <Route path="static" element={<Navigate to="sponsors" replace />} />
+        <Route path="static/sponsors" element={<StaticSponsorsPage />} />
+        <Route path="static/carousels" element={<StaticCarouselsPage />} />
+        <Route path="static/rewards" element={<StaticRewardsPage />} />
+        <Route path="static/about" element={<StaticAboutPage />} />
+        <Route path="static/schedule" element={<StaticSchedulePage />} />
+        <Route path="static/venues" element={<StaticVenuesPage />} />
+        <Route path="static/contacts" element={<StaticContactsPage />} />
+        <Route path="static/winners" element={<StaticWinnersPage />} />
+
+        <Route path="review" element={<Navigate to="queue" replace />} />
+        <Route path="selection" element={<SelectionPage />} />
+        <Route path="submission-tasks" element={<SubmissionTasksPage />} />
+        <Route path="review/queue" element={<ReviewQueuePage />} />
+        <Route path="review/teams/:teamId" element={<TeamReviewDetailPage />} />
+        <Route path="review/returned" element={<ReturnedMonitorPage />} />
+        <Route path="review/approved" element={<ApprovedTeamsPage />} />
+
+        <Route path="notifications" element={<NotificationSettingsPage />} />
+        <Route path="privileges" element={<PrivilegesAdminPage />} />
+        <Route path="audit" element={<AuditLogsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/admin" replace />} />
+    </Routes>
+  )
+}
+
+export {
+  AdminGuard,
+  AdminLayout,
+  DashboardPage,
+  StaticSponsorsPage,
+  StaticCarouselsPage,
+  StaticRewardsPage,
+  StaticAboutPage,
+  StaticSchedulePage,
+  StaticVenuesPage,
+  StaticContactsPage,
+  SelectionPage,
+  SubmissionTasksPage,
+  NotificationSettingsPage,
+  PrivilegesAdminPage,
+}
+
+export default function LegacyAdminApp() {
+  return (
+    <AdminGuard>
+      <AdminAppRoutes />
+    </AdminGuard>
+  )
+}
