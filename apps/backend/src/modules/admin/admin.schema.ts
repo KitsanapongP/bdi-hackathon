@@ -16,22 +16,7 @@ export const updateAllowlistSchema = z.object({
 
 export type UpdateAllowlistInput = z.infer<typeof updateAllowlistSchema>;
 
-export const dashboardStatusEnum = z.enum(['submitted', 'passed', 'failed']);
-
 export const dashboardQuerySchema = z.object({
-    statuses: z
-        .string()
-        .optional()
-        .transform((value) => {
-            if (!value) return ['submitted', 'passed', 'failed'] as const;
-            return value
-                .split(',')
-                .map((item) => item.trim().toLowerCase())
-                .filter((item): item is 'submitted' | 'passed' | 'failed' =>
-                    item === 'submitted' || item === 'passed' || item === 'failed'
-                );
-        })
-        .refine((items) => items.length > 0, 'statuses ต้องมีอย่างน้อย 1 ค่า'),
     days: z.coerce.number().int().min(7).max(180).default(30),
 });
 

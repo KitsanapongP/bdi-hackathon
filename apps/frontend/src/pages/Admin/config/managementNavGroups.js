@@ -17,7 +17,7 @@ const managementNavGroups = [
     links: [
       {
         to: '/admin',
-        label: 'ภาพรวม',
+        label: 'Dashboard',
         icon: LayoutDashboard,
       },
     ],

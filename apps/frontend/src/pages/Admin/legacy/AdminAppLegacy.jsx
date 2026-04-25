@@ -67,7 +67,6 @@ import GameShapes from '../../../components/GameShapes'
 import { apiUrl } from '../../../lib/api'
 import {
   AdminSessionContext,
-  AdminToastContext,
   useAdminSession,
   useAdminToast,
 } from '../shared/adminContexts'
@@ -91,7 +90,7 @@ const adminNavGroups = [
     links: [
       {
         to: '/admin',
-        label: 'ภาพรวม',
+        label: 'Dashboard',
         icon: LayoutDashboard,
       },
     ],
@@ -361,24 +360,6 @@ function StatusBadge({ status, label }) {
     <span className={`admin-ui-status admin-ui-status-${getStatusTone(status)}`}>
       {label || teamStateLabel[status] || memberStateLabel[status] || status}
     </span>
-  )
-}
-
-function AdminToastViewport({ toasts, onClose }) {
-  return (
-    <div className="admin-ui-toast-wrap" aria-live="polite">
-      {toasts.map((toast) => (
-        <div key={toast.id} className={`admin-ui-toast admin-ui-toast-${toast.type}`}>
-          <div className="admin-ui-toast-text">
-            <strong>{toast.title}</strong>
-            {toast.description ? <span>{toast.description}</span> : null}
-          </div>
-          <button type="button" onClick={() => onClose(toast.id)} aria-label="close toast">
-            <X size={14} />
-          </button>
-        </div>
-      ))}
-    </div>
   )
 }
 
@@ -792,27 +773,8 @@ function AdminLayout({ navGroups = adminNavGroups }) {
   const location = useLocation()
   const { adminUser, demoMode } = useAdminSession()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [toasts, setToasts] = useState([])
 
   useEffect(() => setMobileOpen(false), [location.pathname])
-
-  const pushToast = useCallback((toast) => {
-    const id = `${Date.now()}-${Math.random()}`
-    const next = {
-      id,
-      type: toast.type || 'success',
-      title: toast.title || '',
-      description: toast.description || '',
-    }
-    setToasts((prev) => [...prev, next])
-    window.setTimeout(() => {
-      setToasts((prev) => prev.filter((item) => item.id !== id))
-    }, 3200)
-  }, [])
-
-  const removeToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((item) => item.id !== id))
-  }, [])
 
   const pageLabel = useMemo(() => {
     const map = {
@@ -850,8 +812,7 @@ function AdminLayout({ navGroups = adminNavGroups }) {
   }
 
   return (
-    <AdminToastContext.Provider value={{ pushToast }}>
-      <div className="admin-ui-page">
+    <div className="admin-ui-page">
         <GameShapes
           shapeCount={22}
           sizeRange={[20, 42]}
@@ -925,9 +886,7 @@ function AdminLayout({ navGroups = adminNavGroups }) {
             </main>
           </div>
         </div>
-        <AdminToastViewport toasts={toasts} onClose={removeToast} />
       </div>
-    </AdminToastContext.Provider>
   )
 }
 

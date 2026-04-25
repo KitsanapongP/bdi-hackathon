@@ -18,7 +18,7 @@ export interface AllowlistResponse {
     grantedByUserId: number | null;
 }
 
-export type DashboardTeamStatus = 'submitted' | 'passed' | 'failed';
+export type DashboardTeamStatus = 'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined' | 'disbanded';
 
 export interface DashboardStatusCountRow {
     status: DashboardTeamStatus;
@@ -47,6 +47,16 @@ export interface DashboardGenderCountRow {
 
 export interface DashboardProvinceCountRow {
     province: string | null;
+    count: number;
+}
+
+export interface DashboardEducationLevelCountRow {
+    education_level: string | null;
+    count: number;
+}
+
+export interface DashboardInstitutionCountRow {
+    institution_name: string;
     count: number;
 }
 

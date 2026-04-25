@@ -6,6 +6,7 @@ import EmptyState from '../shared/EmptyState'
 import FilterBar from '../shared/FilterBar'
 import LoadingState from '../shared/LoadingState'
 import PageHeader from '../shared/PageHeader'
+import { useAdminToast } from '../shared/adminContexts'
 import './SubmissionTasksPage.css'
 
 function formatDateTime(value) {
@@ -61,7 +62,8 @@ function getTeamStatusLabel(status) {
   return ASSIGN_STATUS_OPTIONS.find((item) => item.value === status)?.label || status || '-'
 }
 
-export default function SubmissionTasksPage({ pushToast }) {
+export default function SubmissionTasksPage() {
+  const { pushToast } = useAdminToast()
   const [rows, setRows] = useState([])
   const [teamOptions, setTeamOptions] = useState([])
   const [loading, setLoading] = useState(true)

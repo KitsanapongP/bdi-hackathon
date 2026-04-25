@@ -2,11 +2,12 @@ import type { DB } from '../../config/db.js';
 import type {
     AllowlistRow,
     DashboardDuplicateMemberRow,
+    DashboardEducationLevelCountRow,
     DashboardGenderCountRow,
+    DashboardInstitutionCountRow,
     DashboardProvinceCountRow,
     DashboardStatusCountRow,
     DashboardTeamMemberCountRow,
-    DashboardTeamStatus,
     DashboardTrendRow,
     ExportMemberDocumentRow,
     ExportSubmissionFileRow,
@@ -87,23 +88,6 @@ export async function updateAllowlist(
     await db.query(`UPDATE access_allowlist SET ${updates.join(', ')} WHERE allow_id = :allowId`, params);
 }
 
-function buildStatusFilter(statuses: DashboardTeamStatus[]) {
-    const safe = Array.from(new Set(statuses));
-    const params: Record<string, string> = {};
-    const tokens: string[] = [];
-
-    safe.forEach((status, index) => {
-        const key = `status${index}`;
-        params[key] = status;
-        tokens.push(`:${key}`);
-    });
-
-    return {
-        inClause: tokens.join(', '),
-        params,
-    };
-}
-
 export async function getDashboardTotalTeams(db: DB): Promise<number> {
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT COUNT(*) AS total FROM team_teams WHERE deleted_at IS NULL`
@@ -113,16 +97,13 @@ export async function getDashboardTotalTeams(db: DB): Promise<number> {
 
 export async function getDashboardStatusCounts(
     db: DB,
-    statuses: DashboardTeamStatus[]
 ): Promise<DashboardStatusCountRow[]> {
-    const { inClause, params } = buildStatusFilter(statuses);
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT status, COUNT(*) AS count
          FROM team_teams
          WHERE deleted_at IS NULL
-           AND status IN (${inClause})
+            AND status IN ('forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined', 'disbanded')
          GROUP BY status`,
-        params
     );
     return rows as DashboardStatusCountRow[];
 }
@@ -139,9 +120,7 @@ export async function getDashboardSubmittedOrApprovedCount(db: DB): Promise<numb
 
 export async function getDashboardTeamMemberCounts(
     db: DB,
-    statuses: DashboardTeamStatus[]
 ): Promise<DashboardTeamMemberCountRow[]> {
-    const { inClause, params } = buildStatusFilter(statuses);
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT
             t.team_id,
@@ -151,22 +130,19 @@ export async function getDashboardTeamMemberCounts(
             COUNT(m.team_member_id) AS member_count
          FROM team_teams t
          LEFT JOIN team_members m
-           ON m.team_id = t.team_id
-          AND m.member_status = 'active'
+            ON m.team_id = t.team_id
+           AND m.member_status = 'active'
          WHERE t.deleted_at IS NULL
-           AND t.status IN (${inClause})
+            AND t.status IN ('forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined')
          GROUP BY t.team_id, t.team_code, team_name, t.status
          ORDER BY t.team_id ASC`,
-        params
     );
     return rows as DashboardTeamMemberCountRow[];
 }
 
 export async function getDashboardGenderCounts(
     db: DB,
-    statuses: DashboardTeamStatus[]
 ): Promise<DashboardGenderCountRow[]> {
-    const { inClause, params } = buildStatusFilter(statuses);
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT u.gender, COUNT(DISTINCT u.user_id) AS count
          FROM team_teams t
@@ -174,22 +150,19 @@ export async function getDashboardGenderCounts(
            ON m.team_id = t.team_id
           AND m.member_status = 'active'
          JOIN user_users u
-           ON u.user_id = m.user_id
-          AND u.is_active = 1
-          AND u.deleted_at IS NULL
+            ON u.user_id = m.user_id
+           AND u.is_active = 1
+           AND u.deleted_at IS NULL
          WHERE t.deleted_at IS NULL
-           AND t.status IN (${inClause})
+            AND t.status IN ('forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined')
          GROUP BY u.gender`,
-        params
     );
     return rows as DashboardGenderCountRow[];
 }
 
 export async function getDashboardProvinceCounts(
     db: DB,
-    statuses: DashboardTeamStatus[]
 ): Promise<DashboardProvinceCountRow[]> {
-    const { inClause, params } = buildStatusFilter(statuses);
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT u.home_province AS province, COUNT(DISTINCT u.user_id) AS count
          FROM team_teams t
@@ -197,16 +170,63 @@ export async function getDashboardProvinceCounts(
            ON m.team_id = t.team_id
           AND m.member_status = 'active'
          JOIN user_users u
-           ON u.user_id = m.user_id
-          AND u.is_active = 1
-          AND u.deleted_at IS NULL
+            ON u.user_id = m.user_id
+           AND u.is_active = 1
+           AND u.deleted_at IS NULL
          WHERE t.deleted_at IS NULL
-           AND t.status IN (${inClause})
+            AND t.status IN ('forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined')
          GROUP BY u.home_province
          ORDER BY count DESC`,
-        params
     );
     return rows as DashboardProvinceCountRow[];
+}
+
+export async function getDashboardEducationLevelCounts(
+    db: DB,
+): Promise<DashboardEducationLevelCountRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT COALESCE(u.education_level, 'unknown') AS education_level, COUNT(DISTINCT u.user_id) AS count
+         FROM team_teams t
+         JOIN team_members m
+           ON m.team_id = t.team_id
+          AND m.member_status = 'active'
+         JOIN user_users u
+            ON u.user_id = m.user_id
+           AND u.is_active = 1
+           AND u.deleted_at IS NULL
+         WHERE t.deleted_at IS NULL
+           AND t.status IN ('forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined')
+         GROUP BY COALESCE(u.education_level, 'unknown')
+         ORDER BY count DESC`
+    );
+    return rows as DashboardEducationLevelCountRow[];
+}
+
+export async function getDashboardInstitutionCounts(
+    db: DB,
+): Promise<DashboardInstitutionCountRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT
+            COALESCE(
+                NULLIF(TRIM(COALESCE(u.institution_name_th, '')), ''),
+                NULLIF(TRIM(COALESCE(u.institution_name_en, '')), ''),
+                'ไม่ระบุ'
+            ) AS institution_name,
+            COUNT(DISTINCT u.user_id) AS count
+         FROM team_teams t
+         JOIN team_members m
+           ON m.team_id = t.team_id
+          AND m.member_status = 'active'
+         JOIN user_users u
+            ON u.user_id = m.user_id
+           AND u.is_active = 1
+           AND u.deleted_at IS NULL
+         WHERE t.deleted_at IS NULL
+           AND t.status IN ('forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined')
+         GROUP BY institution_name
+         ORDER BY count DESC`
+    );
+    return rows as DashboardInstitutionCountRow[];
 }
 
 export async function getDashboardTrend(
@@ -262,26 +282,26 @@ export async function getDashboardTrend(
             WHERE seq.day < :days
          ) d
          LEFT JOIN (
-            SELECT DATE(v.submitted_at) AS event_date, 'submitted' AS event_status
-            FROM verify_review_rounds v
-            JOIN team_teams t1 ON t1.team_id = v.team_id AND t1.deleted_at IS NULL
-            WHERE v.submitted_at IS NOT NULL
+            SELECT DATE(va.created_at) AS event_date, 'submitted' AS event_status
+            FROM verify_audit_logs va
+            JOIN team_teams t1 ON t1.team_id = va.team_id AND t1.deleted_at IS NULL
+            WHERE va.action_code = 'TEAM_SUBMITTED'
 
             UNION ALL
 
-            SELECT DATE(t2.updated_at) AS event_date, 'passed' AS event_status
-            FROM team_teams t2
-            WHERE t2.deleted_at IS NULL
-              AND t2.status = 'passed'
+            SELECT DATE(ta_pass.created_at) AS event_date, 'passed' AS event_status
+            FROM team_audit_logs ta_pass
+            JOIN team_teams t2 ON t2.team_id = ta_pass.team_id AND t2.deleted_at IS NULL
+            WHERE ta_pass.action_code = 'TEAM_SELECTION_PASSED'
 
             UNION ALL
 
-            SELECT DATE(t3.updated_at) AS event_date, 'failed' AS event_status
-            FROM team_teams t3
-            WHERE t3.deleted_at IS NULL
-              AND t3.status = 'failed'
+            SELECT DATE(ta_fail.created_at) AS event_date, 'failed' AS event_status
+            FROM team_audit_logs ta_fail
+            JOIN team_teams t3 ON t3.team_id = ta_fail.team_id AND t3.deleted_at IS NULL
+            WHERE ta_fail.action_code = 'TEAM_SELECTION_FAILED'
          ) e
-           ON e.event_date = d.day_date
+            ON e.event_date = d.day_date
          GROUP BY DATE(d.day_date)
          ORDER BY DATE(d.day_date) ASC`,
         { days }
@@ -291,9 +311,7 @@ export async function getDashboardTrend(
 
 export async function getDashboardDuplicateMembers(
     db: DB,
-    statuses: DashboardTeamStatus[]
 ): Promise<DashboardDuplicateMemberRow[]> {
-    const { inClause, params } = buildStatusFilter(statuses);
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT
             t.team_id,
@@ -311,14 +329,40 @@ export async function getDashboardDuplicateMembers(
            ON m.team_id = t.team_id
           AND m.member_status = 'active'
          JOIN user_users u
-           ON u.user_id = m.user_id
-          AND u.is_active = 1
-          AND u.deleted_at IS NULL
+            ON u.user_id = m.user_id
+           AND u.is_active = 1
+           AND u.deleted_at IS NULL
          WHERE t.deleted_at IS NULL
-           AND t.status IN (${inClause})`,
-        params
+            AND t.status IN ('forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined')`,
     );
     return rows as DashboardDuplicateMemberRow[];
+}
+
+export async function getDashboardSystemCloseDeadlines(db: DB): Promise<Array<{
+    config_key: string;
+    config_value: string;
+    description_th: string | null;
+    description_en: string | null;
+    updated_at: Date;
+}>> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT config_key, config_value, description_th, description_en, updated_at
+         FROM sys_configs
+         WHERE config_key IN (
+            'REGISTRATION_CLOSE_AT',
+            'TEAM_RECRUITMENT_CLOSE_AT',
+            'TEAM_SELECTION_SUBMISSION_CLOSE_AT',
+            'GLOBAL_SELECTION_CONFIRM_CLOSE_AT'
+         )
+         ORDER BY config_value ASC`
+    );
+    return rows as Array<{
+        config_key: string;
+        config_value: string;
+        description_th: string | null;
+        description_en: string | null;
+        updated_at: Date;
+    }>;
 }
 
 export async function getSubmittedTeamsForExport(db: DB): Promise<ExportSubmittedTeamRow[]> {

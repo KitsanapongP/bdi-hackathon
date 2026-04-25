@@ -1837,12 +1837,12 @@ body:has(.admin-ui-page) {
 }
 
 .admin-ui-toast {
-  min-width: 250px;
-  max-width: 360px;
+  min-width: 300px;
+  max-width: 420px;
   background: var(--admin-ui-surface);
   border: 1px solid var(--admin-ui-border);
   border-radius: 12px;
-  padding: 10px;
+  padding: 12px;
   box-shadow: var(--admin-ui-shadow);
   display: flex;
   align-items: flex-start;
@@ -1868,14 +1868,16 @@ body:has(.admin-ui-page) {
 
 .admin-ui-toast-text strong {
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.92rem;
+  line-height: 1.3;
 }
 
 .admin-ui-toast-text span {
   display: block;
-  margin-top: 3px;
+  margin-top: 5px;
   color: var(--admin-ui-muted);
-  font-size: 0.75rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 
 .admin-ui-toast button {

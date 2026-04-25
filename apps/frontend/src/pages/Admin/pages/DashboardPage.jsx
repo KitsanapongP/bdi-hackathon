@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Clock3, Filter, FolderArchive, Globe, History, ListChecks, RefreshCw, ShieldAlert, Users } from 'lucide-react'
+import { AlertTriangle, CalendarClock, Download, Globe, GraduationCap, RefreshCw, Users } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
-import { auditLogsSeed, dashboardDeadlines } from '../legacy/adminMockData.legacy'
 import EmptyState from '../shared/EmptyState'
-import FilterBar from '../shared/FilterBar'
-import PageHeader from '../shared/PageHeader'
-import StatusBadge from '../shared/StatusBadge'
 import { useAdminToast } from '../shared/adminContexts'
 import { formatDateTime } from '../utils/adminFormatters'
+import './DashboardPage.css'
 
-const dashboardStatusOptions = [
-  { value: 'submitted', label: 'ส่งแล้ว', color: '#3b82f6' },
-  { value: 'passed', label: 'ผ่านคัดเลือก', color: '#10b981' },
-  { value: 'failed', label: 'ไม่ผ่าน', color: '#ef4444' },
-]
+const statusMeta = {
+  forming: { label: 'กำลังจัดทีม', color: '#5f6e84' },
+  submitted: { label: 'ส่งโครงร่างแล้ว', color: '#3f6df4' },
+  passed: { label: 'ผ่านการคัดเลือก', color: '#0ea86f' },
+  failed: { label: 'ไม่ผ่านการคัดเลือก', color: '#dd4e4e' },
+  confirmed: { label: 'ยืนยันเข้าร่วม', color: '#0f9d76' },
+  not_joined: { label: 'ไม่เข้าร่วม', color: '#d97706' },
+  disbanded: { label: 'ยุบทีม', color: '#7f1d1d' },
+}
 
 const genderLabelMap = {
   male: 'Male',
@@ -22,78 +23,68 @@ const genderLabelMap = {
   unknown: 'Unknown',
 }
 
-function DashboardDonut({ values }) {
-  const total = values.reduce((sum, item) => sum + item.count, 0)
-  if (!total) return <div className="admin-ui-donut-empty">ไม่มีข้อมูล</div>
-
-  const segments = values
-    .reduce(
-      (acc, item) => {
-        const start = acc.current
-        const end = start + (item.count / total) * 360
-        return {
-          current: end,
-          parts: [...acc.parts, `${item.color} ${start}deg ${end}deg`],
-        }
-      },
-      { current: 0, parts: [] },
-    )
-    .parts.join(', ')
-
-  return (
-    <div className="admin-ui-donut-wrap">
-      <div className="admin-ui-donut" style={{ background: `conic-gradient(${segments})` }}>
-        <div>
-          <strong>{total}</strong>
-          <span>ทีม</span>
-        </div>
-      </div>
-      <div className="admin-ui-donut-legend">
-        {values.map((item) => (
-          <div key={item.key}>
-            <span style={{ backgroundColor: item.color }} />
-            <strong>{item.label}</strong>
-            <small>{item.count}</small>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+const educationLabelMap = {
+  secondary: 'มัธยมต้น',
+  high_school: 'มัธยมปลาย',
+  bachelor: 'ปริญญาตรี',
+  master: 'ปริญญาโท',
+  doctorate: 'ปริญญาเอก',
+  unknown: 'ไม่ระบุ',
 }
 
-function DashboardBars({ rows, max = 0, valueKey = 'count', labelKey = 'label' }) {
-  const maxValue = max || rows.reduce((acc, row) => Math.max(acc, row[valueKey]), 0)
+function HorizontalBars({ rows, emptyText }) {
+  const max = rows.reduce((acc, row) => Math.max(acc, row.count), 0)
+  if (!rows.length) return <p className="admin-dash-v3-empty">{emptyText}</p>
+
   return (
-    <div className="admin-ui-chart-bars">
+    <div className="admin-dash-v3-bars">
       {rows.map((row) => (
-        <div key={row[labelKey]}>
-          <span>{row[labelKey]}</span>
+        <div key={row.label}>
+          <span>{row.label}</span>
           <div>
-            <i style={{ width: `${maxValue ? Math.max(6, (row[valueKey] / maxValue) * 100) : 0}%` }} />
+            <i style={{ width: `${max ? Math.max(8, (row.count / max) * 100) : 0}%` }} />
           </div>
-          <strong>{row[valueKey]}</strong>
+          <strong>{row.count}</strong>
         </div>
       ))}
     </div>
   )
 }
 
+function RegistrationTrendChart({ rows }) {
+  if (!rows.length) return <p className="admin-dash-v3-empty">ยังไม่มีข้อมูลแนวโน้มผู้ลงทะเบียน</p>
+  const max = rows.reduce((acc, row) => Math.max(acc, row.interestedParticipants), 0)
+
+  return (
+    <div className="admin-dash-v3-trend-users">
+      {rows.map((row) => {
+        const periodLabel = String(row.periodStart).slice(0, 10)
+        const heightPercent = max ? Math.max(6, (row.interestedParticipants / max) * 100) : 0
+        return (
+          <div key={row.periodStart}>
+            <div>
+              <i style={{ height: `${heightPercent}%` }} />
+            </div>
+            <strong>{row.interestedParticipants}</strong>
+            <span>{periodLabel}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const { pushToast } = useAdminToast()
-  const [selectedStatuses, setSelectedStatuses] = useState(['submitted', 'passed'])
-  const [days, setDays] = useState(30)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [overview, setOverview] = useState(null)
+  const [participationMode, setParticipationMode] = useState('weekly')
 
   const fetchOverview = useCallback(async () => {
     try {
       setLoading(true)
-      const query = new URLSearchParams({
-        statuses: selectedStatuses.join(','),
-        days: String(days),
-      })
-      const response = await fetch(apiUrl(`/api/admin/dashboard/overview?${query.toString()}`), {
+      const response = await fetch(apiUrl('/api/admin/dashboard/overview'), {
         credentials: 'include',
       })
       const payload = await response.json().catch(() => ({}))
@@ -102,11 +93,11 @@ export default function DashboardPage() {
     } catch (error) {
       console.error(error)
       setOverview(null)
-      pushToast({ type: 'error', title: 'โหลด dashboard ไม่สำเร็จ' })
+      pushToast({ variant: 'danger', title: 'โหลด dashboard ไม่สำเร็จ' })
     } finally {
       setLoading(false)
     }
-  }, [days, pushToast, selectedStatuses])
+  }, [pushToast])
 
   useEffect(() => {
     fetchOverview()
@@ -116,8 +107,10 @@ export default function DashboardPage() {
     try {
       setExporting(true)
       pushToast({
-        title: 'กำลังเริ่ม Export',
-        description: 'ระบบจะดึงเฉพาะทีมที่สถานะ submitted เท่านั้น',
+        variant: 'info',
+        title: 'กำลังส่งออกข้อมูลทีม',
+        description: 'กำลังเตรียมไฟล์ ZIP สำหรับทีมที่ส่งโครงร่างแล้ว กรุณารอสักครู่',
+        durationMs: 7000,
       })
 
       const response = await fetch(apiUrl('/api/admin/exports/submitted-verification-bundle'), {
@@ -144,273 +137,253 @@ export default function DashboardPage() {
       URL.revokeObjectURL(downloadUrl)
 
       pushToast({
-        title: 'Export สำเร็จ',
-        description: 'ไฟล์จะมีเฉพาะทีมสถานะ submitted พร้อมข้อมูลสมาชิกแต่ละทีม',
+        variant: 'success',
+        title: 'ส่งออกข้อมูลทีมสำเร็จ',
+        description: `ดาวน์โหลดไฟล์แล้ว: ${fileName}`,
+        durationMs: 9000,
       })
     } catch (error) {
-      pushToast({ type: 'error', title: error?.message || 'ไม่สามารถ export ได้' })
+      const message = error?.message || 'ไม่สามารถ export ได้'
+      const isNoSubmittedTeams = /ไม่พบทีมสถานะ submitted|ไม่พบทีมที่ส่งโครงร่างแล้ว/i.test(String(message))
+      pushToast({
+        variant: isNoSubmittedTeams ? 'warning' : 'danger',
+        title: isNoSubmittedTeams ? 'ยังไม่มีทีมที่ส่งโครงร่างแล้วสำหรับส่งออก' : 'ส่งออกข้อมูลทีมไม่สำเร็จ',
+        description: isNoSubmittedTeams ? 'ตรวจสอบสถานะทีมในระบบก่อนแล้วลองใหม่อีกครั้ง' : message,
+        durationMs: 10000,
+      })
     } finally {
       setExporting(false)
     }
   }, [pushToast])
 
-  const statusCards = useMemo(() => {
-    const map = new Map((overview?.statusCounts || []).map((item) => [item.status, item.count]))
-    return dashboardStatusOptions.map((item) => ({
-      id: item.value,
-      label: item.label,
-      value: map.get(item.value) || 0,
-      color: item.color,
+  const statusCountMap = useMemo(
+    () => new Map((overview?.statusCounts || []).map((item) => [item.status, item.count])),
+    [overview],
+  )
+
+  const genderRows = useMemo(() => {
+    const genderCountMap = new Map((overview?.genderCounts || []).map((item) => [item.gender || 'unknown', item.count]))
+    return ['male', 'female', 'other', 'unknown'].map((genderKey) => ({
+      label: genderLabelMap[genderKey] || genderKey,
+      count: Number(genderCountMap.get(genderKey) || 0),
     }))
   }, [overview])
-
-  const teamSizeRows = useMemo(
-    () => (overview?.teamSizeBuckets || []).map((item) => ({ label: `${item.bucket} members`, count: item.count })),
-    [overview],
-  )
-
-  const genderRows = useMemo(
-    () =>
-      (overview?.genderCounts || [])
-        .map((item) => ({ label: genderLabelMap[item.gender] || item.gender, count: item.count }))
-        .filter((item) => item.count > 0),
-    [overview],
-  )
 
   const provinceRows = useMemo(
     () => (overview?.provinceCounts || []).slice(0, 8).map((item) => ({ label: item.province, count: item.count })),
     [overview],
   )
 
+  const educationRows = useMemo(
+    () =>
+      (overview?.educationLevelCounts || []).map((item) => ({
+        label: educationLabelMap[item.educationLevel] || item.educationLevel,
+        count: item.count,
+      })),
+    [overview],
+  )
+
+  const institutionRows = useMemo(
+    () => (overview?.institutionCounts || []).map((item) => ({ label: item.institutionName, count: item.count })),
+    [overview],
+  )
+
+  const participationRows = useMemo(() => {
+    const rows = overview?.participation?.trend?.[participationMode] || []
+    return rows.slice(-12)
+  }, [overview, participationMode])
+
+  const closeDeadlines = overview?.systemCloseDeadlines || []
+
   const duplicateRows = overview?.duplicateNames || []
+  const totalTeams = overview?.totals?.teamsCreated || 0
+  const registeredCount = overview?.participation?.interestedParticipants || 0
+
+  const statusColumns = [
+    { key: 'total', label: 'ทีมทั้งหมดในระบบ', count: totalTeams, color: '#1e3a8a' },
+    { key: 'forming', ...statusMeta.forming, count: statusCountMap.get('forming') || 0 },
+    { key: 'submitted', ...statusMeta.submitted, count: statusCountMap.get('submitted') || 0 },
+    { key: 'passed', ...statusMeta.passed, count: statusCountMap.get('passed') || 0 },
+    { key: 'failed', ...statusMeta.failed, count: statusCountMap.get('failed') || 0 },
+    { key: 'confirmed', ...statusMeta.confirmed, count: statusCountMap.get('confirmed') || 0 },
+    { key: 'not_joined', ...statusMeta.not_joined, count: statusCountMap.get('not_joined') || 0 },
+    { key: 'disbanded', ...statusMeta.disbanded, count: statusCountMap.get('disbanded') || 0 },
+  ]
 
   return (
-    <div className="admin-ui-stack">
-      <PageHeader
-        title="แดชบอร์ด"
-        actions={
-          <div className="admin-ui-header-actions">
-            <button type="button" className="admin-ui-btn" onClick={fetchOverview}>
-              <RefreshCw size={15} />
-              รีเฟรช
+    <div className="admin-dash-v3">
+      <section className="admin-dash-v3-toolbar">
+        <button type="button" className="admin-dash-v3-btn" onClick={fetchOverview}>
+          <RefreshCw size={15} />
+          รีเฟรชข้อมูล
+        </button>
+        <button
+          type="button"
+          className="admin-dash-v3-btn admin-dash-v3-btn-primary"
+          onClick={handleExportSubmittedTeams}
+          disabled={exporting}
+        >
+          <Download size={15} />
+          {exporting ? 'กำลังส่งออก...' : 'ส่งออกข้อมูลทีม'}
+        </button>
+      </section>
+
+      <section className="admin-dash-v3-panel">
+        <header>
+          <h3>
+            <Users size={16} />
+            ภาพรวมสถานะทีมทั้งหมด
+          </h3>
+        </header>
+
+        <div className="admin-dash-v3-lifecycle">
+          {statusColumns.map((item) => (
+            <div key={item.key} className={item.key === 'total' ? 'is-total' : ''}>
+              <span style={{ backgroundColor: item.color }} />
+              <p>{item.label}</p>
+              <strong>{loading ? '-' : item.count}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <article className="admin-dash-v3-panel">
+          <header>
+            <h3>
+              <Users size={16} />
+              จำนวนผู้ลงทะเบียน
+            </h3>
+            <strong className="admin-dash-v3-highlight-value">{loading ? '-' : registeredCount}</strong>
+          </header>
+
+          <div className="admin-dash-v3-mode-switch">
+            <button
+              type="button"
+              className={participationMode === 'weekly' ? 'active' : ''}
+              onClick={() => setParticipationMode('weekly')}
+            >
+              รายสัปดาห์
             </button>
             <button
               type="button"
-              className="admin-ui-btn admin-ui-btn-primary"
-              onClick={handleExportSubmittedTeams}
-              disabled={exporting}
-              title="ส่งออกเฉพาะทีมสถานะส่งแล้ว"
+              className={participationMode === 'monthly' ? 'active' : ''}
+              onClick={() => setParticipationMode('monthly')}
             >
-              <FolderArchive size={15} />
-              {exporting ? 'กำลังส่งออก...' : 'ส่งออกทีมที่ส่งแล้ว'}
+              รายเดือน
             </button>
           </div>
-        }
-      />
 
-      <section className="admin-ui-panel">
-        <FilterBar
-          label="กรองตามสถานะ"
-          right={
-            <label className="admin-ui-days-filter">
-              ดูแนวโน้มย้อนหลัง (วัน)
-              <select value={days} onChange={(event) => setDays(Number(event.target.value))}>
-                <option value={14}>14</option>
-                <option value={30}>30</option>
-                <option value={60}>60</option>
-                <option value={90}>90</option>
-              </select>
-            </label>
-          }
-        >
-          <div className="admin-ui-chip-row">
-            {dashboardStatusOptions.map((option) => {
-              const active = selectedStatuses.includes(option.value)
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`admin-ui-chip-btn ${active ? 'active' : ''}`}
-                  onClick={() => {
-                    setSelectedStatuses((prev) => {
-                      if (prev.includes(option.value)) {
-                        if (prev.length === 1) return prev
-                        return prev.filter((status) => status !== option.value)
-                      }
-                      return [...prev, option.value]
-                    })
-                  }}
-                >
-                  {option.label}
-                </button>
-              )
-            })}
+          <RegistrationTrendChart rows={participationRows} />
+        </article>
+      </section>
+
+      <section className="admin-dash-v3-grid-sub">
+        <article className="admin-dash-v3-panel">
+          <header>
+            <h3>
+              <Users size={16} />
+              เพศของผู้สมัคร
+            </h3>
+          </header>
+          <HorizontalBars rows={genderRows} emptyText="ยังไม่มีข้อมูลเพศ" />
+        </article>
+
+        <article className="admin-dash-v3-panel">
+          <header>
+            <h3>
+              <Globe size={16} />
+              ภูมิลำเนาของผู้สมัคร
+            </h3>
+          </header>
+          <HorizontalBars rows={provinceRows} emptyText="ยังไม่มีข้อมูลจังหวัด" />
+        </article>
+
+        <article className="admin-dash-v3-panel">
+          <header>
+            <h3>
+              <GraduationCap size={16} />
+              ระดับการศึกษาของผู้สมัคร
+            </h3>
+          </header>
+          <div className="admin-dash-v3-scroll-area">
+            <HorizontalBars rows={educationRows} emptyText="ยังไม่มีข้อมูลระดับการศึกษา" />
           </div>
-        </FilterBar>
-      </section>
-
-      <section className="admin-ui-stat-grid">
-        {[
-          {
-            id: 'teamsCreated',
-            label: 'จำนวนทีมทั้งหมด',
-            value: overview?.totals?.teamsCreated ?? 0,
-            trend: 'ทีมที่ถูกสร้างทั้งหมด',
-            tone: 'info',
-          },
-          {
-            id: 'filtered',
-            label: 'ทีมในสถานะที่เลือก',
-            value: overview?.totals?.teamsInSelectedStatuses ?? 0,
-            trend: `filter: ${selectedStatuses.join(', ')}`,
-            tone: 'warn',
-          },
-          {
-            id: 'submittedOrApproved',
-            label: 'ทีมที่ส่งแล้ว + ผ่าน',
-            value: overview?.totals?.submittedOrApproved ?? 0,
-            trend: 'ตรงกับโจทย์ทีมที่ส่งเข้าพิจารณา',
-            tone: 'success',
-          },
-          {
-            id: 'members',
-            label: 'จำนวนสมาชิก',
-            value: overview?.totals?.totalMembersInSelectedStatuses ?? 0,
-            trend: `${duplicateRows.length} duplicate-name groups`,
-            tone: 'neutral',
-          },
-        ].map((item) => (
-          <article key={item.id} className={`admin-ui-stat-card ${item.tone} ${loading ? 'is-loading' : ''}`}>
-            <span>{item.label}</span>
-            <strong>{loading ? '-' : item.value}</strong>
-            <small>{item.trend}</small>
-          </article>
-        ))}
-      </section>
-
-      <section className="admin-ui-two-col">
-        <article className="admin-ui-panel">
-          <h3>
-            <Filter size={17} />
-            สัดส่วนสถานะทีม
-          </h3>
-          <DashboardDonut
-            values={statusCards.map((item) => ({
-              key: item.id,
-              label: item.label,
-              count: item.value,
-              color: item.color,
-            }))}
-          />
         </article>
 
-        <article className="admin-ui-panel">
-          <h3>
-            <Users size={17} />
-            สัดส่วนขนาดทีม
-          </h3>
-          <DashboardBars rows={teamSizeRows} />
-        </article>
-      </section>
-
-      <section className="admin-ui-two-col">
-        <article className="admin-ui-panel">
-          <h3>
-            <Users size={17} />
-            สัดส่วนเพศ
-          </h3>
-          <DashboardBars rows={genderRows} />
-        </article>
-
-        <article className="admin-ui-panel">
-          <h3>
-            <Globe size={17} />
-            จังหวัดที่พบมากสุด
-          </h3>
-          <DashboardBars rows={provinceRows} />
-        </article>
-      </section>
-
-      <section className="admin-ui-panel">
-        <h3>
-          <Clock3 size={17} />
-          แนวโน้มสถานะ (ย้อนหลัง {days} วัน)
-        </h3>
-        <div className="admin-ui-trend-grid">
-          {(overview?.submissionTrend || []).slice(-14).map((row) => {
-            const total = row.submitted + row.passed + row.failed
-            return (
-              <div key={row.date}>
-                <div>
-                  <i style={{ height: `${Math.max(4, row.submitted * 8)}px`, background: '#3b82f6' }} />
-                  <i style={{ height: `${Math.max(4, row.passed * 8)}px`, background: '#10b981' }} />
-                  <i style={{ height: `${Math.max(4, row.failed * 8)}px`, background: '#ef4444' }} />
-                </div>
-                <strong>{total}</strong>
-                <span>{row.date.slice(5)}</span>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      <section className="admin-ui-panel">
-        <h3>
-          <ShieldAlert size={17} />
-          ชื่อซ้ำที่น่าสงสัย
-        </h3>
-        <div className="admin-ui-duplicate-list">
-          {duplicateRows.length ? (
-            duplicateRows.slice(0, 10).map((group) => (
-              <div key={group.normalizedName}>
-                <div>
-                  <strong>{group.fullNameTh || group.fullNameEn || group.normalizedName}</strong>
-                  <span>{group.count} รายการ</span>
-                </div>
-                <small>
-                  {group.members.map((member) => `${member.userName} (${member.teamCode}, ${member.status})`).join(' | ')}
-                </small>
-              </div>
-            ))
-          ) : (
-            <EmptyState compact title="ไม่พบชื่อซ้ำในสถานะที่เลือก" />
-          )}
-        </div>
-      </section>
-
-      <section className="admin-ui-panel">
-        <h3>
-          <History size={17} />
-          กิจกรรมล่าสุดในระบบ
-        </h3>
-        <div className="admin-ui-list-mini">
-          {auditLogsSeed.slice(0, 4).map((item) => (
-            <div key={item.id}>
-              <strong>{item.actionType}</strong>
-              <span>
-                {item.actor} • {formatDateTime(item.createdAt)}
-              </span>
+        <article className="admin-dash-v3-panel">
+          <header>
+            <h3>
+              <GraduationCap size={16} />
+              สถาบันการศึกษาของผู้สมัคร
+            </h3>
+          </header>
+          <div className="admin-dash-v3-scroll-area">
+            <div className="admin-dash-v3-list admin-dash-v3-list-compact">
+              {institutionRows.length ? (
+                institutionRows.map((item, index) => (
+                  <div key={`${item.label}-${index}`}>
+                    <strong>{item.label}</strong>
+                    <span>{item.count} คน</span>
+                  </div>
+                ))
+              ) : (
+                <EmptyState compact title="ยังไม่มีข้อมูลสถาบันการศึกษา" />
+              )}
             </div>
-          ))}
-        </div>
+          </div>
+        </article>
       </section>
 
-      <section className="admin-ui-panel">
-        <h3>
-          <ListChecks size={17} />
-          เดดไลน์ที่กำลังจะมาถึง
-        </h3>
-        <div className="admin-ui-timeline-mini">
-          {dashboardDeadlines.map((item) => (
-            <div key={item.id}>
-              <div>
-                <strong>{item.name}</strong>
-                <span>{formatDateTime(item.at)}</span>
-              </div>
-              <StatusBadge status={item.status === 'upcoming' ? 'IN_REVIEW' : 'SUBMITTED'} />
-            </div>
-          ))}
-        </div>
+      <section className="admin-dash-v3-grid-bottom">
+        <article className="admin-dash-v3-panel">
+          <header>
+            <h3>
+              <AlertTriangle size={16} />
+              ชื่อซ้ำที่น่าสงสัย
+            </h3>
+          </header>
+
+          <div className="admin-dash-v3-list">
+            {duplicateRows.length ? (
+              duplicateRows.slice(0, 10).map((group) => (
+                <div key={group.normalizedName}>
+                  <div>
+                    <strong>{group.fullNameTh || group.fullNameEn || group.normalizedName}</strong>
+                    <span>{group.count} รายการ</span>
+                  </div>
+                  <small>
+                    {group.members.map((member) => `${member.userName} (${member.teamCode}, ${member.status})`).join(' | ')}
+                  </small>
+                </div>
+              ))
+            ) : (
+              <EmptyState compact title="ไม่พบชื่อซ้ำ" />
+            )}
+          </div>
+        </article>
+
+        <article className="admin-dash-v3-panel">
+          <header>
+            <h3>
+              <CalendarClock size={16} />
+              Deadline Radar
+            </h3>
+          </header>
+
+          <div className="admin-dash-v3-list">
+            {closeDeadlines.length ? (
+              closeDeadlines.map((item) => (
+                <div key={item.key}>
+                  <strong>{item.label}</strong>
+                  <span>ปิด: {formatDateTime(item.closeAt)}</span>
+                </div>
+              ))
+            ) : (
+              <EmptyState compact title="ยังไม่พบวันเวลาปิดจาก system config" />
+            )}
+          </div>
+        </article>
       </section>
     </div>
   )

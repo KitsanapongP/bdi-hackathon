@@ -6,9 +6,11 @@ import AdminDataTable from '../shared/AdminDataTable'
 import AdminConfirmModal from '../shared/AdminConfirmModal'
 import FilterBar from '../shared/FilterBar'
 import PageHeader from '../shared/PageHeader'
+import { useAdminToast } from '../shared/adminContexts'
 import './PrivilegesPage.css'
 
-export default function PrivilegesPage({ pushToast }) {
+export default function PrivilegesPage() {
+  const { pushToast } = useAdminToast()
   const [templates, setTemplates] = useState([])
   const [claims, setClaims] = useState([])
   const [loading, setLoading] = useState(true)

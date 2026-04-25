@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import './shared/admin-shared.css'
 import { AdminGuard, AdminLayout } from './legacy/AdminAppLegacy'
+import { AdminToastProvider } from './shared/AdminToastProvider'
 import managementNavGroups from './config/managementNavGroups'
 import DashboardPage from './pages/DashboardPage'
 import NotificationSettingsPage from './pages/NotificationSettingsPage'
@@ -45,7 +46,9 @@ function AdminAppRoutes() {
 export default function AdminApp() {
   return (
     <AdminGuard>
-      <AdminAppRoutes />
+      <AdminToastProvider>
+        <AdminAppRoutes />
+      </AdminToastProvider>
     </AdminGuard>
   )
 }

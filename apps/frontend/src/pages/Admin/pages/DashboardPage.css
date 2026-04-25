@@ -1,0 +1,314 @@
+.admin-dash-v3 {
+  --dash-panel: #ffffff;
+  --dash-border: #d7e2f0;
+  --dash-text: #132038;
+  --dash-muted: #5f7796;
+  --dash-shadow: 0 16px 28px -24px rgba(17, 34, 60, 0.5);
+  --dash-font: 'Sarabun', 'Noto Sans Thai', sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--dash-text);
+  font-family: var(--dash-font);
+}
+
+.admin-dash-v3-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-dash-v3-btn {
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--dash-border);
+  background: #f5f9ff;
+  color: #153255;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  font-weight: 700;
+  font-family: inherit;
+}
+
+.admin-dash-v3-btn-primary {
+  border-color: #f0c891;
+  background: linear-gradient(120deg, #f08d44, #f3bb60);
+  color: #422004;
+}
+
+.admin-dash-v3-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.admin-dash-v3-panel {
+  background: var(--dash-panel);
+  border: 1px solid var(--dash-border);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: var(--dash-shadow);
+}
+
+.admin-dash-v3-panel header {
+  margin-bottom: 10px;
+}
+
+.admin-dash-v3-panel h3 {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.98rem;
+}
+
+.admin-dash-v3-highlight-value {
+  display: block;
+  margin-top: 8px;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.admin-dash-v3-lifecycle {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-dash-v3-lifecycle > div {
+  border: 1px solid #e2ebf8;
+  border-radius: 10px;
+  padding: 9px;
+  text-align: center;
+  background: #fbfdff;
+}
+
+.admin-dash-v3-lifecycle > div.is-total {
+  background: linear-gradient(180deg, #f4f8ff, #edf4ff);
+}
+
+.admin-dash-v3-lifecycle span {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.admin-dash-v3-lifecycle p {
+  margin: 7px 0 0;
+  font-size: 0.8rem;
+  color: var(--dash-muted);
+}
+
+.admin-dash-v3-lifecycle strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.2rem;
+}
+
+.admin-dash-v3-grid-main,
+.admin-dash-v3-grid-sub,
+.admin-dash-v3-grid-bottom {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-dash-v3-grid-main {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+}
+
+.admin-dash-v3-grid-sub {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-dash-v3-grid-bottom {
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+}
+
+.admin-dash-v3-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-dash-v3-bars > div {
+  display: grid;
+  grid-template-columns: minmax(84px, 130px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-dash-v3-bars > div > span {
+  color: var(--dash-muted);
+  font-size: 0.82rem;
+}
+
+.admin-dash-v3-bars > div > div {
+  background: #edf3fb;
+  border-radius: 999px;
+  height: 9px;
+}
+
+.admin-dash-v3-bars > div > div i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(120deg, #4575f2, #55b9da);
+}
+
+.admin-dash-v3-bars > div > strong {
+  font-size: 0.81rem;
+}
+
+.admin-dash-v3-empty {
+  margin: 0;
+  color: var(--dash-muted);
+  font-size: 0.88rem;
+}
+
+.admin-dash-v3-mode-switch {
+  display: inline-flex;
+  border: 1px solid #d9e5f5;
+  border-radius: 999px;
+  padding: 3px;
+  margin-bottom: 8px;
+}
+
+.admin-dash-v3-mode-switch button {
+  border: 0;
+  background: transparent;
+  color: #446080;
+  border-radius: 999px;
+  height: 30px;
+  padding: 0 11px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: inherit;
+}
+
+.admin-dash-v3-mode-switch button.active {
+  background: #ebf3ff;
+  color: #1f3b64;
+}
+
+.admin-dash-v3-trend-users {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(54px, 1fr));
+  gap: 6px;
+}
+
+.admin-dash-v3-trend-users > div {
+  border: 1px solid #e2ebf8;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fbfdff, #f3f8ff);
+  padding: 6px;
+  text-align: center;
+}
+
+.admin-dash-v3-trend-users > div > div {
+  height: 110px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.admin-dash-v3-trend-users > div > div i {
+  width: 14px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #5d90f4, #355fd5);
+}
+
+.admin-dash-v3-trend-users > div strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.82rem;
+}
+
+.admin-dash-v3-trend-users > div span {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.7rem;
+  color: var(--dash-muted);
+}
+
+.admin-dash-v3-scroll-area {
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.admin-dash-v3-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-dash-v3-list > div {
+  border: 1px solid #e4ecf8;
+  border-radius: 10px;
+  background: #fbfdff;
+  padding: 8px 10px;
+}
+
+.admin-dash-v3-list > div:not(.admin-ui-empty-state):not(.admin-ui-loading-state) > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-dash-v3-list strong {
+  display: block;
+  font-size: 0.84rem;
+}
+
+.admin-dash-v3-list span {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.76rem;
+  color: var(--dash-muted);
+}
+
+.admin-dash-v3-list small {
+  display: block;
+  margin-top: 7px;
+  color: #4d6889;
+  line-height: 1.45;
+}
+
+.admin-dash-v3-list-compact > div {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+@media (max-width: 1200px) {
+  .admin-dash-v3-grid-main,
+  .admin-dash-v3-grid-sub,
+  .admin-dash-v3-grid-bottom,
+  .admin-dash-v3-lifecycle {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .admin-dash-v3-grid-main,
+  .admin-dash-v3-grid-sub,
+  .admin-dash-v3-grid-bottom,
+  .admin-dash-v3-lifecycle {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-dash-v3-toolbar {
+    justify-content: stretch;
+  }
+
+  .admin-dash-v3-toolbar .admin-dash-v3-btn {
+    justify-content: center;
+  }
+
+  .admin-dash-v3-bars > div {
+    grid-template-columns: minmax(72px, 110px) minmax(0, 1fr) auto;
+  }
+}

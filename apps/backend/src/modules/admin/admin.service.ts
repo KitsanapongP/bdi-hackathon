@@ -21,6 +21,7 @@ import ExcelJS from 'exceljs';
 import archiver from 'archiver';
 import { createTeamAuditLog } from '../teams/teams.repo.js';
 import { triggerNotificationEvent } from '../notifications/notifications.service.js';
+import * as contentService from '../content/content.service.js';
 
 const GLOBAL_SELECTION_CONFIRM_OPEN_AT_KEY = 'GLOBAL_SELECTION_CONFIRM_OPEN_AT';
 const GLOBAL_SELECTION_CONFIRM_CLOSE_AT_KEY = 'GLOBAL_SELECTION_CONFIRM_CLOSE_AT';
@@ -99,7 +100,6 @@ function pickDisplayName(member: DashboardDuplicateMemberRow) {
 }
 
 export async function getDashboardOverview(db: DB, input: DashboardQueryInput) {
-    const statuses = Array.from(new Set(input.statuses)) as DashboardTeamStatus[];
     const totalTeams = await repo.getDashboardTotalTeams(db);
     const submittedOrApproved = await repo.getDashboardSubmittedOrApprovedCount(db);
 
@@ -108,21 +108,33 @@ export async function getDashboardOverview(db: DB, input: DashboardQueryInput) {
         teamMemberCounts,
         genderCountsRows,
         provinceCountsRows,
+        educationLevelRows,
+        institutionRows,
+        systemCloseDeadlines,
         trendRows,
         duplicateMembers,
+        participationOverview,
     ] = await Promise.all([
-        repo.getDashboardStatusCounts(db, statuses),
-        repo.getDashboardTeamMemberCounts(db, statuses),
-        repo.getDashboardGenderCounts(db, statuses),
-        repo.getDashboardProvinceCounts(db, statuses),
+        repo.getDashboardStatusCounts(db),
+        repo.getDashboardTeamMemberCounts(db),
+        repo.getDashboardGenderCounts(db),
+        repo.getDashboardProvinceCounts(db),
+        repo.getDashboardEducationLevelCounts(db),
+        repo.getDashboardInstitutionCounts(db),
+        repo.getDashboardSystemCloseDeadlines(db),
         repo.getDashboardTrend(db, input.days),
-        repo.getDashboardDuplicateMembers(db, statuses),
+        repo.getDashboardDuplicateMembers(db),
+        contentService.getParticipationOverview(db),
     ]);
 
     const statusMap = new Map<DashboardTeamStatus, number>([
+        ['forming', 0],
         ['submitted', 0],
         ['passed', 0],
         ['failed', 0],
+        ['confirmed', 0],
+        ['not_joined', 0],
+        ['disbanded', 0],
     ]);
     statusCountsRows.forEach((row) => {
         statusMap.set(row.status, Number(row.count));
@@ -171,6 +183,16 @@ export async function getDashboardOverview(db: DB, input: DashboardQueryInput) {
             province: row.province as string,
             count: Number(row.count),
         }));
+
+    const educationLevelCounts = educationLevelRows.map((row) => ({
+        educationLevel: row.education_level || 'unknown',
+        count: Number(row.count),
+    }));
+
+    const institutionCounts = institutionRows.map((row) => ({
+        institutionName: row.institution_name || 'ไม่ระบุ',
+        count: Number(row.count),
+    }));
 
     const duplicatesByName = new Map<string, {
         normalizedName: string;
@@ -222,28 +244,48 @@ export async function getDashboardOverview(db: DB, input: DashboardQueryInput) {
 
     return {
         filters: {
-            statuses,
             days: input.days,
         },
         totals: {
             teamsCreated: totalTeams,
             teamsInSelectedStatuses: filteredTeams,
+            teamsActive: filteredTeams,
             submittedOrApproved,
             totalMembersInSelectedStatuses: totalMembers,
+            teamsConfirmed: statusMap.get('confirmed') ?? 0,
+            teamsNotJoined: statusMap.get('not_joined') ?? 0,
+            teamsDisbanded: statusMap.get('disbanded') ?? 0,
         },
         statusCounts: [
+            { status: 'forming', count: statusMap.get('forming') ?? 0 },
             { status: 'submitted', count: statusMap.get('submitted') ?? 0 },
             { status: 'passed', count: statusMap.get('passed') ?? 0 },
             { status: 'failed', count: statusMap.get('failed') ?? 0 },
+            { status: 'confirmed', count: statusMap.get('confirmed') ?? 0 },
+            { status: 'not_joined', count: statusMap.get('not_joined') ?? 0 },
+            { status: 'disbanded', count: statusMap.get('disbanded') ?? 0 },
         ],
         teamSizeBuckets: Object.entries(teamSizeBuckets).map(([bucket, count]) => ({ bucket, count })),
         genderCounts: Object.entries(genderCounts).map(([gender, count]) => ({ gender, count })),
         provinceCounts,
+        educationLevelCounts,
+        institutionCounts,
         submissionTrend: trendRows.map((row) => ({
             date: row.date_label,
             submitted: Number(row.submitted),
             passed: Number(row.passed),
             failed: Number(row.failed),
+        })),
+        participation: {
+            interestedParticipants: Number(participationOverview?.totals?.interestedParticipants || 0),
+            trend: participationOverview?.trend || { weekly: [], monthly: [] },
+            generatedAt: participationOverview?.generatedAt || null,
+        },
+        systemCloseDeadlines: systemCloseDeadlines.map((item) => ({
+            key: item.config_key,
+            label: item.description_th || item.description_en || item.config_key,
+            closeAt: item.config_value,
+            updatedAt: item.updated_at instanceof Date ? item.updated_at.toISOString() : String(item.updated_at),
         })),
         duplicateNames,
     };
