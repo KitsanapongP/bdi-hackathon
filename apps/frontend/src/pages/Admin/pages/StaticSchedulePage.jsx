@@ -3,7 +3,7 @@ import { Pencil, Plus, RefreshCw, Save, Trash2 } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
 import DetailDrawer from '../shared/DetailDrawer'
-import SectionHeading from '../shared/SectionHeading'
+import PageHeader from '../shared/PageHeader'
 import StatusBadge from '../shared/StatusBadge'
 import { useAdminToast } from '../shared/adminContexts'
 import { normalizeTimeInput, toTimePayload } from '../utils/adminFormatters'
@@ -313,7 +313,7 @@ export default function StaticSchedulePage() {
           dayLabel,
           scheduleLabel: schedule?.nameEn || schedule?.nameTh || '-',
           tableType: schedule?.tableType || 'onsite_timetable',
-          trackLabel: track ? track.trackNameEn || track.trackNameTh : 'Default Track',
+          trackLabel: track ? track.trackNameEn || track.trackNameTh : 'แทร็กเริ่มต้น',
           timeLabel: `${normalizeTimeInput(item.startTime)} - ${normalizeTimeInput(item.endTime)}`,
         }
       }),
@@ -322,7 +322,7 @@ export default function StaticSchedulePage() {
 
   const dayFilters = useMemo(
     () => [
-      { label: 'All Days', value: 'all' },
+      { label: 'ทุกวัน', value: 'all' },
       ...days.map((day) => ({
         label: day.dayNameEn || day.dayNameTh || day.dayDate,
         value: String(day.id),
@@ -350,18 +350,17 @@ export default function StaticSchedulePage() {
 
   return (
     <div className="admin-ui-stack">
-      <SectionHeading
-        title="Static Content: Schedule"
-        description="จัดการรายการกำหนดการจากตาราง event_schedule_items พร้อมตัวกรองรายวันและการแสดงผลครบทุกข้อมูล"
-        right={
-          <div className="admin-ui-form-actions">
+      <PageHeader
+        title="กำหนดการ"
+        actions={
+          <div className="admin-ui-header-actions">
             <button type="button" className="admin-ui-btn" onClick={fetchScheduleBundle}>
               <RefreshCw size={15} />
-              Refresh
+              รีเฟรช
             </button>
             <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
               <Plus size={15} />
-              Add Session
+              เพิ่มเซสชัน
             </button>
           </div>
         }
@@ -369,24 +368,24 @@ export default function StaticSchedulePage() {
 
       <section className="admin-ui-stat-grid">
         <article className="admin-ui-stat-card">
-          <span>Items</span>
+          <span>รายการ</span>
           <strong>{stats.total}</strong>
-          <small>sessions in schedule</small>
+          <small>จำนวนเซสชันทั้งหมด</small>
         </article>
         <article className="admin-ui-stat-card success">
-          <span>Enabled</span>
+          <span>เปิดใช้งาน</span>
           <strong>{stats.activeItems}</strong>
-          <small>visible on website</small>
+          <small>แสดงบนเว็บไซต์</small>
         </article>
         <article className="admin-ui-stat-card info">
-          <span>Highlight</span>
+          <span>รายการเด่น</span>
           <strong>{stats.highlighted}</strong>
-          <small>featured sessions</small>
+          <small>เซสชันที่ไฮไลต์</small>
         </article>
         <article className="admin-ui-stat-card warn">
-          <span>Active Days</span>
+          <span>จำนวนวัน</span>
           <strong>{stats.usedDays}</strong>
-          <small>days with sessions</small>
+          <small>วันที่มีเซสชัน</small>
         </article>
       </section>
 
@@ -404,18 +403,18 @@ export default function StaticSchedulePage() {
       </div>
 
       <section className="admin-ui-panel">
-        <h4>Schedule Table Type</h4>
+        <h4>รูปแบบตารางกำหนดการ</h4>
         <div className="admin-ui-two-col">
           {schedules.map((schedule) => (
             <label key={schedule.id}>
-              {schedule.nameTh || schedule.nameEn || `Schedule #${schedule.id}`}
+              {schedule.nameTh || schedule.nameEn || `กำหนดการ #${schedule.id}`}
               <select
                 value={schedule.tableType || 'onsite_timetable'}
                 disabled={savingScheduleId === schedule.id}
                 onChange={(event) => updateScheduleViewType(schedule.id, event.target.value)}
               >
-                <option value="onsite_timetable">Onsite Timetable (เวลา + หัวข้อ)</option>
-                <option value="milestone">Milestone (วันที่ + กิจกรรม)</option>
+                <option value="onsite_timetable">ตารางเวลาแบบหน้างาน (เวลา + หัวข้อ)</option>
+                <option value="milestone">แบบหมุดหมาย (วันที่ + กิจกรรม)</option>
               </select>
             </label>
           ))}
@@ -440,24 +439,24 @@ export default function StaticSchedulePage() {
         searchPlaceholder="ค้นหาหัวข้อ, วิทยากร, สถานที่"
         filters={[
           { label: 'ทั้งหมด', value: 'all', predicate: () => true },
-          { label: 'Enabled', value: 'enabled', predicate: (row) => row.isEnabled },
-          { label: 'Disabled', value: 'disabled', predicate: (row) => !row.isEnabled },
-          { label: 'Highlight', value: 'highlight', predicate: (row) => row.isHighlight },
+          { label: 'เปิดใช้งาน', value: 'enabled', predicate: (row) => row.isEnabled },
+          { label: 'ปิดใช้งาน', value: 'disabled', predicate: (row) => !row.isEnabled },
+          { label: 'ไฮไลต์', value: 'highlight', predicate: (row) => row.isHighlight },
         ]}
         columns={[
           {
             key: 'timeLabel',
-            label: 'Time',
+            label: 'เวลา',
             render: (row) => (
               <div className="admin-ui-col-stack">
                 <strong>{row.timeLabel}</strong>
-                <span>Sort #{row.sortOrder}</span>
+                <span>ลำดับ #{row.sortOrder}</span>
               </div>
             ),
           },
           {
             key: 'dayLabel',
-            label: 'Day / Track',
+            label: 'วัน / แทร็ก',
             render: (row) => (
               <div className="admin-ui-col-stack">
                 <strong>{row.dayLabel || '-'}</strong>
@@ -467,7 +466,7 @@ export default function StaticSchedulePage() {
           },
           {
             key: 'titleEn',
-            label: 'Session',
+            label: 'เซสชัน',
             render: (row) => (
               <div className="admin-ui-col-stack">
                 <strong>{row.titleEn}</strong>
@@ -478,18 +477,18 @@ export default function StaticSchedulePage() {
           },
           {
             key: 'audience',
-            label: 'Audience / State',
+            label: 'ผู้ชม / สถานะ',
             render: (row) => (
               <div className="admin-ui-col-stack">
                 <span>{scheduleAudienceLabel[row.audience] || row.audience}</span>
-                <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} label={row.isEnabled ? 'Enabled' : 'Disabled'} />
-                {row.isHighlight ? <StatusBadge status="RESUBMITTED" label="Highlight" /> : null}
+                <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} label={row.isEnabled ? 'เปิดใช้งาน' : 'ปิดใช้งาน'} />
+                {row.isHighlight ? <StatusBadge status="RESUBMITTED" label="ไฮไลต์" /> : null}
               </div>
             ),
           },
           {
             key: 'actions',
-            label: 'Actions',
+            label: 'การจัดการ',
             render: (row) => (
               <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => openEdit(row)} aria-label="edit">
@@ -507,13 +506,13 @@ export default function StaticSchedulePage() {
       <DetailDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title={editingId ? 'Edit Schedule Session' : 'Create Schedule Session'}
+        title={editingId ? 'แก้ไขเซสชันกำหนดการ' : 'เพิ่มเซสชันกำหนดการ'}
         subtitle="ข้อมูลจะถูก sync เข้าตาราง event_schedule_items และแสดงผลในหน้า Home"
       >
         <div className="admin-ui-form">
           <div className="admin-ui-two-col">
             <label htmlFor="schedule-day">
-              Day *
+              วัน *
               <select
                 id="schedule-day"
                 value={form.dayId}
@@ -530,13 +529,13 @@ export default function StaticSchedulePage() {
             </label>
 
             <label htmlFor="schedule-track">
-              Track
+              แทร็ก
               <select
                 id="schedule-track"
                 value={form.trackId}
                 onChange={(event) => setForm((prev) => ({ ...prev, trackId: event.target.value }))}
               >
-                <option value="">Default Track</option>
+                <option value="">แทร็กเริ่มต้น</option>
                 {trackOptions.map((track) => (
                   <option key={track.id} value={track.id}>
                     {track.trackNameEn || track.trackNameTh}
@@ -548,7 +547,7 @@ export default function StaticSchedulePage() {
 
           <div className="admin-ui-two-col">
             <label htmlFor="schedule-start-time">
-              Start Time *
+              เวลาเริ่ม *
               <input
                 id="schedule-start-time"
                 type="time"
@@ -559,7 +558,7 @@ export default function StaticSchedulePage() {
             </label>
 
             <label htmlFor="schedule-end-time">
-              End Time *
+              เวลาสิ้นสุด *
               <input
                 id="schedule-end-time"
                 type="time"
@@ -711,7 +710,7 @@ export default function StaticSchedulePage() {
                 checked={form.isHighlight}
                 onChange={(event) => setForm((prev) => ({ ...prev, isHighlight: event.target.checked }))}
               />
-              <span>is_highlight</span>
+              <span>ไฮไลต์</span>
             </label>
 
             <label className="admin-ui-check">
@@ -720,12 +719,12 @@ export default function StaticSchedulePage() {
                 checked={form.isEnabled}
                 onChange={(event) => setForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
               />
-              <span>is_enabled</span>
+              <span>เปิดใช้งาน</span>
             </label>
           </div>
 
           <div className="admin-ui-panel">
-            <h3>Preview</h3>
+            <h3>ตัวอย่าง</h3>
             <div className="admin-ui-col-stack">
               <strong>{form.titleEn || '-'}</strong>
               <span>{form.titleTh || '-'}</span>
@@ -739,11 +738,11 @@ export default function StaticSchedulePage() {
 
           <div className="admin-ui-form-actions">
             <button type="button" className="admin-ui-btn" onClick={() => setDrawerOpen(false)}>
-              Cancel
+              ยกเลิก
             </button>
             <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={save}>
               <Save size={14} />
-              Save
+              บันทึก
             </button>
           </div>
         </div>

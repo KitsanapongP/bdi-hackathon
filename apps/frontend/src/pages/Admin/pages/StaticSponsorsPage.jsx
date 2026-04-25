@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, Link2, Pencil, Plus, Save, Trash2, Upload } from 'l
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
 import DetailDrawer from '../shared/DetailDrawer'
-import SectionHeading from '../shared/SectionHeading'
+import PageHeader from '../shared/PageHeader'
 import StatusBadge from '../shared/StatusBadge'
 import { useAdminToast } from '../shared/adminContexts'
 
@@ -389,18 +389,17 @@ export default function StaticSponsorsPage() {
 
   return (
     <div className="admin-ui-stack">
-      <SectionHeading
-        title="Static Content: Sponsors"
-        description=""
-        right={
-          <div className="admin-ui-row-actions">
+      <PageHeader
+        title="ภาคีเครือข่าย"
+        actions={
+          <div className="admin-ui-header-actions">
             <button type="button" className="admin-ui-btn" onClick={openCreateGroup}>
               <Plus size={15} />
-              Add Group
+              เพิ่มกลุ่ม
             </button>
             <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
               <Plus size={15} />
-              Add Sponsor
+              เพิ่มภาคีเครือข่าย
             </button>
           </div>
         }
@@ -413,13 +412,13 @@ export default function StaticSponsorsPage() {
         searchPlaceholder="ค้นหาชื่อกลุ่มภาคี"
         filters={[
           { label: 'ทั้งหมด', value: 'all', predicate: () => true },
-          { label: 'Active', value: 'active', predicate: (row) => row.isActive },
-          { label: 'Inactive', value: 'inactive', predicate: (row) => !row.isActive },
+          { label: 'เปิดใช้งาน', value: 'active', predicate: (row) => row.isActive },
+          { label: 'ปิดใช้งาน', value: 'inactive', predicate: (row) => !row.isActive },
         ]}
         columns={[
           {
             key: 'name',
-            label: 'Sponsor Group',
+            label: 'กลุ่มผู้สนับสนุน',
             render: (row) => (
               <div>
                 <strong>{row.nameTh}</strong>
@@ -429,22 +428,22 @@ export default function StaticSponsorsPage() {
           },
           {
             key: 'code',
-            label: 'Group Code',
+            label: 'รหัสกลุ่ม',
           },
           {
             key: 'sortOrder',
-            label: 'Group Order',
+            label: 'ลำดับกลุ่ม',
           },
           {
             key: 'isActive',
-            label: 'Status',
+            label: 'สถานะ',
             render: (row) => (
               <StatusBadge status={row.isActive ? 'APPROVED' : 'RETURNED'} label={row.isActive ? 'Enable' : 'Disable'} />
             ),
           },
           {
             key: 'actions',
-            label: 'Actions',
+            label: 'การจัดการ',
             render: (row) => (
               <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => moveGroup(row.id, 'up')} aria-label="move up group">
@@ -465,7 +464,7 @@ export default function StaticSponsorsPage() {
       <DetailDrawer
         open={groupDrawerOpen}
         onClose={() => setGroupDrawerOpen(false)}
-        title={editingGroupId ? 'Edit Sponsor Group' : 'Create Sponsor Group'}
+        title={editingGroupId ? 'แก้ไขกลุ่มผู้สนับสนุน' : 'เพิ่มกลุ่มผู้สนับสนุน'}
         subtitle="จัดการชื่อกลุ่มและลำดับการแสดงผล"
       >
         <div className="admin-ui-form">
@@ -549,13 +548,13 @@ export default function StaticSponsorsPage() {
         searchPlaceholder="ค้นหาชื่อ sponsor หรือลิงก์"
         filters={[
           { label: 'ทั้งหมด', value: 'all', predicate: () => true },
-          { label: 'Active', value: 'active', predicate: (row) => row.isActive },
-          { label: 'Inactive', value: 'inactive', predicate: (row) => !row.isActive },
+          { label: 'เปิดใช้งาน', value: 'active', predicate: (row) => row.isActive },
+          { label: 'ปิดใช้งาน', value: 'inactive', predicate: (row) => !row.isActive },
         ]}
         columns={[
           {
             key: 'logo',
-            label: 'Logo + Name',
+            label: 'โลโก้และชื่อ',
             render: (row) => (
               <div className="admin-ui-inline-logo">
                 <img src={apiUrl(row.logo)} alt={row.nameTh || row.name} loading="lazy" decoding="async" />
@@ -568,7 +567,7 @@ export default function StaticSponsorsPage() {
           },
           {
             key: 'link',
-            label: 'Link',
+            label: 'ลิงก์',
             render: (row) =>
               row.link ? (
                 <a href={row.link} target="_blank" rel="noreferrer" className="admin-ui-link">
@@ -581,23 +580,23 @@ export default function StaticSponsorsPage() {
           },
           {
             key: 'sponsorGroup',
-            label: 'Group',
+            label: 'กลุ่ม',
             render: (row) => <span>{row.sponsorGroup?.nameTh || '-'}</span>,
           },
           {
             key: 'displayOrder',
-            label: 'Display Order',
+            label: 'ลำดับแสดงผล',
           },
           {
             key: 'isActive',
-            label: 'Status',
+            label: 'สถานะ',
             render: (row) => (
-              <StatusBadge status={row.isActive ? 'APPROVED' : 'RETURNED'} label={row.isActive ? 'Enable' : 'Disable'} />
+              <StatusBadge status={row.isActive ? 'APPROVED' : 'RETURNED'} label={row.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'} />
             ),
           },
           {
             key: 'actions',
-            label: 'Actions',
+            label: 'การจัดการ',
             render: (row) => (
               <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => moveItem(row.id, 'up')} aria-label="move up">
@@ -621,7 +620,7 @@ export default function StaticSponsorsPage() {
       <DetailDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title={editingId ? 'Edit Sponsor' : 'Create Sponsor'}
+        title={editingId ? 'แก้ไขผู้สนับสนุน' : 'เพิ่มผู้สนับสนุน'}
         subtitle="รองรับการอัปโหลดโลโก้และตรวจสอบไฟล์ภาพ"
       >
         <div className="admin-ui-form">
@@ -715,7 +714,7 @@ export default function StaticSponsorsPage() {
           </label>
 
           <label htmlFor="sponsor-logo">
-            Logo Upload {editingId ? '(optional)' : '*'}
+            อัปโหลดโลโก้ {editingId ? '(ไม่บังคับ)' : '*'}
             <input
               id="sponsor-logo"
               type="file"
@@ -742,7 +741,7 @@ export default function StaticSponsorsPage() {
           </label>
 
           <label htmlFor="sponsor-logo-file-name">
-            Logo File Name
+            ชื่อไฟล์โลโก้
             <input
               id="sponsor-logo-file-name"
               value={form.logoFileName}
@@ -759,7 +758,7 @@ export default function StaticSponsorsPage() {
 
           <div className="admin-ui-toggle-row">
             <label htmlFor="sponsor-active" className="admin-ui-toggle-label">
-              Status
+              สถานะ
             </label>
             <label className="admin-ui-toggle">
               <input
@@ -768,7 +767,7 @@ export default function StaticSponsorsPage() {
                 onChange={(event) => setForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
               />
               <span className="admin-ui-toggle-switch"></span>
-              <span className="admin-ui-toggle-text">{form.isEnabled ? 'Enabled' : 'Disabled'}</span>
+              <span className="admin-ui-toggle-text">{form.isEnabled ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}</span>
             </label>
           </div>
 

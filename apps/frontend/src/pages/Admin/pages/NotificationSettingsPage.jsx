@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Mail, Save } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
-import SectionHeading from '../shared/SectionHeading'
+import PageHeader from '../shared/PageHeader'
 import { useAdminToast } from '../shared/adminContexts'
 
 export default function NotificationSettingsPage() {
@@ -185,31 +185,31 @@ export default function NotificationSettingsPage() {
 
   return (
     <div className="admin-ui-stack">
-      <SectionHeading title="Notification Settings" description="ตั้งค่า event email, แก้ข้อความราย event และส่งเมล custom ถึงทีมที่เลือก" />
+      <PageHeader title="การแจ้งเตือน" />
 
       <article className="admin-ui-panel">
-        <h3>Admin Recipient List</h3>
+        <h3>รายชื่อแอดมินที่รับแจ้งเตือน</h3>
         <AdminDataTable
           rows={recipients.map((recipient) => ({ ...recipient, id: recipient.userId }))}
           loading={loading}
           searchKeys={['displayName', 'userName', 'email']}
           searchPlaceholder="ค้นหา admin จากชื่อ/username/email"
           columns={[
-            { key: 'displayName', label: 'Name' },
-            { key: 'userName', label: 'Username' },
+            { key: 'displayName', label: 'ชื่อ' },
+            { key: 'userName', label: 'ชื่อผู้ใช้' },
             {
               key: 'email',
-              label: 'Email',
+              label: 'อีเมล',
               render: (row) => row.email || '-',
             },
             {
               key: 'enabled',
-              label: 'Receive Notification',
+              label: 'รับการแจ้งเตือน',
               render: (row) => String(row.enabled),
             },
             {
               key: 'actions',
-              label: 'Actions',
+              label: 'การจัดการ',
               render: (row) => (
                 <button
                   type="button"
@@ -217,7 +217,7 @@ export default function NotificationSettingsPage() {
                   disabled={updatingRecipientUserId === row.userId}
                   onClick={() => toggleRecipient(row)}
                 >
-                  {row.enabled ? 'Disable' : 'Enable'}
+                  {row.enabled ? 'ปิดรับ' : 'เปิดรับ'}
                 </button>
               ),
             },
@@ -231,24 +231,24 @@ export default function NotificationSettingsPage() {
         searchKeys={['eventCode']}
         searchPlaceholder="ค้นหา event code"
         columns={[
-          { key: 'eventCode', label: 'Event' },
+            { key: 'eventCode', label: 'เหตุการณ์' },
           {
             key: 'isEmailEnabled',
-            label: 'Email',
+            label: 'ส่งอีเมล',
             render: (row) => String(row.isEmailEnabled),
           },
           {
             key: 'customSubject',
-            label: 'Custom Subject',
+            label: 'หัวข้อกำหนดเอง',
             render: (row) => row.customSubject || '-',
           },
           {
             key: 'actions',
-            label: 'Actions',
+            label: 'การจัดการ',
             render: (row) => (
               <div className="admin-ui-inline-actions">
                 <button type="button" className="admin-ui-mini-btn" onClick={() => updateSetting(row.eventCode, { isEmailEnabled: !row.isEmailEnabled })}>
-                  Toggle Email
+                  เปิด/ปิดอีเมล
                 </button>
               </div>
             ),
@@ -257,13 +257,13 @@ export default function NotificationSettingsPage() {
       />
 
       <article className="admin-ui-panel">
-        <h3>Event Message Overrides</h3>
+        <h3>ข้อความกำหนดเองรายเหตุการณ์</h3>
         <div className="admin-ui-form">
           {settings.map((row) => (
             <div key={row.eventCode} className="admin-ui-panel" style={{ marginBottom: 12 }}>
               <strong>{row.eventCode}</strong>
               <label>
-                Subject Override
+                หัวข้อกำหนดเอง
                 <input
                   value={eventDrafts[row.eventCode]?.customSubject || ''}
                   onChange={(event) =>
@@ -279,7 +279,7 @@ export default function NotificationSettingsPage() {
                 />
               </label>
               <label>
-                Message Override
+                ข้อความกำหนดเอง
                 <textarea
                   rows={3}
                   value={eventDrafts[row.eventCode]?.customMessage || ''}
@@ -297,7 +297,7 @@ export default function NotificationSettingsPage() {
               </label>
               <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={() => saveEventMessage(row.eventCode)}>
                 <Save size={14} />
-                Save Override
+                บันทึกข้อความ
               </button>
             </div>
           ))}
@@ -305,10 +305,10 @@ export default function NotificationSettingsPage() {
       </article>
 
       <article className="admin-ui-panel">
-        <h3>Send Custom Email To Team</h3>
+        <h3>ส่งอีเมลแบบกำหนดเองให้ทีม</h3>
         <div className="admin-ui-form">
           <label>
-            Team
+            ทีม
             <select
               value={customEmail.teamId}
               onChange={(event) => setCustomEmail((prev) => ({ ...prev, teamId: event.target.value }))}
@@ -322,7 +322,7 @@ export default function NotificationSettingsPage() {
             </select>
           </label>
           <label>
-            Subject
+            หัวข้อ
             <input
               value={customEmail.subject}
               onChange={(event) => setCustomEmail((prev) => ({ ...prev, subject: event.target.value }))}
@@ -330,7 +330,7 @@ export default function NotificationSettingsPage() {
             />
           </label>
           <label>
-            Message
+            ข้อความ
             <textarea
               rows={5}
               value={customEmail.message}
@@ -340,16 +340,16 @@ export default function NotificationSettingsPage() {
           </label>
           <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={sending} onClick={sendCustomEmail}>
             <Mail size={14} />
-            {sending ? 'Sending...' : 'Send Custom Email'}
+            {sending ? 'กำลังส่ง...' : 'ส่งอีเมล'}
           </button>
         </div>
       </article>
 
       <article className="admin-ui-panel">
-        <h3>SMTP Quota Burst Test (110 emails)</h3>
+        <h3>ทดสอบส่งอีเมลแบบชุด (110 ฉบับ)</h3>
         <div className="admin-ui-form">
           <label>
-            Recipient Email
+            อีเมลผู้รับ
             <input
               type="email"
               value={burstTestRecipientEmail}
@@ -364,7 +364,7 @@ export default function NotificationSettingsPage() {
             onClick={sendBurstTestEmail}
           >
             <Mail size={14} />
-            {sendingBurstTest ? 'Sending 110 emails...' : 'Send 110 Test Emails'}
+            {sendingBurstTest ? 'กำลังส่ง 110 ฉบับ...' : 'ส่งอีเมลทดสอบ 110 ฉบับ'}
           </button>
         </div>
       </article>

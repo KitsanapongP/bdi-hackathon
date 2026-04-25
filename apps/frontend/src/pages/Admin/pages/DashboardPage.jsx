@@ -2,15 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Clock3, Filter, FolderArchive, Globe, History, ListChecks, RefreshCw, ShieldAlert, Users } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import { auditLogsSeed, dashboardDeadlines } from '../legacy/adminMockData.legacy'
-import SectionHeading from '../shared/SectionHeading'
+import EmptyState from '../shared/EmptyState'
+import FilterBar from '../shared/FilterBar'
+import PageHeader from '../shared/PageHeader'
 import StatusBadge from '../shared/StatusBadge'
 import { useAdminToast } from '../shared/adminContexts'
 import { formatDateTime } from '../utils/adminFormatters'
 
 const dashboardStatusOptions = [
-  { value: 'submitted', label: 'Submitted', color: '#3b82f6' },
-  { value: 'passed', label: 'Passed', color: '#10b981' },
-  { value: 'failed', label: 'Failed', color: '#ef4444' },
+  { value: 'submitted', label: 'ส่งแล้ว', color: '#3b82f6' },
+  { value: 'passed', label: 'ผ่านคัดเลือก', color: '#10b981' },
+  { value: 'failed', label: 'ไม่ผ่าน', color: '#ef4444' },
 ]
 
 const genderLabelMap = {
@@ -22,7 +24,7 @@ const genderLabelMap = {
 
 function DashboardDonut({ values }) {
   const total = values.reduce((sum, item) => sum + item.count, 0)
-  if (!total) return <div className="admin-ui-donut-empty">No data</div>
+  if (!total) return <div className="admin-ui-donut-empty">ไม่มีข้อมูล</div>
 
   const segments = values
     .reduce(
@@ -43,7 +45,7 @@ function DashboardDonut({ values }) {
       <div className="admin-ui-donut" style={{ background: `conic-gradient(${segments})` }}>
         <div>
           <strong>{total}</strong>
-          <span>teams</span>
+          <span>ทีม</span>
         </div>
       </div>
       <div className="admin-ui-donut-legend">
@@ -184,32 +186,43 @@ export default function DashboardPage() {
 
   return (
     <div className="admin-ui-stack">
-      <SectionHeading
-        title="Admin Dashboard"
-        description="ภาพรวมทีมตามสถานะ, demographic, และตรวจชื่อซ้ำของผู้ส่งเข้าพิจารณา (ปุ่ม Export จะดึงเฉพาะทีม status = submitted)"
-        right={
-          <div className="admin-ui-headmin-ui-actions">
+      <PageHeader
+        title="แดชบอร์ด"
+        actions={
+          <div className="admin-ui-header-actions">
             <button type="button" className="admin-ui-btn" onClick={fetchOverview}>
               <RefreshCw size={15} />
-              Refresh
+              รีเฟรช
             </button>
             <button
               type="button"
               className="admin-ui-btn admin-ui-btn-primary"
               onClick={handleExportSubmittedTeams}
               disabled={exporting}
-              title="Export เฉพาะทีมสถานะ submitted"
+              title="ส่งออกเฉพาะทีมสถานะส่งแล้ว"
             >
               <FolderArchive size={15} />
-              {exporting ? 'กำลัง Export...' : 'Export Submitted Teams'}
+              {exporting ? 'กำลังส่งออก...' : 'ส่งออกทีมที่ส่งแล้ว'}
             </button>
           </div>
         }
       />
 
       <section className="admin-ui-panel">
-        <div className="admin-ui-dashboard-filters">
-          <strong>Status filter</strong>
+        <FilterBar
+          label="กรองตามสถานะ"
+          right={
+            <label className="admin-ui-days-filter">
+              ดูแนวโน้มย้อนหลัง (วัน)
+              <select value={days} onChange={(event) => setDays(Number(event.target.value))}>
+                <option value={14}>14</option>
+                <option value={30}>30</option>
+                <option value={60}>60</option>
+                <option value={90}>90</option>
+              </select>
+            </label>
+          }
+        >
           <div className="admin-ui-chip-row">
             {dashboardStatusOptions.map((option) => {
               const active = selectedStatuses.includes(option.value)
@@ -233,44 +246,35 @@ export default function DashboardPage() {
               )
             })}
           </div>
-          <label className="admin-ui-days-filter">
-            Trend days
-            <select value={days} onChange={(event) => setDays(Number(event.target.value))}>
-              <option value={14}>14</option>
-              <option value={30}>30</option>
-              <option value={60}>60</option>
-              <option value={90}>90</option>
-            </select>
-          </label>
-        </div>
+        </FilterBar>
       </section>
 
       <section className="admin-ui-stat-grid">
         {[
           {
             id: 'teamsCreated',
-            label: 'Teams Created',
+            label: 'จำนวนทีมทั้งหมด',
             value: overview?.totals?.teamsCreated ?? 0,
             trend: 'ทีมที่ถูกสร้างทั้งหมด',
             tone: 'info',
           },
           {
             id: 'filtered',
-            label: 'Teams In Selected Statuses',
+            label: 'ทีมในสถานะที่เลือก',
             value: overview?.totals?.teamsInSelectedStatuses ?? 0,
             trend: `filter: ${selectedStatuses.join(', ')}`,
             tone: 'warn',
           },
           {
             id: 'submittedOrApproved',
-            label: 'Submitted + Approved',
+            label: 'ทีมที่ส่งแล้ว + ผ่าน',
             value: overview?.totals?.submittedOrApproved ?? 0,
             trend: 'ตรงกับโจทย์ทีมที่ส่งเข้าพิจารณา',
             tone: 'success',
           },
           {
             id: 'members',
-            label: 'Members In Selection',
+            label: 'จำนวนสมาชิก',
             value: overview?.totals?.totalMembersInSelectedStatuses ?? 0,
             trend: `${duplicateRows.length} duplicate-name groups`,
             tone: 'neutral',
@@ -288,7 +292,7 @@ export default function DashboardPage() {
         <article className="admin-ui-panel">
           <h3>
             <Filter size={17} />
-            Team Status Distribution
+            สัดส่วนสถานะทีม
           </h3>
           <DashboardDonut
             values={statusCards.map((item) => ({
@@ -303,7 +307,7 @@ export default function DashboardPage() {
         <article className="admin-ui-panel">
           <h3>
             <Users size={17} />
-            Team Size Distribution
+            สัดส่วนขนาดทีม
           </h3>
           <DashboardBars rows={teamSizeRows} />
         </article>
@@ -313,7 +317,7 @@ export default function DashboardPage() {
         <article className="admin-ui-panel">
           <h3>
             <Users size={17} />
-            Gender Breakdown
+            สัดส่วนเพศ
           </h3>
           <DashboardBars rows={genderRows} />
         </article>
@@ -321,7 +325,7 @@ export default function DashboardPage() {
         <article className="admin-ui-panel">
           <h3>
             <Globe size={17} />
-            Top Provinces
+            จังหวัดที่พบมากสุด
           </h3>
           <DashboardBars rows={provinceRows} />
         </article>
@@ -330,7 +334,7 @@ export default function DashboardPage() {
       <section className="admin-ui-panel">
         <h3>
           <Clock3 size={17} />
-          Status Trend (Last {days} Days)
+          แนวโน้มสถานะ (ย้อนหลัง {days} วัน)
         </h3>
         <div className="admin-ui-trend-grid">
           {(overview?.submissionTrend || []).slice(-14).map((row) => {
@@ -353,7 +357,7 @@ export default function DashboardPage() {
       <section className="admin-ui-panel">
         <h3>
           <ShieldAlert size={17} />
-          Duplicate Real Names
+          ชื่อซ้ำที่น่าสงสัย
         </h3>
         <div className="admin-ui-duplicate-list">
           {duplicateRows.length ? (
@@ -361,7 +365,7 @@ export default function DashboardPage() {
               <div key={group.normalizedName}>
                 <div>
                   <strong>{group.fullNameTh || group.fullNameEn || group.normalizedName}</strong>
-                  <span>{group.count} records</span>
+                  <span>{group.count} รายการ</span>
                 </div>
                 <small>
                   {group.members.map((member) => `${member.userName} (${member.teamCode}, ${member.status})`).join(' | ')}
@@ -369,7 +373,7 @@ export default function DashboardPage() {
               </div>
             ))
           ) : (
-            <div className="admin-ui-table-empty">ไม่พบชื่อซ้ำในสถานะที่เลือก</div>
+            <EmptyState compact title="ไม่พบชื่อซ้ำในสถานะที่เลือก" />
           )}
         </div>
       </section>
@@ -377,7 +381,7 @@ export default function DashboardPage() {
       <section className="admin-ui-panel">
         <h3>
           <History size={17} />
-          Recent Audit Activity
+          กิจกรรมล่าสุดในระบบ
         </h3>
         <div className="admin-ui-list-mini">
           {auditLogsSeed.slice(0, 4).map((item) => (
@@ -394,7 +398,7 @@ export default function DashboardPage() {
       <section className="admin-ui-panel">
         <h3>
           <ListChecks size={17} />
-          Upcoming Deadlines
+          เดดไลน์ที่กำลังจะมาถึง
         </h3>
         <div className="admin-ui-timeline-mini">
           {dashboardDeadlines.map((item) => (

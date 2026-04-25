@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
 import DetailDrawer from '../shared/DetailDrawer'
-import SectionHeading from '../shared/SectionHeading'
+import PageHeader from '../shared/PageHeader'
 import StatusBadge from '../shared/StatusBadge'
 import { useAdminToast } from '../shared/adminContexts'
 
@@ -199,14 +199,15 @@ export default function StaticRewardsPage() {
 
   return (
     <div className="admin-ui-stack">
-      <SectionHeading
-        title="Static Content: Rewards"
-        description=""
-        right={
-          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
-            <Plus size={15} />
-            Add Reward
-          </button>
+      <PageHeader
+        title="รางวัล"
+        actions={
+          <div className="admin-ui-header-actions">
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
+              <Plus size={15} />
+              เพิ่มรางวัล
+            </button>
+          </div>
         }
       />
 
@@ -216,15 +217,15 @@ export default function StaticRewardsPage() {
         searchPlaceholder="ค้นหา reward title / description"
         filters={[
           { label: 'ทั้งหมด', value: 'all', predicate: () => true },
-          { label: 'Enabled', value: 'active', predicate: (row) => row.isActive },
-          { label: 'Disabled', value: 'inactive', predicate: (row) => !row.isActive },
+          { label: 'เปิดใช้งาน', value: 'active', predicate: (row) => row.isActive },
+          { label: 'ปิดใช้งาน', value: 'inactive', predicate: (row) => !row.isActive },
         ]}
         loading={loading}
         columns={[
-          { key: 'rank', label: 'Rank' },
+          { key: 'rank', label: 'อันดับ' },
           {
             key: 'title',
-            label: 'Title',
+            label: 'ชื่อรางวัล',
             render: (row) => (
               <div>
                 <div>{row.titleTh || row.title}</div>
@@ -234,21 +235,21 @@ export default function StaticRewardsPage() {
           },
           {
             key: 'amount',
-            label: 'Amount',
+            label: 'มูลค่า',
             render: (row) => (row.amount ? Number(row.amount).toLocaleString('th-TH') : '-'),
           },
           {
             key: 'currency',
-            label: 'Currency',
+            label: 'สกุลเงิน',
             render: (row) => row.currency || '-',
           },
           {
             key: 'sortOrder',
-            label: 'Order',
+            label: 'ลำดับ',
           },
           {
             key: 'isActive',
-            label: 'Status',
+            label: 'สถานะ',
             render: (row) => <StatusBadge status={row.isActive ? 'ENABLED' : 'DISABLED'} />,
           },
           {
@@ -277,7 +278,7 @@ export default function StaticRewardsPage() {
       <DetailDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title={editingId ? 'Edit Reward' : 'Create Reward'}
+        title={editingId ? 'แก้ไขรางวัล' : 'เพิ่มรางวัล'}
         subtitle="ฟอร์มมี required validation และคง format ที่พร้อมต่อ API"
       >
         <div className="admin-ui-form">

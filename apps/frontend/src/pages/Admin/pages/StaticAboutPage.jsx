@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Save } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
-import SectionHeading from '../shared/SectionHeading'
+import PageHeader from '../shared/PageHeader'
 import { useAdminToast } from '../shared/adminContexts'
 
 export default function StaticAboutPage() {
@@ -71,28 +71,29 @@ export default function StaticAboutPage() {
 
   return (
     <div className="admin-ui-stack">
-      <SectionHeading
-        title="Static Content: About"
-        description="HTML editor + Preview mode รองรับ TH/EN (เชื่อม API แล้ว)"
-        right={
-          <button
-            type="button"
-            className="admin-ui-btn admin-ui-btn-primary"
-            onClick={saveAboutPage}
-            disabled={loading || saving}
-          >
-            <Save size={15} />
-            {saving ? 'Saving...' : 'Save About'}
-          </button>
+      <PageHeader
+        title="เกี่ยวกับ"
+        actions={
+          <div className="admin-ui-header-actions">
+            <button
+              type="button"
+              className="admin-ui-btn admin-ui-btn-primary"
+              onClick={saveAboutPage}
+              disabled={loading || saving}
+            >
+              <Save size={15} />
+              {saving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+            </button>
+          </div>
         }
       />
 
       <div className="admin-ui-tab-row">
         <button type="button" className={tab === 'editor' ? 'active' : ''} onClick={() => setTab('editor')}>
-          Editor
+          แก้ไข
         </button>
         <button type="button" className={tab === 'preview' ? 'active' : ''} onClick={() => setTab('preview')}>
-          Preview
+          ตัวอย่าง
         </button>
       </div>
 
@@ -101,14 +102,14 @@ export default function StaticAboutPage() {
           ภาษาไทย
         </button>
         <button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => setLang('en')}>
-          English
+          ภาษาอังกฤษ
         </button>
       </div>
 
       {tab === 'editor' ? (
         <article className="admin-ui-panel">
           <label htmlFor="about-editor" className="admin-ui-label">
-            HTML Content ({lang.toUpperCase()})
+            เนื้อหา HTML ({lang.toUpperCase()})
           </label>
           <textarea
             id="about-editor"

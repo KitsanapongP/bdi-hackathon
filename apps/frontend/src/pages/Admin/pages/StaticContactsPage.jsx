@@ -3,7 +3,8 @@ import { ArrowDown, ArrowUp, Contact, Globe, Pencil, Plus, Save, Trash2 } from '
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
 import DetailDrawer from '../shared/DetailDrawer'
-import SectionHeading from '../shared/SectionHeading'
+import EmptyState from '../shared/EmptyState'
+import PageHeader from '../shared/PageHeader'
 import StatusBadge from '../shared/StatusBadge'
 import { useAdminToast } from '../shared/adminContexts'
 import { formatDateInput, formatDateTime } from '../utils/adminFormatters'
@@ -416,14 +417,15 @@ export default function StaticContactsPage() {
 
   return (
     <div className="admin-ui-stack">
-      <SectionHeading
-        title="Static Content: Contacts"
-        description="จัดการ content_contacts และ content_contact_channels ครบทุกคอลัมน์ พร้อมโฟลว์ที่แก้ไขง่าย"
-        right={
-          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateContact}>
-            <Plus size={15} />
-            Add Contact
-          </button>
+      <PageHeader
+        title="ข้อมูลติดต่อ"
+        actions={
+          <div className="admin-ui-header-actions">
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateContact}>
+              <Plus size={15} />
+              เพิ่มผู้ติดต่อ
+            </button>
+          </div>
         }
       />
 
@@ -434,14 +436,14 @@ export default function StaticContactsPage() {
         searchPlaceholder="ค้นหาประเภท / display name / role / organization"
         filters={[
           { label: 'ทั้งหมด', value: 'all', predicate: () => true },
-          { label: 'Enabled', value: 'enabled', predicate: (row) => row.isEnabled },
-          { label: 'Disabled', value: 'disabled', predicate: (row) => !row.isEnabled },
-          { label: 'Featured', value: 'featured', predicate: (row) => row.isFeatured },
+          { label: 'เปิดใช้งาน', value: 'enabled', predicate: (row) => row.isEnabled },
+          { label: 'ปิดใช้งาน', value: 'disabled', predicate: (row) => !row.isEnabled },
+          { label: 'แนะนำ', value: 'featured', predicate: (row) => row.isFeatured },
         ]}
         columns={[
           {
             key: 'displayName',
-            label: 'Display Name / Role',
+            label: 'ชื่อแสดงผล / ตำแหน่ง',
             render: (row) => (
               <div className="admin-ui-col-stack">
                 <strong>{row.displayNameTh || '-'}</strong>
@@ -452,12 +454,12 @@ export default function StaticContactsPage() {
           },
           {
             key: 'contactCategory',
-            label: 'Category',
+            label: 'หมวดหมู่',
             render: (row) => getContactCategoryLabel(row.contactCategory),
           },
           {
             key: 'organization',
-            label: 'Organization / Department',
+            label: 'หน่วยงาน / แผนก',
             render: (row) => (
               <div className="admin-ui-col-stack">
                 <strong>{row.organizationTh || row.organizationEn || '-'}</strong>
@@ -468,7 +470,7 @@ export default function StaticContactsPage() {
           },
           {
             key: 'channelsCount',
-            label: 'Channels',
+            label: 'ช่องทางติดต่อ',
             render: (row) => (
               <span className="admin-ui-icon-text">
                 <Contact size={13} />
@@ -478,23 +480,23 @@ export default function StaticContactsPage() {
           },
           {
             key: 'publishedAt',
-            label: 'Published At',
+            label: 'เวลาเผยแพร่',
             render: (row) => formatDateTime(row.publishedAt),
           },
-          { key: 'sortOrder', label: 'Order' },
+          { key: 'sortOrder', label: 'ลำดับ' },
           {
             key: 'state',
-            label: 'Flags',
+            label: 'ตัวเลือก',
             render: (row) => (
               <div className="admin-ui-col-stack">
                 <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} />
-                {row.isFeatured ? <StatusBadge status="READY_TO_RESUBMIT" label="FEATURED" /> : <span className="admin-ui-text-muted">-</span>}
+                {row.isFeatured ? <StatusBadge status="READY_TO_RESUBMIT" label="แนะนำ" /> : <span className="admin-ui-text-muted">-</span>}
               </div>
             ),
           },
           {
-            key: 'actions',
-            label: 'Actions',
+              key: 'actions',
+              label: 'การจัดการ',
             render: (row) => (
               <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => moveContact(row.id, 'up')} aria-label="move up">
@@ -516,21 +518,16 @@ export default function StaticContactsPage() {
       />
 
       <article className="admin-ui-panel admin-ui-stack">
-        <div className="admin-ui-section-head">
-          <div>
-            <h3>Step 1: Select Contact</h3>
-            <p>เลือก contact ที่ต้องการ แล้วค่อยเพิ่มหรือแก้ไข channels ของ contact นั้น</p>
-          </div>
-        </div>
+        <h3>เลือกผู้ติดต่อ</h3>
         <div className="admin-ui-contact-selector-row">
           <label htmlFor="channel-contact-select" className="admin-ui-label">
-            Selected Contact
+            ผู้ติดต่อที่เลือก
             <select
               id="channel-contact-select"
               value={selectedContact?.id || ''}
               onChange={(event) => setSelectedContactId(Number(event.target.value) || null)}
             >
-              <option value="">เลือก contact</option>
+               <option value="">เลือกผู้ติดต่อ</option>
               {sortedContacts.map((contact) => (
                 <option key={contact.id} value={contact.id}>
                   {contact.id} - {contact.displayNameEn || contact.displayNameTh}
@@ -554,18 +551,15 @@ export default function StaticContactsPage() {
       </article>
 
       <article className="admin-ui-panel admin-ui-stack">
-        <div className="admin-ui-section-head">
-          <div>
-            <h3>Contact Channels</h3>
-            <p>
-              {selectedContact
-                ? `กำลังแก้ไขช่องทางของ ${selectedContact.displayNameTh || selectedContact.displayNameEn}`
-                : 'เลือก contact เพื่อจัดการช่องทางการติดต่อ'}
-            </p>
-          </div>
+        <div className="admin-ui-page-header">
+          <h3>
+            {selectedContact
+              ? `ช่องทางติดต่อ: ${selectedContact.displayNameTh || selectedContact.displayNameEn}`
+              : 'ช่องทางติดต่อ'}
+          </h3>
           <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateChannel} disabled={!selectedContact}>
             <Plus size={15} />
-            Add Channel
+            เพิ่มช่องทาง
           </button>
         </div>
 
@@ -577,19 +571,19 @@ export default function StaticContactsPage() {
             searchPlaceholder="ค้นหา channel type / label / value"
             filters={[
               { label: 'ทั้งหมด', value: 'all', predicate: () => true },
-              { label: 'Enabled', value: 'enabled', predicate: (row) => row.isEnabled },
-              { label: 'Disabled', value: 'disabled', predicate: (row) => !row.isEnabled },
-              { label: 'Primary', value: 'primary', predicate: (row) => row.isPrimary },
+              { label: 'เปิดใช้งาน', value: 'enabled', predicate: (row) => row.isEnabled },
+              { label: 'ปิดใช้งาน', value: 'disabled', predicate: (row) => !row.isEnabled },
+              { label: 'ช่องทางหลัก', value: 'primary', predicate: (row) => row.isPrimary },
             ]}
             columns={[
               {
                 key: 'channelType',
-                label: 'Type',
+                label: 'ประเภท',
                 render: (row) => <strong>{row.channelType}</strong>,
               },
               {
                 key: 'labels',
-                label: 'Label TH/EN',
+                label: 'ชื่อกำกับ TH/EN',
                 render: (row) => (
                   <div className="admin-ui-col-stack">
                     <span>{row.labelTh || '-'}</span>
@@ -599,7 +593,7 @@ export default function StaticContactsPage() {
               },
               {
                 key: 'value',
-                label: 'Value / URL',
+                label: 'ค่า / URL',
                 render: (row) => (
                   <div className="admin-ui-col-stack">
                     <span>{row.value}</span>
@@ -616,7 +610,7 @@ export default function StaticContactsPage() {
               },
               {
                 key: 'flags',
-                label: 'Flags',
+                label: 'ตัวเลือก',
                 render: (row) => (
                   <div className="admin-ui-col-stack">
                     <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} />
@@ -624,10 +618,10 @@ export default function StaticContactsPage() {
                   </div>
                 ),
               },
-              { key: 'sortOrder', label: 'Order' },
+              { key: 'sortOrder', label: 'ลำดับ' },
               {
                 key: 'actions',
-                label: 'Actions',
+                label: 'การจัดการ',
                 render: (row) => (
                   <div className="admin-ui-row-actions">
                     <button type="button" onClick={() => moveChannel(row.id, 'up')} aria-label="move up">
@@ -648,14 +642,14 @@ export default function StaticContactsPage() {
             ]}
           />
         ) : (
-          <div className="admin-ui-table-empty">ยังไม่มี contact ให้กำหนดช่องทาง</div>
+          <EmptyState compact title="ยังไม่มีผู้ติดต่อให้กำหนดช่องทาง" />
         )}
       </article>
 
       <DetailDrawer
         open={contactDrawerOpen}
         onClose={() => setContactDrawerOpen(false)}
-        title={editingContactId ? 'Edit Contact' : 'Create Contact'}
+        title={editingContactId ? 'แก้ไขผู้ติดต่อ' : 'เพิ่มผู้ติดต่อ'}
         subtitle="ตั้งค่าทุกคอลัมน์ของ content_contacts"
       >
         <div className="admin-ui-form">
@@ -830,7 +824,7 @@ export default function StaticContactsPage() {
                 checked={contactForm.isFeatured}
                 onChange={(event) => setContactForm((prev) => ({ ...prev, isFeatured: event.target.checked }))}
               />
-              <span>is_featured</span>
+              <span>แสดงเป็นรายการแนะนำ</span>
             </label>
             <label className="admin-ui-check">
               <input
@@ -838,7 +832,7 @@ export default function StaticContactsPage() {
                 checked={contactForm.isEnabled}
                 onChange={(event) => setContactForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
               />
-              <span>is_enabled</span>
+              <span>เปิดใช้งาน</span>
             </label>
           </div>
 
@@ -857,7 +851,7 @@ export default function StaticContactsPage() {
       <DetailDrawer
         open={channelDrawerOpen}
         onClose={() => setChannelDrawerOpen(false)}
-        title={editingChannelId ? 'Edit Contact Channel' : 'Create Contact Channel'}
+        title={editingChannelId ? 'แก้ไขช่องทางติดต่อ' : 'เพิ่มช่องทางติดต่อ'}
         subtitle={`ตั้งค่าช่องทางของ ${selectedContact?.displayNameEn || selectedContact?.displayNameTh || '-'}`}
       >
         <div className="admin-ui-form">
@@ -934,7 +928,7 @@ export default function StaticContactsPage() {
                 checked={channelForm.isPrimary}
                 onChange={(event) => setChannelForm((prev) => ({ ...prev, isPrimary: event.target.checked }))}
               />
-              <span>is_primary</span>
+              <span>เป็นช่องทางหลัก</span>
             </label>
             <label className="admin-ui-check">
               <input
@@ -942,12 +936,12 @@ export default function StaticContactsPage() {
                 checked={channelForm.isEnabled}
                 onChange={(event) => setChannelForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
               />
-              <span>is_enabled</span>
+              <span>เปิดใช้งาน</span>
             </label>
           </div>
 
           <div className="admin-ui-panel">
-            <h3>Preview</h3>
+            <h3>ตัวอย่าง</h3>
             <p className="admin-ui-text-muted">{selectedContact?.displayNameEn || selectedContact?.displayNameTh || '-'}</p>
             <div className="admin-ui-col-stack">
               <span>{channelForm.channelType}</span>

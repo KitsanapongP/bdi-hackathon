@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, Link2, Pencil, Plus, Save, Trash2, Upload } from 'l
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
 import DetailDrawer from '../shared/DetailDrawer'
-import SectionHeading from '../shared/SectionHeading'
+import PageHeader from '../shared/PageHeader'
 import StatusBadge from '../shared/StatusBadge'
 import { useAdminToast } from '../shared/adminContexts'
 import { formatDateInput, formatDateTime } from '../utils/adminFormatters'
@@ -307,14 +307,15 @@ export default function StaticCarouselsPage() {
 
   return (
     <div className="admin-ui-stack">
-      <SectionHeading
-        title="Static Content: Carousel"
-        description="จัดการภาพสไลด์หน้าแรก พร้อม URL, publish window, และลำดับการแสดงผล"
-        right={
-          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
-            <Plus size={15} />
-            Add Slide
-          </button>
+      <PageHeader
+        title="แบนเนอร์"
+        actions={
+          <div className="admin-ui-header-actions">
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
+              <Plus size={15} />
+              เพิ่มสไลด์
+            </button>
+          </div>
         }
       />
 
@@ -325,13 +326,13 @@ export default function StaticCarouselsPage() {
         searchPlaceholder="ค้นหา title / description / target URL"
         filters={[
           { label: 'ทั้งหมด', value: 'all', predicate: () => true },
-          { label: 'Enabled', value: 'active', predicate: (row) => row.isEnabled },
-          { label: 'Disabled', value: 'inactive', predicate: (row) => !row.isEnabled },
+          { label: 'เปิดใช้งาน', value: 'active', predicate: (row) => row.isEnabled },
+          { label: 'ปิดใช้งาน', value: 'inactive', predicate: (row) => !row.isEnabled },
         ]}
         columns={[
           {
             key: 'image',
-            label: 'Image + Title',
+            label: 'รูปภาพและชื่อ',
             render: (row) => (
               <div className="admin-ui-inline-banner">
                 <img src={apiUrl(row.imageUrl || row.imageStorageKey)} alt={row.titleTh || row.titleEn || 'carousel'} loading="lazy" decoding="async" />
@@ -344,7 +345,7 @@ export default function StaticCarouselsPage() {
           },
           {
             key: 'targetUrl',
-            label: 'Target URL',
+            label: 'ลิงก์ปลายทาง',
             render: (row) =>
               row.targetUrl ? (
                 <a href={row.targetUrl} target="_blank" rel="noreferrer" className="admin-ui-link">
@@ -357,7 +358,7 @@ export default function StaticCarouselsPage() {
           },
           {
             key: 'publishWindow',
-            label: 'Publish Window',
+            label: 'ช่วงเวลาเผยแพร่',
             render: (row) => (
               <div className="admin-ui-col-stack">
                 <strong>{formatDateTime(row.startAt)}</strong>
@@ -367,16 +368,16 @@ export default function StaticCarouselsPage() {
           },
           {
             key: 'sortOrder',
-            label: 'Order',
+            label: 'ลำดับ',
           },
           {
             key: 'isEnabled',
-            label: 'Status',
+            label: 'สถานะ',
             render: (row) => <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} />,
           },
           {
             key: 'actions',
-            label: 'Actions',
+            label: 'การจัดการ',
             render: (row) => (
               <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => moveItem(row.id, 'up')} aria-label="move up">
@@ -400,7 +401,7 @@ export default function StaticCarouselsPage() {
       <DetailDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title={editingId ? 'Edit Carousel Slide' : 'Create Carousel Slide'}
+        title={editingId ? 'แก้ไขสไลด์' : 'เพิ่มสไลด์'}
         subtitle="รองรับ image upload, URL click-through, และช่วงเวลาเผยแพร่"
       >
         <div className="admin-ui-form">

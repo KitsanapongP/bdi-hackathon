@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
-import SectionHeading from '../shared/SectionHeading'
+import AdminConfirmModal from '../shared/AdminConfirmModal'
+import FilterBar from '../shared/FilterBar'
+import PageHeader from '../shared/PageHeader'
 import { useAdminToast } from '../shared/adminContexts'
 import { formatDateInput, formatDateTime } from '../utils/adminFormatters'
 
@@ -15,6 +17,7 @@ export default function SelectionPage() {
   const [closeAt, setCloseAt] = useState('')
   const [savingWindow, setSavingWindow] = useState(false)
   const [expiringSelection, setExpiringSelection] = useState(false)
+  const [expireConfirmOpen, setExpireConfirmOpen] = useState(false)
 
   const fetchRows = useCallback(async () => {
     try {
@@ -107,8 +110,6 @@ export default function SelectionPage() {
   }
 
   const expireTimedOutSelectionTeams = async () => {
-    const confirmed = window.confirm('อัปเดตทีมที่หมดเวลายืนยันให้เป็น not_joined ตอนนี้ใช่หรือไม่?')
-    if (!confirmed) return
     try {
       setExpiringSelection(true)
       const res = await fetch(apiUrl('/api/admin/selection/expire-not-joined'), {
@@ -124,41 +125,104 @@ export default function SelectionPage() {
       pushToast({ type: 'error', title: error?.message || 'อัปเดตทีมหมดเวลาไม่สำเร็จ' })
     } finally {
       setExpiringSelection(false)
+      setExpireConfirmOpen(false)
     }
   }
 
+  const statusCounts = useMemo(() => {
+    const counts = {
+      submitted: 0,
+      passed: 0,
+      failed: 0,
+      confirmed: 0,
+      not_joined: 0,
+    }
+    rows.forEach((row) => {
+      const key = String(row.status || '')
+      if (key in counts) counts[key] += 1
+    })
+    return counts
+  }, [rows])
+
   return (
     <div className="admin-ui-stack">
-      <SectionHeading title="Selection Result" description="ประกาศผลผ่าน/ไม่ผ่าน และกำหนดเวลาให้ทีมยืนยันเข้าร่วม" />
+      <PageHeader
+        title="คัดเลือกทีม"
+        actions={
+          <div className="admin-ui-header-actions">
+            <button type="button" className="admin-ui-btn" onClick={fetchRows}>
+              <RefreshCw size={14} />
+              รีเฟรช
+            </button>
+            <button
+              type="button"
+              className="admin-ui-btn"
+              onClick={() => setExpireConfirmOpen(true)}
+              disabled={expiringSelection}
+              title="อัปเดตทีม passed ที่หมดเวลายืนยันให้เป็น not_joined"
+            >
+              {expiringSelection ? 'กำลังอัปเดต...' : 'อัปเดตทีมที่หมดเวลา'}
+            </button>
+          </div>
+        }
+      />
+
+      <section className="admin-ui-stat-grid">
+        <article className="admin-ui-stat-card info">
+          <span>ส่งแล้ว</span>
+          <strong>{statusCounts.submitted}</strong>
+          <small>ทีมรอประกาศผล</small>
+        </article>
+        <article className="admin-ui-stat-card success">
+          <span>ผ่านคัดเลือก</span>
+          <strong>{statusCounts.passed}</strong>
+          <small>ทีมผ่านคัดเลือก</small>
+        </article>
+        <article className="admin-ui-stat-card warn">
+          <span>ไม่ผ่าน</span>
+          <strong>{statusCounts.failed}</strong>
+          <small>ทีมไม่ผ่านคัดเลือก</small>
+        </article>
+        <article className="admin-ui-stat-card neutral">
+          <span>ยืนยันแล้ว</span>
+          <strong>{statusCounts.confirmed}</strong>
+          <small>ยืนยันแล้ว {statusCounts.not_joined} ทีมไม่เข้าร่วม</small>
+        </article>
+      </section>
+
       <article className="admin-ui-panel">
-        <div className="admin-ui-dashboard-filters">
+        <FilterBar
+          label="ตัวกรองการคัดเลือก"
+          right={
+            <button
+              type="button"
+              className="admin-ui-btn admin-ui-btn-primary"
+              onClick={saveGlobalConfirmWindow}
+              disabled={savingWindow || !openAt || !closeAt}
+              title="บันทึกช่วงเวลาเปิด/ปิดการยืนยันสำหรับทุกทีมที่ passed"
+            >
+              {savingWindow ? 'กำลังบันทึก...' : 'บันทึกช่วงเวลายืนยัน'}
+            </button>
+          }
+        >
           <label>
-            Team status
+            สถานะทีม
             <select value={status} onChange={(event) => setStatus(event.target.value)}>
-              <option value="submitted">submitted</option>
-              <option value="passed">passed</option>
-              <option value="failed">failed</option>
-              <option value="confirmed">confirmed</option>
-              <option value="not_joined">not_joined</option>
+              <option value="submitted">ส่งแล้ว</option>
+              <option value="passed">ผ่านคัดเลือก</option>
+              <option value="failed">ไม่ผ่าน</option>
+              <option value="confirmed">ยืนยันแล้ว</option>
+              <option value="not_joined">ไม่เข้าร่วม</option>
             </select>
           </label>
           <label>
-            Confirm open at
+            เปิดยืนยันเวลา
             <input type="datetime-local" value={openAt} onChange={(event) => setOpenAt(event.target.value)} />
           </label>
           <label>
-            Confirm close at
+            ปิดยืนยันเวลา
             <input type="datetime-local" value={closeAt} onChange={(event) => setCloseAt(event.target.value)} />
           </label>
-          <button
-            type="button"
-            className="admin-ui-btn admin-ui-btn-primary"
-            onClick={saveGlobalConfirmWindow}
-            disabled={savingWindow || !openAt || !closeAt}
-            title="บันทึกช่วงเวลาเปิด/ปิดการยืนยันสำหรับทุกทีมที่ passed"
-          >
-            {savingWindow ? 'Saving...' : 'Save Global window'}
-          </button>
           <button
             type="button"
             className="admin-ui-btn"
@@ -168,22 +232,9 @@ export default function SelectionPage() {
             }}
             title="ล้างค่าเวลาเปิด/ปิดที่กรอกไว้"
           >
-            Clear window
+            ล้างช่วงเวลา
           </button>
-          <button type="button" className="admin-ui-btn" onClick={fetchRows}>
-            <RefreshCw size={14} />
-            Refresh
-          </button>
-          <button
-            type="button"
-            className="admin-ui-btn"
-            onClick={expireTimedOutSelectionTeams}
-            disabled={expiringSelection}
-            title="อัปเดตทีม passed ที่หมดเวลายืนยันให้เป็น not_joined"
-          >
-            {expiringSelection ? 'Updating...' : 'Update expired teams'}
-          </button>
-        </div>
+        </FilterBar>
       </article>
 
       <AdminDataTable
@@ -192,39 +243,52 @@ export default function SelectionPage() {
         searchKeys={['team_code', 'team_name_th', 'team_name_en', 'leader_name']}
         searchPlaceholder="ค้นหา team code / team name / leader"
         columns={[
-          { key: 'team_code', label: 'Team Code' },
+          { key: 'team_code', label: 'รหัสทีม' },
           {
             key: 'team_name_th',
-            label: 'Team',
+            label: 'ชื่อทีม',
             render: (row) => row.team_name_th || row.team_name_en,
           },
-          { key: 'leader_name', label: 'Leader' },
-          { key: 'status', label: 'Status' },
+          { key: 'leader_name', label: 'หัวหน้าทีม' },
+          { key: 'status', label: 'สถานะ' },
           {
             key: 'confirmation_deadline_at',
-            label: 'Confirm Deadline',
+            label: 'หมดเขตยืนยัน',
             render: (row) => formatDateTime(row.confirmation_deadline_at),
           },
           {
             key: 'confirmed_at',
-            label: 'Confirmed At',
+            label: 'เวลาที่ยืนยัน',
             render: (row) => formatDateTime(row.confirmed_at),
           },
           {
             key: 'actions',
-            label: 'Actions',
+            label: 'การจัดการ',
             render: (row) => (
               <div className="admin-ui-inline-actions">
                 <button type="button" className="admin-ui-mini-btn" onClick={() => setResult(row.team_id, 'passed')}>
-                  Set passed
+                  ตั้งเป็นผ่าน
                 </button>
                 <button type="button" className="admin-ui-mini-btn" onClick={() => setResult(row.team_id, 'failed')}>
-                  Set failed
+                  ตั้งเป็นไม่ผ่าน
                 </button>
               </div>
             ),
           },
         ]}
+      />
+
+      <AdminConfirmModal
+        open={expireConfirmOpen}
+        danger
+        title="ยืนยันอัปเดตทีมที่หมดเวลา?"
+        description="ระบบจะเปลี่ยนทีมที่หมดเวลายืนยันจาก passed ไปเป็น not_joined ทันที"
+        confirmLabel={expiringSelection ? 'กำลังอัปเดต...' : 'อัปเดตเลย'}
+        cancelLabel="ยกเลิก"
+        onCancel={() => {
+          if (!expiringSelection) setExpireConfirmOpen(false)
+        }}
+        onConfirm={expireTimedOutSelectionTeams}
       />
     </div>
   )

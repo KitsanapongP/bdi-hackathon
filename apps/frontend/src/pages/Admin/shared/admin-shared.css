@@ -1,7 +1,7 @@
 :root {
-  --admin-ui-primary: var(--gt-primary, #7c3aed);
-  --admin-ui-primary-hover: var(--gt-primary-hover, #6d28d9);
-  --admin-ui-primary-soft: rgba(124, 58, 237, 0.12);
+  --admin-ui-primary: var(--gt-primary, #0f766e);
+  --admin-ui-primary-hover: var(--gt-primary-hover, #115e59);
+  --admin-ui-primary-soft: rgba(15, 118, 110, 0.12);
   --admin-ui-bg: var(--gt-bg, #f8fafc);
   --admin-ui-surface: var(--gt-surface, #ffffff);
   --admin-ui-surface-soft: var(--gt-surface-alt, #f1f5f9);
@@ -63,7 +63,7 @@ body:has(.admin-ui-page) {
   width: 36px;
   height: 36px;
   border-radius: 11px;
-  background: linear-gradient(135deg, #7c3aed, #3b82f6);
+  background: linear-gradient(135deg, #0f766e, #2563eb);
   color: #fff;
   display: flex;
   align-items: center;
@@ -112,7 +112,11 @@ body:has(.admin-ui-page) {
 }
 
 .admin-ui-nav-group a.active {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--admin-ui-primary) 16%, transparent), rgba(59, 130, 246, 0.15));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--admin-ui-primary) 16%, transparent),
+    color-mix(in srgb, #2563eb 14%, transparent)
+  );
   color: var(--admin-ui-primary);
   font-weight: 700;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--admin-ui-primary) 30%, transparent);
@@ -214,6 +218,51 @@ body:has(.admin-ui-page) {
   gap: 18px;
 }
 
+.admin-ui-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.admin-ui-page-header-main h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.admin-ui-page-header-actions,
+.admin-ui-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-ui-filter-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.admin-ui-filter-bar-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-ui-filter-bar-main > strong {
+  font-size: 0.85rem;
+  color: var(--admin-ui-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.admin-ui-filter-bar-right {
+  margin-left: auto;
+}
+
 .admin-ui-section-head {
   display: flex;
   align-items: flex-start;
@@ -248,7 +297,7 @@ body:has(.admin-ui-page) {
   background: var(--admin-ui-primary);
   border-color: var(--admin-ui-primary);
   color: #fff;
-  box-shadow: 0 10px 25px -13px rgba(124, 58, 237, 0.9);
+  box-shadow: 0 10px 25px -13px color-mix(in srgb, var(--admin-ui-primary) 85%, transparent);
 }
 
 .admin-ui-btn-primary:hover {
@@ -971,6 +1020,48 @@ body:has(.admin-ui-page) {
   align-items: center;
   justify-content: center;
   color: var(--admin-ui-muted);
+}
+
+.admin-ui-empty-state,
+.admin-ui-loading-state {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--admin-ui-muted);
+  text-align: center;
+}
+
+.admin-ui-empty-state.compact,
+.admin-ui-loading-state.compact {
+  min-height: 70px;
+}
+
+.admin-ui-empty-state-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--admin-ui-border);
+  background: var(--admin-ui-surface-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-ui-empty-state strong {
+  display: block;
+  color: var(--admin-ui-text);
+  font-size: 0.88rem;
+}
+
+.admin-ui-empty-state p {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+}
+
+.admin-ui-loading-state span {
+  font-size: 0.86rem;
 }
 
 .admin-ui-table-pager {
@@ -1884,6 +1975,16 @@ body:has(.admin-ui-page) {
     flex-direction: column;
   }
 
+  .admin-ui-page-header,
+  .admin-ui-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-ui-filter-bar-right {
+    margin-left: 0;
+  }
+
   .admin-ui-days-filter {
     margin-left: 0;
   }
@@ -2190,4 +2291,75 @@ body:has(.admin-ui-page) {
   .ad-priv-scan-inline .ad-form-actions {
     flex-wrap: wrap;
   }
+}
+
+.admin-ui-btn-danger {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+
+.admin-ui-confirm-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 48;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.admin-ui-confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.48);
+  border: 0;
+}
+
+.admin-ui-confirm-card {
+  position: relative;
+  width: min(420px, 100%);
+  border-radius: 14px;
+  border: 1px solid var(--admin-ui-border);
+  background: var(--admin-ui-surface);
+  box-shadow: var(--admin-ui-shadow);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-ui-confirm-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--admin-ui-primary) 30%, transparent);
+  color: var(--admin-ui-primary);
+  background: color-mix(in srgb, var(--admin-ui-primary) 8%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-ui-confirm-icon.danger {
+  border-color: rgba(220, 38, 38, 0.36);
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.admin-ui-confirm-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.admin-ui-confirm-card p {
+  margin: 0;
+  font-size: 0.87rem;
+  color: var(--admin-ui-muted);
+}
+
+.admin-ui-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }

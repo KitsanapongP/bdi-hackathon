@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, Menu, Pencil, RefreshCw, Save, Search, Trash2, Users, X } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
+import AdminConfirmModal from '../shared/AdminConfirmModal'
+import EmptyState from '../shared/EmptyState'
+import FilterBar from '../shared/FilterBar'
+import LoadingState from '../shared/LoadingState'
+import PageHeader from '../shared/PageHeader'
 import './SubmissionTasksPage.css'
 
 function formatDateTime(value) {
@@ -64,6 +69,7 @@ export default function SubmissionTasksPage({ pushToast }) {
   const [assigning, setAssigning] = useState(false)
   const [reordering, setReordering] = useState(false)
   const [deletingTaskId, setDeletingTaskId] = useState(null)
+  const [deleteCandidate, setDeleteCandidate] = useState(null)
   const [assignedTeams, setAssignedTeams] = useState([])
   const [loadingAssignedTeams, setLoadingAssignedTeams] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState(null)
@@ -347,10 +353,14 @@ export default function SubmissionTasksPage({ pushToast }) {
     }
   }
 
-  const deleteTask = async (row) => {
-    const confirmed = window.confirm(`ต้องการลบงาน "${row.taskName}" ใช่หรือไม่?`)
-    if (!confirmed) return
+  const requestDeleteTask = (row) => {
+    if (!row?.submissionTaskId) return
+    setDeleteCandidate(row)
+  }
 
+  const confirmDeleteTask = async () => {
+    if (!deleteCandidate?.submissionTaskId || deletingTaskId) return
+    const row = deleteCandidate
     try {
       setDeletingTaskId(row.submissionTaskId)
       const res = await fetch(apiUrl(`/api/admin/submission-tasks/${row.submissionTaskId}`), {
@@ -370,6 +380,7 @@ export default function SubmissionTasksPage({ pushToast }) {
       pushToast({ type: 'error', title: err?.message || 'ลบงานไม่สำเร็จ' })
     } finally {
       setDeletingTaskId(null)
+      setDeleteCandidate(null)
     }
   }
 
@@ -449,38 +460,29 @@ export default function SubmissionTasksPage({ pushToast }) {
 
   return (
     <div className="admin-ui-stack stp-page">
-      <div className="admin-ui-section-head stp-head">
-        <div>
-          <h2>จัดการงานที่ทีมต้องส่ง</h2>
-          <p>หน้าจอเรียบง่ายสำหรับสร้าง แก้ไข มอบหมายทีม และลากจัดลำดับงาน</p>
-        </div>
-        <div className="admin-ui-inline-actions">
-          <button type="button" className="admin-ui-btn" onClick={load}>
-            <RefreshCw size={14} />
-            รีเฟรชข้อมูล
-          </button>
-          {editingTaskId ? (
-            <button type="button" className="admin-ui-btn" onClick={resetForm}>
-              <X size={14} />
-              ยกเลิกการแก้ไข
+      <PageHeader
+        title="งานที่ทีมต้องส่ง"
+        actions={
+          <div className="admin-ui-header-actions">
+            <button type="button" className="admin-ui-btn" onClick={load}>
+              <RefreshCw size={14} />
+              รีเฟรชข้อมูล
             </button>
-          ) : null}
-        </div>
-      </div>
+            {editingTaskId ? (
+              <button type="button" className="admin-ui-btn" onClick={resetForm}>
+                <X size={14} />
+                ยกเลิกการแก้ไข
+              </button>
+            ) : null}
+          </div>
+        }
+      />
 
       <section className="stp-layout">
         <article className="admin-ui-panel stp-list-panel">
-          <div className="stp-list-head">
-            <strong>รายการงานทั้งหมด</strong>
-            <div className="stp-list-tools">
-              <div className="stp-search">
-                <Search size={14} />
-                <input
-                  value={listSearch}
-                  onChange={(event) => setListSearch(event.target.value)}
-                  placeholder="ค้นหาชื่องาน หรือรายละเอียด"
-                />
-              </div>
+          <FilterBar
+            label="รายการงานทั้งหมด"
+            right={
               <label>
                 ขั้นตอน
                 <select value={stageFilter} onChange={(event) => setStageFilter(event.target.value)}>
@@ -490,8 +492,19 @@ export default function SubmissionTasksPage({ pushToast }) {
                   ))}
                 </select>
               </label>
+            }
+          >
+            <div className="stp-list-tools">
+              <div className="stp-search">
+                <Search size={14} />
+                <input
+                  value={listSearch}
+                  onChange={(event) => setListSearch(event.target.value)}
+                  placeholder="ค้นหาชื่องาน หรือรายละเอียด"
+                />
+              </div>
             </div>
-          </div>
+          </FilterBar>
 
           <p className="stp-hint">
             {reorderLocked ? 'ปิดตัวกรองหรือค้นหาก่อน แล้วจึงลากจัดลำดับได้' : 'ลากการ์ดเพื่อจัดลำดับ หรือใช้ปุ่มขึ้น/ลง'}
@@ -499,9 +512,9 @@ export default function SubmissionTasksPage({ pushToast }) {
 
           <div className="stp-list">
             {loading ? (
-              <div className="admin-ui-table-empty">กำลังโหลด...</div>
+              <LoadingState compact label="กำลังโหลดรายการงาน..." />
             ) : !displayRows.length ? (
-              <div className="admin-ui-table-empty">ไม่พบงานที่ตรงกับเงื่อนไข</div>
+              <EmptyState compact title="ไม่พบงานที่ตรงกับเงื่อนไข" description="ลองล้างคำค้นหา หรือเลือกขั้นตอนเป็นทั้งหมด" />
             ) : (
               displayRows.map((row) => {
                 const index = orderedRows.findIndex((item) => item.submissionTaskId === row.submissionTaskId)
@@ -558,7 +571,7 @@ export default function SubmissionTasksPage({ pushToast }) {
                       <button
                         type="button"
                         className="admin-ui-mini-btn"
-                        onClick={() => deleteTask(row)}
+                        onClick={() => requestDeleteTask(row)}
                         disabled={deletingTaskId === row.submissionTaskId}
                       >
                         <Trash2 size={13} />
@@ -672,7 +685,7 @@ export default function SubmissionTasksPage({ pushToast }) {
                   <div className="stp-assign-title">มอบหมายแล้ว ({assignedTeams.length})</div>
                   <div className="stp-team-list stp-team-list-assigned">
                     {loadingAssignedTeams ? (
-                      <div className="admin-ui-table-empty">กำลังโหลด...</div>
+                      <LoadingState compact label="กำลังโหลดทีมที่มอบหมายแล้ว..." />
                     ) : filteredAssignedTeams.length ? (
                       filteredAssignedTeams.map((team) => (
                         <div key={team.teamId} className="stp-team-item stp-team-item-readonly">
@@ -684,7 +697,7 @@ export default function SubmissionTasksPage({ pushToast }) {
                         </div>
                       ))
                     ) : (
-                      <div className="admin-ui-table-empty">ไม่พบทีมที่มอบหมายแล้ว</div>
+                      <EmptyState compact title="ไม่พบทีมที่มอบหมายแล้ว" />
                     )}
                   </div>
                 </div>
@@ -727,11 +740,11 @@ export default function SubmissionTasksPage({ pushToast }) {
             )}
 
             {!editingTaskId && !filteredUnassignedTeams.length ? (
-              <div className="admin-ui-table-empty">ไม่พบทีมที่ตรงกับคำค้นหา</div>
+              <EmptyState compact title="ไม่พบทีมที่ตรงกับคำค้นหา" />
             ) : null}
 
             {editingTaskId && !loadingAssignedTeams && !filteredAssignedTeams.length && !filteredUnassignedTeams.length ? (
-              <div className="admin-ui-table-empty">ไม่พบทีมที่ตรงกับคำค้นหา</div>
+              <EmptyState compact title="ไม่พบทีมที่ตรงกับคำค้นหา" />
             ) : null}
 
             <div className="stp-selected-row">
@@ -767,6 +780,19 @@ export default function SubmissionTasksPage({ pushToast }) {
           </div>
         </article>
       </section>
+
+      <AdminConfirmModal
+        open={Boolean(deleteCandidate)}
+        danger
+        title={deleteCandidate ? `ยืนยันลบงาน "${deleteCandidate.taskName}"?` : 'ยืนยันลบงาน?'}
+        description="ระบบจะลบงานนี้ออกจากรายการทันที และไม่สามารถย้อนกลับจากหน้านี้ได้"
+        confirmLabel={deletingTaskId ? 'กำลังลบ...' : 'ลบงาน'}
+        cancelLabel="ยกเลิก"
+        onCancel={() => {
+          if (!deletingTaskId) setDeleteCandidate(null)
+        }}
+        onConfirm={confirmDeleteTask}
+      />
     </div>
   )
 }

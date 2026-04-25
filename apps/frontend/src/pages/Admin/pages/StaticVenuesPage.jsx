@@ -3,7 +3,8 @@ import { ArrowDown, ArrowUp, Eye, FileImage, Pencil, Plus, Save, Trash2 } from '
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
 import DetailDrawer from '../shared/DetailDrawer'
-import SectionHeading from '../shared/SectionHeading'
+import EmptyState from '../shared/EmptyState'
+import PageHeader from '../shared/PageHeader'
 import StatusBadge from '../shared/StatusBadge'
 import { useAdminToast } from '../shared/adminContexts'
 import { formatFileSize } from '../utils/adminFormatters'
@@ -522,14 +523,15 @@ export default function StaticVenuesPage() {
 
   return (
     <div className="admin-ui-stack">
-      <SectionHeading
-        title="Static Content: Venues"
-        description="จัดการ content_venues และ content_venue_images แบบครบคอลัมน์ พร้อม flow ใช้งานง่าย"
-        right={
-          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateVenue}>
-            <Plus size={15} />
-            Add Venue
-          </button>
+      <PageHeader
+        title="สถานที่"
+        actions={
+          <div className="admin-ui-header-actions">
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateVenue}>
+              <Plus size={15} />
+              เพิ่มสถานที่
+            </button>
+          </div>
         }
       />
 
@@ -544,13 +546,13 @@ export default function StaticVenuesPage() {
           { label: 'ที่พัก', value: 'accommodation', predicate: (row) => row.category === 'accommodation' },
           { label: 'การเดินทาง', value: 'transportation', predicate: (row) => row.category === 'transportation' },
           { label: 'ท่องเที่ยว', value: 'attraction', predicate: (row) => row.category === 'attraction' },
-          { label: 'Enabled', value: 'enabled', predicate: (row) => row.isEnabled },
-          { label: 'Disabled', value: 'disabled', predicate: (row) => !row.isEnabled },
+          { label: 'เปิดใช้งาน', value: 'enabled', predicate: (row) => row.isEnabled },
+          { label: 'ปิดใช้งาน', value: 'disabled', predicate: (row) => !row.isEnabled },
         ]}
         columns={[
           {
             key: 'name',
-            label: 'Venue Name',
+            label: 'ชื่อสถานที่',
             render: (row) => (
               <div className="admin-ui-col-stack">
                 <strong>{row.nameTh || '-'}</strong>
@@ -562,12 +564,12 @@ export default function StaticVenuesPage() {
           },
           {
             key: 'category',
-            label: 'Category',
+            label: 'หมวดหมู่',
             render: (row) => getVenueCategoryLabel(row.category),
           },
           {
             key: 'images',
-            label: 'Images',
+            label: 'รูปภาพ',
             render: (row) => (
               <span className="admin-ui-icon-text">
                 <FileImage size={13} />
@@ -575,15 +577,15 @@ export default function StaticVenuesPage() {
               </span>
             ),
           },
-          { key: 'sortOrder', label: 'sort_order' },
+          { key: 'sortOrder', label: 'ลำดับ' },
           {
             key: 'isEnabled',
-            label: 'is_enabled',
+            label: 'เปิดใช้งาน',
             render: (row) => <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} />,
           },
           {
             key: 'actions',
-            label: 'Actions',
+            label: 'การจัดการ',
             render: (row) => (
               <div className="admin-ui-row-actions">
                 <button type="button" onClick={() => moveVenue(row.id, 'up')} aria-label="move up">
@@ -608,16 +610,11 @@ export default function StaticVenuesPage() {
       />
 
       <article className="admin-ui-panel admin-ui-stack">
-        <div className="admin-ui-section-head">
-          <div>
-            <h3>Step 1: Select Venue</h3>
-            <p>เลือกสถานที่ที่ต้องการก่อน แล้วค่อยจัดการรายการรูปภาพในสถานที่นั้น</p>
-          </div>
-        </div>
+        <h3>เลือกสถานที่</h3>
 
         <div className="admin-ui-contact-selector-row">
           <label htmlFor="venue-select" className="admin-ui-label">
-            Selected Venue
+            สถานที่ที่เลือก
             <select
               id="venue-select"
               value={selectedVenue?.id || ''}
@@ -648,18 +645,15 @@ export default function StaticVenuesPage() {
       </article>
 
       <article className="admin-ui-panel admin-ui-stack">
-        <div className="admin-ui-section-head">
-          <div>
-            <h3>Venue Images</h3>
-            <p>
-              {selectedVenue
-                ? `กำลังแก้ไขรูปของ ${selectedVenue.nameTh || selectedVenue.nameEn}`
-                : 'เลือกสถานที่ก่อนเพื่อจัดการรูปภาพ'}
-            </p>
-          </div>
+        <div className="admin-ui-page-header">
+          <h3>
+            {selectedVenue
+              ? `รูปภาพของสถานที่: ${selectedVenue.nameTh || selectedVenue.nameEn}`
+              : 'รูปภาพสถานที่'}
+          </h3>
           <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateImage} disabled={!selectedVenue}>
             <Plus size={15} />
-            Add Image
+            เพิ่มรูปภาพ
           </button>
         </div>
 
@@ -671,27 +665,27 @@ export default function StaticVenuesPage() {
             searchPlaceholder="ค้นหา image_storage_key / alt"
             filters={[
               { label: 'ทั้งหมด', value: 'all', predicate: () => true },
-              { label: 'Cover', value: 'cover', predicate: (row) => row.isCover },
-              { label: 'Enabled', value: 'enabled', predicate: (row) => row.isEnabled },
-              { label: 'Disabled', value: 'disabled', predicate: (row) => !row.isEnabled },
+               { label: 'ภาพหน้าปก', value: 'cover', predicate: (row) => row.isCover },
+               { label: 'เปิดใช้งาน', value: 'enabled', predicate: (row) => row.isEnabled },
+               { label: 'ปิดใช้งาน', value: 'disabled', predicate: (row) => !row.isEnabled },
             ]}
             columns={[
               {
                 key: 'preview',
-                label: 'image_storage_key',
+                label: 'ที่เก็บไฟล์รูป (image_storage_key)',
                 render: (row) => (
                   <div className="admin-ui-inline-banner">
                     <img src={apiUrl(row.imageUrl || row.imageStorageKey)} alt={row.altTh || row.altEn || 'venue'} loading="lazy" decoding="async" />
                     <div className="admin-ui-col-stack">
                       <strong className="admin-ui-truncate">{row.imageStorageKey}</strong>
-                      <span>ID: {row.id}</span>
+                      <span>รหัส: {row.id}</span>
                     </div>
                   </div>
                 ),
               },
               {
                 key: 'alt',
-                label: 'Alt TH/EN',
+                label: 'ข้อความแทนภาพ TH/EN',
                 render: (row) => (
                   <div className="admin-ui-col-stack">
                     <span>{row.altTh || '-'}</span>
@@ -701,18 +695,18 @@ export default function StaticVenuesPage() {
               },
               {
                 key: 'flags',
-                label: 'Flags',
+                label: 'ตัวเลือก',
                 render: (row) => (
                   <div className="admin-ui-col-stack">
                     <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} />
-                    {row.isCover ? <StatusBadge status="APPROVED" label="COVER" /> : <span className="admin-ui-text-muted">-</span>}
+                    {row.isCover ? <StatusBadge status="APPROVED" label="ภาพหน้าปก" /> : <span className="admin-ui-text-muted">-</span>}
                   </div>
                 ),
               },
-              { key: 'sortOrder', label: 'sort_order' },
+              { key: 'sortOrder', label: 'ลำดับ' },
               {
                 key: 'actions',
-                label: 'Actions',
+                label: 'การจัดการ',
                 render: (row) => (
                   <div className="admin-ui-row-actions">
                     <button type="button" onClick={() => moveImage(row.id, 'up')} aria-label="move up">
@@ -733,14 +727,14 @@ export default function StaticVenuesPage() {
             ]}
           />
         ) : (
-          <div className="admin-ui-table-empty">ยังไม่มีสถานที่ให้จัดการรูปภาพ</div>
+          <EmptyState compact title="ยังไม่มีสถานที่ให้จัดการรูปภาพ" />
         )}
       </article>
 
       <DetailDrawer
         open={venueDrawerOpen}
         onClose={() => setVenueDrawerOpen(false)}
-        title={editingVenueId ? 'Edit Venue' : 'Create Venue'}
+        title={editingVenueId ? 'แก้ไขสถานที่' : 'เพิ่มสถานที่'}
         subtitle="ตั้งค่าทุกคอลัมน์ของ content_venues"
       >
         <div className="admin-ui-form">
@@ -857,7 +851,7 @@ export default function StaticVenuesPage() {
               checked={venueForm.isEnabled}
               onChange={(event) => setVenueForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
             />
-            <span>is_enabled</span>
+            <span>เปิดใช้งาน</span>
           </label>
 
           <div className="admin-ui-form-actions">
@@ -875,7 +869,7 @@ export default function StaticVenuesPage() {
       <DetailDrawer
         open={imageDrawerOpen}
         onClose={() => setImageDrawerOpen(false)}
-        title={editingImageId ? 'Edit Venue Image' : 'Create Venue Image'}
+        title={editingImageId ? 'แก้ไขรูปสถานที่' : 'เพิ่มรูปสถานที่'}
         subtitle={`ตั้งค่าคอลัมน์ใน content_venue_images ของ ${selectedVenue?.nameTh || selectedVenue?.nameEn || '-'}`}
       >
         <div className="admin-ui-form">
@@ -970,7 +964,7 @@ export default function StaticVenuesPage() {
                 checked={imageForm.isCover}
                 onChange={(event) => setImageForm((prev) => ({ ...prev, isCover: event.target.checked }))}
               />
-              <span>is_cover</span>
+              <span>ตั้งเป็นภาพหน้าปก</span>
             </label>
             <label className="admin-ui-check">
               <input
@@ -978,12 +972,12 @@ export default function StaticVenuesPage() {
                 checked={imageForm.isEnabled}
                 onChange={(event) => setImageForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
               />
-              <span>is_enabled</span>
+              <span>เปิดใช้งาน</span>
             </label>
           </div>
 
           <div className="admin-ui-file-preview">
-            <h5>Preview</h5>
+            <h5>ตัวอย่าง</h5>
             <div className="admin-ui-file-preview-box admin-ui-venue-image-preview">
               {imagePreviewUrl ? (
                 <img

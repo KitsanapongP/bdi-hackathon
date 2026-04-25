@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Filter, Search } from 'lucide-react'
+import EmptyState from './EmptyState'
+import LoadingState from './LoadingState'
 
 export default function AdminDataTable({
   rows,
@@ -88,7 +90,7 @@ export default function AdminDataTable({
             {loading ? (
               <tr>
                 <td colSpan={columns.length}>
-                  <div className="admin-ui-table-empty">กําลังโหลด...</div>
+                  <LoadingState compact label="กําลังโหลดข้อมูลตาราง..." />
                 </td>
               </tr>
             ) : pagedRows.length ? (
@@ -104,7 +106,7 @@ export default function AdminDataTable({
             ) : (
               <tr>
                 <td colSpan={columns.length}>
-                  <div className="admin-ui-table-empty">{emptyMessage}</div>
+                  <EmptyState compact title={emptyMessage} />
                 </td>
               </tr>
             )}

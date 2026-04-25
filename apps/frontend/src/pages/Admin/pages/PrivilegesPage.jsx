@@ -3,7 +3,9 @@ import { Camera, CameraOff, Check, Pencil, QrCode, RefreshCw, RotateCcw, Save, S
 import jsQR from 'jsqr'
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
-import SectionHeading from '../shared/SectionHeading'
+import AdminConfirmModal from '../shared/AdminConfirmModal'
+import FilterBar from '../shared/FilterBar'
+import PageHeader from '../shared/PageHeader'
 import './PrivilegesPage.css'
 
 export default function PrivilegesPage({ pushToast }) {
@@ -11,6 +13,8 @@ export default function PrivilegesPage({ pushToast }) {
   const [claims, setClaims] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deletingTemplateId, setDeletingTemplateId] = useState(null)
+  const [deleteTemplateCandidate, setDeleteTemplateCandidate] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [scanToken, setScanToken] = useState('')
   const [scanResult, setScanResult] = useState(null)
@@ -326,16 +330,27 @@ export default function PrivilegesPage({ pushToast }) {
     }
   }
 
-  const deleteTemplate = async (templateId) => {
-    if (!window.confirm('ยืนยันลบสิทธิ์นี้?')) return
+  const requestDeleteTemplate = (template) => {
+    if (!template?.privilegeId) return
+    setDeleteTemplateCandidate(template)
+  }
+
+  const confirmDeleteTemplate = async () => {
+    if (!deleteTemplateCandidate?.privilegeId || deletingTemplateId) return
+    const templateId = deleteTemplateCandidate.privilegeId
     try {
+      setDeletingTemplateId(templateId)
       const response = await fetch(apiUrl(`/api/privileges/admin/templates/${templateId}`), { method: 'DELETE', credentials: 'include' })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok || !payload?.ok) throw new Error(payload?.message || 'ลบข้อมูลไม่สำเร็จ')
+      if (editingId === templateId) resetForm()
       pushToast({ type: 'warning', title: 'ลบสิทธิ์แล้ว' })
       await fetchData(search)
     } catch (error) {
       pushToast({ type: 'error', title: error?.message || 'ลบไม่สำเร็จ' })
+    } finally {
+      setDeletingTemplateId(null)
+      setDeleteTemplateCandidate(null)
     }
   }
 
@@ -412,43 +427,53 @@ export default function PrivilegesPage({ pushToast }) {
 
   return (
     <div className="admin-ui-stack priv-ui-page">
-      <SectionHeading title="Privileges" description="จัดการ template สิทธิประโยชน์, ตรวจ token และแก้ไขสถานะรายคน/รายทีม" />
+      <PageHeader
+        title="สิทธิประโยชน์"
+        actions={
+          <div className="admin-ui-header-actions">
+            <button type="button" className="admin-ui-btn" onClick={() => fetchData(search)}>
+              <RefreshCw size={14} />
+              รีเฟรช
+            </button>
+          </div>
+        }
+      />
 
       <div className="priv-ui-summary-row">
-        <div className="priv-ui-summary-card"><span>Templates</span><strong>{templates.length}</strong><small>{publishedCount} published / {activeCount} active</small></div>
-        <div className="priv-ui-summary-card"><span>Claims</span><strong>{claims.length}</strong><small>{pendingClaimsCount} pending / {claimedClaimsCount} claimed</small></div>
+        <div className="priv-ui-summary-card"><span>เทมเพลต</span><strong>{templates.length}</strong><small>{publishedCount} เผยแพร่ / {activeCount} ใช้งาน</small></div>
+        <div className="priv-ui-summary-card"><span>รายการรับสิทธิ์</span><strong>{claims.length}</strong><small>{pendingClaimsCount} รอดำเนินการ / {claimedClaimsCount} รับแล้ว</small></div>
       </div>
 
       <article className="admin-ui-panel admin-ui-stack">
-        <h3>Template Management</h3>
+        <h3>จัดการเทมเพลตสิทธิ์</h3>
         <div className="priv-ui-create-box">
           <div className="priv-ui-create-head">
-            <strong>{editingId ? 'Edit Template' : 'Create New Template'}</strong>
+            <strong>{editingId ? 'แก้ไขเทมเพลต' : 'สร้างเทมเพลตใหม่'}</strong>
             <small>{editingId ? 'กำลังแก้ไข template ที่เลือกจากตารางด้านล่าง' : 'กรอกฟอร์มนี้เพื่อเพิ่ม template ใหม่'}</small>
           </div>
 
           <div ref={templateFormRef} className="admin-ui-form priv-ui-template-form">
-            <label>Code<input value={form.privilegeCode} onChange={(event) => setForm((prev) => ({ ...prev, privilegeCode: event.target.value }))} /></label>
-            <label>Display Name (TH)<input value={form.privilegeNameTh} onChange={(event) => setForm((prev) => ({ ...prev, privilegeNameTh: event.target.value }))} /></label>
-            <label>Type<select value={form.privilegeType} onChange={(event) => setForm((prev) => ({ ...prev, privilegeType: event.target.value }))}><option value="souvenir_qr">souvenir_qr</option><option value="auto_admin">auto_admin</option></select></label>
-            <label>Sort<input type="number" value={form.sortOrder} onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value) }))} /></label>
+            <label>โค้ด<input value={form.privilegeCode} onChange={(event) => setForm((prev) => ({ ...prev, privilegeCode: event.target.value }))} /></label>
+            <label>ชื่อสิทธิ์ (TH)<input value={form.privilegeNameTh} onChange={(event) => setForm((prev) => ({ ...prev, privilegeNameTh: event.target.value }))} /></label>
+            <label>ประเภท<select value={form.privilegeType} onChange={(event) => setForm((prev) => ({ ...prev, privilegeType: event.target.value }))}><option value="souvenir_qr">souvenir_qr</option><option value="auto_admin">auto_admin</option></select></label>
+            <label>ลำดับ<input type="number" value={form.sortOrder} onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value) }))} /></label>
           </div>
 
           <div className="priv-ui-create-foot">
             <div className="priv-ui-inline-checks">
-              <label className="admin-ui-check"><input type="checkbox" checked={form.isActive} onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))} /><span>Active</span></label>
-              <label className="admin-ui-check"><input type="checkbox" checked={form.isPublished} onChange={(event) => setForm((prev) => ({ ...prev, isPublished: event.target.checked }))} /><span>Published</span></label>
+              <label className="admin-ui-check"><input type="checkbox" checked={form.isActive} onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))} /><span>ใช้งาน</span></label>
+              <label className="admin-ui-check"><input type="checkbox" checked={form.isPublished} onChange={(event) => setForm((prev) => ({ ...prev, isPublished: event.target.checked }))} /><span>เผยแพร่</span></label>
             </div>
             <div className="admin-ui-form-actions priv-ui-template-actions">
-              {editingId ? <button type="button" className="admin-ui-btn" onClick={resetForm}>Cancel Edit</button> : null}
-              <button type="button" className="admin-ui-btn" onClick={resetForm}>Reset</button>
-              <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={saving} onClick={submitTemplate}><Save size={14} />{saving ? 'Saving...' : editingId ? 'Update Template' : 'Create Template'}</button>
+              {editingId ? <button type="button" className="admin-ui-btn" onClick={resetForm}>ยกเลิกการแก้ไข</button> : null}
+              <button type="button" className="admin-ui-btn" onClick={resetForm}>ล้างฟอร์ม</button>
+              <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={saving} onClick={submitTemplate}><Save size={14} />{saving ? 'กำลังบันทึก...' : editingId ? 'บันทึกการแก้ไข' : 'สร้างเทมเพลต'}</button>
             </div>
           </div>
         </div>
 
         <div className="priv-ui-subhead">
-          <strong>Templates List</strong>
+          <strong>รายการเทมเพลต</strong>
           <span>จัดการ Publish, Edit, Delete จากรายการด้านล่าง</span>
         </div>
 
@@ -458,19 +483,19 @@ export default function PrivilegesPage({ pushToast }) {
           searchKeys={['privilegeCode', 'privilegeNameTh', 'privilegeType']}
           searchPlaceholder="ค้นหา template"
           columns={[
-            { key: 'privilegeCode', label: 'Code' },
-            { key: 'privilegeNameTh', label: 'Name' },
-            { key: 'privilegeType', label: 'Type', render: (row) => <span className="admin-ui-status admin-ui-status-info">{row.privilegeType}</span> },
-            { key: 'published', label: 'Published', render: (row) => <span className={`admin-ui-status ${row.isPublished ? 'admin-ui-status-success' : 'admin-ui-status-neutral'}`}>{row.isPublished ? 'Published' : 'Draft'}</span> },
+            { key: 'privilegeCode', label: 'โค้ด' },
+            { key: 'privilegeNameTh', label: 'ชื่อ' },
+            { key: 'privilegeType', label: 'ประเภท', render: (row) => <span className="admin-ui-status admin-ui-status-info">{row.privilegeType}</span> },
+            { key: 'published', label: 'สถานะเผยแพร่', render: (row) => <span className={`admin-ui-status ${row.isPublished ? 'admin-ui-status-success' : 'admin-ui-status-neutral'}`}>{row.isPublished ? 'เผยแพร่แล้ว' : 'ฉบับร่าง'}</span> },
             {
-              key: 'actions', label: 'Actions', render: (row) => (
+              key: 'actions', label: 'การจัดการ', render: (row) => (
                 <div className="admin-ui-row-actions">
                   <button type="button" onClick={() => {
                     setEditingId(row.privilegeId)
                     setForm({ privilegeCode: row.privilegeCode, privilegeNameTh: row.privilegeNameTh, privilegeType: row.privilegeType, isActive: row.isActive, isPublished: row.isPublished, sortOrder: row.sortOrder })
                   }}><Pencil size={14} /></button>
                   <button type="button" onClick={() => togglePublish(row)}>{row.isPublished ? <RotateCcw size={14} /> : <Check size={14} />}</button>
-                  <button type="button" onClick={() => deleteTemplate(row.privilegeId)}><Trash2 size={14} /></button>
+                  <button type="button" onClick={() => requestDeleteTemplate(row)} disabled={deletingTemplateId === row.privilegeId}><Trash2 size={14} /></button>
                 </div>
               ),
             },
@@ -480,67 +505,91 @@ export default function PrivilegesPage({ pushToast }) {
 
       <div className="priv-ui-two-col">
         <article className="admin-ui-panel admin-ui-stack">
-          <h3><ScanLine size={17} />Camera Scan / Redeem</h3>
+          <h3><ScanLine size={17} />สแกนและยืนยันรับสิทธิ์</h3>
           <div className="priv-ui-inline-actions">
             <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={!scannerSupported} onClick={() => {
               if (scannerOpen) { setScannerOpen(false); releaseCamera(); return }
               setScannerError(''); setScannerOpen(true)
             }}>{scannerOpen ? <CameraOff size={14} /> : <Camera size={14} />}{scannerOpen ? 'ปิดกล้อง' : 'เปิดกล้องสแกน'}</button>
-            <button type="button" className="admin-ui-btn" onClick={() => loadCameraDevices().catch(() => pushToast({ type: 'error', title: 'โหลดรายการกล้องไม่สำเร็จ' }))}><RefreshCw size={14} />Refresh cameras</button>
+            <button type="button" className="admin-ui-btn" onClick={() => loadCameraDevices().catch(() => pushToast({ type: 'error', title: 'โหลดรายการกล้องไม่สำเร็จ' }))}><RefreshCw size={14} />รีเฟรชกล้อง</button>
           </div>
 
-          <div className="priv-ui-scanner-mode">Engine: {scannerMode === 'barcode_detector' ? 'BarcodeDetector + jsQR fallback' : scannerMode === 'jsqr' ? 'jsQR fallback (QR only)' : 'not available'}</div>
+          <div className="priv-ui-scanner-mode">ระบบสแกน: {scannerMode === 'barcode_detector' ? 'BarcodeDetector + jsQR สำรอง' : scannerMode === 'jsqr' ? 'jsQR สำรอง (QR เท่านั้น)' : 'ไม่พร้อมใช้งาน'}</div>
           {!scannerSupported ? <div className="priv-ui-note-box"><strong>Camera scan ไม่พร้อมใช้งาน</strong><p>เบราว์เซอร์นี้ไม่สามารถเข้าถึงกล้องได้ กรุณาอนุญาต camera permission หรือใช้ช่องกรอก token ด้านล่าง</p></div> : null}
-          {scannerSupported && scannerMode === 'jsqr' ? <div className="priv-ui-note-box"><strong>Safari/Firefox fallback mode</strong><p>โหมดนี้รองรับการอ่าน QR code ได้ดี แต่ไม่รองรับ 1D barcode (เช่น code128/ean)</p></div> : null}
-          {cameraDevices.length > 1 ? <label className="priv-ui-camera-select">Camera source<select value={selectedCameraId} onChange={(event) => setSelectedCameraId(event.target.value)}>{cameraDevices.map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Camera ${index + 1}`}</option>)}</select></label> : null}
+          {scannerSupported && scannerMode === 'jsqr' ? <div className="priv-ui-note-box"><strong>โหมดสำรอง Safari/Firefox</strong><p>โหมดนี้รองรับการอ่าน QR code ได้ดี แต่ไม่รองรับ 1D barcode (เช่น code128/ean)</p></div> : null}
+          {cameraDevices.length > 1 ? <label className="priv-ui-camera-select">แหล่งกล้อง<select value={selectedCameraId} onChange={(event) => setSelectedCameraId(event.target.value)}>{cameraDevices.map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Camera ${index + 1}`}</option>)}</select></label> : null}
 
           {scannerOpen ? <div className="priv-ui-scanner-box"><video ref={videoRef} autoPlay muted playsInline className="priv-ui-scanner-video" /><div className="priv-ui-scanner-overlay" /><span className="priv-ui-scanner-hint">{scannerBusy ? (scannerMode === 'jsqr' ? 'กำลังสแกน QR...' : 'กำลังสแกน QR/Barcode...') : 'พร้อมสแกน'}</span></div> : null}
           {scannerError ? <div className="priv-ui-scanner-error">{scannerError}</div> : null}
 
           <div className="admin-ui-form priv-ui-scan-inline">
-            <label>Token<input value={scanToken} onChange={(event) => setScanToken(event.target.value)} placeholder="วาง token จาก QR scanner" /></label>
-            <div className="admin-ui-form-actions"><button type="button" className="admin-ui-btn" onClick={scanClaim}>Check</button><button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={redeemClaim}>Redeem</button></div>
+            <label>โทเคน<input value={scanToken} onChange={(event) => setScanToken(event.target.value)} placeholder="วางโทเคนจาก QR scanner" /></label>
+            <div className="admin-ui-form-actions"><button type="button" className="admin-ui-btn" onClick={scanClaim}>ตรวจสอบ</button><button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={redeemClaim}>ยืนยันรับสิทธิ์</button></div>
           </div>
 
-          {scanResult ? <div className="priv-ui-note-box"><strong>{scanResult.privilegeNameTh}</strong><p>{scanResult.displayName} ({scanResult.teamCode})</p><p>Status: {scanResult.claimStatus}</p><p>Code: {scanResult.privilegeCode}</p></div> : null}
+          {scanResult ? <div className="priv-ui-note-box"><strong>{scanResult.privilegeNameTh}</strong><p>{scanResult.displayName} ({scanResult.teamCode})</p><p>สถานะ: {scanResult.claimStatus}</p><p>โค้ด: {scanResult.privilegeCode}</p></div> : null}
         </article>
 
         <article className="admin-ui-panel admin-ui-stack">
-          <h3>Team Bulk Update</h3>
+          <h3>อัปเดตสิทธิ์แบบกลุ่ม</h3>
           <div className="admin-ui-form priv-ui-bulk-form">
-            <label>teamId<input value={bulkForm.teamId} onChange={(event) => setBulkForm((prev) => ({ ...prev, teamId: event.target.value }))} /></label>
-            <label>privilegeId<input value={bulkForm.privilegeId} onChange={(event) => setBulkForm((prev) => ({ ...prev, privilegeId: event.target.value }))} /></label>
-            <label>claimStatus<select value={bulkForm.claimStatus} onChange={(event) => setBulkForm((prev) => ({ ...prev, claimStatus: event.target.value }))}><option value="claimed">claimed</option><option value="pending">pending</option></select></label>
-            <label>claimNote<input value={bulkForm.claimNote} onChange={(event) => setBulkForm((prev) => ({ ...prev, claimNote: event.target.value }))} /></label>
-            <div className="admin-ui-form-actions priv-ui-bulk-actions"><button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={applyTeamBulk}>Apply Team Update</button></div>
+            <label>รหัสทีม (teamId)<input value={bulkForm.teamId} onChange={(event) => setBulkForm((prev) => ({ ...prev, teamId: event.target.value }))} /></label>
+            <label>รหัสสิทธิ์ (privilegeId)<input value={bulkForm.privilegeId} onChange={(event) => setBulkForm((prev) => ({ ...prev, privilegeId: event.target.value }))} /></label>
+            <label>สถานะรับสิทธิ์ (claimStatus)<select value={bulkForm.claimStatus} onChange={(event) => setBulkForm((prev) => ({ ...prev, claimStatus: event.target.value }))}><option value="claimed">รับแล้ว</option><option value="pending">รอดำเนินการ</option></select></label>
+            <label>หมายเหตุ (claimNote)<input value={bulkForm.claimNote} onChange={(event) => setBulkForm((prev) => ({ ...prev, claimNote: event.target.value }))} /></label>
+            <div className="admin-ui-form-actions priv-ui-bulk-actions"><button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={applyTeamBulk}>อัปเดตทั้งทีม</button></div>
           </div>
         </article>
       </div>
 
       <article className="admin-ui-panel admin-ui-stack">
-        <h3>Claims Correction</h3>
+        <h3>ปรับแก้รายการรับสิทธิ์</h3>
         <div className="priv-ui-subhead">
-          <strong>Claims List</strong>
-          <span>{pendingClaimsCount} pending / {claimedClaimsCount} claimed</span>
+          <strong>รายการรับสิทธิ์</strong>
+          <span>{pendingClaimsCount} รอดำเนินการ / {claimedClaimsCount} รับแล้ว</span>
         </div>
-        <div className="admin-ui-form priv-ui-claims-tools">
-          <label>Search<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="username / team / privilege" /></label>
-          <div className="admin-ui-form-actions"><button type="button" className="admin-ui-btn" onClick={() => fetchData(search)}>Search</button></div>
-        </div>
+        <FilterBar
+          label="ตัวกรองรายการรับสิทธิ์"
+          right={
+            <button type="button" className="admin-ui-btn" onClick={() => fetchData(search)}>
+              ค้นหา
+            </button>
+          }
+        >
+          <div className="admin-ui-form priv-ui-claims-tools">
+            <label>
+              ค้นหา
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ชื่อผู้ใช้ / ทีม / สิทธิ์" />
+            </label>
+          </div>
+        </FilterBar>
         <AdminDataTable
           rows={claims.map((item) => ({ ...item, id: item.claimId }))}
           loading={loading}
           searchKeys={['displayName', 'teamCode', 'privilegeCode', 'privilegeNameTh']}
           searchPlaceholder="ค้นหา claim"
           columns={[
-            { key: 'displayName', label: 'Member' },
-            { key: 'teamCode', label: 'Team' },
-            { key: 'privilegeNameTh', label: 'Privilege' },
-            { key: 'claimStatus', label: 'Status', render: (row) => <span className={`admin-ui-status ${row.claimStatus === 'claimed' ? 'admin-ui-status-success' : 'admin-ui-status-warning'}`}>{row.claimStatus === 'claimed' ? 'claimed' : 'pending'}</span> },
-            { key: 'actions', label: 'Actions', render: (row) => <div className="priv-ui-claim-actions"><button type="button" className="admin-ui-mini-btn" onClick={() => updateClaim(row.claimId, 'claimed')}>Mark Claimed</button><button type="button" className="admin-ui-mini-btn" onClick={() => updateClaim(row.claimId, 'pending')}>Reset</button></div> },
+            { key: 'displayName', label: 'ผู้รับสิทธิ์' },
+            { key: 'teamCode', label: 'ทีม' },
+            { key: 'privilegeNameTh', label: 'สิทธิ์' },
+            { key: 'claimStatus', label: 'สถานะ', render: (row) => <span className={`admin-ui-status ${row.claimStatus === 'claimed' ? 'admin-ui-status-success' : 'admin-ui-status-warning'}`}>{row.claimStatus === 'claimed' ? 'รับแล้ว' : 'รอดำเนินการ'}</span> },
+            { key: 'actions', label: 'การจัดการ', render: (row) => <div className="priv-ui-claim-actions"><button type="button" className="admin-ui-mini-btn" onClick={() => updateClaim(row.claimId, 'claimed')}>ตั้งเป็นรับแล้ว</button><button type="button" className="admin-ui-mini-btn" onClick={() => updateClaim(row.claimId, 'pending')}>รีเซ็ต</button></div> },
           ]}
         />
       </article>
+
+      <AdminConfirmModal
+        open={Boolean(deleteTemplateCandidate)}
+        danger
+        title={deleteTemplateCandidate ? `ลบเทมเพลต ${deleteTemplateCandidate.privilegeCode}?` : 'ลบเทมเพลตนี้?'}
+        description="ระบบจะลบเทมเพลตนี้ออกจากรายการทันที"
+        confirmLabel={deletingTemplateId ? 'กำลังลบ...' : 'ลบ'}
+        cancelLabel="ยกเลิก"
+        onCancel={() => {
+          if (!deletingTemplateId) setDeleteTemplateCandidate(null)
+        }}
+        onConfirm={confirmDeleteTemplate}
+      />
     </div>
   )
 }
