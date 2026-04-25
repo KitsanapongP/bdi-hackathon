@@ -3,37 +3,59 @@ import { RefreshCw } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
 import AdminConfirmModal from '../shared/AdminConfirmModal'
-import FilterBar from '../shared/FilterBar'
 import PageHeader from '../shared/PageHeader'
 import { useAdminToast } from '../shared/adminContexts'
 import { formatDateInput, formatDateTime } from '../utils/adminFormatters'
+import './SelectionPage.css'
+
+const selectionStatusOptions = [
+  { value: 'all', label: 'ทุกสถานะ' },
+  { value: 'forming', label: 'กำลังจัดทีม' },
+  { value: 'submitted', label: 'ส่งโครงร่างแล้ว' },
+  { value: 'passed', label: 'ผ่านคัดเลือก' },
+  { value: 'failed', label: 'ไม่ผ่านคัดเลือก' },
+  { value: 'confirmed', label: 'ยืนยันเข้าร่วมแล้ว' },
+  { value: 'not_joined', label: 'ไม่เข้าร่วม' },
+  { value: 'disbanded', label: 'ยุบทีม' },
+]
+
+const selectionStatusLabelMap = {
+  forming: 'กำลังจัดทีม',
+  submitted: 'ส่งโครงร่างแล้ว',
+  passed: 'ผ่านคัดเลือก',
+  failed: 'ไม่ผ่านคัดเลือก',
+  confirmed: 'ยืนยันเข้าร่วมแล้ว',
+  not_joined: 'ไม่เข้าร่วม',
+  disbanded: 'ยุบทีม',
+}
 
 export default function SelectionPage() {
   const { pushToast } = useAdminToast()
   const [loading, setLoading] = useState(true)
-  const [rows, setRows] = useState([])
-  const [status, setStatus] = useState('submitted')
+  const [allRows, setAllRows] = useState([])
+  const [statusFilter, setStatusFilter] = useState('all')
   const [openAt, setOpenAt] = useState('')
   const [closeAt, setCloseAt] = useState('')
   const [savingWindow, setSavingWindow] = useState(false)
   const [expiringSelection, setExpiringSelection] = useState(false)
   const [expireConfirmOpen, setExpireConfirmOpen] = useState(false)
+  const [changingResult, setChangingResult] = useState(false)
+  const [resultConfirmOpen, setResultConfirmOpen] = useState(false)
+  const [resultCandidate, setResultCandidate] = useState(null)
 
   const fetchRows = useCallback(async () => {
     try {
       setLoading(true)
-      const query = new URLSearchParams()
-      if (status) query.set('status', status)
-      const res = await fetch(apiUrl(`/api/admin/selection/teams?${query.toString()}`), { credentials: 'include' })
+      const res = await fetch(apiUrl('/api/admin/selection/teams'), { credentials: 'include' })
       const payload = await res.json()
       if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ไม่สามารถโหลดข้อมูลได้')
-      setRows(payload.data || [])
+      setAllRows(payload.data || [])
     } catch (error) {
-      pushToast({ type: 'error', title: error?.message || 'โหลดข้อมูล selection ไม่สำเร็จ' })
+      pushToast({ variant: 'danger', title: error?.message || 'โหลดข้อมูลคัดเลือกทีมไม่สำเร็จ' })
     } finally {
       setLoading(false)
     }
-  }, [pushToast, status])
+  }, [pushToast])
 
   useEffect(() => {
     fetchRows()
@@ -65,11 +87,11 @@ export default function SelectionPage() {
     const openMs = new Date(openAt).getTime()
     const closeMs = new Date(closeAt).getTime()
     if (!Number.isFinite(openMs) || !Number.isFinite(closeMs)) {
-      pushToast({ type: 'error', title: 'รูปแบบวันเวลาไม่ถูกต้อง' })
+      pushToast({ variant: 'danger', title: 'รูปแบบวันเวลาไม่ถูกต้อง' })
       return
     }
     if (openMs > closeMs) {
-      pushToast({ type: 'error', title: 'วันเวลาเปิดต้องไม่มากกว่าวันเวลาปิด' })
+      pushToast({ variant: 'danger', title: 'วันเวลาเปิดต้องไม่มากกว่าวันเวลาปิด' })
       return
     }
 
@@ -83,17 +105,18 @@ export default function SelectionPage() {
       })
       const payload = await res.json()
       if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'บันทึกข้อมูลไม่สำเร็จ')
-      pushToast({ title: 'บันทึก Global confirm window สำเร็จ' })
+      pushToast({ variant: 'success', title: 'บันทึกช่วงเวลายืนยันสำเร็จ' })
       fetchRows()
     } catch (error) {
-      pushToast({ type: 'error', title: error?.message || 'บันทึก Global confirm window ไม่สำเร็จ' })
+      pushToast({ variant: 'danger', title: error?.message || 'บันทึกช่วงเวลายืนยันไม่สำเร็จ' })
     } finally {
       setSavingWindow(false)
     }
   }
 
-  const setResult = async (teamId, nextStatus) => {
+  const setResult = useCallback(async (teamId, nextStatus) => {
     try {
+      setChangingResult(true)
       const res = await fetch(apiUrl(`/api/admin/selection/teams/${teamId}/result`), {
         method: 'POST',
         credentials: 'include',
@@ -102,12 +125,31 @@ export default function SelectionPage() {
       })
       const payload = await res.json()
       if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'อัปเดตข้อมูลไม่สำเร็จ')
-      pushToast({ title: 'บันทึกผลคัดเลือกสำเร็จ' })
+      pushToast({ variant: 'success', title: 'บันทึกผลคัดเลือกสำเร็จ' })
       fetchRows()
     } catch (error) {
-      pushToast({ type: 'error', title: error?.message || 'บันทึกผลคัดเลือกไม่สำเร็จ' })
+      pushToast({ variant: 'danger', title: error?.message || 'บันทึกผลคัดเลือกไม่สำเร็จ' })
+    } finally {
+      setChangingResult(false)
     }
-  }
+  }, [fetchRows, pushToast])
+
+  const requestResultChange = useCallback((row, nextStatus) => {
+    setResultCandidate({
+      teamId: row.team_id,
+      nextStatus,
+      teamCode: row.team_code,
+      teamName: row.team_name_th || row.team_name_en || '-',
+    })
+    setResultConfirmOpen(true)
+  }, [])
+
+  const confirmResultChange = useCallback(async () => {
+    if (!resultCandidate?.teamId || !resultCandidate?.nextStatus) return
+    await setResult(resultCandidate.teamId, resultCandidate.nextStatus)
+    setResultConfirmOpen(false)
+    setResultCandidate(null)
+  }, [resultCandidate, setResult])
 
   const expireTimedOutSelectionTeams = async () => {
     try {
@@ -119,37 +161,27 @@ export default function SelectionPage() {
       const payload = await res.json()
       if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'เปลี่ยนสถานะหมดอายุไม่สำเร็จ')
       const updatedCount = Number(payload?.data?.updatedCount || 0)
-      pushToast({ title: `อัปเดตสถานะสำเร็จ ${updatedCount} ทีม` })
+      pushToast({ variant: 'success', title: `อัปเดตสถานะสำเร็จ ${updatedCount} ทีม` })
       fetchRows()
     } catch (error) {
-      pushToast({ type: 'error', title: error?.message || 'อัปเดตทีมหมดเวลาไม่สำเร็จ' })
+      pushToast({ variant: 'danger', title: error?.message || 'อัปเดตทีมหมดเวลาไม่สำเร็จ' })
     } finally {
       setExpiringSelection(false)
       setExpireConfirmOpen(false)
     }
   }
 
-  const statusCounts = useMemo(() => {
-    const counts = {
-      submitted: 0,
-      passed: 0,
-      failed: 0,
-      confirmed: 0,
-      not_joined: 0,
-    }
-    rows.forEach((row) => {
-      const key = String(row.status || '')
-      if (key in counts) counts[key] += 1
-    })
-    return counts
-  }, [rows])
+  const rows = useMemo(() => {
+    if (statusFilter === 'all') return allRows
+    return allRows.filter((row) => String(row.status || '') === statusFilter)
+  }, [allRows, statusFilter])
 
   return (
-    <div className="admin-ui-stack">
+    <div className="admin-ui-stack admin-selection-v2">
       <PageHeader
         title="คัดเลือกทีม"
         actions={
-          <div className="admin-ui-header-actions">
+          <div className="admin-ui-header-actions admin-selection-v2-actions">
             <button type="button" className="admin-ui-btn" onClick={fetchRows}>
               <RefreshCw size={14} />
               รีเฟรช
@@ -159,7 +191,7 @@ export default function SelectionPage() {
               className="admin-ui-btn"
               onClick={() => setExpireConfirmOpen(true)}
               disabled={expiringSelection}
-              title="อัปเดตทีม passed ที่หมดเวลายืนยันให้เป็น not_joined"
+              title="อัปเดตทีมที่หมดเวลายืนยันให้เป็นไม่เข้าร่วม"
             >
               {expiringSelection ? 'กำลังอัปเดต...' : 'อัปเดตทีมที่หมดเวลา'}
             </button>
@@ -167,54 +199,26 @@ export default function SelectionPage() {
         }
       />
 
-      <section className="admin-ui-stat-grid">
-        <article className="admin-ui-stat-card info">
-          <span>ส่งแล้ว</span>
-          <strong>{statusCounts.submitted}</strong>
-          <small>ทีมรอประกาศผล</small>
-        </article>
-        <article className="admin-ui-stat-card success">
-          <span>ผ่านคัดเลือก</span>
-          <strong>{statusCounts.passed}</strong>
-          <small>ทีมผ่านคัดเลือก</small>
-        </article>
-        <article className="admin-ui-stat-card warn">
-          <span>ไม่ผ่าน</span>
-          <strong>{statusCounts.failed}</strong>
-          <small>ทีมไม่ผ่านคัดเลือก</small>
-        </article>
-        <article className="admin-ui-stat-card neutral">
-          <span>ยืนยันแล้ว</span>
-          <strong>{statusCounts.confirmed}</strong>
-          <small>ยืนยันแล้ว {statusCounts.not_joined} ทีมไม่เข้าร่วม</small>
-        </article>
-      </section>
-
-      <article className="admin-ui-panel">
-        <FilterBar
-          label="ตัวกรองการคัดเลือก"
-          right={
+      <article className="admin-ui-panel admin-selection-v2-window-panel">
+        <div className="admin-selection-v2-window-head">
+          <div>
+            <h3>ตั้งค่าช่วงเวลายืนยันเข้าร่วมโครงการ</h3>
+            <p>เวลานี้จะถูกใช้กับทีมที่ผ่านคัดเลือกเพื่อกำหนดวันหมดเขตยืนยันเข้าร่วม</p>
+          </div>
+          <div>
             <button
               type="button"
               className="admin-ui-btn admin-ui-btn-primary"
               onClick={saveGlobalConfirmWindow}
               disabled={savingWindow || !openAt || !closeAt}
-              title="บันทึกช่วงเวลาเปิด/ปิดการยืนยันสำหรับทุกทีมที่ passed"
+              title="บันทึกช่วงเวลาเปิด/ปิดการยืนยันสำหรับทุกทีมที่ผ่านคัดเลือก"
             >
               {savingWindow ? 'กำลังบันทึก...' : 'บันทึกช่วงเวลายืนยัน'}
             </button>
-          }
-        >
-          <label>
-            สถานะทีม
-            <select value={status} onChange={(event) => setStatus(event.target.value)}>
-              <option value="submitted">ส่งแล้ว</option>
-              <option value="passed">ผ่านคัดเลือก</option>
-              <option value="failed">ไม่ผ่าน</option>
-              <option value="confirmed">ยืนยันแล้ว</option>
-              <option value="not_joined">ไม่เข้าร่วม</option>
-            </select>
-          </label>
+          </div>
+        </div>
+
+        <div className="admin-selection-v2-window-fields">
           <label>
             เปิดยืนยันเวลา
             <input type="datetime-local" value={openAt} onChange={(event) => setOpenAt(event.target.value)} />
@@ -223,18 +227,7 @@ export default function SelectionPage() {
             ปิดยืนยันเวลา
             <input type="datetime-local" value={closeAt} onChange={(event) => setCloseAt(event.target.value)} />
           </label>
-          <button
-            type="button"
-            className="admin-ui-btn"
-            onClick={() => {
-              setOpenAt('')
-              setCloseAt('')
-            }}
-            title="ล้างค่าเวลาเปิด/ปิดที่กรอกไว้"
-          >
-            ล้างช่วงเวลา
-          </button>
-        </FilterBar>
+        </div>
       </article>
 
       <AdminDataTable
@@ -242,6 +235,18 @@ export default function SelectionPage() {
         loading={loading}
         searchKeys={['team_code', 'team_name_th', 'team_name_en', 'leader_name']}
         searchPlaceholder="ค้นหา team code / team name / leader"
+        toolbarExtra={
+          <label className="admin-selection-v2-status-filter">
+            <span>สถานะทีม</span>
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              {selectionStatusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        }
         columns={[
           { key: 'team_code', label: 'รหัสทีม' },
           {
@@ -250,7 +255,11 @@ export default function SelectionPage() {
             render: (row) => row.team_name_th || row.team_name_en,
           },
           { key: 'leader_name', label: 'หัวหน้าทีม' },
-          { key: 'status', label: 'สถานะ' },
+          {
+            key: 'status',
+            label: 'สถานะ',
+            render: (row) => selectionStatusLabelMap[row.status] || row.status || '-',
+          },
           {
             key: 'confirmation_deadline_at',
             label: 'หมดเขตยืนยัน',
@@ -266,10 +275,20 @@ export default function SelectionPage() {
             label: 'การจัดการ',
             render: (row) => (
               <div className="admin-ui-inline-actions">
-                <button type="button" className="admin-ui-mini-btn" onClick={() => setResult(row.team_id, 'passed')}>
+                <button
+                  type="button"
+                  className="admin-ui-mini-btn"
+                  onClick={() => requestResultChange(row, 'passed')}
+                  disabled={changingResult}
+                >
                   ตั้งเป็นผ่าน
                 </button>
-                <button type="button" className="admin-ui-mini-btn" onClick={() => setResult(row.team_id, 'failed')}>
+                <button
+                  type="button"
+                  className="admin-ui-mini-btn"
+                  onClick={() => requestResultChange(row, 'failed')}
+                  disabled={changingResult}
+                >
                   ตั้งเป็นไม่ผ่าน
                 </button>
               </div>
@@ -282,13 +301,28 @@ export default function SelectionPage() {
         open={expireConfirmOpen}
         danger
         title="ยืนยันอัปเดตทีมที่หมดเวลา?"
-        description="ระบบจะเปลี่ยนทีมที่หมดเวลายืนยันจาก passed ไปเป็น not_joined ทันที"
+        description="ระบบจะเปลี่ยนทีมที่หมดเวลายืนยันจากผ่านคัดเลือกไปเป็นไม่เข้าร่วมทันที"
         confirmLabel={expiringSelection ? 'กำลังอัปเดต...' : 'อัปเดตเลย'}
         cancelLabel="ยกเลิก"
         onCancel={() => {
           if (!expiringSelection) setExpireConfirmOpen(false)
         }}
         onConfirm={expireTimedOutSelectionTeams}
+      />
+
+      <AdminConfirmModal
+        open={resultConfirmOpen}
+        title="ยืนยันการเปลี่ยนสถานะทีม"
+        description={`ทีม ${resultCandidate?.teamCode || '-'} (${resultCandidate?.teamName || '-'}) จะถูกเปลี่ยนเป็น "${selectionStatusLabelMap[resultCandidate?.nextStatus] || '-'}"`}
+        confirmLabel={changingResult ? 'กำลังบันทึก...' : 'ยืนยันเปลี่ยนสถานะ'}
+        cancelLabel="ยกเลิก"
+        onCancel={() => {
+          if (!changingResult) {
+            setResultConfirmOpen(false)
+            setResultCandidate(null)
+          }
+        }}
+        onConfirm={confirmResultChange}
       />
     </div>
   )
