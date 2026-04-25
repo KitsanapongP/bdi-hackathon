@@ -148,7 +148,7 @@ export default function DashboardPage() {
       pushToast({
         variant: isNoSubmittedTeams ? 'warning' : 'danger',
         title: isNoSubmittedTeams ? 'ยังไม่มีทีมที่ส่งโครงร่างแล้วสำหรับส่งออก' : 'ส่งออกข้อมูลทีมไม่สำเร็จ',
-        description: isNoSubmittedTeams ? 'ตรวจสอบสถานะทีมในระบบก่อนแล้วลองใหม่อีกครั้ง' : message,
+        description: isNoSubmittedTeams ? 'ตอนนี้ยังไม่มีทีมที่ส่งโครงร่างในระบบ' : message,
         durationMs: 10000,
       })
     } finally {
