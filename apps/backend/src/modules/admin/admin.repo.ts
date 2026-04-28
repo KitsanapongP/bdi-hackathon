@@ -144,17 +144,14 @@ export async function getDashboardGenderCounts(
     db: DB,
 ): Promise<DashboardGenderCountRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT u.gender, COUNT(DISTINCT u.user_id) AS count
-         FROM team_teams t
-         JOIN team_members m
-           ON m.team_id = t.team_id
-          AND m.member_status = 'active'
-         JOIN user_users u
-            ON u.user_id = m.user_id
-           AND u.is_active = 1
+        `SELECT u.gender, COUNT(*) AS count
+         FROM user_users u
+         LEFT JOIN access_allowlist a
+           ON a.user_id = u.user_id
+          AND a.is_active = 1
+         WHERE u.is_active = 1
            AND u.deleted_at IS NULL
-         WHERE t.deleted_at IS NULL
-            AND t.status IN ('forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined')
+           AND a.user_id IS NULL
          GROUP BY u.gender`,
     );
     return rows as DashboardGenderCountRow[];
@@ -164,17 +161,14 @@ export async function getDashboardProvinceCounts(
     db: DB,
 ): Promise<DashboardProvinceCountRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT u.home_province AS province, COUNT(DISTINCT u.user_id) AS count
-         FROM team_teams t
-         JOIN team_members m
-           ON m.team_id = t.team_id
-          AND m.member_status = 'active'
-         JOIN user_users u
-            ON u.user_id = m.user_id
-           AND u.is_active = 1
+        `SELECT u.home_province AS province, COUNT(*) AS count
+         FROM user_users u
+         LEFT JOIN access_allowlist a
+           ON a.user_id = u.user_id
+          AND a.is_active = 1
+         WHERE u.is_active = 1
            AND u.deleted_at IS NULL
-         WHERE t.deleted_at IS NULL
-            AND t.status IN ('forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined')
+           AND a.user_id IS NULL
          GROUP BY u.home_province
          ORDER BY count DESC`,
     );
@@ -185,17 +179,14 @@ export async function getDashboardEducationLevelCounts(
     db: DB,
 ): Promise<DashboardEducationLevelCountRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT COALESCE(u.education_level, 'unknown') AS education_level, COUNT(DISTINCT u.user_id) AS count
-         FROM team_teams t
-         JOIN team_members m
-           ON m.team_id = t.team_id
-          AND m.member_status = 'active'
-         JOIN user_users u
-            ON u.user_id = m.user_id
-           AND u.is_active = 1
+        `SELECT COALESCE(u.education_level, 'unknown') AS education_level, COUNT(*) AS count
+         FROM user_users u
+         LEFT JOIN access_allowlist a
+           ON a.user_id = u.user_id
+          AND a.is_active = 1
+         WHERE u.is_active = 1
            AND u.deleted_at IS NULL
-         WHERE t.deleted_at IS NULL
-           AND t.status IN ('forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined')
+           AND a.user_id IS NULL
          GROUP BY COALESCE(u.education_level, 'unknown')
          ORDER BY count DESC`
     );
@@ -212,17 +203,14 @@ export async function getDashboardInstitutionCounts(
                 NULLIF(TRIM(COALESCE(u.institution_name_en, '')), ''),
                 'ไม่ระบุ'
             ) AS institution_name,
-            COUNT(DISTINCT u.user_id) AS count
-         FROM team_teams t
-         JOIN team_members m
-           ON m.team_id = t.team_id
-          AND m.member_status = 'active'
-         JOIN user_users u
-            ON u.user_id = m.user_id
-           AND u.is_active = 1
+            COUNT(*) AS count
+         FROM user_users u
+         LEFT JOIN access_allowlist a
+           ON a.user_id = u.user_id
+          AND a.is_active = 1
+         WHERE u.is_active = 1
            AND u.deleted_at IS NULL
-         WHERE t.deleted_at IS NULL
-           AND t.status IN ('forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined')
+           AND a.user_id IS NULL
          GROUP BY institution_name
          ORDER BY count DESC`
     );
