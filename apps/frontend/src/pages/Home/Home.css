@@ -2376,6 +2376,34 @@ section.gt-hero {
     font-size: 1.16rem;
 }
 
+.gt-training-benefits-title {
+    font-size: clamp(1.08rem, 1.8vw, 1.92rem);
+    white-space: nowrap;
+    text-align: center;
+}
+
+#training-benefits .gt-section-header {
+    max-width: 1120px;
+}
+
+.gt-training-benefit-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gt-training-benefit-heading-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gt-primary);
+    background: rgba(124, 58, 237, 0.12);
+    flex-shrink: 0;
+}
+
 .dark .gt-benefit-card {
     box-shadow: 0 14px 28px -22px rgba(2, 6, 23, 0.95);
 }

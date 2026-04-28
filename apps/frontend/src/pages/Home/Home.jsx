@@ -11,6 +11,7 @@ import {
     Car,
     UtensilsCrossed,
     Gift,
+    Award,
     Rocket,
     Home,
     Calendar,
@@ -1764,6 +1765,28 @@ function HomePage() {
                                     </div>
                                 </li>
                             </ul>
+                        </div>
+                    </section>
+
+                    {/* Training Benefits */}
+                    <section id="training-benefits" className="gt-section gt-container">
+                        <div className="gt-section-header gt-reveal">
+                            <h2 className="gt-training-benefits-title">สิทธิประโยชน์ของผู้ที่ลงทะเบียนและเข้าร่วมการอบรม</h2>
+                            <p>สิทธิ์สำหรับผู้ลงทะเบียนที่เข้าร่วมการอบรมครบตามเงื่อนไขที่กำหนด</p>
+                        </div>
+
+                        <div className="gt-benefits-wrap gt-reveal">
+                            <article className="gt-benefit-card gt-benefit-card-featured" aria-label="สิทธิประโยชน์ของผู้ที่ลงทะเบียนและเข้าร่วมการอบรม">
+                                <h3 className="gt-training-benefit-heading">
+                                    <span className="gt-training-benefit-heading-icon"><Award size={18} /></span>
+                                    ประกาศนียบัตรสำหรับผู้ผ่านเงื่อนไขการอบรม
+                                </h3>
+                                <p>
+                                    ผู้ลงทะเบียนที่เข้าร่วมฝึกอบรมวันที่ 24 พฤษภาคม ครบทุกหัวข้อ และมีการส่งโครงร่างโดยหัวหน้าทีม จะได้รับประกาศนียบัตร
+                                    <br />
+                                    <strong>(โครงร่างนั้นต้องไม่ใช้ AI ในการสร้าง)</strong>
+                                </p>
+                            </article>
                         </div>
                     </section>
 
