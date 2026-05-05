@@ -342,7 +342,7 @@ function RegisterPage() {
             return;
         }
         if (regUserName.length < 3) {
-            showRegisterError('ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร');
+            showRegisterError('นามแฝง (Alias) ต้องมีอย่างน้อย 3 ตัวอักษร');
             return;
         }
         if (regPass !== regConfirmPass) {
@@ -645,7 +645,7 @@ function RegisterPage() {
                                 <section className="gr-form-section">
                                     <h3>ข้อมูลบัญชีผู้ใช้</h3>
                                     <div className="gr-form-grid gr-form-grid-2">
-                                        <div className="gr-input-group"><label>ชื่อผู้ใช้ (Username)</label><input type="text" name="registerUsername" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="อย่างน้อย 3 ตัวอักษร" value={regUserName} onChange={(e) => setRegUserName(e.target.value)} required disabled={registerActionDisabled} minLength={3} maxLength={50} /></div>
+                                        <div className="gr-input-group"><label>นามแฝง (Alias)</label><input type="text" name="registerUsername" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="อย่างน้อย 3 ตัวอักษร" value={regUserName} onChange={(e) => setRegUserName(e.target.value)} required disabled={registerActionDisabled} minLength={3} maxLength={50} /></div>
                                         <div className="gr-input-group"><label>เบอร์โทรศัพท์ (Phone Number)</label><input type="tel" name="registerPhone" autoComplete="off" data-lpignore="true" className="gr-input" placeholder="เช่น 0812345678" value={regPhone} onChange={(e) => {
                                             const value = e.target.value.replace(/\D/g, '').slice(0, 10);
                                             setRegPhone(value);

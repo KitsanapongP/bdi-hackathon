@@ -193,10 +193,10 @@ export default function NotificationSettingsPage() {
           rows={recipients.map((recipient) => ({ ...recipient, id: recipient.userId }))}
           loading={loading}
           searchKeys={['displayName', 'userName', 'email']}
-          searchPlaceholder="ค้นหา admin จากชื่อ/username/email"
+          searchPlaceholder="ค้นหา admin จากชื่อ/นามแฝง (Alias)/email"
           columns={[
             { key: 'displayName', label: 'ชื่อ' },
-            { key: 'userName', label: 'ชื่อผู้ใช้' },
+            { key: 'userName', label: 'นามแฝง (Alias)' },
             {
               key: 'email',
               label: 'อีเมล',

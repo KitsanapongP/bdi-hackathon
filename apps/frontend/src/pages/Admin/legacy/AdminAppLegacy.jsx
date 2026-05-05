@@ -7042,10 +7042,10 @@ function NotificationSettingsPage() {
           rows={recipients.map((r) => ({ ...r, id: r.userId }))}
           loading={loading}
           searchKeys={['displayName', 'userName', 'email']}
-          searchPlaceholder="ค้นหา admin จากชื่อ/username/email"
+          searchPlaceholder="ค้นหา admin จากชื่อ/นามแฝง (Alias)/email"
           columns={[
             { key: 'displayName', label: 'Name' },
-            { key: 'userName', label: 'Username' },
+            { key: 'userName', label: 'นามแฝง (Alias)' },
             {
               key: 'email',
               label: 'Email',

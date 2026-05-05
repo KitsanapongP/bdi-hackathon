@@ -561,7 +561,7 @@ export default function PrivilegesPage() {
           <div className="admin-ui-form priv-ui-claims-tools">
             <label>
               ค้นหา
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ชื่อผู้ใช้ / ทีม / สิทธิ์" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="นามแฝง (Alias) / ทีม / สิทธิ์" />
             </label>
           </div>
         </FilterBar>

@@ -29,7 +29,7 @@ export const createInvitationSchema = z.object({
     inviteeUserName: z.string().min(2).max(50).optional(),
 }).refine(
     (data) => !!data.inviteeUserId || !!data.inviteeUserName,
-    { message: 'กรุณาระบุ user id หรือ username อย่างน้อย 1 ค่า' }
+    { message: 'กรุณาระบุนามแฝง' }
 );
 
 export const respondInvitationSchema = z.object({

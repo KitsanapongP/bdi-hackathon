@@ -613,8 +613,8 @@ function ProfileTab({ apiFetch, showToast, user }) {
                     </div>
                     <div className="pf-form-grid" style={{ marginTop: 12 }}>
                         <div className="pf-field">
-                            <span className="pf-label">Username</span>
-                            <input className="pf-input" value={data.userName || ''} onChange={(e) => set('userName', e.target.value)} placeholder="username" />
+                            <span className="pf-label">นามแฝง (Alias)</span>
+                            <input className="pf-input" value={data.userName || ''} onChange={(e) => set('userName', e.target.value)} placeholder="กรอกนามแฝง (Alias)" />
                         </div>
                         <div className="pf-field">
                             <span className="pf-label">Email</span>

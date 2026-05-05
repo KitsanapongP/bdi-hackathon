@@ -182,7 +182,7 @@ const getProfileMissingFields = (profile) => {
     const missing = [];
 
     const requiredTextFields = [
-        { key: 'userName', label: 'Username' },
+        { key: 'userName', label: 'นามแฝง (Alias)' },
         { key: 'firstNameTh', label: 'ชื่อ (TH)' },
         { key: 'lastNameTh', label: 'นามสกุล (TH)' },
         { key: 'firstNameEn', label: 'First Name (EN)' },
@@ -759,7 +759,7 @@ export default function TeamContent({ user }) {
         }
         const inviteeUserName = inviteUserNameInput.trim();
         if (!inviteeUserName) {
-            throw new Error('กรุณากรอก Username ที่ต้องการเชิญ');
+            throw new Error('กรุณากรอกนามแฝง (Alias) ที่ต้องการเชิญ');
         }
         const res = await fetch(apiUrl(`/api/teams/${team.id}/invitations`), {
             method: 'POST',
@@ -1637,7 +1637,7 @@ export default function TeamContent({ user }) {
                         <div className="gl-manage-grid">
                             <div className="gl-team-info-card gl-manage-glass-card">
                                 <span className="gl-team-info-label"><UserPlus size={16} /> เชิญสมาชิกใหม่</span>
-                                <p className="gl-card-desc">เชิญผู้ใช้เข้าร่วมทีมด้วย Username</p>
+                                <p className="gl-card-desc">เชิญผู้ใช้เข้าร่วมทีมด้วยนามแฝง (Alias)</p>
                                 <div className="gl-invite-input-group mt-3">
                                     <div className="gl-input-wrapper">
                                         <Search size={16} className="gl-input-icon" />
@@ -1646,7 +1646,7 @@ export default function TeamContent({ user }) {
                                             value={inviteUserNameInput}
                                             disabled={isTeamEditLocked}
                                             onChange={(e) => setInviteUserNameInput(e.target.value)}
-                                            placeholder="กรอก Username"
+                                            placeholder="กรอกนามแฝง (Alias)"
                                         />
                                     </div>
                                     <button className="gt-btn gt-btn-primary gl-fancy-btn" disabled={actionLoading || isTeamEditLocked || !inviteUserNameInput.trim()} onClick={handleInviteMember}>
@@ -2198,8 +2198,8 @@ export default function TeamContent({ user }) {
                                     <h4><User size={16} /> ข้อมูลบัญชี</h4>
                                     <div className="pf-form-grid" style={{ marginTop: 12 }}>
                                         <div className="pf-field">
-                                            <span className="pf-label">Username</span>
-                                            <input className="pf-input" value={profileData.userName || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, userName: e.target.value }))} placeholder="กรอก Username" />
+                                            <span className="pf-label">นามแฝง (Alias)</span>
+                                            <input className="pf-input" value={profileData.userName || ''} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, userName: e.target.value }))} placeholder="กรอกนามแฝง (Alias)" />
                                         </div>
                                         <div className="pf-field">
                                             <span className="pf-label">Email</span>
