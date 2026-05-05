@@ -330,8 +330,8 @@ function HomeShell({ children }) {
                             </div>
                             <div className="gt-footer-col">
                                 <h4>Follow us</h4>
-                                <a href="https://www.facebook.com/hackathonthailand" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Facebook size={16} /> Facebook
+                                <a href="https://www.facebook.com/bdihackathon" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Facebook size={16} /> BDI Hackathon
                                 </a>
                             </div>
                         </div>
