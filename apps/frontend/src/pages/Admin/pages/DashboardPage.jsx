@@ -78,6 +78,9 @@ export default function DashboardPage() {
   const { pushToast } = useAdminToast()
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [exportingSheet, setExportingSheet] = useState(false)
+  const [sheetExportModalOpen, setSheetExportModalOpen] = useState(false)
+  const [sheetStatuses, setSheetStatuses] = useState(['submitted', 'passed'])
   const [overview, setOverview] = useState(null)
   const [participationMode, setParticipationMode] = useState('weekly')
 
@@ -156,6 +159,61 @@ export default function DashboardPage() {
     }
   }, [pushToast])
 
+  const toggleSheetStatus = useCallback((status) => {
+    setSheetStatuses((prev) => {
+      if (prev.includes(status)) return prev.filter((item) => item !== status)
+      return [...prev, status]
+    })
+  }, [])
+
+  const handleExportSelectionSheet = useCallback(async () => {
+    if (sheetStatuses.length === 0) {
+      pushToast({ variant: 'warning', title: 'กรุณาเลือกสถานะทีมอย่างน้อย 1 สถานะ' })
+      return
+    }
+
+    try {
+      setExportingSheet(true)
+      const query = new URLSearchParams({ statuses: sheetStatuses.join(',') })
+      const response = await fetch(apiUrl(`/api/admin/exports/teams-selection-sheet?${query.toString()}`), {
+        credentials: 'include',
+      })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload?.message || 'ไม่สามารถ export ไฟล์คัดเลือกได้')
+      }
+
+      const blob = await response.blob()
+      const disposition = response.headers.get('content-disposition') || ''
+      const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+      const fileName = encodedName ? decodeURIComponent(encodedName) : `teams_selection_export_${Date.now()}.xlsx`
+
+      const downloadUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = downloadUrl
+      anchor.download = fileName
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(downloadUrl)
+
+      pushToast({
+        variant: 'success',
+        title: 'ส่งออกไฟล์คัดเลือกสำเร็จ',
+        description: `ดาวน์โหลดไฟล์แล้ว: ${fileName}`,
+      })
+      setSheetExportModalOpen(false)
+    } catch (error) {
+      pushToast({
+        variant: 'danger',
+        title: 'ส่งออกไฟล์คัดเลือกไม่สำเร็จ',
+        description: error?.message || 'ไม่สามารถ export ไฟล์คัดเลือกได้',
+      })
+    } finally {
+      setExportingSheet(false)
+    }
+  }, [pushToast, sheetStatuses])
+
   const statusCountMap = useMemo(
     () => new Map((overview?.statusCounts || []).map((item) => [item.status, item.count])),
     [overview],
@@ -226,7 +284,50 @@ export default function DashboardPage() {
           <Download size={15} />
           {exporting ? 'กำลังส่งออก...' : 'ส่งออกข้อมูลทีม'}
         </button>
+        <button
+          type="button"
+          className="admin-dash-v3-btn"
+          onClick={() => setSheetExportModalOpen(true)}
+          disabled={exportingSheet}
+        >
+          <Download size={15} />
+          {exportingSheet ? 'กำลังส่งออกไฟล์คัดเลือก...' : 'ส่งออกไฟล์คัดเลือก (XLSX)'}
+        </button>
       </section>
+
+      {sheetExportModalOpen ? (
+        <div className="admin-dash-v3-modal-layer" role="dialog" aria-modal="true">
+          <button type="button" className="admin-dash-v3-modal-backdrop" onClick={() => setSheetExportModalOpen(false)} />
+          <div className="admin-dash-v3-modal-card">
+            <h3>เลือกสถานะทีมที่ต้องการส่งออก</h3>
+            <div className="admin-dash-v3-status-list">
+              {Object.entries(statusMeta).map(([statusKey, meta]) => (
+                <label key={statusKey}>
+                  <input
+                    type="checkbox"
+                    checked={sheetStatuses.includes(statusKey)}
+                    onChange={() => toggleSheetStatus(statusKey)}
+                  />
+                  <span>{meta.label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="admin-dash-v3-modal-actions">
+              <button type="button" className="admin-dash-v3-btn" onClick={() => setSheetExportModalOpen(false)}>
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                className="admin-dash-v3-btn admin-dash-v3-btn-primary"
+                onClick={handleExportSelectionSheet}
+                disabled={exportingSheet || sheetStatuses.length === 0}
+              >
+                {exportingSheet ? 'กำลังส่งออก...' : 'ยืนยันส่งออก'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <section className="admin-dash-v3-panel">
         <header>

@@ -165,9 +165,28 @@ export interface ExportMemberDocumentRow {
 
 export interface ExportSubmissionFileRow {
     team_id: number;
+    team_submission_task_id: number | null;
+    task_name: string | null;
+    task_sort_order: number | null;
     file_storage_key: string;
     file_original_name: string;
     uploaded_at: Date;
+}
+
+export type ExportTeamStatus = 'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined' | 'disbanded';
+
+export interface ExportTeamsForSheetRow {
+    team_id: number;
+    team_code: string;
+    team_name_th: string | null;
+    team_name_en: string | null;
+    status: ExportTeamStatus;
+    current_leader_user_id: number | null;
+    leader_user_name: string | null;
+    video_link: string | null;
+    confirmation_deadline_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
 }
 
 export interface AdminSubmissionTaskRow {

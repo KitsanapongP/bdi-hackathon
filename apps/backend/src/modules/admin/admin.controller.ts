@@ -33,6 +33,7 @@ import {
     selectionTeamsQuerySchema,
     selectionResultSchema,
     updateGlobalSelectionDeadlineSchema,
+    exportTeamsSheetQuerySchema,
 } from './admin.schema.js';
 import * as service from './admin.service.js';
 import * as contentService from '../content/content.service.js';
@@ -1057,6 +1058,33 @@ export async function handleExportSubmittedVerificationBundle(req: FastifyReques
     try {
         const result = await service.exportSubmittedVerificationBundle(req.server.ctx.db);
         reply.header('Content-Type', 'application/zip');
+        reply.header('Content-Disposition', buildAttachmentHeader(result.fileName));
+        return reply.send(result.stream);
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleExportTeamsSheet(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = exportTeamsSheetQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'รูปแบบข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const statuses = String(parsed.data.statuses || '')
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean);
+        const host = String(req.headers.host || '').trim();
+        const protocol = req.protocol || 'https';
+        const publicBaseUrl = host ? `${protocol}://${host}` : '';
+        const result = await service.exportTeamsSelectionSheet(req.server.ctx.db, statuses, publicBaseUrl);
+        reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         reply.header('Content-Disposition', buildAttachmentHeader(result.fileName));
         return reply.send(result.stream);
     } catch (err) {

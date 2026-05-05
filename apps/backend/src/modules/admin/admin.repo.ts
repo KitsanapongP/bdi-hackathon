@@ -11,6 +11,8 @@ import type {
     DashboardTrendRow,
     ExportMemberDocumentRow,
     ExportSubmissionFileRow,
+    ExportTeamStatus,
+    ExportTeamsForSheetRow,
     ExportSubmittedTeamRow,
     ExportTeamAdvisorRow,
     ExportTeamMemberRow,
@@ -533,16 +535,59 @@ export async function getSubmissionFilesForExport(db: DB, teamIds: number[]): Pr
     const [rows] = await db.query<RowDataPacket[]>(`
         SELECT
             f.team_id,
+            f.team_submission_task_id,
+            st.task_name,
+            st.sort_order AS task_sort_order,
             f.file_storage_key,
             f.file_original_name,
             f.uploaded_at
         FROM team_submission_files f
+        LEFT JOIN team_submission_tasks tst
+          ON tst.team_submission_task_id = f.team_submission_task_id
+        LEFT JOIN submission_tasks st
+          ON st.submission_task_id = tst.submission_task_id
         WHERE f.team_id IN (${tokens.join(', ')})
           AND f.deleted_at IS NULL
-        ORDER BY f.team_id ASC, f.uploaded_at ASC, f.file_id ASC
+        ORDER BY f.team_id ASC, st.sort_order ASC, f.uploaded_at ASC, f.file_id ASC
     `, params);
 
     return rows as ExportSubmissionFileRow[];
+}
+
+export async function getTeamsForSheetExport(
+    db: DB,
+    statuses: ExportTeamStatus[],
+): Promise<ExportTeamsForSheetRow[]> {
+    if (statuses.length === 0) return [];
+
+    const params: Record<string, string> = {};
+    const tokens = statuses.map((status, idx) => {
+        const key = `status${idx}`;
+        params[key] = status;
+        return `:${key}`;
+    });
+
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT
+            t.team_id,
+            t.team_code,
+            t.team_name_th,
+            t.team_name_en,
+            t.status,
+            t.current_leader_user_id,
+            u.user_name AS leader_user_name,
+            t.video_link,
+            t.confirmation_deadline_at,
+            t.created_at,
+            t.updated_at
+        FROM team_teams t
+        LEFT JOIN user_users u ON u.user_id = t.current_leader_user_id
+        WHERE t.deleted_at IS NULL
+          AND t.status IN (${tokens.join(', ')})
+        ORDER BY t.team_id ASC
+    `, params);
+
+    return rows as ExportTeamsForSheetRow[];
 }
 
 export async function listSelectionTeams(

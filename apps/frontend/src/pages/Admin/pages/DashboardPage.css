@@ -44,6 +44,61 @@
   cursor: not-allowed;
 }
 
+.admin-dash-v3-modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-dash-v3-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 34, 60, 0.35);
+  border: 0;
+}
+
+.admin-dash-v3-modal-card {
+  position: relative;
+  width: min(560px, calc(100vw - 28px));
+  border-radius: 14px;
+  border: 1px solid #d7e2f0;
+  background: #fff;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  padding: 14px;
+}
+
+.admin-dash-v3-modal-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.admin-dash-v3-status-list {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-dash-v3-status-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e2ebf8;
+  border-radius: 10px;
+  padding: 8px;
+  background: #fbfdff;
+}
+
+.admin-dash-v3-modal-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .admin-dash-v3-panel {
   background: var(--dash-panel);
   border: 1px solid var(--dash-border);

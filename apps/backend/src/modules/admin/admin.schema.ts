@@ -201,6 +201,10 @@ export const selectionTeamsQuerySchema = z.object({
     status: z.enum(['forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined']).optional(),
 });
 
+export const exportTeamsSheetQuerySchema = z.object({
+    statuses: z.string().trim().min(1, 'กรุณาเลือกสถานะทีมอย่างน้อย 1 สถานะ'),
+});
+
 export const selectionResultSchema = z.object({
     status: z.enum(['passed', 'failed']),
 });

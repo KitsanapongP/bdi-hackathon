@@ -9,6 +9,7 @@ import type {
     ExportMemberDocumentRow,
     ExportSubmissionFileRow,
     ExportSubmittedTeamRow,
+    ExportTeamStatus,
     ExportTeamAdvisorRow,
     ExportTeamMemberRow,
     SelectionTeamRow,
@@ -22,6 +23,7 @@ import archiver from 'archiver';
 import { createTeamAuditLog } from '../teams/teams.repo.js';
 import { triggerNotificationEvent } from '../notifications/notifications.service.js';
 import * as contentService from '../content/content.service.js';
+import { buildMemberDocumentBundleStorageKey, getOrCreateReviewShareId } from '../public-review/public-review.service.js';
 
 const GLOBAL_SELECTION_CONFIRM_OPEN_AT_KEY = 'GLOBAL_SELECTION_CONFIRM_OPEN_AT';
 const GLOBAL_SELECTION_CONFIRM_CLOSE_AT_KEY = 'GLOBAL_SELECTION_CONFIRM_CLOSE_AT';
@@ -31,6 +33,38 @@ interface TeamExportBundle {
     team: ExportSubmittedTeamRow;
     advisors: ExportTeamAdvisorRow[];
     members: ExportTeamMemberRow[];
+}
+
+const TEAM_STATUS_SET = new Set<ExportTeamStatus>([
+    'forming',
+    'submitted',
+    'passed',
+    'failed',
+    'confirmed',
+    'not_joined',
+    'disbanded',
+]);
+
+function normalizeStatuses(values: string[]): ExportTeamStatus[] {
+    const uniqueStatuses: ExportTeamStatus[] = [];
+    for (const value of values) {
+        const status = String(value || '').trim() as ExportTeamStatus;
+        if (!TEAM_STATUS_SET.has(status)) continue;
+        if (uniqueStatuses.includes(status)) continue;
+        uniqueStatuses.push(status);
+    }
+    return uniqueStatuses;
+}
+
+function buildPublicReviewUrl(baseUrl: string, shareId: string): string {
+    const safeBase = String(baseUrl || '').replace(/\/$/, '');
+    return `${safeBase}/api/public-review/files/${shareId}`;
+}
+
+function pickMemberDisplayName(member: ExportTeamMemberRow): string {
+    const th = `${member.first_name_th || ''} ${member.last_name_th || ''}`.trim();
+    const en = `${member.first_name_en || ''} ${member.last_name_en || ''}`.trim();
+    return th || en || member.user_name || `user-${member.user_id}`;
 }
 
 function toAllowlistResponse(row: any): AllowlistResponse {
@@ -658,6 +692,249 @@ export async function exportSubmittedVerificationBundle(db: DB): Promise<{ fileN
     const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
     return {
         fileName: `verification_export_${timestamp}.zip`,
+        stream: output,
+    };
+}
+
+export async function exportTeamsSelectionSheet(
+    db: DB,
+    inputStatuses: string[],
+    publicBaseUrl: string,
+): Promise<{ fileName: string; stream: PassThrough }> {
+    const statuses = normalizeStatuses(inputStatuses);
+    if (statuses.length === 0) {
+        throw new BadRequestError('กรุณาเลือกสถานะทีมอย่างน้อย 1 สถานะ');
+    }
+
+    const teams = await repo.getTeamsForSheetExport(db, statuses);
+    if (teams.length === 0) {
+        throw new NotFoundError('ไม่พบข้อมูลทีมตามสถานะที่เลือก');
+    }
+
+    const teamIds = teams.map((team) => team.team_id);
+    const [advisors, members, memberDocuments, submissionFiles] = await Promise.all([
+        repo.getTeamAdvisorsForExport(db, teamIds),
+        repo.getTeamMembersForExport(db, teamIds),
+        repo.getMemberDocumentsForExport(db, teamIds),
+        repo.getSubmissionFilesForExport(db, teamIds),
+    ]);
+
+    const advisorsByTeam = new Map<number, ExportTeamAdvisorRow[]>();
+    const membersByTeam = new Map<number, ExportTeamMemberRow[]>();
+    const submissionFilesByTeam = new Map<number, ExportSubmissionFileRow[]>();
+    const documentsByTeam = new Map<number, ExportMemberDocumentRow[]>();
+
+    for (const row of advisors) {
+        const bucket = advisorsByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        advisorsByTeam.set(row.team_id, bucket);
+    }
+    for (const row of members) {
+        const bucket = membersByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        membersByTeam.set(row.team_id, bucket);
+    }
+    for (const row of submissionFiles) {
+        const bucket = submissionFilesByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        submissionFilesByTeam.set(row.team_id, bucket);
+    }
+    for (const row of memberDocuments) {
+        const bucket = documentsByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        documentsByTeam.set(row.team_id, bucket);
+    }
+
+    const memberNameToTeamSet = new Map<string, Set<number>>();
+    for (const member of members) {
+        const normalized = pickMemberDisplayName(member).trim().toLowerCase().replace(/\s+/g, ' ');
+        if (!normalized) continue;
+        const bucket = memberNameToTeamSet.get(normalized) ?? new Set<number>();
+        bucket.add(member.team_id);
+        memberNameToTeamSet.set(normalized, bucket);
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('teams_selection_export');
+    const maxSubmissionFiles = Math.max(0, ...teams.map((team) => (submissionFilesByTeam.get(team.team_id) ?? []).length));
+    const maxVideoLinks = Math.max(0, ...teams.map((team) => (team.video_link ? 1 : 0)));
+
+    const baseColumns: Array<{ header: string; key: string; width: number }> = [
+        { header: 'team_id', key: 'team_id', width: 12 },
+        { header: 'team_code', key: 'team_code', width: 14 },
+        { header: 'team_name_th', key: 'team_name_th', width: 26 },
+        { header: 'team_name_en', key: 'team_name_en', width: 26 },
+        { header: 'team_status', key: 'team_status', width: 14 },
+    ];
+
+    const memberColumns: Array<{ header: string; key: string; width: number }> = [];
+    for (let index = 1; index <= 5; index += 1) {
+        memberColumns.push(
+            { header: `member_${index}_name`, key: `member_${index}_name`, width: 24 },
+            { header: `member_${index}_profile`, key: `member_${index}_profile`, width: 34 },
+            { header: `member_${index}_document_link`, key: `member_${index}_document_link`, width: 30 },
+        );
+    }
+
+    const videoColumns = Array.from({ length: maxVideoLinks }).map((_, index) => ({
+        header: `video_link_${index + 1}`,
+        key: `video_link_${index + 1}`,
+        width: 30,
+    }));
+    const submissionColumns = Array.from({ length: maxSubmissionFiles }).map((_, index) => ({
+        header: `submission_file_${index + 1}`,
+        key: `submission_file_${index + 1}`,
+        width: 44,
+    }));
+
+    const tailColumns: Array<{ header: string; key: string; width: number }> = [
+        { header: 'leader_user_name', key: 'leader_user_name', width: 24 },
+        { header: 'member_count', key: 'member_count', width: 12 },
+        { header: 'advisor_names', key: 'advisor_names', width: 26 },
+        { header: 'advisor_contacts', key: 'advisor_contacts', width: 28 },
+        { header: 'duplicate_member_flag', key: 'duplicate_member_flag', width: 16 },
+        { header: 'created_at', key: 'created_at', width: 20 },
+        { header: 'updated_at', key: 'updated_at', width: 20 },
+    ];
+
+    sheet.columns = [...baseColumns, ...videoColumns, ...submissionColumns, ...memberColumns, ...tailColumns];
+
+    const hyperlinkStyle: Partial<ExcelJS.Font> = {
+        color: { argb: 'FF0563C1' },
+        underline: true,
+    };
+
+    for (const team of teams) {
+        const teamMembers = [...(membersByTeam.get(team.team_id) ?? [])].sort((a, b) => a.member_order - b.member_order);
+        const teamAdvisors = advisorsByTeam.get(team.team_id) ?? [];
+        const teamSubmissionFiles = submissionFilesByTeam.get(team.team_id) ?? [];
+        const teamDocuments = documentsByTeam.get(team.team_id) ?? [];
+        const leader = teamMembers.find((member) => member.role === 'leader') || teamMembers[0] || null;
+        const leaderDisplayName = leader ? pickMemberDisplayName(leader) : (team.leader_user_name || '');
+        const hasDuplicate = teamMembers.some((member) => {
+            const normalized = pickMemberDisplayName(member).trim().toLowerCase().replace(/\s+/g, ' ');
+            if (!normalized) return false;
+            return (memberNameToTeamSet.get(normalized)?.size || 0) > 1;
+        });
+
+        const docsByUser = new Map<number, ExportMemberDocumentRow[]>();
+        for (const doc of teamDocuments) {
+            const bucket = docsByUser.get(doc.user_id) ?? [];
+            bucket.push(doc);
+            docsByUser.set(doc.user_id, bucket);
+        }
+
+        const row = sheet.addRow({
+            team_id: team.team_id,
+            team_code: team.team_code,
+            team_name_th: team.team_name_th || '',
+            team_name_en: team.team_name_en || '',
+            team_status: team.status,
+            leader_user_name: leaderDisplayName,
+            member_count: teamMembers.length,
+            advisor_names: teamAdvisors.map((advisor) => buildAdvisorDisplayNameTh(advisor) || buildAdvisorDisplayNameEn(advisor)).filter(Boolean).join(', '),
+            advisor_contacts: teamAdvisors
+                .map((advisor) => [advisor.email || '', advisor.phone || ''].filter(Boolean).join(' / '))
+                .filter(Boolean)
+                .join(', '),
+            duplicate_member_flag: hasDuplicate ? 'YES' : 'NO',
+            created_at: formatDateTime(team.created_at),
+            updated_at: formatDateTime(team.updated_at),
+        });
+
+        row.getCell('advisor_names').alignment = { wrapText: true, vertical: 'top' };
+        row.getCell('advisor_contacts').alignment = { wrapText: true, vertical: 'top' };
+
+        for (let index = 0; index < 5; index += 1) {
+            const member = teamMembers[index] || null;
+            const nameKey = `member_${index + 1}_name`;
+            const profileKey = `member_${index + 1}_profile`;
+            const docKey = `member_${index + 1}_document_link`;
+
+            if (!member) {
+                row.getCell(nameKey).value = '';
+                row.getCell(profileKey).value = '';
+                row.getCell(docKey).value = '';
+                continue;
+            }
+
+            row.getCell(nameKey).value = pickMemberDisplayName(member);
+            row.getCell(profileKey).value = [
+                `Email: ${member.email || '-'}`,
+                `Phone: ${member.phone || '-'}`,
+                `Institution: ${member.institution_name_th || member.institution_name_en || '-'}`,
+                `Gender: ${member.gender || '-'}`,
+                `Home Province: ${member.home_province || '-'}`,
+                `Education: ${member.education_level || '-'}`,
+            ].join('\n');
+            row.getCell(profileKey).alignment = { wrapText: true, vertical: 'top' };
+
+            const memberDocs = [...(docsByUser.get(member.user_id) ?? [])].sort(
+                (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime(),
+            );
+            if (memberDocs.length > 0) {
+                const shareId = await getOrCreateReviewShareId(db, {
+                    storageKey: buildMemberDocumentBundleStorageKey(team.team_id, member.user_id),
+                    fileKind: 'member_document',
+                    fileOriginalName: `member_docs_bundle_team_${team.team_id}_member_${member.user_id}.pdf`,
+                });
+                const label = `Open ID Bundle (${memberDocs.length} files)`;
+                const docCell = row.getCell(docKey);
+                docCell.value = {
+                    text: label,
+                    hyperlink: buildPublicReviewUrl(publicBaseUrl, shareId),
+                };
+                docCell.font = hyperlinkStyle;
+            } else {
+                row.getCell(docKey).value = '';
+            }
+        }
+
+        if (maxVideoLinks > 0) {
+            const videoKey = 'video_link_1';
+            if (team.video_link) {
+                const videoCell = row.getCell(videoKey);
+                videoCell.value = { text: 'Open Video', hyperlink: team.video_link };
+                videoCell.font = hyperlinkStyle;
+            }
+        }
+
+        for (let index = 0; index < maxSubmissionFiles; index += 1) {
+            const file = teamSubmissionFiles[index];
+            const key = `submission_file_${index + 1}`;
+            if (!file) {
+                row.getCell(key).value = '';
+                continue;
+            }
+            const shareId = await getOrCreateReviewShareId(db, {
+                storageKey: file.file_storage_key,
+                fileKind: 'submission_file',
+                fileOriginalName: file.file_original_name,
+            });
+            const taskName = (file.task_name || 'Untitled Task').trim();
+            const cell = row.getCell(key);
+            cell.value = {
+                text: `Task: ${taskName} - File ${index + 1}: ${file.file_original_name}`,
+                hyperlink: buildPublicReviewUrl(publicBaseUrl, shareId),
+            };
+            cell.font = hyperlinkStyle;
+            cell.alignment = { wrapText: true, vertical: 'top' };
+        }
+
+        row.height = 108;
+    }
+
+    sheet.getRow(1).font = { bold: true };
+
+    const output = new PassThrough();
+    void (async () => {
+        await workbook.xlsx.write(output);
+        output.end();
+    })();
+
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
+    return {
+        fileName: `teams_selection_export_${timestamp}.xlsx`,
         stream: output,
     };
 }

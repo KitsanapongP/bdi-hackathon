@@ -25,6 +25,7 @@ import { submissionsRoutes } from './modules/submissions/submissions.routes.js';
 import { notificationsRoutes } from './modules/notifications/notifications.routes.js';
 import { privilegesRoutes } from './modules/privileges/privileges.routes.js';
 import { cronRoutes } from './modules/cron/cron.routes.js';
+import { publicReviewRoutes } from './modules/public-review/public-review.routes.js';
 import { AppError } from './shared/errors.js';
 
 export type AppContext = { env: Env; db: DB };
@@ -184,6 +185,7 @@ export function buildApp(ctx: AppContext) {
   app.register(notificationsRoutes, { prefix: '/api/notifications' });
   app.register(privilegesRoutes, { prefix: '/api/privileges' });
   app.register(cronRoutes, { prefix: '/api/cron' });
+  app.register(publicReviewRoutes, { prefix: '/api/public-review' });
 
   // Log incoming request body
   app.addHook('preHandler', async (request, reply) => {
