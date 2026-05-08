@@ -90,11 +90,11 @@ export default function SubmissionTasksPage() {
     allowedExtensions: '.pdf,.pptx,.zip',
     deadlineAt: '',
     isSubmissionOpen: true,
-    teamStatuses: ['submitted'],
+    teamStatuses: [],
     teamIds: [],
   })
 
-  const hasAssignmentTargets = form.teamStatuses.length > 0 || form.teamIds.length > 0
+  const hasAssignmentTargets = form.teamIds.length > 0
 
   const resetForm = useCallback(() => {
     setEditingTaskId(null)
@@ -111,7 +111,7 @@ export default function SubmissionTasksPage() {
       allowedExtensions: '.pdf,.pptx,.zip',
       deadlineAt: '',
       isSubmissionOpen: true,
-      teamStatuses: ['submitted'],
+      teamStatuses: [],
       teamIds: [],
     })
   }, [])
@@ -216,11 +216,14 @@ export default function SubmissionTasksPage() {
 
   const filteredTeamOptions = useMemo(() => {
     const keyword = teamSearch.trim().toLowerCase()
-    if (!keyword) return teamOptions.slice(0, 180)
-    return teamOptions
+    const filteredByStatus = form.teamStatuses.length
+      ? teamOptions.filter((item) => form.teamStatuses.includes(item.status))
+      : teamOptions
+    if (!keyword) return filteredByStatus.slice(0, 180)
+    return filteredByStatus
       .filter((item) => `${item.teamCode} ${item.teamName} ${item.status}`.toLowerCase().includes(keyword))
       .slice(0, 180)
-  }, [teamOptions, teamSearch])
+  }, [form.teamStatuses, teamOptions, teamSearch])
 
   const assignedTeamIdSet = useMemo(() => {
     const set = new Set()
@@ -238,6 +241,13 @@ export default function SubmissionTasksPage() {
   const filteredUnassignedTeams = useMemo(
     () => filteredTeamOptions.filter((item) => !assignedTeamIdSet.has(String(item.teamId))),
     [assignedTeamIdSet, filteredTeamOptions],
+  )
+
+  const selectableTeams = editingTaskId ? filteredUnassignedTeams : filteredTeamOptions
+
+  const allFilteredSelected = useMemo(
+    () => selectableTeams.length > 0 && selectableTeams.every((item) => form.teamIds.includes(String(item.teamId))),
+    [form.teamIds, selectableTeams],
   )
 
   const startEdit = async (row) => {
@@ -464,6 +474,28 @@ export default function SubmissionTasksPage() {
     })
   }
 
+  const toggleSelectAllFiltered = () => {
+    setForm((prev) => {
+      const filteredTeamIds = selectableTeams.map((item) => String(item.teamId))
+      if (!filteredTeamIds.length) return prev
+
+      const isAllSelected = filteredTeamIds.every((teamId) => prev.teamIds.includes(teamId))
+      if (isAllSelected) {
+        return {
+          ...prev,
+          teamIds: prev.teamIds.filter((teamId) => !filteredTeamIds.includes(teamId)),
+        }
+      }
+
+      const next = new Set(prev.teamIds)
+      filteredTeamIds.forEach((teamId) => next.add(teamId))
+      return {
+        ...prev,
+        teamIds: Array.from(next),
+      }
+    })
+  }
+
   return (
     <div className="admin-ui-stack stp-page">
       <PageHeader
@@ -557,7 +589,9 @@ export default function SubmissionTasksPage() {
                           <span>{getTypeLabel(row.taskType)}</span>
                           <span>{row.isRequired ? 'บังคับส่ง' : 'ไม่บังคับ'}</span>
                           <span>{row.isDefault ? 'งานตั้งต้นทีมใหม่' : 'งานเฉพาะทีมที่มอบหมาย'}</span>
-                          <span>{row.isEnabled ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}</span>
+                          <span className={`stp-status-pill ${row.isEnabled ? 'enabled' : 'disabled'}`}>
+                            {row.isEnabled ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                          </span>
                         </div>
                         {row.description ? <p>{row.description}</p> : null}
                         <small>กำหนดส่ง: {formatDateTime(row.deadlineAt)} | มอบหมายแล้ว {row.assignedTeamCount || 0} ทีม</small>
@@ -656,15 +690,15 @@ export default function SubmissionTasksPage() {
                 />
                 <span>เปิดให้ส่งได้ทันทีหลังมอบหมาย</span>
               </label>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={form.isEnabled}
-                  onChange={(event) => setForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
-                />
-                <span>เปิดใช้งานงานนี้</span>
-              </label>
             </div>
+            <label className="check stp-enabled-row full">
+              <span>เปิดใช้งานงานนี้</span>
+              <span className={`stp-switch ${form.isEnabled ? 'on' : 'off'}`}>
+                <input type="checkbox" checked={form.isEnabled} onChange={(event) => setForm((prev) => ({ ...prev, isEnabled: event.target.checked }))} />
+                <span className="stp-switch-track" />
+                <small>{form.isEnabled ? 'ON' : 'OFF'}</small>
+              </span>
+            </label>
             {editingTaskId ? <small>การเปลี่ยนสถานะงานตั้งต้น ทำได้เฉพาะตอนสร้างงานใหม่</small> : null}
 
             {form.taskType === 'file' ? (
@@ -699,6 +733,9 @@ export default function SubmissionTasksPage() {
               </div>
               <button type="button" className="admin-ui-btn" onClick={() => setForm((prev) => ({ ...prev, teamIds: [] }))} disabled={!form.teamIds.length}>
                 ล้างทีมที่เลือก
+              </button>
+              <button type="button" className="admin-ui-btn" onClick={toggleSelectAllFiltered} disabled={!selectableTeams.length}>
+                {allFilteredSelected ? 'ยกเลิกทั้งหมดในผลกรอง' : 'ติ๊กทั้งหมดในผลกรอง'}
               </button>
             </div>
 
