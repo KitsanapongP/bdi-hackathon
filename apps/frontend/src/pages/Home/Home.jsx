@@ -50,7 +50,7 @@ const config = {
         primary: '#7c3aed',
     },
     locale: {
-        nav: ['หน้าแรก', 'เกี่ยวกับ', 'ภาคีเครือข่าย', 'กำหนดการกิจกรรม', 'สถานที่จัดงาน', 'ตัวอย่างชุดข้อมูล', 'ลงทะเบียน'],
+        nav: ['หน้าแรก', 'เกี่ยวกับ', 'ภาคีเครือข่าย', 'กำหนดการกิจกรรม', 'สถานที่จัดงาน', 'ตัวอย่างชุดข้อมูล', 'คำถามที่พบบ่อย', 'ลงทะเบียน'],
         heroBadge: '🏆 BDI Young Innovator Hackathon',
         heroTitle: 'สถาบันข้อมูลขนาดใหญ่ (องค์การมหาชน) ร่วมกับวิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น\nขอเชิญนักเรียน นิสิต และนักศึกษา เข้าร่วมการแข่งขัน BDI Young Innovator Hackathon\nชิงถ้วยพระราชทาน สมเด็จพระกนิษฐาธิราชเจ้า กรมสมเด็จพระเทพรัตนราชสุดา ฯ สยามบรมราชกุมารี',
         ctaPrimary: 'ลงทะเบียนเลย',
@@ -1300,7 +1300,7 @@ function HomePage() {
         return () => clearTimeout(timer);
     }, [location.state?.scrollTo]);
 
-    const sectionIds = ['hero', 'about', null, 'schedule', null, null, 'register'];
+    const sectionIds = ['hero', 'about', null, 'schedule', null, null, null, 'register'];
 
     return (
         <div className="gt-page">
@@ -1354,7 +1354,7 @@ function HomePage() {
                     </a>
                     <div className="gt-pill-links">
                         {config.locale.nav.map((label, i) => {
-                            if (i === 6 && user) return null; // hide ลงทะเบียน when logged in
+                            if (i === 7 && user) return null; // hide ลงทะเบียน when logged in
 
                             const handleNavClick = () => {
                                 if (i === 1) {
@@ -1378,6 +1378,11 @@ function HomePage() {
                                 }
 
                                 if (i === 6) {
+                                    navigate('/home/faqs');
+                                    return;
+                                }
+
+                                if (i === 7) {
                                     navigate('/home/register');
                                     return;
                                 }
@@ -1430,7 +1435,7 @@ function HomePage() {
                 <div className={`gt-pill-collapse ${mobileOpen ? 'open' : ''}`}>
                     <div className="gt-pill-collapse-inner">
                         {config.locale.nav.map((label, i) => {
-                            const isRegister = i === 6;
+                            const isRegister = i === 7;
                             if (isRegister && user) {
                                 return (
                                     <button key={i} className="gt-collapse-link" onClick={() => { setShowLobby(true); setShowProfile(false); setMobileOpen(false); window.scrollTo(0, 0); }}>
@@ -1465,6 +1470,12 @@ function HomePage() {
                                 }
 
                                 if (i === 6) {
+                                    navigate('/home/faqs');
+                                    setMobileOpen(false);
+                                    return;
+                                }
+
+                                if (i === 7) {
                                     navigate('/home/register');
                                     setMobileOpen(false);
                                     return;
@@ -1534,6 +1545,9 @@ function HomePage() {
                             </button>
                             <button className="gt-btn gt-btn-secondary" onClick={() => scrollTo('schedule')}>
                                 {config.locale.ctaSecondary}
+                            </button>
+                            <button className="gt-btn gt-btn-secondary" onClick={() => navigate('/home/faqs')}>
+                                คำถามที่พบบ่อย
                             </button>
                         </div>
                     </section>
