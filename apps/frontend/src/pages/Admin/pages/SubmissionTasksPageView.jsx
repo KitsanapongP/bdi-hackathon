@@ -789,7 +789,7 @@ export default function SubmissionTasksPage() {
               type="button"
               className="admin-ui-btn admin-ui-btn-primary"
               onClick={saveTask}
-              disabled={saving || !form.taskName.trim() || (!editingTaskId && !hasAssignmentTargets)}
+              disabled={saving || !form.taskName.trim() || (!editingTaskId && !form.isDefault && !hasAssignmentTargets)}
             >
               <Save size={14} />
               {saving ? 'กำลังบันทึก...' : editingTaskId ? 'บันทึกการแก้ไข' : 'สร้างงานและมอบหมาย'}
