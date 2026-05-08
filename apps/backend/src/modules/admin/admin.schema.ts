@@ -224,13 +224,14 @@ export const createSubmissionTaskSchema = z.object({
     taskType: submissionTaskTypeEnum,
     stage: submissionTaskStageEnum.optional(),
     isRequired: z.boolean().optional(),
+    isDefault: z.boolean().optional(),
     allowedExtensions: z.string().trim().nullable().optional(),
     sortOrder: z.number().int().min(0).optional(),
     deadlineAt: z.string().trim().nullable().optional(),
     isSubmissionOpen: z.boolean().optional(),
     teamIds: z.array(z.number().int().positive()).optional(),
     teamStatuses: z.array(submissionTaskTeamStatusEnum).optional(),
-}).refine((value) => (value.teamIds?.length ?? 0) > 0 || (value.teamStatuses?.length ?? 0) > 0, {
+}).refine((value) => Boolean(value.isDefault) || (value.teamIds?.length ?? 0) > 0 || (value.teamStatuses?.length ?? 0) > 0, {
     message: 'กรุณาระบุทีมเป้าหมายอย่างน้อย 1 ทีม หรือ 1 สถานะทีม',
     path: ['teamIds'],
 });

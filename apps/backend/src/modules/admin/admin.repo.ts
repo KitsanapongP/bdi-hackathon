@@ -776,6 +776,7 @@ export async function createSubmissionTaskAdmin(
         taskType: 'link' | 'file';
         stage: 'pre_selection' | 'training' | 'onsite';
         isRequired: boolean;
+        isDefault: boolean;
         allowedExtensions: string | null;
         sortOrder: number;
         deadlineAt: string | null;
@@ -785,13 +786,14 @@ export async function createSubmissionTaskAdmin(
     const [result] = await db.query<ResultSetHeader>(
         `INSERT INTO submission_tasks
             (task_name, description, task_type, stage, is_required, allowed_extensions, sort_order, deadline_at, is_enabled, is_default, created_by_user_id)
-         VALUES (:taskName, :description, :taskType, :stage, :isRequired, :allowedExtensions, :sortOrder, :deadlineAt, 1, 0, :createdByUserId)`,
+         VALUES (:taskName, :description, :taskType, :stage, :isRequired, :allowedExtensions, :sortOrder, :deadlineAt, 1, :isDefault, :createdByUserId)`,
         {
             taskName: data.taskName,
             description: data.description,
             taskType: data.taskType,
             stage: data.stage,
             isRequired: data.isRequired ? 1 : 0,
+            isDefault: data.isDefault ? 1 : 0,
             allowedExtensions: data.allowedExtensions,
             sortOrder: data.sortOrder,
             deadlineAt: data.deadlineAt,

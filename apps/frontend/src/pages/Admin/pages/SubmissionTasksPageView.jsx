@@ -85,6 +85,7 @@ export default function SubmissionTasksPage() {
     taskType: 'link',
     stage: 'pre_selection',
     isRequired: false,
+    isDefault: false,
     isEnabled: true,
     allowedExtensions: '.pdf,.pptx,.zip',
     deadlineAt: '',
@@ -105,6 +106,7 @@ export default function SubmissionTasksPage() {
       taskType: 'link',
       stage: 'pre_selection',
       isRequired: false,
+      isDefault: false,
       isEnabled: true,
       allowedExtensions: '.pdf,.pptx,.zip',
       deadlineAt: '',
@@ -248,6 +250,7 @@ export default function SubmissionTasksPage() {
       taskType: row.taskType || 'link',
       stage: row.stage || 'pre_selection',
       isRequired: Boolean(row.isRequired),
+      isDefault: Boolean(row.isDefault),
       isEnabled: row.isEnabled !== false,
       allowedExtensions: row.allowedExtensions || '.pdf,.pptx,.zip',
       deadlineAt: formatDateInput(row.deadlineAt),
@@ -264,7 +267,7 @@ export default function SubmissionTasksPage() {
       return
     }
 
-    if (!editingTaskId && !hasAssignmentTargets) {
+    if (!editingTaskId && !form.isDefault && !hasAssignmentTargets) {
       pushToast({ type: 'error', title: 'กรุณาเลือกทีมอย่างน้อย 1 กลุ่มหรือ 1 ทีม' })
       return
     }
@@ -278,6 +281,7 @@ export default function SubmissionTasksPage() {
         taskType: form.taskType,
         stage: form.stage,
         isRequired: form.isRequired,
+        isDefault: form.isDefault,
         allowedExtensions: form.taskType === 'file' ? form.allowedExtensions : null,
         deadlineAt: form.deadlineAt || null,
         isEnabled: Boolean(form.isEnabled),
@@ -552,6 +556,7 @@ export default function SubmissionTasksPage() {
                           <span>{getStageLabel(row.stage)}</span>
                           <span>{getTypeLabel(row.taskType)}</span>
                           <span>{row.isRequired ? 'บังคับส่ง' : 'ไม่บังคับ'}</span>
+                          <span>{row.isDefault ? 'งานตั้งต้นทีมใหม่' : 'งานเฉพาะทีมที่มอบหมาย'}</span>
                           <span>{row.isEnabled ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}</span>
                         </div>
                         {row.description ? <p>{row.description}</p> : null}
@@ -637,6 +642,15 @@ export default function SubmissionTasksPage() {
               <label className="check">
                 <input
                   type="checkbox"
+                  checked={form.isDefault}
+                  onChange={(event) => setForm((prev) => ({ ...prev, isDefault: event.target.checked }))}
+                  disabled={Boolean(editingTaskId)}
+                />
+                <span>ตั้งเป็นงานตั้งต้นสำหรับทีมใหม่</span>
+              </label>
+              <label className="check">
+                <input
+                  type="checkbox"
                   checked={form.isSubmissionOpen}
                   onChange={(event) => setForm((prev) => ({ ...prev, isSubmissionOpen: event.target.checked }))}
                 />
@@ -651,6 +665,7 @@ export default function SubmissionTasksPage() {
                 <span>เปิดใช้งานงานนี้</span>
               </label>
             </div>
+            {editingTaskId ? <small>การเปลี่ยนสถานะงานตั้งต้น ทำได้เฉพาะตอนสร้างงานใหม่</small> : null}
 
             {form.taskType === 'file' ? (
               <label>
@@ -661,7 +676,13 @@ export default function SubmissionTasksPage() {
           </div>
 
           <div className="stp-target-box">
-            <strong>{editingTaskId ? 'มอบหมายเพิ่ม (ไม่ลบทีมเดิม)' : 'เลือกทีมที่จะมอบหมายงาน'}</strong>
+            <strong>
+              {editingTaskId
+                ? 'มอบหมายเพิ่ม (ไม่ลบทีมเดิม)'
+                : form.isDefault
+                  ? 'เลือกทีมที่จะมอบหมายงานตอนนี้ (ไม่เลือกก็ได้ เพราะทีมใหม่จะได้อัตโนมัติ)'
+                  : 'เลือกทีมที่จะมอบหมายงาน'}
+            </strong>
 
             <div className="stp-chip-row">
               {ASSIGN_STATUS_OPTIONS.map((status) => (

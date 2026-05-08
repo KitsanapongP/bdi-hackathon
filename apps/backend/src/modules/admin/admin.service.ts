@@ -1137,6 +1137,7 @@ export async function createSubmissionTaskAdmin(
         taskType: 'link' | 'file';
         stage?: 'pre_selection' | 'training' | 'onsite' | undefined;
         isRequired?: boolean | undefined;
+        isDefault?: boolean | undefined;
         allowedExtensions?: string | null | undefined;
         sortOrder?: number | undefined;
         deadlineAt?: string | null | undefined;
@@ -1148,7 +1149,7 @@ export async function createSubmissionTaskAdmin(
 ) {
     const mergedTeamIds = await resolveTeamIdsForSubmissionTaskAssignment(db, input);
 
-    if (mergedTeamIds.length === 0) {
+    if (!input.isDefault && mergedTeamIds.length === 0) {
         throw new BadRequestError('ไม่พบทีมที่ตรงกับเงื่อนไขสำหรับ assign งาน');
     }
 
@@ -1163,6 +1164,7 @@ export async function createSubmissionTaskAdmin(
         taskType: input.taskType,
         stage: input.stage ?? 'pre_selection',
         isRequired: Boolean(input.isRequired),
+        isDefault: Boolean(input.isDefault),
         allowedExtensions,
         sortOrder: Number.isFinite(Number(input.sortOrder)) ? Math.trunc(Number(input.sortOrder)) : 0,
         deadlineAt: normalizedDeadline,
@@ -1174,13 +1176,15 @@ export async function createSubmissionTaskAdmin(
     const teamIdsToAssign = mergedTeamIds.filter((teamId) => !existingAssignedSet.has(teamId));
 
     const assignedSource = (input.teamStatuses?.length ?? 0) > 0 ? 'admin_status' : 'admin_team';
-    const assignedCount = await repo.bulkAssignSubmissionTaskToTeamsAdmin(db, {
-        submissionTaskId,
-        assignedByUserId: adminUserId,
-        assignedSource,
-        isSubmissionOpen: input.isSubmissionOpen ?? true,
-        teamIds: teamIdsToAssign,
-    });
+    const assignedCount = teamIdsToAssign.length > 0
+        ? await repo.bulkAssignSubmissionTaskToTeamsAdmin(db, {
+            submissionTaskId,
+            assignedByUserId: adminUserId,
+            assignedSource,
+            isSubmissionOpen: input.isSubmissionOpen ?? true,
+            teamIds: teamIdsToAssign,
+        })
+        : 0;
 
     const created = await repo.getSubmissionTaskByIdAdmin(db, submissionTaskId);
     if (!created) {
