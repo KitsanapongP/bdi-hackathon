@@ -2259,11 +2259,8 @@ export default function TeamContent({ user }) {
                                         <div className="pf-field full">
                                             <span className="pf-label">ระดับการศึกษา</span>
                                             <select className="pf-input" value={profileData.educationLevel || 'bachelor'} disabled={!canEditGeneralInfo || profileSaving} onChange={(e) => setProfileData((d) => ({ ...d, educationLevel: e.target.value }))}>
-                                                <option value="secondary">ม.ต้น</option>
-                                                <option value="high_school">ม.ปลาย</option>
-                                                <option value="bachelor">ป.ตรี</option>
-                                                <option value="master">ป.โท</option>
-                                                <option value="doctorate">ป.เอก</option>
+                                                <option value="high_school">มัธยมศึกษาตอนปลาย</option>
+                                                <option value="bachelor">ปริญญาตรี</option>
                                             </select>
                                         </div>
                                         <div className="pf-field">
