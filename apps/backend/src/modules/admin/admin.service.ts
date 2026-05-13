@@ -514,7 +514,7 @@ async function buildTeamWorkbookBuffer(bundle: TeamExportBundle): Promise<Buffer
         team_id: bundle.team.team_id,
         team_code: bundle.team.team_code,
         team_name_th: bundle.team.team_name_th,
-        team_name_en: bundle.team.team_name_en,
+        team_name_en: bundle.team.team_name_th,
         team_status: bundle.team.status,
         visibility: bundle.team.visibility,
         leader_user_id: bundle.team.current_leader_user_id,
@@ -536,7 +536,7 @@ async function buildTeamWorkbookBuffer(bundle: TeamExportBundle): Promise<Buffer
             team_id: member.team_id,
             team_code: member.team_code,
             team_name_th: member.team_name_th,
-            team_name_en: member.team_name_en,
+            team_name_en: member.team_name_th,
             team_status: member.team_status,
             user_id: member.user_id,
             user_name: member.user_name,
@@ -628,7 +628,7 @@ export async function exportSubmittedVerificationBundle(db: DB): Promise<{ fileN
 
     for (const team of teams) {
         const exportFolderName = sanitizeFileSegment(
-            `${team.team_code}_${team.team_name_th || team.team_name_en || `team-${team.team_id}`}`,
+            `${team.team_code}_${team.team_name_th || `team-${team.team_id}`}`,
             `team_${team.team_id}`,
         );
         const bundle: TeamExportBundle = {
@@ -681,7 +681,7 @@ export async function exportSubmittedVerificationBundle(db: DB): Promise<{ fileN
 
         const workbookBuffer = await buildTeamWorkbookBuffer(bundle);
         const xlsxName = `${sanitizeFileSegment(
-            `${team.team_code}_${team.team_name_th || team.team_name_en || `team-${team.team_id}`}`,
+            `${team.team_code}_${team.team_name_th || `team-${team.team_id}`}`,
             `team_${team.team_id}`,
         )}_member_personal_data.xlsx`;
         archive.append(workbookBuffer, { name: `${exportFolderName}/${xlsxName}` });
@@ -828,7 +828,7 @@ export async function exportTeamsSelectionSheet(
             team_id: team.team_id,
             team_code: team.team_code,
             team_name_th: team.team_name_th || '',
-            team_name_en: team.team_name_en || '',
+            team_name_en: team.team_name_th || '',
             team_status: team.status,
             leader_user_name: leaderDisplayName,
             member_count: teamMembers.length,
@@ -1111,7 +1111,7 @@ export async function getSubmissionTaskAssignedTeamsAdmin(db: DB, submissionTask
     return rows.map((row) => ({
         teamId: row.team_id,
         teamCode: row.team_code,
-        teamName: row.team_name_th || row.team_name_en || '-',
+        teamName: row.team_name_th || '-',
         status: row.status,
         isSubmissionOpen: row.is_submission_open === 1,
     }));

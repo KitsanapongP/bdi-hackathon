@@ -152,7 +152,7 @@ export default function SubmissionTasksPage() {
       ;(payload.data || []).forEach((row) => {
         if (row?.status === 'disbanded') return
         if (!row?.team_id || dedup.has(row.team_id)) return
-        const teamName = row.team_name_th || row.team_name_en || '-'
+        const teamName = row.team_name_th || '-'
         dedup.set(row.team_id, {
           teamId: row.team_id,
           teamCode: row.team_code || '-',

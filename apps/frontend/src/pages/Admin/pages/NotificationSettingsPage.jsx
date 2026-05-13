@@ -34,7 +34,7 @@ export default function NotificationSettingsPage() {
       if (!row?.team_id || dedup.has(row.team_id)) return
       dedup.set(row.team_id, {
         teamId: row.team_id,
-        label: `${row.team_name_th || row.team_name_en} [${row.team_code}]`,
+        label: `${row.team_name_th || '-'} [${row.team_code}]`,
       })
     })
 

@@ -479,6 +479,7 @@ export async function updateTeamName(db: DB, teamId: number, teamNameTh: string)
     await db.query(`
         UPDATE team_teams
         SET team_name_th = :teamNameTh,
+            team_name_en = :teamNameTh,
             updated_at = NOW()
         WHERE team_id = :teamId
     `, { teamId, teamNameTh });

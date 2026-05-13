@@ -116,7 +116,7 @@ export async function uploadDocument(
     // Save file to disk
     const members = await getTeamMembers(db, teamId);
     const me = members.find((m: any) => m.user_id === userId);
-    const teamFolder = sanitizePathSegment(team.team_name_th || team.team_name_en, `team-${teamId}`);
+    const teamFolder = sanitizePathSegment(team.team_name_th, `team-${teamId}`);
     const memberDisplayName = (me?.show_real_name && me?.first_name_th)
         ? me.first_name_th
         : (me?.user_name || `user-${userId}`);

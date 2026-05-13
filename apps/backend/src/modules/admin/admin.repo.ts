@@ -127,7 +127,7 @@ export async function getDashboardTeamMemberCounts(
         `SELECT
             t.team_id,
             t.team_code,
-            COALESCE(NULLIF(t.team_name_th, ''), t.team_name_en) AS team_name,
+            t.team_name_th AS team_name,
             t.status,
             COUNT(m.team_member_id) AS member_count
          FROM team_teams t
@@ -306,7 +306,7 @@ export async function getDashboardDuplicateMembers(
         `SELECT
             t.team_id,
             t.team_code,
-            COALESCE(NULLIF(t.team_name_th, ''), t.team_name_en) AS team_name,
+            t.team_name_th AS team_name,
             t.status,
             u.user_id,
             u.user_name,
@@ -865,7 +865,7 @@ export async function listAssignedTeamsBySubmissionTaskAdmin(
           AND t.deleted_at IS NULL
          WHERE tst.submission_task_id = :submissionTaskId
            AND tst.deleted_at IS NULL
-         ORDER BY t.team_name_th ASC, t.team_name_en ASC, t.team_id ASC`,
+         ORDER BY t.team_name_th ASC, t.team_id ASC`,
         { submissionTaskId },
     );
 

@@ -272,9 +272,9 @@ async function resolveTemplateAndVariables(
   const variables: Record<string, string> = {
     team_id: String(team.team_id),
     team_code: team.team_code || '',
-    team_name: team.team_name_th || team.team_name_en || '',
+    team_name: team.team_name_th || '',
     team_name_th: team.team_name_th || '',
-    team_name_en: team.team_name_en || '',
+    team_name_en: team.team_name_th || '',
     actor_name: actorName,
     event_code: eventCode,
     event_title: EVENT_TITLES[eventCode],
@@ -293,7 +293,7 @@ async function resolveTemplateAndVariables(
   variables.action_at = actionAtRaw;
   variables.action_at_formatted = actionAtFormatted;
 
-  const teamLabel = `${team.team_name_th || team.team_name_en} [${team.team_code}]`;
+  const teamLabel = `${team.team_name_th || '-'} [${team.team_code}]`;
   const resolvedSubject = renderTemplate(DEFAULT_EVENT_SUBJECTS[eventCode], variables) || DEFAULT_EVENT_SUBJECTS[eventCode];
   const subjectFromSetting = renderTemplate(setting.customSubject, variables).trim();
   const baseSubject = subjectFromSetting || resolvedSubject;
@@ -304,7 +304,7 @@ async function resolveTemplateAndVariables(
   const messageText = messageFromSetting || renderedMessage;
 
   const detailLines = [
-    formatDetailLine('ชื่อทีม', team.team_name_th || team.team_name_en),
+    formatDetailLine('ชื่อทีม', team.team_name_th || '-'),
     formatDetailLine('รหัสทีม', team.team_code || '-'),
     formatDetailLine('ผู้ดำเนินการ', actorName),
     ...(variables.disband_reason ? [formatDetailLine('เหตุผล', variables.disband_reason)] : []),
@@ -678,7 +678,7 @@ export async function sendCustomEmailToTeam(
     };
   }
 
-  const teamLabel = `${team.team_name_th || team.team_name_en} [${team.team_code}]`;
+  const teamLabel = `${team.team_name_th || '-'} [${team.team_code}]`;
   const subject = data.subject.startsWith(`${teamLabel} |`) ? data.subject : `${teamLabel} | ${data.subject}`;
   const customMessage = data.message.trim();
 

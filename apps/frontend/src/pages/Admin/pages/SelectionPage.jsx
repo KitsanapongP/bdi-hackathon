@@ -139,7 +139,7 @@ export default function SelectionPage() {
       teamId: row.team_id,
       nextStatus,
       teamCode: row.team_code,
-      teamName: row.team_name_th || row.team_name_en || '-',
+      teamName: row.team_name_th || '-',
     })
     setResultConfirmOpen(true)
   }, [])
@@ -233,7 +233,7 @@ export default function SelectionPage() {
       <AdminDataTable
         rows={rows.map((row) => ({ ...row, id: row.team_id }))}
         loading={loading}
-        searchKeys={['team_code', 'team_name_th', 'team_name_en', 'leader_name']}
+        searchKeys={['team_code', 'team_name_th', 'leader_name']}
         searchPlaceholder="ค้นหา team code / team name / leader"
         toolbarExtra={
           <label className="admin-selection-v2-status-filter">
@@ -252,7 +252,7 @@ export default function SelectionPage() {
           {
             key: 'team_name_th',
             label: 'ชื่อทีม',
-            render: (row) => row.team_name_th || row.team_name_en,
+            render: (row) => row.team_name_th || '-',
           },
           { key: 'leader_name', label: 'หัวหน้าทีม' },
           {

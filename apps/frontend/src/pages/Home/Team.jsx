@@ -678,7 +678,6 @@ export default function TeamContent({ user }) {
             credentials: 'include',
             body: JSON.stringify({
                 teamNameTh: createName,
-                teamNameEn: createName,
                 visibility: createPublic ? 'public' : 'private',
             }),
         });

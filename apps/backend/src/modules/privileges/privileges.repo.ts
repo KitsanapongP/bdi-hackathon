@@ -556,7 +556,6 @@ export async function listClaimsAdmin(
         u.user_name LIKE :q
         OR t.team_code LIKE :q
         OR t.team_name_th LIKE :q
-        OR t.team_name_en LIKE :q
         OR p.privilege_code LIKE :q
         OR p.privilege_name_th LIKE :q
         OR p.privilege_name_en LIKE :q

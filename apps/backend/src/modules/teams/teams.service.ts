@@ -76,7 +76,7 @@ async function assertSelectionConfirmWindowOpen(db: DB): Promise<void> {
     throw new AppError('หมดเวลายืนยันการเข้าร่วมโครงการแล้ว', 400);
 }
 
-export async function createTeam(db: DB, userId: number, data: { teamNameTh: string; teamNameEn: string; visibility: 'public' | 'private' }) {
+export async function createTeam(db: DB, userId: number, data: { teamNameTh: string; visibility: 'public' | 'private' }) {
     await assertTeamRecruitmentOpen(db);
 
     // Check if user is already in a team
@@ -95,7 +95,7 @@ export async function createTeam(db: DB, userId: number, data: { teamNameTh: str
             teamId = await repo.createTeam(db, {
                 teamCode,
                 teamNameTh: data.teamNameTh,
-                teamNameEn: data.teamNameEn,
+                teamNameEn: data.teamNameTh,
                 visibility: data.visibility,
                 leaderUserId: userId,
             });

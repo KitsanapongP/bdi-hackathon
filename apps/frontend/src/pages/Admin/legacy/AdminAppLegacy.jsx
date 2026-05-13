@@ -6812,14 +6812,14 @@ function SelectionPage() {
       <AdminDataTable
         rows={rows.map((r) => ({ ...r, id: r.team_id }))}
         loading={loading}
-        searchKeys={['team_code', 'team_name_th', 'team_name_en', 'leader_name']}
+        searchKeys={['team_code', 'team_name_th', 'leader_name']}
         searchPlaceholder="ค้นหา team code / team name / leader"
         columns={[
           { key: 'team_code', label: 'Team Code' },
           {
             key: 'team_name_th',
             label: 'Team',
-            render: (row) => row.team_name_th || row.team_name_en,
+            render: (row) => row.team_name_th || '-',
           },
           { key: 'leader_name', label: 'Leader' },
           { key: 'status', label: 'Status' },
@@ -6887,7 +6887,7 @@ function NotificationSettingsPage() {
       if (!row?.team_id || dedup.has(row.team_id)) return
       dedup.set(row.team_id, {
         teamId: row.team_id,
-        label: `${row.team_name_th || row.team_name_en} [${row.team_code}]`,
+        label: `${row.team_name_th || '-'} [${row.team_code}]`,
       })
     })
 

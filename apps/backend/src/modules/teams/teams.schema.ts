@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 export const createTeamSchema = z.object({
     teamNameTh: z.string().min(2, 'ชื่อทีมต้องมีอย่างน้อย 2 ตัวอักษร').max(255),
-    teamNameEn: z.string().min(2, 'Team name must be at least 2 characters').max(255),
     visibility: z.enum(['public', 'private']).default('private'),
 });
 

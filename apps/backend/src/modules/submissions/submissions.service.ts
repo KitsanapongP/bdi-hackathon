@@ -178,7 +178,7 @@ export async function uploadSubmissionFile(
     assertTeamFileExtension(file.filename, allowedExtensions);
 
     const team = await repo.getTeamById(db, teamId);
-    const teamName = sanitizePathSegment(team?.team_name_th || team?.team_name_en, `team-${teamId}`);
+    const teamName = sanitizePathSegment(team?.team_name_th, `team-${teamId}`);
     const dir = path.join(UPLOADS_BASE_DIR, teamName, 'submission_files');
     fs.mkdirSync(dir, { recursive: true });
 
