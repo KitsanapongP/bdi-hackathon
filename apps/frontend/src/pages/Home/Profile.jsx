@@ -82,7 +82,7 @@ function ProfileContent({ user }) {
             <div className="gl-frame">
 
                 {/* ── LEFT: Menu Sidebar ── */}
-                <aside className="gl-members-panel">
+                <aside className="gl-members-panel pf-settings-panel">
                     <div className="gl-members-header">
                         <h3>ตั้งค่าโปรไฟล์</h3>
                     </div>

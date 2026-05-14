@@ -864,7 +864,7 @@ export default function TeamContent({ user }) {
         const filteredTeams = publicTeams.filter((t) => t.name.toLowerCase().includes(searchQuery.toLowerCase()));
         return (
             <div className="gl-page-container">
-                <div className="gl-frame gl-frame-center">
+                <div className={`gl-frame gl-frame-center ${activeView ? 'gl-frame-inner-active' : ''}`}>
 
                     {/* โ”€โ”€ Lobby Home (2x2 grid) โ”€โ”€ */}
                     {activeView === null && (
@@ -932,7 +932,7 @@ export default function TeamContent({ user }) {
                     {activeView === 'create' && (
                         <div className="gl-inner-view">
                             <div className="gl-inner-header">
-                                <button className="gl-back-btn" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> ย้อนกลับ</button>
+                                <button className="gl-back-btn" aria-label="ย้อนกลับ" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> <span className="gl-back-label">ย้อนกลับ</span></button>
                                 <div className="gl-inner-header-icon create-icon"><Plus size={24} /></div>
                                 <div>
                                     <h3>สร้างทีมใหม่</h3>
@@ -962,7 +962,7 @@ export default function TeamContent({ user }) {
                     {activeView === 'join' && (
                         <div className="gl-inner-view">
                             <div className="gl-inner-header">
-                                <button className="gl-back-btn" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> ย้อนกลับ</button>
+                                <button className="gl-back-btn" aria-label="ย้อนกลับ" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> <span className="gl-back-label">ย้อนกลับ</span></button>
                                 <div className="gl-inner-header-icon join-icon"><Lock size={24} /></div>
                                 <div>
                                     <h3>เข้าทีมด้วยรหัสเชิญ</h3>
@@ -985,7 +985,7 @@ export default function TeamContent({ user }) {
                     {activeView === 'browse' && (
                         <div className="gl-inner-view gl-inner-wide">
                             <div className="gl-inner-header">
-                                <button className="gl-back-btn" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> ย้อนกลับ</button>
+                                <button className="gl-back-btn" aria-label="ย้อนกลับ" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> <span className="gl-back-label">ย้อนกลับ</span></button>
                                 <div className="gl-inner-header-icon browse-icon"><Globe size={24} /></div>
                                 <div>
                                     <h3>ค้นหาทีมสาธารณะ</h3>
@@ -1027,7 +1027,7 @@ export default function TeamContent({ user }) {
                     {activeView === 'invitations' && (
                         <div className="gl-inner-view gl-inner-wide">
                             <div className="gl-inner-header">
-                                <button className="gl-back-btn" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> ย้อนกลับ</button>
+                                <button className="gl-back-btn" aria-label="ย้อนกลับ" onClick={() => setActiveView(null)}><ChevronLeft size={16} /> <span className="gl-back-label">ย้อนกลับ</span></button>
                                 <div className="gl-inner-header-icon invite-icon-header"><Mail size={24} /></div>
                                 <div>
                                     <h3>คำเชิญเข้าทีม</h3>
@@ -1494,7 +1494,7 @@ export default function TeamContent({ user }) {
     const renderSimpleDetail = (title, icon, body) => (
         <div className="gl-detail-view">
             <div className="gl-detail-top">
-                <button className="gl-back-btn" onClick={() => setSelectedCard(null)}><ChevronLeft size={16} /> ย้อนกลับ</button>
+                <button className="gl-back-btn" aria-label="ย้อนกลับ" onClick={() => setSelectedCard(null)}><ChevronLeft size={16} /> <span className="gl-back-label">ย้อนกลับ</span></button>
                 <h3 className="gl-detail-title">{icon} {title}</h3>
             </div>
             <div className="gl-detail-body">{body}</div>
@@ -1796,7 +1796,7 @@ export default function TeamContent({ user }) {
         return (
             <div className="gl-detail-view gl-member-profile-view">
                 <div className="gl-detail-top">
-                    <button className="gl-back-btn" onClick={closeMemberProfile}><ChevronLeft size={16} /> ย้อนกลับ</button>
+                    <button className="gl-back-btn" aria-label="ย้อนกลับ" onClick={closeMemberProfile}><ChevronLeft size={16} /> <span className="gl-back-label">ย้อนกลับ</span></button>
                     <h3 className="gl-detail-title"><User size={20} /> โปรไฟล์สมาชิกทีม</h3>
                 </div>
 
@@ -2315,19 +2315,19 @@ export default function TeamContent({ user }) {
                                     <span className="vf-doc-size">{(doc.file_size_bytes / 1024).toFixed(0)} KB</span>
                                 </div>
                                 <div className="vf-doc-actions">
-                                    <button type="button" className="vf-doc-open" onClick={() => openDocumentPdf(doc.document_id)}>
+                                    <button type="button" className="vf-doc-open" aria-label="ดูเอกสาร" onClick={() => openDocumentPdf(doc.document_id)}>
                                         <Eye size={14} /> ดู
                                     </button>
-                                    <button type="button" className="vf-doc-download" onClick={() => downloadDocumentPdf(doc.document_id)}>
+                                    <button type="button" className="vf-doc-download" aria-label="ดาวน์โหลดเอกสาร" onClick={() => downloadDocumentPdf(doc.document_id)}>
                                         <Download size={14} /> ดาวน์โหลด
                                     </button>
                                     {!isSubmitted && !myConfirmed && (
-                                        <button type="button" className="vf-doc-rename" onClick={() => handleRenameDoc(doc)}>
+                                        <button type="button" className="vf-doc-rename" aria-label="แก้ไขชื่อเอกสาร" onClick={() => handleRenameDoc(doc)}>
                                             <Edit2 size={14} /> แก้ไขชื่อเอกสาร
                                         </button>
                                     )}
                                     {!isSubmitted && !myConfirmed && (
-                                        <button className="vf-doc-delete" disabled={actionLoading} onClick={() => handleDeleteDoc(doc.document_id, doc.file_original_name)}>
+                                        <button className="vf-doc-delete" aria-label="ลบเอกสาร" disabled={actionLoading} onClick={() => handleDeleteDoc(doc.document_id, doc.file_original_name)}>
                                             <Trash2 size={14} />
                                         </button>
                                     )}
