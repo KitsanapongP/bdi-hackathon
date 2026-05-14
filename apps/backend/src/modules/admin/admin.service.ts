@@ -21,7 +21,6 @@ import { PassThrough } from 'node:stream';
 import ExcelJS from 'exceljs';
 import archiver from 'archiver';
 import { createTeamAuditLog } from '../teams/teams.repo.js';
-import { triggerNotificationEvent } from '../notifications/notifications.service.js';
 import * as contentService from '../content/content.service.js';
 import { buildMemberDocumentBundleStorageKey, getOrCreateReviewShareId } from '../public-review/public-review.service.js';
 
@@ -977,15 +976,6 @@ export async function setSelectionResult(
         actionDetail: {
             previous_status: team.status,
             next_status: data.status,
-            confirmation_deadline_at: confirmDeadlineAt,
-        },
-    });
-
-    await triggerNotificationEvent(db, {
-        eventCode: data.status === 'passed' ? 'SELECTION_PASSED' : 'SELECTION_FAILED',
-        teamId: data.teamId,
-        actorUserId: data.adminUserId,
-        extra: {
             confirmation_deadline_at: confirmDeadlineAt,
         },
     });
