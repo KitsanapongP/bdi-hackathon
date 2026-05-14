@@ -25,6 +25,8 @@
     transition: all 0.25s;
     text-align: left;
     backdrop-filter: blur(4px);
+    background-clip: padding-box;
+    overflow: hidden;
 }
 
 .pf-menu-item:hover {
@@ -724,8 +726,39 @@
 }
 
 @media (max-width: 640px) {
+    .pf-settings-panel {
+        position: relative;
+        overflow: hidden;
+        border-radius: 18px 18px 0 0;
+    }
+
+    .pf-settings-panel::after {
+        content: none;
+    }
+
     .pf-settings-panel .gl-members-header {
         display: none;
+    }
+
+    .pf-settings-panel .gl-member-list {
+        padding: 0 2px 8px 0;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(45, 212, 191, 0.75) rgba(255, 255, 255, 0.12);
+    }
+
+    .pf-settings-panel .gl-member-list::-webkit-scrollbar {
+        display: block;
+        height: 5px;
+    }
+
+    .pf-settings-panel .gl-member-list::-webkit-scrollbar-track {
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .pf-settings-panel .gl-member-list::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: rgba(45, 212, 191, 0.75);
     }
 
     .pf-menu-item {
@@ -733,6 +766,11 @@
         padding: 9px 11px;
         font-size: 0.9rem;
         border-width: 1px;
+        border-radius: 12px;
+    }
+
+    .pf-menu-item.active {
+        box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.35);
     }
 
     .pf-menu-icon svg {
