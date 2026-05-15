@@ -539,6 +539,9 @@
 }
 
 .pf-modal h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 1.125rem;
     font-weight: 800;
     margin: 0 0 18px;
@@ -546,8 +549,14 @@
 
 .pf-modal-actions {
     display: flex;
+    justify-content: flex-end;
     gap: 10px;
     margin-top: 18px;
+}
+
+.pf-modal-submit-btn {
+    min-width: 120px;
+    justify-content: center;
 }
 
 /* ── Toast ── */

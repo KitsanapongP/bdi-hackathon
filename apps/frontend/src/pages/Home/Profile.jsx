@@ -895,12 +895,12 @@ function SocialTab({ apiFetch, showToast }) {
                             <input className="pf-input" value={form.profileUrl} onChange={(e) => setForm((f) => ({ ...f, profileUrl: e.target.value }))} placeholder="https://..." />
                         </div>
                         <div className="pf-field">
-                            <span className="pf-label">Display Text (ไม่บังคับ)</span>
-                            <input className="pf-input" value={form.displayText} onChange={(e) => setForm((f) => ({ ...f, displayText: e.target.value }))} placeholder="เช่น @myhandle" />
+                            <span className="pf-label">ข้อความที่แสดง (Optional)</span>
+                            <input className="pf-input" value={form.displayText} onChange={(e) => setForm((f) => ({ ...f, displayText: e.target.value }))} placeholder="เช่น @myprofile" />
                         </div>
                         <div className="pf-modal-actions">
                             <button className="gl-action-btn gl-invite-btn" onClick={() => setShowAdd(false)}>ยกเลิก</button>
-                            <button className="gl-action-btn gl-submit-btn" style={{ flex: 1 }} onClick={handleSave} disabled={!form.platformCode || !form.profileUrl}>
+                            <button className="gl-action-btn gl-submit-btn pf-modal-submit-btn" onClick={handleSave} disabled={!form.platformCode || !form.profileUrl}>
                                 <Save size={16} /> {editId ? 'บันทึก' : 'เพิ่ม'}
                             </button>
                         </div>
