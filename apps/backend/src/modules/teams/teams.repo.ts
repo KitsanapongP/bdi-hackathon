@@ -14,12 +14,13 @@ export async function createTeam(db: DB, data: {
     teamCode: string;
     teamNameTh: string;
     teamNameEn: string;
+    teamDescription: string | null;
     visibility: 'public' | 'private';
     leaderUserId: number;
 }): Promise<number> {
     const [result] = await db.query<ResultSetHeader>(
-        `INSERT INTO team_teams (team_code, team_name_th, team_name_en, visibility, current_leader_user_id, status, created_at, updated_at)
-         VALUES (:teamCode, :teamNameTh, :teamNameEn, :visibility, :leaderUserId, 'forming', NOW(), NOW())`,
+        `INSERT INTO team_teams (team_code, team_name_th, team_name_en, team_description, visibility, current_leader_user_id, status, created_at, updated_at)
+         VALUES (:teamCode, :teamNameTh, :teamNameEn, :teamDescription, :visibility, :leaderUserId, 'forming', NOW(), NOW())`,
         data
     );
     return result.insertId;
@@ -483,6 +484,15 @@ export async function updateTeamName(db: DB, teamId: number, teamNameTh: string)
             updated_at = NOW()
         WHERE team_id = :teamId
     `, { teamId, teamNameTh });
+}
+
+export async function updateTeamDescription(db: DB, teamId: number, teamDescription: string | null): Promise<void> {
+    await db.query(`
+        UPDATE team_teams
+        SET team_description = :teamDescription,
+            updated_at = NOW()
+        WHERE team_id = :teamId
+    `, { teamId, teamDescription });
 }
 
 export async function confirmTeamParticipation(

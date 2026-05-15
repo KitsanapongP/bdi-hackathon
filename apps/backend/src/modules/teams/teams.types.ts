@@ -3,6 +3,7 @@ export interface TeamRow {
     team_code: string;
     team_name_th: string;
     team_name_en: string;
+    team_description: string | null;
     visibility: 'public' | 'private';
     current_leader_user_id: number;
     status: 'forming' | 'submitted' | 'disbanded' | 'passed' | 'failed' | 'confirmed' | 'not_joined';

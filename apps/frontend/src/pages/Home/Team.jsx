@@ -56,6 +56,7 @@ import './Profile.css';
 const TEAM_MEMBER_MAX_DEFAULT = 5;
 const TEAM_MEMBER_MIN_DEFAULT = 3;
 const TEAM_NAME_MAX_LENGTH = 50;
+const TEAM_DESCRIPTION_MAX_LENGTH = 500;
 
 const CARDS = [
     { id: 'verify', icon: <ShieldCheck />, label: 'ยืนยันตัวตน', color: '#14b8a6' },
@@ -233,6 +234,8 @@ export default function TeamContent({ user }) {
     const [toastExiting, setToastExiting] = useState(false);
     const [editingTeamName, setEditingTeamName] = useState(false);
     const [newTeamNameInput, setNewTeamNameInput] = useState('');
+    const [editingTeamDescription, setEditingTeamDescription] = useState(false);
+    const [newTeamDescriptionInput, setNewTeamDescriptionInput] = useState('');
 
     // โ”€โ”€ Verification state โ”€โ”€
     const [verifyData, setVerifyData] = useState(null);
@@ -379,6 +382,7 @@ export default function TeamContent({ user }) {
 
     const [activeView, setActiveView] = useState(null);
     const [createName, setCreateName] = useState('');
+    const [createDescription, setCreateDescription] = useState('');
     const [createPublic, setCreatePublic] = useState(true);
     const [joinCode, setJoinCode] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -435,8 +439,12 @@ export default function TeamContent({ user }) {
     const hasPendingJoinRequests = pendingJoinRequests.length > 0;
     const createTeamNameLength = createName.trim().length;
     const isCreateTeamNameValid = createTeamNameLength >= 2 && createTeamNameLength <= TEAM_NAME_MAX_LENGTH;
+    const createTeamDescriptionLength = createDescription.trim().length;
+    const isCreateTeamDescriptionValid = createTeamDescriptionLength <= TEAM_DESCRIPTION_MAX_LENGTH;
     const editTeamNameLength = newTeamNameInput.trim().length;
     const isEditTeamNameValid = editTeamNameLength >= 2 && editTeamNameLength <= TEAM_NAME_MAX_LENGTH;
+    const editTeamDescriptionLength = newTeamDescriptionInput.trim().length;
+    const isEditTeamDescriptionValid = editTeamDescriptionLength <= TEAM_DESCRIPTION_MAX_LENGTH;
     const sortedMembers = useMemo(() => {
         if (!team?.members) return [];
         return [...team.members].sort((a, b) => {
@@ -533,6 +541,7 @@ export default function TeamContent({ user }) {
                 setTeam({
                     id: dbTeam.team_id,
                     name: dbTeam.team_name_th,
+                    description: dbTeam.team_description || '',
                     status: normalizeStatus(dbTeam.status),
                     visibility: dbTeam.visibility || 'private',
                     code: dbTeam.team_code || '------',
@@ -559,6 +568,7 @@ export default function TeamContent({ user }) {
                 setPublicTeams(payload.data.map((t) => ({
                     id: t.team_id,
                     name: t.team_name_th,
+                    description: t.team_description || '',
                     memberCount: t.member_count || 1,
                 })));
             })
@@ -679,12 +689,16 @@ export default function TeamContent({ user }) {
         if (!isCreateTeamNameValid) {
             throw new Error(`ชื่อทีมต้องมี 2-${TEAM_NAME_MAX_LENGTH} ตัวอักษร`);
         }
+        if (!isCreateTeamDescriptionValid) {
+            throw new Error(`คำอธิบายทีมต้องไม่เกิน ${TEAM_DESCRIPTION_MAX_LENGTH} ตัวอักษร`);
+        }
         const res = await fetch(apiUrl('/api/teams'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
                 teamNameTh: createName.trim(),
+                teamDescription: createDescription.trim() || null,
                 visibility: createPublic ? 'public' : 'private',
             }),
         });
@@ -868,7 +882,11 @@ export default function TeamContent({ user }) {
     if (isLoadingTeam) return <div className="gl-page-container"><div className="gl-frame gl-frame-center"><h3>กำลังโหลดข้อมูลทีม...</h3></div></div>;
 
     if (!user.hasTeam) {
-        const filteredTeams = publicTeams.filter((t) => t.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        const normalizedSearchQuery = searchQuery.toLowerCase();
+        const filteredTeams = publicTeams.filter((t) => (
+            t.name.toLowerCase().includes(normalizedSearchQuery) ||
+            String(t.description || '').toLowerCase().includes(normalizedSearchQuery)
+        ));
         return (
             <div className="gl-page-container">
                 <div className={`gl-frame gl-frame-center ${activeView ? 'gl-frame-inner-active' : ''}`}>
@@ -960,6 +978,20 @@ export default function TeamContent({ user }) {
                                         {createTeamNameLength}/{TEAM_NAME_MAX_LENGTH} ตัวอักษร
                                     </span>
                                 </div>
+                                <div className="gl-form-field">
+                                    <label className="gl-form-label">คำอธิบายทีม</label>
+                                    <textarea
+                                        className="gl-form-input gl-form-textarea"
+                                        value={createDescription}
+                                        maxLength={TEAM_DESCRIPTION_MAX_LENGTH}
+                                        onChange={(e) => setCreateDescription(e.target.value.slice(0, TEAM_DESCRIPTION_MAX_LENGTH))}
+                                        placeholder="เช่น จุดประสงค์ของทีม ทักษะที่กำลังมองหา หรือแนวทางโปรเจกต์"
+                                        rows={4}
+                                    />
+                                    <span className={`gl-form-counter ${isCreateTeamDescriptionValid ? '' : 'is-error'}`}>
+                                        {createTeamDescriptionLength}/{TEAM_DESCRIPTION_MAX_LENGTH} ตัวอักษร
+                                    </span>
+                                </div>
                                 <div className="gl-form-toggle-row">
                                     <div className="gl-form-toggle-info">
                                         <span className="gl-form-toggle-label">{createPublic ? 'สาธารณะ' : 'ส่วนตัว'}</span>
@@ -967,7 +999,7 @@ export default function TeamContent({ user }) {
                                     </div>
                                     <button type="button" className={`gl-form-toggle ${createPublic ? 'on' : ''}`} onClick={() => setCreatePublic((v) => !v)} />
                                 </div>
-                                <button className="gl-form-submit gl-btn-pink" disabled={!isTeamRecruitmentOpen || actionLoading || !isCreateTeamNameValid} onClick={handleCreateTeam}>
+                                <button className="gl-form-submit gl-btn-pink" disabled={!isTeamRecruitmentOpen || actionLoading || !isCreateTeamNameValid || !isCreateTeamDescriptionValid} onClick={handleCreateTeam}>
                                     <Plus size={18} /> สร้างทีม
                                 </button>
                             </div>
@@ -1026,6 +1058,7 @@ export default function TeamContent({ user }) {
                                                 <div className="gl-browse-team-avatar">{t.name.charAt(0)}</div>
                                                 <div className="gl-browse-team-info">
                                                     <span className="gl-browse-team-name">{t.name}</span>
+                                                    <span className="gl-browse-team-desc">{t.description || 'ทีมนี้ยังไม่ได้เพิ่มคำอธิบาย'}</span>
                                                     <span className="gl-browse-team-meta"><Users size={13} /> {t.memberCount}/{maxMembers} คน</span>
                                                 </div>
                                             </div>
@@ -1508,6 +1541,31 @@ export default function TeamContent({ user }) {
         }, { toastError: true });
     };
 
+    const handleUpdateTeamDescription = () => {
+        if (isTeamEditLocked) {
+            showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขคำอธิบายทีมได้', 'error');
+            return;
+        }
+        if (!isEditTeamDescriptionValid) {
+            showToast(`คำอธิบายทีมต้องไม่เกิน ${TEAM_DESCRIPTION_MAX_LENGTH} ตัวอักษร`, 'error');
+            return;
+        }
+        withAction(async () => {
+            const trimmedDescription = newTeamDescriptionInput.trim();
+            const res = await fetch(apiUrl(`/api/teams/${team.id}/description`), {
+                method: 'PUT',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ teamDescription: trimmedDescription || null }),
+            });
+            const payload = await res.json();
+            if (!payload.ok) throw new Error(payload.message || 'บันทึกคำอธิบายทีมไม่สำเร็จ');
+            showToast('บันทึกคำอธิบายทีมสำเร็จ', 'success');
+            setEditingTeamDescription(false);
+            setTeam(prev => ({ ...prev, description: trimmedDescription }));
+        }, { toastError: true });
+    };
+
     const renderSimpleDetail = (title, icon, body) => (
         <div className="gl-detail-view">
             <div className="gl-detail-top">
@@ -1600,7 +1658,80 @@ export default function TeamContent({ user }) {
                         </div>
                     </div>
 
-                    {/* 2. Team Visibility */}
+                    {/* 2. Member Count */}
+                    <div className="gl-team-info-card gl-manage-glass-card gl-compact-card">
+                        <span className="gl-team-info-label" style={{ marginBottom: 0 }}><Users size={16} /> จำนวนสมาชิก</span>
+                        <div className="gl-bold-value" style={{ marginTop: 'auto' }}>{team.members.length} <span className="gl-sub-value">/ {maxMembers} คน</span></div>
+                        <div className="gl-progress-mini">
+                            <div className="gl-progress-mini-fill" style={{ width: `${(team.members.length / maxMembers) * 100}%` }}></div>
+                        </div>
+                    </div>
+
+                    {/* 3. Team Description */}
+                    <div className="gl-team-info-card gl-manage-glass-card gl-team-description-card">
+                        <div className="gl-info-header gl-team-description-header">
+                            <span className="gl-team-info-label" style={{ marginBottom: 0 }}><Info size={16} /> คำอธิบายทีม</span>
+                            {isLeader && !editingTeamDescription && (
+                                <button
+                                    className="gl-icon-btn gl-team-name-edit-trigger"
+                                    disabled={actionLoading || isTeamEditLocked}
+                                    onClick={() => { setEditingTeamDescription(true); setNewTeamDescriptionInput(team.description || ''); }}
+                                    title="แก้ไขคำอธิบายทีม"
+                                >
+                                    <Edit2 size={16} />
+                                </button>
+                            )}
+                        </div>
+
+                        {!editingTeamDescription && (
+                            <p className={`gl-team-description-value ${team.description ? '' : 'is-empty'}`}>
+                                {team.description || 'ทีมนี้ยังไม่ได้เพิ่มคำอธิบาย'}
+                            </p>
+                        )}
+
+                        {editingTeamDescription && (
+                            <div className="gl-team-description-edit-panel">
+                                <textarea
+                                    className="gr-input gl-team-description-input"
+                                    value={newTeamDescriptionInput}
+                                    maxLength={TEAM_DESCRIPTION_MAX_LENGTH}
+                                    disabled={actionLoading || isTeamEditLocked}
+                                    onChange={e => setNewTeamDescriptionInput(e.target.value.slice(0, TEAM_DESCRIPTION_MAX_LENGTH))}
+                                    placeholder="กรอกคำอธิบายทีม"
+                                    rows={4}
+                                    autoFocus
+                                />
+                                <span className={`gl-form-counter ${isEditTeamDescriptionValid ? '' : 'is-error'}`}>
+                                    {editTeamDescriptionLength}/{TEAM_DESCRIPTION_MAX_LENGTH} ตัวอักษร
+                                </span>
+                                <div className="gl-team-description-actions">
+                                    <button
+                                        className="gl-team-name-action-btn gl-team-name-save-btn"
+                                        disabled={actionLoading || !isEditTeamDescriptionValid}
+                                        onClick={handleUpdateTeamDescription}
+                                        title="บันทึก"
+                                    >
+                                        <Save size={14} />
+                                        <span>บันทึก</span>
+                                    </button>
+                                    <button
+                                        className="gl-team-name-action-btn gl-team-name-cancel-btn"
+                                        disabled={actionLoading}
+                                        onClick={() => {
+                                            setEditingTeamDescription(false);
+                                            setNewTeamDescriptionInput(team.description || '');
+                                        }}
+                                        title="ยกเลิก"
+                                    >
+                                        <X size={14} />
+                                        <span>ยกเลิก</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 4. Team Visibility */}
                     <div className="gl-team-info-card gl-manage-glass-card gl-compact-card">
                         <div className="gl-info-header" style={{ marginBottom: 4 }}>
                             <span className="gl-team-info-label" style={{ marginBottom: 0 }}><Globe size={16} /> การมองเห็นทีม</span>
@@ -1627,16 +1758,7 @@ export default function TeamContent({ user }) {
                         {isTeamEditLocked && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว</p>}
                     </div>
 
-                    {/* 3. Member Count */}
-                    <div className="gl-team-info-card gl-manage-glass-card gl-compact-card">
-                        <span className="gl-team-info-label" style={{ marginBottom: 0 }}><Users size={16} /> จำนวนสมาชิก</span>
-                        <div className="gl-bold-value" style={{ marginTop: 'auto' }}>{team.members.length} <span className="gl-sub-value">/ {maxMembers} คน</span></div>
-                        <div className="gl-progress-mini">
-                            <div className="gl-progress-mini-fill" style={{ width: `${(team.members.length / maxMembers) * 100}%` }}></div>
-                        </div>
-                    </div>
-
-                    {/* 4. Invite Code */}
+                    {/* 5. Invite Code */}
                     <div className="gl-team-info-card gl-manage-glass-card gl-compact-card">
                         <span className="gl-team-info-label" style={{ marginBottom: 0 }}><Copy size={16} /> รหัสเชิญเข้าร่วมทีม</span>
                         <div className="gl-code-box" style={{ marginTop: 'auto' }}>

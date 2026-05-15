@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
+const teamDescriptionSchema = z.string().max(500, 'คำอธิบายทีมต้องไม่เกิน 500 ตัวอักษร').optional().nullable();
+
 export const createTeamSchema = z.object({
     teamNameTh: z.string().min(2, 'ชื่อทีมต้องมีอย่างน้อย 2 ตัวอักษร').max(50, 'ชื่อทีมต้องไม่เกิน 50 ตัวอักษร'),
+    teamDescription: teamDescriptionSchema,
     visibility: z.enum(['public', 'private']).default('private'),
 });
 
@@ -45,4 +48,8 @@ export const updateTeamVisibilitySchema = z.object({
 
 export const updateTeamNameSchema = z.object({
     teamNameTh: z.string().min(2, 'ชื่อทีมต้องมีอย่างน้อย 2 ตัวอักษร').max(50, 'ชื่อทีมต้องไม่เกิน 50 ตัวอักษร'),
+});
+
+export const updateTeamDescriptionSchema = z.object({
+    teamDescription: teamDescriptionSchema,
 });

@@ -2584,6 +2584,12 @@
     color: var(--gl-text-dim);
 }
 
+.gl-form-textarea {
+    min-height: 104px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
 .gl-form-counter {
     align-self: flex-end;
     color: var(--gl-text-dim);
@@ -2802,6 +2808,17 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.gl-browse-team-desc {
+    color: rgba(224, 231, 255, 0.78);
+    display: -webkit-box;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    max-width: 520px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .gl-browse-team-meta {
@@ -4337,6 +4354,66 @@
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
+}
+
+.gl-team-description-card {
+    grid-column: 1 / -1;
+    min-height: 136px;
+    padding: 18px !important;
+    justify-content: flex-start;
+}
+
+.gl-team-description-header {
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.gl-team-description-header .gl-team-name-edit-trigger {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #e9d5ff;
+}
+
+.gl-team-description-value {
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 0.96rem;
+    line-height: 1.6;
+    margin: 0;
+    max-width: 920px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.gl-team-description-value.is-empty {
+    color: var(--gl-text-dim);
+    font-style: italic;
+}
+
+.gl-team-description-edit-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.gl-team-description-input {
+    min-height: 118px;
+    padding: 12px 14px !important;
+    text-align: left;
+    line-height: 1.5;
+    resize: vertical;
+    border-radius: 14px !important;
+    border: 1px solid rgba(255, 255, 255, 0.24) !important;
+    background: rgba(20, 14, 47, 0.45) !important;
+    color: #fff !important;
+}
+
+.gl-team-description-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
 }
 
 .gl-team-name-save-btn {

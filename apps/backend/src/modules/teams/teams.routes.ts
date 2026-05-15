@@ -16,6 +16,7 @@ export async function teamsRoutes(app: FastifyInstance) {
     app.put('/:id/leader', controller.handleTransferLeader);
     app.put('/:id/visibility', controller.handleUpdateTeamVisibility);
     app.put('/:id/name', controller.handleUpdateTeamName);
+    app.put('/:id/description', controller.handleUpdateTeamDescription);
 
     app.post('/:id/join-requests', controller.handleSubmitJoinRequest);
     app.get('/:id/join-requests', controller.handleGetPendingJoinRequests);

@@ -76,7 +76,12 @@ async function assertSelectionConfirmWindowOpen(db: DB): Promise<void> {
     throw new AppError('หมดเวลายืนยันการเข้าร่วมโครงการแล้ว', 400);
 }
 
-export async function createTeam(db: DB, userId: number, data: { teamNameTh: string; visibility: 'public' | 'private' }) {
+function normalizeTeamDescription(value?: string | null): string | null {
+    const trimmed = String(value ?? '').trim();
+    return trimmed.length > 0 ? trimmed : null;
+}
+
+export async function createTeam(db: DB, userId: number, data: { teamNameTh: string; teamDescription?: string | null | undefined; visibility: 'public' | 'private' }) {
     await assertTeamRecruitmentOpen(db);
 
     // Check if user is already in a team
@@ -96,6 +101,7 @@ export async function createTeam(db: DB, userId: number, data: { teamNameTh: str
                 teamCode,
                 teamNameTh: data.teamNameTh,
                 teamNameEn: data.teamNameTh,
+                teamDescription: normalizeTeamDescription(data.teamDescription),
                 visibility: data.visibility,
                 leaderUserId: userId,
             });
@@ -778,4 +784,36 @@ export async function updateTeamName(
     });
 
     return { teamNameTh: trimmedName };
+}
+
+export async function updateTeamDescription(
+    db: DB,
+    teamId: number,
+    leaderUserId: number,
+    teamDescription?: string | null,
+) {
+    const team = await repo.getTeamById(db, teamId);
+    if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
+    if (team.current_leader_user_id !== leaderUserId) {
+        throw new AppError('เฉพาะหัวหน้าทีมเท่านั้นที่แก้ไขได้', 403);
+    }
+    assertTeamEditable(team.status, 'แก้ไขคำอธิบายทีม');
+
+    const nextDescription = normalizeTeamDescription(teamDescription);
+    if ((team.team_description ?? null) === nextDescription) {
+        return { teamDescription: team.team_description ?? null };
+    }
+
+    await repo.updateTeamDescription(db, teamId, nextDescription);
+    await repo.createTeamAuditLog(db, {
+        teamId,
+        actorUserId: leaderUserId,
+        actionCode: 'TEAM_DESCRIPTION_UPDATED',
+        actionDetail: {
+            previous_team_description: team.team_description ?? null,
+            next_team_description: nextDescription,
+        },
+    });
+
+    return { teamDescription: nextDescription };
 }
