@@ -173,6 +173,15 @@ export interface ExportSubmissionFileRow {
     uploaded_at: Date;
 }
 
+export interface ExportSubmissionLinkRow {
+    team_id: number;
+    team_submission_task_id: number;
+    task_name: string | null;
+    task_sort_order: number | null;
+    link_url: string;
+    updated_at: Date;
+}
+
 export type ExportTeamStatus = 'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined' | 'disbanded';
 
 export interface ExportTeamsForSheetRow {

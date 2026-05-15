@@ -11,6 +11,7 @@ import type {
     DashboardTrendRow,
     ExportMemberDocumentRow,
     ExportSubmissionFileRow,
+    ExportSubmissionLinkRow,
     ExportTeamStatus,
     ExportTeamsForSheetRow,
     ExportSubmittedTeamRow,
@@ -552,6 +553,39 @@ export async function getSubmissionFilesForExport(db: DB, teamIds: number[]): Pr
     `, params);
 
     return rows as ExportSubmissionFileRow[];
+}
+
+export async function getSubmissionLinksForExport(db: DB, teamIds: number[]): Promise<ExportSubmissionLinkRow[]> {
+    if (teamIds.length === 0) return [];
+
+    const params: Record<string, number> = {};
+    const tokens = teamIds.map((teamId, idx) => {
+        const key = `teamId${idx}`;
+        params[key] = teamId;
+        return `:${key}`;
+    });
+
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT
+            tst.team_id,
+            tst.team_submission_task_id,
+            st.task_name,
+            st.sort_order AS task_sort_order,
+            tst.link_url,
+            tst.updated_at
+        FROM team_submission_tasks tst
+        JOIN submission_tasks st
+          ON st.submission_task_id = tst.submission_task_id
+        WHERE tst.team_id IN (${tokens.join(', ')})
+          AND tst.deleted_at IS NULL
+          AND st.deleted_at IS NULL
+          AND st.task_type = 'link'
+          AND tst.link_url IS NOT NULL
+          AND TRIM(tst.link_url) <> ''
+        ORDER BY tst.team_id ASC, st.sort_order ASC, tst.updated_at ASC, tst.team_submission_task_id ASC
+    `, params);
+
+    return rows as ExportSubmissionLinkRow[];
 }
 
 export async function getTeamsForSheetExport(

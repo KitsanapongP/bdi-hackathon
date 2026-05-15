@@ -8,6 +8,7 @@ import type {
     DashboardTeamStatus,
     ExportMemberDocumentRow,
     ExportSubmissionFileRow,
+    ExportSubmissionLinkRow,
     ExportSubmittedTeamRow,
     ExportTeamStatus,
     ExportTeamAdvisorRow,
@@ -711,16 +712,18 @@ export async function exportTeamsSelectionSheet(
     }
 
     const teamIds = teams.map((team) => team.team_id);
-    const [advisors, members, memberDocuments, submissionFiles] = await Promise.all([
+    const [advisors, members, memberDocuments, submissionFiles, submissionLinks] = await Promise.all([
         repo.getTeamAdvisorsForExport(db, teamIds),
         repo.getTeamMembersForExport(db, teamIds),
         repo.getMemberDocumentsForExport(db, teamIds),
         repo.getSubmissionFilesForExport(db, teamIds),
+        repo.getSubmissionLinksForExport(db, teamIds),
     ]);
 
     const advisorsByTeam = new Map<number, ExportTeamAdvisorRow[]>();
     const membersByTeam = new Map<number, ExportTeamMemberRow[]>();
     const submissionFilesByTeam = new Map<number, ExportSubmissionFileRow[]>();
+    const submissionLinksByTeam = new Map<number, ExportSubmissionLinkRow[]>();
     const documentsByTeam = new Map<number, ExportMemberDocumentRow[]>();
 
     for (const row of advisors) {
@@ -737,6 +740,11 @@ export async function exportTeamsSelectionSheet(
         const bucket = submissionFilesByTeam.get(row.team_id) ?? [];
         bucket.push(row);
         submissionFilesByTeam.set(row.team_id, bucket);
+    }
+    for (const row of submissionLinks) {
+        const bucket = submissionLinksByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        submissionLinksByTeam.set(row.team_id, bucket);
     }
     for (const row of memberDocuments) {
         const bucket = documentsByTeam.get(row.team_id) ?? [];
@@ -756,7 +764,13 @@ export async function exportTeamsSelectionSheet(
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('teams_selection_export');
     const maxSubmissionFiles = Math.max(0, ...teams.map((team) => (submissionFilesByTeam.get(team.team_id) ?? []).length));
-    const maxVideoLinks = Math.max(0, ...teams.map((team) => (team.video_link ? 1 : 0)));
+    const maxVideoLinks = Math.max(
+        0,
+        ...teams.map((team) => {
+            const taskLinks = submissionLinksByTeam.get(team.team_id) ?? [];
+            return taskLinks.length;
+        }),
+    );
 
     const baseColumns: Array<{ header: string; key: string; width: number }> = [
         { header: 'team_id', key: 'team_id', width: 12 },
@@ -807,6 +821,7 @@ export async function exportTeamsSelectionSheet(
         const teamMembers = [...(membersByTeam.get(team.team_id) ?? [])].sort((a, b) => a.member_order - b.member_order);
         const teamAdvisors = advisorsByTeam.get(team.team_id) ?? [];
         const teamSubmissionFiles = submissionFilesByTeam.get(team.team_id) ?? [];
+        const teamSubmissionLinks = submissionLinksByTeam.get(team.team_id) ?? [];
         const teamDocuments = documentsByTeam.get(team.team_id) ?? [];
         const leader = teamMembers.find((member) => member.role === 'leader') || teamMembers[0] || null;
         const leaderDisplayName = leader ? pickMemberDisplayName(leader) : (team.leader_user_name || '');
@@ -889,12 +904,19 @@ export async function exportTeamsSelectionSheet(
             }
         }
 
-        if (maxVideoLinks > 0) {
-            const videoKey = 'video_link_1';
-            if (team.video_link) {
+        for (let index = 0; index < maxVideoLinks; index += 1) {
+            const link = teamSubmissionLinks[index];
+            const href = link?.link_url || '';
+            const videoKey = `video_link_${index + 1}`;
+            if (href) {
                 const videoCell = row.getCell(videoKey);
-                videoCell.value = { text: 'Open Video', hyperlink: team.video_link };
+                videoCell.value = {
+                    text: link?.task_name ? `Open ${link.task_name}` : 'Open Video',
+                    hyperlink: href,
+                };
                 videoCell.font = hyperlinkStyle;
+            } else {
+                row.getCell(videoKey).value = '';
             }
         }
 
