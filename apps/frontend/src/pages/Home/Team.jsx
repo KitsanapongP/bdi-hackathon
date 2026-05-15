@@ -1653,28 +1653,30 @@ export default function TeamContent({ user }) {
                                         {editTeamNameLength}/{TEAM_NAME_MAX_LENGTH} ตัวอักษร
                                     </span>
 
-                                    <button
-                                        className="gl-team-name-action-btn gl-team-name-save-btn"
-                                        disabled={actionLoading || !isEditTeamNameValid}
-                                        onClick={handleUpdateTeamName}
-                                        title="บันทึก"
-                                    >
-                                        <Save size={14} />
-                                        <span>บันทึก</span>
-                                    </button>
+                                    <div className="gl-team-name-actions">
+                                        <button
+                                            className="gl-team-name-action-btn gl-team-name-save-btn"
+                                            disabled={actionLoading || !isEditTeamNameValid}
+                                            onClick={handleUpdateTeamName}
+                                            title="บันทึก"
+                                        >
+                                            <Save size={14} />
+                                            <span>บันทึก</span>
+                                        </button>
 
-                                    <button
-                                        className="gl-team-name-action-btn gl-team-name-cancel-btn"
-                                        disabled={actionLoading}
-                                        onClick={() => {
-                                            setEditingTeamName(false);
-                                            setNewTeamNameInput(team.name);
-                                        }}
-                                        title="ยกเลิก"
-                                    >
-                                        <X size={14} />
-                                        <span>ยกเลิก</span>
-                                    </button>
+                                        <button
+                                            className="gl-team-name-action-btn gl-team-name-cancel-btn"
+                                            disabled={actionLoading}
+                                            onClick={() => {
+                                                setEditingTeamName(false);
+                                                setNewTeamNameInput(team.name);
+                                            }}
+                                            title="ยกเลิก"
+                                        >
+                                            <X size={14} />
+                                            <span>ยกเลิก</span>
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>

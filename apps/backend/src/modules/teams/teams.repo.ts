@@ -86,6 +86,18 @@ export async function getTeamByIdForUpdate(db: DB, teamId: number): Promise<Team
     return (rows[0] as TeamRow | undefined) ?? null;
 }
 
+export async function getTeamByNameTh(db: DB, teamNameTh: string): Promise<TeamRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM team_teams
+         WHERE team_name_th = :teamNameTh
+           AND deleted_at IS NULL
+         LIMIT 1`,
+        { teamNameTh },
+    );
+    return (rows[0] as TeamRow | undefined) ?? null;
+}
+
 export async function getTeamMembers(db: DB, teamId: number): Promise<any[]> {
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT m.*, u.user_name, u.avatar_url, u.first_name_th, u.last_name_th, IFNULL(p.show_real_name, 0) as show_real_name 

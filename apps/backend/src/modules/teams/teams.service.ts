@@ -31,6 +31,12 @@ function isDuplicateTeamCodeError(err: unknown): boolean {
     return code === 'ER_DUP_ENTRY' && /team_code|uq_team_teams_team_code/i.test(message);
 }
 
+function isDuplicateTeamNameError(err: unknown): boolean {
+    const code = String((err as { code?: string } | null)?.code || '');
+    const message = String((err as { message?: string } | null)?.message || '');
+    return code === 'ER_DUP_ENTRY' && /team_name_th|uq_team_teams_team_name_th/i.test(message);
+}
+
 async function applySelectionExpiryIfNeeded(db: DB, teamId: number): Promise<void> {
     const changed = await repo.failTeamIfConfirmationExpired(db, teamId);
     if (!changed) return;
@@ -81,8 +87,22 @@ function normalizeTeamDescription(value?: string | null): string | null {
     return trimmed.length > 0 ? trimmed : null;
 }
 
+function normalizeTeamName(value: string): string {
+    return value.trim();
+}
+
+async function assertTeamNameAvailable(db: DB, teamNameTh: string, excludeTeamId?: number): Promise<void> {
+    const existingTeam = await repo.getTeamByNameTh(db, teamNameTh);
+    if (existingTeam && existingTeam.team_id !== excludeTeamId) {
+        throw new AppError('ชื่อทีมนี้ถูกใช้แล้ว กรุณาใช้ชื่อทีมอื่น', 400);
+    }
+}
+
 export async function createTeam(db: DB, userId: number, data: { teamNameTh: string; teamDescription?: string | null | undefined; visibility: 'public' | 'private' }) {
     await assertTeamRecruitmentOpen(db);
+
+    const teamNameTh = normalizeTeamName(data.teamNameTh);
+    await assertTeamNameAvailable(db, teamNameTh);
 
     // Check if user is already in a team
     const inTeam = await repo.checkUserInAnyTeam(db, userId);
@@ -99,8 +119,8 @@ export async function createTeam(db: DB, userId: number, data: { teamNameTh: str
         try {
             teamId = await repo.createTeam(db, {
                 teamCode,
-                teamNameTh: data.teamNameTh,
-                teamNameEn: data.teamNameTh,
+                teamNameTh,
+                teamNameEn: teamNameTh,
                 teamDescription: normalizeTeamDescription(data.teamDescription),
                 visibility: data.visibility,
                 leaderUserId: userId,
@@ -108,6 +128,7 @@ export async function createTeam(db: DB, userId: number, data: { teamNameTh: str
             break;
         } catch (err) {
             if (isDuplicateTeamCodeError(err)) continue;
+            if (isDuplicateTeamNameError(err)) throw new AppError('ชื่อทีมนี้ถูกใช้แล้ว กรุณาใช้ชื่อทีมอื่น', 400);
             throw err;
         }
     }
@@ -770,7 +791,7 @@ export async function updateTeamName(
     }
     assertTeamEditable(team.status, 'แก้ไขชื่อทีม');
 
-    const trimmedName = teamNameTh.trim();
+    const trimmedName = normalizeTeamName(teamNameTh);
     if (!trimmedName) {
         throw new AppError('ชื่อทีมต้องไม่ว่าง', 400);
     }
@@ -778,7 +799,14 @@ export async function updateTeamName(
         return { teamNameTh: team.team_name_th };
     }
 
-    await repo.updateTeamName(db, teamId, trimmedName);
+    await assertTeamNameAvailable(db, trimmedName, teamId);
+
+    try {
+        await repo.updateTeamName(db, teamId, trimmedName);
+    } catch (err) {
+        if (isDuplicateTeamNameError(err)) throw new AppError('ชื่อทีมนี้ถูกใช้แล้ว กรุณาใช้ชื่อทีมอื่น', 400);
+        throw err;
+    }
     await repo.createTeamAuditLog(db, {
         teamId,
         actorUserId: leaderUserId,

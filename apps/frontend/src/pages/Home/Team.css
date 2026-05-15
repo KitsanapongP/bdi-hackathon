@@ -4332,29 +4332,20 @@
 
 .gl-team-name-edit-panel {
     width: 100%;
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     gap: 8px;
-    padding: 6px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: linear-gradient(140deg,
-            rgba(124, 58, 237, 0.2) 0%,
-            rgba(59, 130, 246, 0.14) 55%,
-            rgba(45, 212, 191, 0.1) 100%);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.14),
-        0 4px 14px rgba(17, 24, 39, 0.16);
-    backdrop-filter: blur(6px);
+    padding: 0;
 }
 
 .gl-team-name-input {
-    height: 36px;
-    padding: 0 12px !important;
+    width: 100%;
+    height: 40px;
+    padding: 0 14px !important;
     text-align: left;
     font-weight: 700;
-    border-radius: 10px !important;
+    border-radius: 12px !important;
     border: 1px solid rgba(255, 255, 255, 0.24) !important;
     background: rgba(20, 14, 47, 0.45) !important;
     color: #fff !important;
@@ -4371,7 +4362,13 @@
 }
 
 .gl-team-name-counter {
-    grid-column: 1 / -1;
+    align-self: flex-end;
+}
+
+.gl-team-name-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
 }
 
 .gl-team-name-action-btn {
