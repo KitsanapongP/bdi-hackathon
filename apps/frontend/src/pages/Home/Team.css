@@ -2584,6 +2584,17 @@
     color: var(--gl-text-dim);
 }
 
+.gl-form-counter {
+    align-self: flex-end;
+    color: var(--gl-text-dim);
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.gl-form-counter.is-error {
+    color: #fecaca;
+}
+
 .gl-form-code-input {
     font-family: 'Consolas', 'Courier New', monospace;
     letter-spacing: 2px;
@@ -4306,6 +4317,10 @@
     outline: none;
     border-color: rgba(45, 212, 191, 0.75) !important;
     box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.18) !important;
+}
+
+.gl-team-name-counter {
+    grid-column: 1 / -1;
 }
 
 .gl-team-name-action-btn {

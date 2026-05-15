@@ -55,6 +55,7 @@ import './Profile.css';
 
 const TEAM_MEMBER_MAX_DEFAULT = 5;
 const TEAM_MEMBER_MIN_DEFAULT = 3;
+const TEAM_NAME_MAX_LENGTH = 50;
 
 const CARDS = [
     { id: 'verify', icon: <ShieldCheck />, label: 'ยืนยันตัวตน', color: '#14b8a6' },
@@ -432,6 +433,10 @@ export default function TeamContent({ user }) {
         ? `การยืนยันการเข้าร่วมโครงการจะเปิดในวันที่ ${formatThaiDate(globalSelectionConfirmWindow.openAtMs)}`
         : (globalSelectionConfirmWindow.status === SYSTEM_WINDOW_STATUS.CLOSED ? 'หมดเวลายืนยันการเข้าร่วมโครงการแล้ว' : '');
     const hasPendingJoinRequests = pendingJoinRequests.length > 0;
+    const createTeamNameLength = createName.trim().length;
+    const isCreateTeamNameValid = createTeamNameLength >= 2 && createTeamNameLength <= TEAM_NAME_MAX_LENGTH;
+    const editTeamNameLength = newTeamNameInput.trim().length;
+    const isEditTeamNameValid = editTeamNameLength >= 2 && editTeamNameLength <= TEAM_NAME_MAX_LENGTH;
     const sortedMembers = useMemo(() => {
         if (!team?.members) return [];
         return [...team.members].sort((a, b) => {
@@ -671,20 +676,22 @@ export default function TeamContent({ user }) {
         if (!isTeamRecruitmentOpen) {
             throw new Error(teamRecruitmentMessage || 'หมดเขตการรับสมัคร');
         }
-        if (!createName.trim()) return;
+        if (!isCreateTeamNameValid) {
+            throw new Error(`ชื่อทีมต้องมี 2-${TEAM_NAME_MAX_LENGTH} ตัวอักษร`);
+        }
         const res = await fetch(apiUrl('/api/teams'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
-                teamNameTh: createName,
+                teamNameTh: createName.trim(),
                 visibility: createPublic ? 'public' : 'private',
             }),
         });
         const payload = await res.json();
         if (!payload.ok) throw new Error(payload.message || 'สร้างทีมไม่สำเร็จ');
         window.location.reload();
-    });
+    }, { toastError: true });
 
     const handleJoinByCode = () => withAction(async () => {
         if (!isTeamRecruitmentOpen) {
@@ -942,7 +949,16 @@ export default function TeamContent({ user }) {
                             <div className="gl-inner-form">
                                 <div className="gl-form-field">
                                     <label className="gl-form-label">ชื่อทีม</label>
-                                    <input className="gl-form-input" value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="กรอกชื่อทีม" />
+                                    <input
+                                        className="gl-form-input"
+                                        value={createName}
+                                        maxLength={TEAM_NAME_MAX_LENGTH}
+                                        onChange={(e) => setCreateName(e.target.value.slice(0, TEAM_NAME_MAX_LENGTH))}
+                                        placeholder="กรอกชื่อทีม"
+                                    />
+                                    <span className={`gl-form-counter ${isCreateTeamNameValid || createTeamNameLength === 0 ? '' : 'is-error'}`}>
+                                        {createTeamNameLength}/{TEAM_NAME_MAX_LENGTH} ตัวอักษร
+                                    </span>
                                 </div>
                                 <div className="gl-form-toggle-row">
                                     <div className="gl-form-toggle-info">
@@ -951,7 +967,7 @@ export default function TeamContent({ user }) {
                                     </div>
                                     <button type="button" className={`gl-form-toggle ${createPublic ? 'on' : ''}`} onClick={() => setCreatePublic((v) => !v)} />
                                 </div>
-                                <button className="gl-form-submit gl-btn-pink" disabled={!isTeamRecruitmentOpen || actionLoading || !createName.trim()} onClick={handleCreateTeam}>
+                                <button className="gl-form-submit gl-btn-pink" disabled={!isTeamRecruitmentOpen || actionLoading || !isCreateTeamNameValid} onClick={handleCreateTeam}>
                                     <Plus size={18} /> สร้างทีม
                                 </button>
                             </div>
@@ -1472,22 +1488,23 @@ export default function TeamContent({ user }) {
             showToast('ทีมถูกล็อกแล้ว ไม่สามารถเปลี่ยนชื่อทีมได้', 'error');
             return;
         }
-        if (!newTeamNameInput.trim()) {
-            showToast('กรุณากรอกชื่อทีม', 'error');
+        if (!isEditTeamNameValid) {
+            showToast(`ชื่อทีมต้องมี 2-${TEAM_NAME_MAX_LENGTH} ตัวอักษร`, 'error');
             return;
         }
         withAction(async () => {
+            const trimmedTeamName = newTeamNameInput.trim();
             const res = await fetch(apiUrl(`/api/teams/${team.id}/name`), {
                 method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ teamNameTh: newTeamNameInput.trim() }),
+                body: JSON.stringify({ teamNameTh: trimmedTeamName }),
             });
             const payload = await res.json();
             if (!payload.ok) throw new Error(payload.message || 'เปลี่ยนชื่อทีมไม่สำเร็จ');
             showToast('เปลี่ยนชื่อทีมสำเร็จ', 'success');
             setEditingTeamName(false);
-            setTeam(prev => ({ ...prev, name: newTeamNameInput.trim() }));
+            setTeam(prev => ({ ...prev, name: trimmedTeamName }));
         }, { toastError: true });
     };
 
@@ -1537,10 +1554,11 @@ export default function TeamContent({ user }) {
                                     <input
                                         className="gr-input gl-team-name-input"
                                         value={newTeamNameInput}
+                                        maxLength={TEAM_NAME_MAX_LENGTH}
                                         disabled={actionLoading || isTeamEditLocked}
-                                        onChange={e => setNewTeamNameInput(e.target.value)}
+                                        onChange={e => setNewTeamNameInput(e.target.value.slice(0, TEAM_NAME_MAX_LENGTH))}
                                         onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && newTeamNameInput.trim() && !actionLoading) {
+                                            if (e.key === 'Enter' && isEditTeamNameValid && !actionLoading) {
                                                 handleUpdateTeamName();
                                             }
                                             if (e.key === 'Escape' && !actionLoading) {
@@ -1551,10 +1569,13 @@ export default function TeamContent({ user }) {
                                         placeholder="กรอกชื่อทีม"
                                         autoFocus
                                     />
+                                    <span className={`gl-form-counter gl-team-name-counter ${isEditTeamNameValid || editTeamNameLength === 0 ? '' : 'is-error'}`}>
+                                        {editTeamNameLength}/{TEAM_NAME_MAX_LENGTH} ตัวอักษร
+                                    </span>
 
                                     <button
                                         className="gl-team-name-action-btn gl-team-name-save-btn"
-                                        disabled={actionLoading || !newTeamNameInput.trim()}
+                                        disabled={actionLoading || !isEditTeamNameValid}
                                         onClick={handleUpdateTeamName}
                                         title="บันทึก"
                                     >
