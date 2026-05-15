@@ -40,8 +40,8 @@ export const updateSocialLinkSchema = z.object({
 
 /* ── 1.9 Public profile ── */
 export const updatePublicProfileSchema = z.object({
-    bioTh: z.string().max(2000).optional().nullable(),
-    bioEn: z.string().max(2000).optional().nullable(),
+    bioTh: z.string().max(500).optional().nullable(),
+    bioEn: z.string().max(500).optional().nullable(),
     lookingForTeam: z.boolean().optional(),
     contactNote: z.string().max(500).optional().nullable(),
 });

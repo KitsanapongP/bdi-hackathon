@@ -148,6 +148,14 @@
 .pf-textarea {
     resize: vertical;
     min-height: 80px;
+    max-height: 220px;
+}
+
+.pf-char-count {
+    align-self: flex-end;
+    color: var(--gl-text-dim);
+    font-size: 0.75rem;
+    font-weight: 600;
 }
 
 /* ── Form grid ── */

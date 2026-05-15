@@ -915,6 +915,7 @@ function SocialTab({ apiFetch, showToast }) {
    Tab 4: Public Profile (1.9)
    ═══════════════════════════════════════════════════════════ */
 function PublicTab({ apiFetch, showToast }) {
+    const BIO_MAX_LENGTH = 500;
     const [data, setData] = useState({ bioTh: '', bioEn: '', lookingForTeam: false, contactNote: '' });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -962,11 +963,13 @@ function PublicTab({ apiFetch, showToast }) {
                     <div className="pf-form-grid" style={{ marginTop: 12 }}>
                         <div className="pf-field">
                             <span className="pf-label">Bio (TH)</span>
-                            <textarea className="pf-input pf-textarea" value={data.bioTh || ''} onChange={(e) => set('bioTh', e.target.value)} placeholder="แนะนำตัวสั้นๆ ภาษาไทย..." />
+                            <textarea className="pf-input pf-textarea" value={data.bioTh || ''} onChange={(e) => set('bioTh', e.target.value)} placeholder="แนะนำตัวสั้นๆ ภาษาไทย..." maxLength={BIO_MAX_LENGTH} />
+                            <span className="pf-char-count">{(data.bioTh || '').length}/{BIO_MAX_LENGTH}</span>
                         </div>
                         <div className="pf-field">
                             <span className="pf-label">Bio (EN)</span>
-                            <textarea className="pf-input pf-textarea" value={data.bioEn || ''} onChange={(e) => set('bioEn', e.target.value)} placeholder="A short introduction..." />
+                            <textarea className="pf-input pf-textarea" value={data.bioEn || ''} onChange={(e) => set('bioEn', e.target.value)} placeholder="A short introduction..." maxLength={BIO_MAX_LENGTH} />
+                            <span className="pf-char-count">{(data.bioEn || '').length}/{BIO_MAX_LENGTH}</span>
                         </div>
                     </div>
                 </div>
