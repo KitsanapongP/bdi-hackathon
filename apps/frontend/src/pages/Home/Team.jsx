@@ -2886,7 +2886,7 @@ export default function TeamContent({ user }) {
                                 <div className="gl-top-hints">
                                     {!isLeader && <span className="gl-top-hint-item"><Lock size={12} /> เฉพาะหัวหน้าทีม</span>}
                                     {!readinessLoaded && <span className="gl-top-hint-item"><Loader2 size={12} /> กำลังตรวจสอบข้อมูลความพร้อมของทีม...</span>}
-                                    {!shouldShowParticipationConfirm && !isTeamSelectionSubmissionOpen && <span className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {teamSelectionSubmissionMessage || 'ยังไม่อยู่ในช่วงเวลาส่งทีมเข้าคัดเลือก'}</span>}
+                                    {!readinessLoaded && !shouldShowParticipationConfirm && !isTeamSelectionSubmissionOpen && <span className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {teamSelectionSubmissionMessage || 'ยังไม่อยู่ในช่วงเวลาส่งทีมเข้าคัดเลือก'}</span>}
                                     {readinessLoaded && !shouldShowParticipationConfirm && submitMissing.map((msg, i) => (
                                         <span key={i} className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {msg}</span>
                                     ))}
