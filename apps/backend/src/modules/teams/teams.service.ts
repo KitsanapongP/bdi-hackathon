@@ -436,17 +436,23 @@ export async function getTeamMemberProfile(
 ): Promise<TeamMemberProfileSafe> {
     const viewerMember = await repo.getTeamMemberByTeamAndUser(db, teamId, viewerUserId);
     if (!viewerMember || viewerMember.member_status !== 'active') {
-        throw new AppError('คุณไม่ได้เป็นสมาชิกของทีมนี้', 403);
+        throw new AppError('ไม่มีสิทธิ์ดูโปรไฟล์นี้', 403);
     }
 
     const targetMember = await repo.getTeamMemberByTeamAndUser(db, teamId, targetUserId);
-    if (!targetMember || targetMember.member_status !== 'active') {
-        throw new AppError('ไม่พบสมาชิกในทีมนี้', 404);
+    const isActiveTeamMember = targetMember?.member_status === 'active';
+    if (!isActiveTeamMember) {
+        const team = await repo.getTeamById(db, teamId);
+        const pendingRequest = await repo.getJoinRequestByUserAndTeam(db, targetUserId, teamId);
+        const canLeaderViewRequester = team?.current_leader_user_id === viewerUserId && !!pendingRequest;
+        if (!canLeaderViewRequester) {
+            throw new AppError('ไม่มีสิทธิ์ดูโปรไฟล์นี้', 403);
+        }
     }
 
     const profileRow = await repo.getTeamMemberProfileByUserId(db, targetUserId);
     if (!profileRow) {
-        throw new AppError('ไม่พบข้อมูลสมาชิก', 404);
+        throw new AppError('ไม่มีสิทธิ์ดูโปรไฟล์นี้', 403);
     }
 
     const privacy = {

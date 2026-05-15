@@ -82,7 +82,11 @@ const normalizeStatus = (raw) => {
     return TEAM_STATUS_CONFIG[key] ? key : 'forming';
 };
 
-const roleLabel = (role) => (role === 'leader' ? 'หัวหน้า' : 'สมาชิก');
+const roleLabel = (role) => {
+    if (role === 'leader') return 'หัวหน้า';
+    if (role === 'requester') return 'ผู้ขอเข้าร่วมทีม';
+    return 'สมาชิก';
+};
 
 const SOCIAL_PLATFORM_LABELS = {
     github: 'GitHub',
@@ -770,6 +774,26 @@ export default function TeamContent({ user }) {
         setPendingJoinRequests((prev) => prev.filter((item) => item.join_request_id !== requestId));
         if (status === 'approved') window.location.reload();
     });
+
+    const confirmRespondJoinRequest = (req, status) => {
+        if (isTeamEditLocked) {
+            showToast('ทีมถูกล็อกแล้ว ไม่สามารถจัดการคำขอเข้าร่วมได้', 'error');
+            return;
+        }
+        const requesterName = req.requester_user_name || `ผู้ใช้ ${req.requester_user_id}`;
+        const isApprove = status === 'approved';
+        openConfirm(
+            isApprove ? 'อนุมัติคำขอเข้าร่วมทีม' : 'ปฏิเสธคำขอเข้าร่วมทีม',
+            isApprove
+                ? `ต้องการอนุมัติให้ ${requesterName} เข้าร่วมทีมนี้หรือไม่?`
+                : `ต้องการปฏิเสธคำขอเข้าร่วมทีมของ ${requesterName} หรือไม่?`,
+            () => {
+                closeConfirm();
+                handleRespondJoinRequest(req.join_request_id, status);
+            },
+            isApprove ? 'success' : 'danger',
+        );
+    };
 
     const handleInviteMember = () => withAction(async () => {
         if (!team?.id) return;
@@ -1815,10 +1839,25 @@ export default function TeamContent({ user }) {
                                                     <span className="gl-req-name">{req.requester_user_name || `ผู้ใช้ ${req.requester_user_id}`}</span>
                                                 </div>
                                                 <div className="gl-req-actions">
-                                                    <button className="gl-btn-icon-success" disabled={actionLoading || isTeamEditLocked} onClick={() => handleRespondJoinRequest(req.join_request_id, 'approved')} title="อนุมัติ">
-                                                        <CheckCircle size={16} /> อนุมัติ
+                                                    <button
+                                                        className="gl-btn-icon-profile"
+                                                        disabled={actionLoading}
+                                                        onClick={() => handleOpenMemberProfile({
+                                                            id: req.requester_user_id,
+                                                            name: req.requester_user_name || `ผู้ใช้ ${req.requester_user_id}`,
+                                                            role: 'requester',
+                                                            leader: false,
+                                                            color: '#10b981',
+                                                        })}
+                                                        title="ดูโปรไฟล์"
+                                                        aria-label={`ดูโปรไฟล์ ${req.requester_user_name || `ผู้ใช้ ${req.requester_user_id}`}`}
+                                                    >
+                                                        <Eye size={16} />
                                                     </button>
-                                                    <button className="gl-btn-icon-danger" disabled={actionLoading || isTeamEditLocked} onClick={() => handleRespondJoinRequest(req.join_request_id, 'rejected')} title="ปฏิเสธ">
+                                                    <button className="gl-btn-icon-success" disabled={actionLoading || isTeamEditLocked} onClick={() => confirmRespondJoinRequest(req, 'approved')} title="อนุมัติ" aria-label={`อนุมัติ ${req.requester_user_name || `ผู้ใช้ ${req.requester_user_id}`}`}>
+                                                        <CheckCircle size={16} />
+                                                    </button>
+                                                    <button className="gl-btn-icon-danger" disabled={actionLoading || isTeamEditLocked} onClick={() => confirmRespondJoinRequest(req, 'rejected')} title="ปฏิเสธ" aria-label={`ปฏิเสธ ${req.requester_user_name || `ผู้ใช้ ${req.requester_user_id}`}`}>
                                                         <X size={16} />
                                                     </button>
                                                 </div>
