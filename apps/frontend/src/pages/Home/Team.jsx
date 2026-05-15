@@ -1055,7 +1055,6 @@ export default function TeamContent({ user }) {
                                     {filteredTeams.map((t) => (
                                         <div key={t.id} className="gl-browse-item">
                                             <div className="gl-browse-item-left">
-                                                <div className="gl-browse-team-avatar">{t.name.charAt(0)}</div>
                                                 <div className="gl-browse-team-info">
                                                     <span className="gl-browse-team-name">{t.name}</span>
                                                     <span className="gl-browse-team-desc">{t.description || 'ทีมนี้ยังไม่ได้เพิ่มคำอธิบาย'}</span>

@@ -2776,28 +2776,15 @@
 .gl-browse-item-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0;
     min-width: 0;
-}
-
-.gl-browse-team-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, var(--gl-light), var(--gl-teal));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-weight: 800;
-    font-size: 1rem;
-    flex-shrink: 0;
+    flex: 1;
 }
 
 .gl-browse-team-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     min-width: 0;
 }
 
