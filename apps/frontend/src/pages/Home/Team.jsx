@@ -8,7 +8,6 @@ import {
     Copy,
     Crown,
     FileText,
-    Gamepad2,
     Globe,
     Info,
     Lock,
@@ -2773,7 +2772,7 @@ export default function TeamContent({ user }) {
                                 {/* Left: Team identity */}
                                 <div className="gl-top-identity">
                                     <div className="gl-top-team-icon">
-                                        <Gamepad2 size={22} />
+                                        <Users size={22} />
                                     </div>
                                     <div className="gl-top-team-meta">
                                         <span className="gl-top-team-name">{team.name}</span>
