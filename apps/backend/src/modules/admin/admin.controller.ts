@@ -42,6 +42,7 @@ import * as eventService from '../events/events.service.js';
 import { ok } from '../../shared/response.js';
 import { AppError } from '../../shared/errors.js';
 import type { JwtPayload } from '../auth/auth.types.js';
+import { getPublicRequestBaseUrl } from '../../shared/request-url.js';
 
 function buildAttachmentHeader(fileName: string): string {
     const safeName = encodeURIComponent(fileName || 'export.zip');
@@ -58,9 +59,7 @@ function pickFrontendBaseUrl(req: FastifyRequest): string {
         .find((value) => /^https?:\/\//i.test(value));
     if (corsOrigin) return corsOrigin;
 
-    const host = String(req.headers.host || '').trim();
-    const protocol = req.protocol || 'https';
-    return host ? `${protocol}://${host}` : '';
+    return getPublicRequestBaseUrl(req);
 }
 
 export async function handleGetAdminMe(req: FastifyRequest, reply: FastifyReply) {

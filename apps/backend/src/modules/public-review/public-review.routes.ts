@@ -2,6 +2,7 @@ import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import fs from 'node:fs';
 import { getReviewFileByShareId, getReviewTeamByShareId } from './public-review.service.js';
 import { AppError } from '../../shared/errors.js';
+import { getPublicRequestBaseUrl } from '../../shared/request-url.js';
 
 function buildContentDisposition(mode: 'inline' | 'attachment', fileName: string): string {
     const fallbackName = String(fileName || 'file')
@@ -41,9 +42,7 @@ export const publicReviewRoutes: FastifyPluginAsync = async (app) => {
         }
 
         try {
-            const host = String(req.headers.host || '').trim();
-            const protocol = req.protocol || 'https';
-            const publicBaseUrl = host ? `${protocol}://${host}` : '';
+            const publicBaseUrl = getPublicRequestBaseUrl(req);
             const result = await getReviewTeamByShareId(app.ctx.db, shareId, publicBaseUrl);
             reply.header('X-Robots-Tag', 'noindex, nofollow, noarchive');
             return reply.send({ ok: true, data: result });
