@@ -133,42 +133,6 @@ export default function TeamReviewPage() {
         </dl>
       </section>
 
-      <section className="team-review-grid">
-        <article className="team-review-panel">
-          <h2><Users size={18} /> Members</h2>
-          <div className="team-review-member-list">
-            {(payload?.members || []).map((member) => (
-              <div key={member.userId} className="team-review-member">
-                <div>
-                  <strong>{member.name}</strong>
-                  <span>{member.role}</span>
-                </div>
-                <p>{[member.email, member.phone, member.institution].filter(Boolean).join(' / ') || '-'}</p>
-                <p>{[member.educationLevel, member.homeProvince].filter(Boolean).join(' / ') || '-'}</p>
-                {member.documentUrl ? (
-                  <a href={member.documentUrl} target="_blank" rel="noreferrer">
-                    <ExternalLink size={14} />
-                    Open ID Bundle ({member.documentCount})
-                  </a>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="team-review-panel">
-          <h2>Advisors</h2>
-          <div className="team-review-advisor-list">
-            {(payload?.advisors || []).length ? payload.advisors.map((advisor, index) => (
-              <div key={`${advisor.name}-${index}`}>
-                <strong>{advisor.name}</strong>
-                <p>{[advisor.email, advisor.phone, advisor.institution].filter(Boolean).join(' / ') || '-'}</p>
-              </div>
-            )) : <p className="team-review-muted">ไม่มีข้อมูลที่ปรึกษา</p>}
-          </div>
-        </article>
-      </section>
-
       <section className="team-review-panel">
         <h2>Submission Links</h2>
         <div className="team-review-link-list">
@@ -219,6 +183,42 @@ export default function TeamReviewPage() {
             ))}
           </div>
         ) : <p className="team-review-muted">ไม่มีไฟล์ส่งงาน</p>}
+      </section>
+
+      <section className="team-review-grid team-review-people-grid">
+        <article className="team-review-panel team-review-panel-compact">
+          <h2><Users size={16} /> Members</h2>
+          <div className="team-review-member-list">
+            {(payload?.members || []).map((member) => (
+              <div key={member.userId} className="team-review-member">
+                <div>
+                  <strong>{member.name}</strong>
+                  <span>{member.role}</span>
+                </div>
+                <p>{[member.email, member.phone, member.institution].filter(Boolean).join(' / ') || '-'}</p>
+                <p>{[member.educationLevel, member.homeProvince].filter(Boolean).join(' / ') || '-'}</p>
+                {member.documentUrl ? (
+                  <a href={member.documentUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink size={13} />
+                    Open ID Bundle ({member.documentCount})
+                  </a>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="team-review-panel team-review-panel-compact">
+          <h2>Advisors</h2>
+          <div className="team-review-advisor-list">
+            {(payload?.advisors || []).length ? payload.advisors.map((advisor, index) => (
+              <div key={`${advisor.name}-${index}`}>
+                <strong>{advisor.name}</strong>
+                <p>{[advisor.email, advisor.phone, advisor.institution].filter(Boolean).join(' / ') || '-'}</p>
+              </div>
+            )) : <p className="team-review-muted">ไม่มีข้อมูลที่ปรึกษา</p>}
+          </div>
+        </article>
       </section>
     </main>
   )

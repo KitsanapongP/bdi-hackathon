@@ -85,8 +85,12 @@
   width: min(1180px, 100%);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.6fr);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  gap: 10px;
+}
+
+.team-review-people-grid {
+  align-items: start;
 }
 
 .team-review-grid .team-review-panel {
@@ -95,6 +99,10 @@
 
 .team-review-panel {
   padding: 16px;
+}
+
+.team-review-panel-compact {
+  padding: 12px;
 }
 
 .team-review-panel h2 {
@@ -106,11 +114,25 @@
   letter-spacing: 0;
 }
 
+.team-review-panel-compact h2 {
+  margin-bottom: 9px;
+  font-size: 0.94rem;
+}
+
 .team-review-member-list,
 .team-review-advisor-list,
 .team-review-file-groups {
   display: grid;
   gap: 10px;
+}
+
+.team-review-panel-compact .team-review-member-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.team-review-panel-compact .team-review-advisor-list {
+  gap: 8px;
 }
 
 .team-review-member,
@@ -122,6 +144,16 @@
   padding: 12px;
 }
 
+.team-review-panel-compact .team-review-member,
+.team-review-panel-compact .team-review-advisor-list > div {
+  padding: 9px;
+}
+
+.team-review-panel-compact .team-review-member strong,
+.team-review-panel-compact .team-review-advisor-list strong {
+  font-size: 0.9rem;
+}
+
 .team-review-member > div {
   display: flex;
   justify-content: space-between;
@@ -130,8 +162,20 @@
 
 .team-review-member span {
   color: #3262b7;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 800;
+}
+
+.team-review-panel-compact .team-review-member p,
+.team-review-panel-compact .team-review-advisor-list p {
+  margin-top: 4px;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.team-review-panel-compact .team-review-member a {
+  margin-top: 5px;
+  font-size: 0.82rem;
 }
 
 .team-review-member p,
@@ -257,6 +301,7 @@
 
   .team-review-hero,
   .team-review-grid,
+  .team-review-panel-compact .team-review-member-list,
   .team-review-file-list {
     grid-template-columns: 1fr;
   }
