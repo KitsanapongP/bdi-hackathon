@@ -48,6 +48,21 @@ function buildAttachmentHeader(fileName: string): string {
     return `attachment; filename*=UTF-8''${safeName}`;
 }
 
+function pickFrontendBaseUrl(req: FastifyRequest): string {
+    const configuredFrontend = String(req.server.ctx.env.FRONTEND_BASE_URL || '').trim().replace(/\/+$/, '');
+    if (configuredFrontend) return configuredFrontend;
+
+    const corsOrigin = String(req.server.ctx.env.CORS_ORIGIN || '')
+        .split(',')
+        .map((value) => value.trim().replace(/\/+$/, ''))
+        .find((value) => /^https?:\/\//i.test(value));
+    if (corsOrigin) return corsOrigin;
+
+    const host = String(req.headers.host || '').trim();
+    const protocol = req.protocol || 'https';
+    return host ? `${protocol}://${host}` : '';
+}
+
 export async function handleGetAdminMe(req: FastifyRequest, reply: FastifyReply) {
     const user = req.user as JwtPayload;
     const freshUser = await authService.getUserById(req.server.ctx.db, user.userId);
@@ -1107,9 +1122,7 @@ export async function handleExportTeamsReviewSheet(req: FastifyRequest, reply: F
             .split(',')
             .map((value) => value.trim())
             .filter(Boolean);
-        const host = String(req.headers.host || '').trim();
-        const protocol = req.protocol || 'https';
-        const publicBaseUrl = host ? `${protocol}://${host}` : '';
+        const publicBaseUrl = pickFrontendBaseUrl(req);
         const result = await service.exportTeamsReviewSheet(req.server.ctx.db, statuses, publicBaseUrl);
         reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         reply.header('Content-Disposition', buildAttachmentHeader(result.fileName));
