@@ -31,6 +31,11 @@ function fileIcon(kind) {
   return <FileText size={18} />
 }
 
+function getDownloadFileName(file) {
+  const name = String(file?.fileName || '').trim()
+  return name || 'submission-file'
+}
+
 function FilePreview({ file }) {
   const kind = fileKind(file)
   if (kind === 'image') {
@@ -55,6 +60,7 @@ export default function TeamReviewPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [payload, setPayload] = useState(null)
+  const [downloadingKey, setDownloadingKey] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -108,6 +114,32 @@ export default function TeamReviewPage() {
   }
 
   const team = payload?.team || {}
+
+  const downloadFile = async (file) => {
+    const downloadUrl = file?.downloadUrl || file?.url
+    if (!downloadUrl) return
+
+    const key = downloadUrl
+    try {
+      setDownloadingKey(key)
+      const response = await fetch(downloadUrl, { credentials: 'include' })
+      if (!response.ok) throw new Error('download failed')
+
+      const blob = await response.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = objectUrl
+      anchor.download = getDownloadFileName(file)
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(objectUrl)
+    } catch (err) {
+      window.open(downloadUrl, '_blank', 'noopener,noreferrer')
+    } finally {
+      setDownloadingKey('')
+    }
+  }
 
   return (
     <main className="team-review-page">
@@ -170,10 +202,14 @@ export default function TeamReviewPage() {
                             <ExternalLink size={14} />
                             Open
                           </a>
-                          <a href={file.downloadUrl}>
+                          <button
+                            type="button"
+                            onClick={() => downloadFile(file)}
+                            disabled={downloadingKey === (file.downloadUrl || file.url)}
+                          >
                             <Download size={14} />
-                            Download
-                          </a>
+                            {downloadingKey === (file.downloadUrl || file.url) ? 'Downloading...' : 'Download'}
+                          </button>
                         </footer>
                       </article>
                     )

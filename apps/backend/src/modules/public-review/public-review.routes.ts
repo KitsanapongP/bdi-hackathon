@@ -3,6 +3,14 @@ import fs from 'node:fs';
 import { getReviewFileByShareId, getReviewTeamByShareId } from './public-review.service.js';
 import { AppError } from '../../shared/errors.js';
 
+function buildContentDisposition(mode: 'inline' | 'attachment', fileName: string): string {
+    const fallbackName = String(fileName || 'file')
+        .replace(/[\\/\r\n"]/g, '_')
+        .replace(/[^\x20-\x7E]/g, '_') || 'file';
+    const encodedName = encodeURIComponent(fileName || fallbackName);
+    return `${mode}; filename="${fallbackName}"; filename*=UTF-8''${encodedName}`;
+}
+
 export const publicReviewRoutes: FastifyPluginAsync = async (app) => {
     app.get('/files/:shareId', async (req: FastifyRequest<{ Params: { shareId: string } }>, reply) => {
         const shareId = String(req.params.shareId || '').trim();
@@ -16,7 +24,7 @@ export const publicReviewRoutes: FastifyPluginAsync = async (app) => {
             const dispositionMode = query?.download === '1' ? 'attachment' : 'inline';
             reply.header('Content-Type', result.contentType);
             reply.header('X-Robots-Tag', 'noindex, nofollow, noarchive');
-            reply.header('Content-Disposition', `${dispositionMode}; filename="${encodeURIComponent(result.fileOriginalName)}"`);
+            reply.header('Content-Disposition', buildContentDisposition(dispositionMode, result.fileOriginalName));
             return reply.send(fs.createReadStream(result.absolutePath));
         } catch (err) {
             if (err instanceof AppError) {
