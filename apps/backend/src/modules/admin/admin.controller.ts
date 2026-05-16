@@ -1095,6 +1095,33 @@ export async function handleExportTeamsSheet(req: FastifyRequest, reply: Fastify
     }
 }
 
+export async function handleExportTeamsReviewSheet(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = exportTeamsSheetQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'เธฃเธนเธเนเธเธเธเนเธญเธกเธนเธฅเนเธกเนเธ–เธนเธเธ•เนเธญเธ';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const statuses = String(parsed.data.statuses || '')
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean);
+        const host = String(req.headers.host || '').trim();
+        const protocol = req.protocol || 'https';
+        const publicBaseUrl = host ? `${protocol}://${host}` : '';
+        const result = await service.exportTeamsReviewSheet(req.server.ctx.db, statuses, publicBaseUrl);
+        reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        reply.header('Content-Disposition', buildAttachmentHeader(result.fileName));
+        return reply.send(result.stream);
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
 export async function handleGetSubmissionTasksAdmin(req: FastifyRequest, reply: FastifyReply) {
     try {
         const rows = await service.listSubmissionTasksAdmin(req.server.ctx.db);

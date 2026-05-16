@@ -79,7 +79,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [exportingSheet, setExportingSheet] = useState(false)
+  const [exportingReviewSheet, setExportingReviewSheet] = useState(false)
   const [sheetExportModalOpen, setSheetExportModalOpen] = useState(false)
+  const [sheetExportMode, setSheetExportMode] = useState('selection')
   const [sheetStatuses, setSheetStatuses] = useState(['submitted', 'passed'])
   const [overview, setOverview] = useState(null)
   const [participationMode, setParticipationMode] = useState('weekly')
@@ -214,6 +216,64 @@ export default function DashboardPage() {
     }
   }, [pushToast, sheetStatuses])
 
+  const handleExportReviewSheet = useCallback(async () => {
+    if (sheetStatuses.length === 0) {
+      pushToast({ variant: 'warning', title: 'กรุณาเลือกสถานะทีมอย่างน้อย 1 สถานะ' })
+      return
+    }
+
+    try {
+      setExportingReviewSheet(true)
+      const query = new URLSearchParams({ statuses: sheetStatuses.join(',') })
+      const response = await fetch(apiUrl(`/api/admin/exports/teams-review-sheet?${query.toString()}`), {
+        credentials: 'include',
+      })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload?.message || 'Cannot export review links sheet')
+      }
+
+      const blob = await response.blob()
+      const disposition = response.headers.get('content-disposition') || ''
+      const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+      const fileName = encodedName ? decodeURIComponent(encodedName) : `teams_review_links_${Date.now()}.xlsx`
+
+      const downloadUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = downloadUrl
+      anchor.download = fileName
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(downloadUrl)
+
+      pushToast({
+        variant: 'success',
+        title: 'Export review links สำเร็จ',
+        description: `ดาวน์โหลดไฟล์แล้ว: ${fileName}`,
+      })
+      setSheetExportModalOpen(false)
+    } catch (error) {
+      pushToast({
+        variant: 'danger',
+        title: 'Export review links ไม่สำเร็จ',
+        description: error?.message || 'Cannot export review links sheet',
+      })
+    } finally {
+      setExportingReviewSheet(false)
+    }
+  }, [pushToast, sheetStatuses])
+
+  const openSheetExportModal = useCallback((mode) => {
+    setSheetExportMode(mode)
+    setSheetExportModalOpen(true)
+  }, [])
+
+  const confirmSheetExport = useCallback(() => {
+    if (sheetExportMode === 'review') return handleExportReviewSheet()
+    return handleExportSelectionSheet()
+  }, [handleExportReviewSheet, handleExportSelectionSheet, sheetExportMode])
+
   const statusCountMap = useMemo(
     () => new Map((overview?.statusCounts || []).map((item) => [item.status, item.count])),
     [overview],
@@ -287,11 +347,20 @@ export default function DashboardPage() {
         <button
           type="button"
           className="admin-dash-v3-btn"
-          onClick={() => setSheetExportModalOpen(true)}
+          onClick={() => openSheetExportModal('selection')}
           disabled={exportingSheet}
         >
           <Download size={15} />
           {exportingSheet ? 'กำลังส่งออกไฟล์คัดเลือก...' : 'ส่งออกไฟล์คัดเลือก (XLSX)'}
+        </button>
+        <button
+          type="button"
+          className="admin-dash-v3-btn"
+          onClick={() => openSheetExportModal('review')}
+          disabled={exportingReviewSheet}
+        >
+          <Download size={15} />
+          {exportingReviewSheet ? 'Exporting review links...' : 'Export Review Links (XLSX)'}
         </button>
       </section>
 
@@ -299,7 +368,7 @@ export default function DashboardPage() {
         <div className="admin-dash-v3-modal-layer" role="dialog" aria-modal="true">
           <button type="button" className="admin-dash-v3-modal-backdrop" onClick={() => setSheetExportModalOpen(false)} />
           <div className="admin-dash-v3-modal-card">
-            <h3>เลือกสถานะทีมที่ต้องการส่งออก</h3>
+            <h3>{sheetExportMode === 'review' ? 'เลือกสถานะทีมสำหรับ Export Review Links' : 'เลือกสถานะทีมที่ต้องการส่งออก'}</h3>
             <div className="admin-dash-v3-status-list">
               {Object.entries(statusMeta).map(([statusKey, meta]) => (
                 <label key={statusKey}>
@@ -319,10 +388,10 @@ export default function DashboardPage() {
               <button
                 type="button"
                 className="admin-dash-v3-btn admin-dash-v3-btn-primary"
-                onClick={handleExportSelectionSheet}
-                disabled={exportingSheet || sheetStatuses.length === 0}
+                onClick={confirmSheetExport}
+                disabled={exportingSheet || exportingReviewSheet || sheetStatuses.length === 0}
               >
-                {exportingSheet ? 'กำลังส่งออก...' : 'ยืนยันส่งออก'}
+                {exportingSheet || exportingReviewSheet ? 'กำลังส่งออก...' : 'ยืนยันส่งออก'}
               </button>
             </div>
           </div>

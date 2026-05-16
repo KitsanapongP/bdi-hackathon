@@ -10,6 +10,7 @@ import SponsorsPage from './pages/Home/SponsorsPage'
 import DatasetsPage from './pages/Home/DatasetsPage'
 import VenuesPage from './pages/Home/VenuesPage'
 import AdminApp from './pages/Admin/AdminApp'
+import TeamReviewPage from './pages/Review/TeamReviewPage'
 
 function App() {
   const location = useLocation()
@@ -38,6 +39,7 @@ function App() {
         <Route path="/home/register" element={<RegisterPage />} />
         <Route path="/login" element={<RegisterPage />} />
         <Route path="/home/team" element={<TeamPage />} />
+        <Route path="/review/team/:shareId" element={<TeamReviewPage />} />
         <Route path="/admin/*" element={<AdminApp />} />
       </Routes>
     </div>
