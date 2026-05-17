@@ -389,6 +389,7 @@ export default function TeamContent({ user }) {
     const [createPublic, setCreatePublic] = useState(true);
     const [joinCode, setJoinCode] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [expandedPublicTeamDescriptions, setExpandedPublicTeamDescriptions] = useState({});
     const [inviteUserNameInput, setInviteUserNameInput] = useState('');
 
     const [publicTeams, setPublicTeams] = useState([]);
@@ -422,6 +423,13 @@ export default function TeamContent({ user }) {
     const [memberProfileData, setMemberProfileData] = useState(null);
     const [selectedMember, setSelectedMember] = useState(null);
     const memberProfileReqIdRef = useRef(0);
+
+    const togglePublicTeamDescription = (teamId) => {
+        setExpandedPublicTeamDescriptions((prev) => ({
+            ...prev,
+            [teamId]: !prev[teamId],
+        }));
+    };
 
     const isLeader = useMemo(() => team?.leaderUserId === user?.userId, [team, user]);
     const isSingleLeaderTeam = isLeader && (team?.members?.length || 0) === 1;
@@ -1075,20 +1083,34 @@ export default function TeamContent({ user }) {
                                             <span>ไม่พบทีมที่ค้นหา</span>
                                         </div>
                                     )}
-                                    {filteredTeams.map((t) => (
-                                        <div key={t.id} className="gl-browse-item">
-                                            <div className="gl-browse-item-left">
-                                                <div className="gl-browse-team-info">
-                                                    <span className="gl-browse-team-name">{t.name}</span>
-                                                    <span className="gl-browse-team-desc">{t.description || 'ทีมนี้ยังไม่ได้เพิ่มคำอธิบาย'}</span>
-                                                    <span className="gl-browse-team-meta"><Users size={13} /> {t.memberCount}/{maxMembers} คน</span>
+                                    {filteredTeams.map((t) => {
+                                        const description = t.description || 'ทีมนี้ยังไม่ได้เพิ่มคำอธิบาย';
+                                        const canExpandDescription = Boolean(t.description) && description.length > 120;
+                                        const isDescriptionExpanded = Boolean(expandedPublicTeamDescriptions[t.id]);
+                                        return (
+                                            <div key={t.id} className="gl-browse-item">
+                                                <div className="gl-browse-item-left">
+                                                    <div className="gl-browse-team-info">
+                                                        <span className="gl-browse-team-name">{t.name}</span>
+                                                        <span className={`gl-browse-team-desc ${isDescriptionExpanded ? 'is-expanded' : ''}`}>{description}</span>
+                                                        {canExpandDescription && (
+                                                            <button
+                                                                type="button"
+                                                                className="gl-browse-desc-toggle"
+                                                                onClick={() => togglePublicTeamDescription(t.id)}
+                                                            >
+                                                                {isDescriptionExpanded ? 'ย่อ' : 'อ่านเพิ่มเติม'}
+                                                            </button>
+                                                        )}
+                                                        <span className="gl-browse-team-meta"><Users size={13} /> {t.memberCount}/{maxMembers} คน</span>
+                                                    </div>
                                                 </div>
+                                                <button className="gl-browse-join-btn gl-btn-green" disabled={!isTeamRecruitmentOpen || actionLoading} onClick={() => handleRequestPublicTeam(t.id)}>
+                                                    <UserPlus size={15} /> ขอเข้าร่วม
+                                                </button>
                                             </div>
-                                             <button className="gl-browse-join-btn gl-btn-green" disabled={!isTeamRecruitmentOpen || actionLoading} onClick={() => handleRequestPublicTeam(t.id)}>
-                                                 <UserPlus size={15} /> ขอเข้าร่วม
-                                             </button>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>

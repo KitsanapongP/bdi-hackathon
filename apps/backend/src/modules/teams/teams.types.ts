@@ -14,6 +14,7 @@ export interface TeamRow {
     created_at: Date;
     updated_at: Date;
     deleted_at: Date | null;
+    member_count?: number | string;
 }
 
 export interface TeamMemberRow {

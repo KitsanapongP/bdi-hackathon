@@ -2853,6 +2853,28 @@
     -webkit-line-clamp: 2;
 }
 
+.gl-browse-team-desc.is-expanded {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+}
+
+.gl-browse-desc-toggle {
+    width: fit-content;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #67e8f9;
+    font-size: 0.8rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.gl-browse-desc-toggle:hover {
+    color: #a5f3fc;
+    text-decoration: underline;
+}
+
 .gl-browse-team-meta {
     display: flex;
     align-items: center;

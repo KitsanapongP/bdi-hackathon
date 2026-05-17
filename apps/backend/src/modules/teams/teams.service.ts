@@ -527,7 +527,11 @@ export async function getTeamMemberProfile(
 }
 
 export async function getPublicTeams(db: DB, visibility?: string) {
-    return repo.getPublicTeams(db, visibility);
+    const [teams, maxTeamMembers] = await Promise.all([
+        repo.getPublicTeams(db, visibility),
+        getTeamMemberMax(db),
+    ]);
+    return teams.filter((team) => Number(team.member_count ?? 0) < maxTeamMembers);
 }
 
 export async function getTeamIdByInviteCode(db: DB, inviteCode: string) {
