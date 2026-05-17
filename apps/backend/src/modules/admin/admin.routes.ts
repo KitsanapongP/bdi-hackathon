@@ -55,6 +55,7 @@ import {
     handleUpdateScheduleViewTypeAdmin,
     handleExportSubmittedVerificationBundle,
     handleExportTeamsSheet,
+    handleExportTeamsReviewSheet,
     handleGetSubmissionTasksAdmin,
     handleGetSubmissionTaskAssignedTeamsAdmin,
     handleCreateSubmissionTaskAdmin,
@@ -134,6 +135,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
 
     fastify.get('/exports/submitted-verification-bundle', handleExportSubmittedVerificationBundle);
     fastify.get('/exports/teams-selection-sheet', handleExportTeamsSheet);
+    fastify.get('/exports/teams-review-sheet', handleExportTeamsReviewSheet);
     fastify.get('/submission-tasks', handleGetSubmissionTasksAdmin);
     fastify.get('/submission-tasks/:id/teams', handleGetSubmissionTaskAssignedTeamsAdmin);
     fastify.post('/submission-tasks', handleCreateSubmissionTaskAdmin);

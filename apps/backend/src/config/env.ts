@@ -21,6 +21,7 @@ const EnvSchema = z.object({
   JWT_SECRET: z.string().min(8, 'JWT_SECRET must be at least 8 characters'),
   LOG_VIEWER_SECRET: z.string().optional().default('hackathon'),
   CORS_ORIGIN: z.string().optional().default(''),
+  FRONTEND_BASE_URL: z.string().optional().default(''),
   SMTP_HOST: z.string().optional().default(''),
   SMTP_PORT: z.coerce.number().optional().default(587),
   SMTP_SECURE: z.string().optional().default('false'),

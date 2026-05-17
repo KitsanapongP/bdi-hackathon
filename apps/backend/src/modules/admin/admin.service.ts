@@ -23,7 +23,7 @@ import ExcelJS from 'exceljs';
 import archiver from 'archiver';
 import { createTeamAuditLog } from '../teams/teams.repo.js';
 import * as contentService from '../content/content.service.js';
-import { buildMemberDocumentBundleStorageKey, getOrCreateReviewShareId } from '../public-review/public-review.service.js';
+import { buildMemberDocumentBundleStorageKey, getOrCreateReviewShareId, getOrCreateTeamReviewShareId } from '../public-review/public-review.service.js';
 
 const GLOBAL_SELECTION_CONFIRM_OPEN_AT_KEY = 'GLOBAL_SELECTION_CONFIRM_OPEN_AT';
 const GLOBAL_SELECTION_CONFIRM_CLOSE_AT_KEY = 'GLOBAL_SELECTION_CONFIRM_CLOSE_AT';
@@ -59,6 +59,11 @@ function normalizeStatuses(values: string[]): ExportTeamStatus[] {
 function buildPublicReviewUrl(baseUrl: string, shareId: string): string {
     const safeBase = String(baseUrl || '').replace(/\/$/, '');
     return `${safeBase}/api/public-review/files/${shareId}`;
+}
+
+function buildPublicTeamReviewPageUrl(baseUrl: string, shareId: string): string {
+    const safeBase = String(baseUrl || '').replace(/\/$/, '');
+    return `${safeBase}/review/team/${shareId}`;
 }
 
 function pickMemberDisplayName(member: ExportTeamMemberRow): string {
@@ -956,6 +961,131 @@ export async function exportTeamsSelectionSheet(
     const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
     return {
         fileName: `teams_selection_export_${timestamp}.xlsx`,
+        stream: output,
+    };
+}
+
+export async function exportTeamsReviewSheet(
+    db: DB,
+    inputStatuses: string[],
+    publicBaseUrl: string,
+): Promise<{ fileName: string; stream: PassThrough }> {
+    const statuses = normalizeStatuses(inputStatuses);
+    if (statuses.length === 0) {
+        throw new BadRequestError('เธเธฃเธธเธ“เธฒเน€เธฅเธทเธญเธเธชเธ–เธฒเธเธฐเธ—เธตเธกเธญเธขเนเธฒเธเธเนเธญเธข 1 เธชเธ–เธฒเธเธฐ');
+    }
+
+    const teams = await repo.getTeamsForSheetExport(db, statuses);
+    if (teams.length === 0) {
+        throw new NotFoundError('เนเธกเนเธเธเธเนเธญเธกเธนเธฅเธ—เธตเธกเธ•เธฒเธกเธชเธ–เธฒเธเธฐเธ—เธตเนเน€เธฅเธทเธญเธ');
+    }
+
+    const teamIds = teams.map((team) => team.team_id);
+    const [advisors, members, submissionFiles, submissionLinks] = await Promise.all([
+        repo.getTeamAdvisorsForExport(db, teamIds),
+        repo.getTeamMembersForExport(db, teamIds),
+        repo.getSubmissionFilesForExport(db, teamIds),
+        repo.getSubmissionLinksForExport(db, teamIds),
+    ]);
+
+    const advisorsByTeam = new Map<number, ExportTeamAdvisorRow[]>();
+    const membersByTeam = new Map<number, ExportTeamMemberRow[]>();
+    const submissionFilesByTeam = new Map<number, ExportSubmissionFileRow[]>();
+    const submissionLinksByTeam = new Map<number, ExportSubmissionLinkRow[]>();
+
+    for (const row of advisors) {
+        const bucket = advisorsByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        advisorsByTeam.set(row.team_id, bucket);
+    }
+    for (const row of members) {
+        const bucket = membersByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        membersByTeam.set(row.team_id, bucket);
+    }
+    for (const row of submissionFiles) {
+        const bucket = submissionFilesByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        submissionFilesByTeam.set(row.team_id, bucket);
+    }
+    for (const row of submissionLinks) {
+        const bucket = submissionLinksByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        submissionLinksByTeam.set(row.team_id, bucket);
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('teams_review_links');
+    sheet.columns = [
+        { header: 'team_id', key: 'team_id', width: 12 },
+        { header: 'team_code', key: 'team_code', width: 14 },
+        { header: 'team_name_th', key: 'team_name_th', width: 28 },
+        { header: 'team_name_en', key: 'team_name_en', width: 28 },
+        { header: 'team_status', key: 'team_status', width: 14 },
+        { header: 'review_link', key: 'review_link', width: 42 },
+        { header: 'leader_user_name', key: 'leader_user_name', width: 24 },
+        { header: 'member_count', key: 'member_count', width: 12 },
+        { header: 'member_names', key: 'member_names', width: 42 },
+        { header: 'advisor_names', key: 'advisor_names', width: 34 },
+        { header: 'submission_link_count', key: 'submission_link_count', width: 20 },
+        { header: 'submission_file_count', key: 'submission_file_count', width: 20 },
+        { header: 'created_at', key: 'created_at', width: 20 },
+        { header: 'updated_at', key: 'updated_at', width: 20 },
+    ];
+
+    const hyperlinkStyle: Partial<ExcelJS.Font> = {
+        color: { argb: 'FF0563C1' },
+        underline: true,
+    };
+
+    for (const team of teams) {
+        const teamMembers = [...(membersByTeam.get(team.team_id) ?? [])].sort((a, b) => a.member_order - b.member_order);
+        const teamAdvisors = advisorsByTeam.get(team.team_id) ?? [];
+        const teamSubmissionFiles = submissionFilesByTeam.get(team.team_id) ?? [];
+        const teamSubmissionLinks = submissionLinksByTeam.get(team.team_id) ?? [];
+        const leader = teamMembers.find((member) => member.role === 'leader') || teamMembers[0] || null;
+        const leaderDisplayName = leader ? pickMemberDisplayName(leader) : (team.leader_user_name || '');
+        const teamShareId = await getOrCreateTeamReviewShareId(db, team.team_id);
+        const reviewUrl = buildPublicTeamReviewPageUrl(publicBaseUrl, teamShareId);
+
+        const row = sheet.addRow({
+            team_id: team.team_id,
+            team_code: team.team_code,
+            team_name_th: team.team_name_th || '',
+            team_name_en: team.team_name_en || '',
+            team_status: team.status,
+            leader_user_name: leaderDisplayName,
+            member_count: teamMembers.length,
+            member_names: teamMembers.map(pickMemberDisplayName).filter(Boolean).join(', '),
+            advisor_names: teamAdvisors.map((advisor) => buildAdvisorDisplayNameTh(advisor) || buildAdvisorDisplayNameEn(advisor)).filter(Boolean).join(', '),
+            submission_link_count: teamSubmissionLinks.length,
+            submission_file_count: teamSubmissionFiles.length,
+            created_at: formatDateTime(team.created_at),
+            updated_at: formatDateTime(team.updated_at),
+        });
+
+        const reviewCell = row.getCell('review_link');
+        reviewCell.value = {
+            text: 'Open Team Review',
+            hyperlink: reviewUrl,
+        };
+        reviewCell.font = hyperlinkStyle;
+        row.getCell('member_names').alignment = { wrapText: true, vertical: 'top' };
+        row.getCell('advisor_names').alignment = { wrapText: true, vertical: 'top' };
+        row.height = 54;
+    }
+
+    sheet.getRow(1).font = { bold: true };
+
+    const output = new PassThrough();
+    void (async () => {
+        await workbook.xlsx.write(output);
+        output.end();
+    })();
+
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
+    return {
+        fileName: `teams_review_links_${timestamp}.xlsx`,
         stream: output,
     };
 }
