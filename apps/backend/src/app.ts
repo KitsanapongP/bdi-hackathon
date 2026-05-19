@@ -303,8 +303,10 @@ export function buildApp(ctx: AppContext) {
   app.setErrorHandler((err, _req, reply) => {
     app.log.error(err);
 
-    const rawStatusCode =
-      typeof (err as any)?.statusCode === 'number' ? Number((err as any).statusCode) : 500;
+    const isFileTooLargeError = (err as any)?.code === 'FST_REQ_FILE_TOO_LARGE';
+    const rawStatusCode = isFileTooLargeError
+      ? 413
+      : typeof (err as any)?.statusCode === 'number' ? Number((err as any).statusCode) : 500;
     const statusCode = rawStatusCode >= 400 && rawStatusCode < 600 ? rawStatusCode : 500;
 
     let message = 'ขออภัย เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง';
@@ -318,6 +320,8 @@ export function buildApp(ctx: AppContext) {
         message = 'คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้';
       } else if (statusCode === 404) {
         message = 'ไม่พบข้อมูลที่ต้องการ';
+      } else if (statusCode === 413) {
+        message = 'ไฟล์มีขนาดเกิน 10MB';
       } else {
         message = 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
       }

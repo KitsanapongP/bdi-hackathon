@@ -1258,6 +1258,17 @@ export default function TeamContent({ user }) {
             showToast('ทีมถูกล็อกแล้ว ไม่สามารถอัปโหลดเอกสารได้', 'error');
             return;
         }
+        const maxDocumentCount = 5;
+        if (myDocs.length + files.length > maxDocumentCount) {
+            showToast(`อัปโหลดเอกสารได้สูงสุด ${maxDocumentCount} ไฟล์`, 'error');
+            return;
+        }
+        const maxFileSizeBytes = 10 * 1024 * 1024;
+        const oversizedFile = files.find((file) => file.size > maxFileSizeBytes);
+        if (oversizedFile) {
+            showToast(`ไฟล์ PDF ต้องมีขนาดไม่เกิน 10MB: ${oversizedFile.name}`, 'error');
+            return;
+        }
         await withAction(async () => {
             const formData = new FormData();
             for (const f of files) formData.append('files', f);
@@ -1384,7 +1395,12 @@ export default function TeamContent({ user }) {
             return;
         }
 
-        openConfirm('ยืนยันเอกสารของฉัน', <>คุณแน่ใจหรือไม่ว่าต้องการยืนยันเอกสาร?<br />สามารถยกเลิกการยืนยันได้ก่อนหัวหน้าทีมกดส่ง</>, () => {
+        openConfirm('ยืนยันเอกสารของฉัน', <>
+            คุณแน่ใจหรือไม่ว่าต้องการยืนยันเอกสาร?<br />
+            คุณสามารถยกเลิกการยืนยันเพื่อแก้ไขข้อมูลได้ก่อนหัวหน้าทีมกดส่งทีมเข้าร่วมพิจารณา<br />
+            หากหัวหน้าทีมส่งทีมเข้าร่วมพิจารณาแล้ว จะไม่สามารถแก้ไขข้อมูลได้อีก กรุณาตรวจสอบข้อมูลก่อนยืนยัน<br />
+            ทางเราจะไม่รับผิดชอบหากต้องการแก้ไขข้อมูลในภายหลัง
+        </>, () => {
             closeConfirm();
             withAction(async () => {
                 const res = await fetch(apiUrl(`/api/verification/team/${team.id}/confirm`), {
@@ -2503,6 +2519,9 @@ export default function TeamContent({ user }) {
                     {/* My documents section */}
                     <div className="gl-team-info-card">
                         <span className="gl-team-info-label"><FileText size={13} /> เอกสารของฉัน ({myDocs.length} ไฟล์)</span>
+                        <p className="vf-hint">
+                            CV อธิบาย Background ของตนเอง เช่น สถาบันการศึกษา สาขาที่กำลังศึกษา ประสบการณ์ ความเชี่ยวชาญ หรือรางวัลที่เคยได้รับ ซึ่งมีส่วนสนับสนุนต่อการแข่งขันครั้งนี้ และภายใน CV ควรแนบหลักฐานระบุตัวตนที่เป็นทางการ เช่น บัตรประจำตัวนักศึกษา เพื่อแสดงคุณสมบัติการเข้าร่วมการแข่งขัน
+                        </p>
 
                         {myDocs.length === 0 && (
                             <div className="vf-empty-docs">
@@ -2540,13 +2559,16 @@ export default function TeamContent({ user }) {
                         ))}
 
                         {/* Upload button */}
-                        {!isSubmitted && !myConfirmed && (
+                        {!isSubmitted && !myConfirmed && myDocs.length < 5 && (
                             <label className="vf-upload-btn">
                                 <Upload size={16} /> เลือกไฟล์ PDF
                                 <input type="file" accept="application/pdf" multiple hidden
                                     onChange={(e) => { handleUploadDocs(Array.from(e.target.files)); e.target.value = ''; }}
                                 />
                             </label>
+                        )}
+                        {!isSubmitted && !myConfirmed && myDocs.length >= 5 && (
+                            <p className="vf-hint">อัปโหลดเอกสารได้สูงสุด 5 ไฟล์</p>
                         )}
                     </div>
 

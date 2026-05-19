@@ -101,6 +101,11 @@ export async function uploadDocument(
         throw new BadRequestError('\u0e23\u0e2d\u0e07\u0e23\u0e31\u0e1a\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e44\u0e1f\u0e25\u0e4c PDF \u0e40\u0e17\u0e48\u0e32\u0e19\u0e31\u0e49\u0e19');
     }
 
+    const currentDocuments = await repo.getDocumentsByTeamAndUser(db, teamId, userId);
+    if (currentDocuments.length >= 5) {
+        throw new BadRequestError('อัปโหลดเอกสารได้สูงสุด 5 ไฟล์');
+    }
+
     // Ensure round exists
     const currentRound = await repo.getOrCreateVerifyRound(db, teamId, userId);
 
