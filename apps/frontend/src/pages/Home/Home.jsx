@@ -21,6 +21,7 @@ import {
     LogIn,
     LogOut,
     User,
+    Bell,
     Phone,
     MapPin,
     Mail,
@@ -889,6 +890,7 @@ function HomePage() {
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [user, setUser] = useState(null);
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [showLobby, setShowLobby] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
     const bannerRef = useRef(null);
@@ -934,6 +936,36 @@ function HomePage() {
 
         return () => window.clearInterval(intervalId);
     }, []);
+
+    useEffect(() => {
+        if (!user) {
+            setUnreadNotifications(0);
+            return;
+        }
+
+        let cancelled = false;
+
+        const fetchUnreadNotifications = () => {
+            fetch(apiUrl('/api/notifications/inbox/unread-count'), { credentials: 'include' })
+                .then((res) => res.json())
+                .then((payload) => {
+                    if (!cancelled && payload?.ok) {
+                        setUnreadNotifications(Number(payload.data?.unreadCount || 0));
+                    }
+                })
+                .catch(() => {
+                    if (!cancelled) setUnreadNotifications(0);
+                });
+        };
+
+        fetchUnreadNotifications();
+        window.addEventListener('focus', fetchUnreadNotifications);
+
+        return () => {
+            cancelled = true;
+            window.removeEventListener('focus', fetchUnreadNotifications);
+        };
+    }, [user]);
 
     useEffect(() => {
         // Initialize from localStorage first for immediate render
@@ -1404,24 +1436,33 @@ function HomePage() {
                                     className={`gt-pill-link gt-auth-btn gt-team-btn ${showLobby ? 'active' : ''}`}
                                     onClick={() => { setShowLobby(true); setShowProfile(false); window.scrollTo(0, 0); }}
                                 >
-                                    <Users size={15} /> ทีมของฉัน
+                                    <Users size={15} /> <span className="gt-auth-label">ทีมของฉัน</span>
                                 </button>
                                 <button
                                     className={`gt-pill-link gt-auth-btn gt-login ${showProfile ? 'active' : ''}`}
                                     onClick={() => { setShowProfile(true); setShowLobby(false); window.scrollTo(0, 0); }}
                                 >
-                                    <User size={15} /> โปรไฟล์
+                                    <User size={15} /> <span className="gt-auth-label">โปรไฟล์</span>
+                                </button>
+                                <button
+                                    className="gt-notification-nav-btn"
+                                    onClick={() => navigate('/home/notifications')}
+                                    aria-label="การแจ้งเตือน"
+                                    title="การแจ้งเตือน"
+                                >
+                                    <Bell size={17} />
+                                    {unreadNotifications > 0 ? <span>{unreadNotifications > 99 ? '99+' : unreadNotifications}</span> : null}
                                 </button>
                                 <button
                                     className="gt-pill-link gt-auth-btn gt-logout"
                                     onClick={handleLogout}
                                 >
-                                    <LogOut size={15} /> ออกจากระบบ
+                                    <LogOut size={15} /> <span className="gt-auth-label">ออกจากระบบ</span>
                                 </button>
                             </>
                         ) : (
                             <Link to="/login" className="gt-pill-link gt-auth-btn gt-login">
-                                <LogIn size={15} /> เข้าสู่ระบบ
+                                <LogIn size={15} /> <span className="gt-auth-label">เข้าสู่ระบบ</span>
                             </Link>
                         )}
                         <ThemeToggle />
@@ -1494,6 +1535,9 @@ function HomePage() {
                             <>
                                 <button className="gt-collapse-link" onClick={() => { setShowProfile(true); setShowLobby(false); setMobileOpen(false); window.scrollTo(0, 0); }}>
                                     <User size={16} /> โปรไฟล์
+                                </button>
+                                <button className="gt-collapse-link" onClick={() => { navigate('/home/notifications'); setMobileOpen(false); }}>
+                                    <Bell size={16} /> การแจ้งเตือน{unreadNotifications > 0 ? ` (${unreadNotifications > 99 ? '99+' : unreadNotifications})` : ''}
                                 </button>
                                 <div className="gt-collapse-divider" />
                                 <button className="gt-collapse-link gt-collapse-logout" onClick={() => { handleLogout(); setMobileOpen(false); }}>

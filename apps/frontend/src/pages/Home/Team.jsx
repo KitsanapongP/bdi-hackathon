@@ -3,6 +3,7 @@ import {
     AlertTriangle,
     Award,
     CheckCircle,
+    ChevronDown,
     ChevronLeft,
     Clock,
     Copy,
@@ -397,6 +398,8 @@ export default function TeamContent({ user }) {
     const [pendingJoinRequests, setPendingJoinRequests] = useState([]);
     const [inboxItems, setInboxItems] = useState([]);
     const [inboxLoading, setInboxLoading] = useState(false);
+    const [expandedInboxIds, setExpandedInboxIds] = useState(() => new Set());
+    const [markingInboxId, setMarkingInboxId] = useState(null);
     const [readinessLoading, setReadinessLoading] = useState(false);
     const [readinessLoaded, setReadinessLoaded] = useState(false);
     const [nowMs, setNowMs] = useState(Date.now());
@@ -631,6 +634,41 @@ export default function TeamContent({ user }) {
     useEffect(() => {
         if (selectedCard === 'inbox') fetchInbox();
     }, [selectedCard, fetchInbox]);
+
+    const toggleInboxMessage = (notificationLogId) => {
+        setExpandedInboxIds((current) => {
+            const next = new Set(current);
+            if (next.has(notificationLogId)) {
+                next.delete(notificationLogId);
+            } else {
+                next.add(notificationLogId);
+            }
+            return next;
+        });
+    };
+
+    const markInboxMessageRead = async (notificationLogId) => {
+        if (!notificationLogId) return;
+        setMarkingInboxId(notificationLogId);
+        try {
+            const res = await fetch(apiUrl(`/api/teams/inbox/${notificationLogId}/read`), {
+                method: 'POST',
+                credentials: 'include',
+            });
+            const payload = await res.json().catch(() => null);
+            if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'อ่านข้อความไม่สำเร็จ');
+            const now = new Date().toISOString();
+            setInboxItems((current) => current.map((item) => (
+                item.notificationLogId === notificationLogId
+                    ? { ...item, readAt: item.readAt || now, status: item.status === 'sent' ? 'read' : item.status }
+                    : item
+            )));
+        } catch (err) {
+            showToast(getReadableErrorMessage(err, 'อ่านข้อความไม่สำเร็จ'), 'error');
+        } finally {
+            setMarkingInboxId(null);
+        }
+    };
 
     useEffect(() => {
         const shouldTick = team?.status === 'passed' && !team?.confirmedAt && !!team?.confirmationDeadlineAt;
@@ -2134,22 +2172,59 @@ export default function TeamContent({ user }) {
     const DETAIL_MAP = {
         announce: () => renderSimpleDetail('ประกาศ', <Megaphone size={20} />, <div className="gl-empty-state"><Megaphone size={40} /><h3>ยังไม่มีประกาศ</h3></div>),
         inbox: () => renderSimpleDetail('กล่องข้อความ', <Mail size={20} />, (
-            <div className="gl-info-card">
+            <div className="gl-info-card gl-team-inbox-card">
+                <div className="gl-team-inbox-intro">
+                    <h4><Mail size={18} /> ข้อความถึงทีมของคุณ</h4>
+                    <p>พื้นที่นี้แสดงเฉพาะข้อความที่ผู้จัดงานส่งถึงทีมของคุณ สมาชิกทุกคนในทีมสามารถเห็นข้อความเหล่านี้ได้</p>
+                </div>
                 {inboxLoading && <div className="gl-empty-state"><Loader2 size={40} /><h3>กำลังโหลด...</h3></div>}
-                {!inboxLoading && inboxItems.length === 0 && <div className="gl-empty-state"><Mail size={36} /><h3>ยังไม่มีข้อความ</h3></div>}
-                {!inboxLoading && inboxItems.map((item) => (
-                    <div key={item.notificationLogId} className="sub-advisor-card">
-                        <div className="sub-advisor-info">
-                            <div className="sub-advisor-name">
-                                {item.subject || item.eventCode}
+                {!inboxLoading && inboxItems.length === 0 && <div className="gl-empty-state"><Mail size={36} /><h3>ยังไม่มีข้อความจากผู้จัดงาน</h3><p>หากผู้จัดงานติดต่อทีมของคุณ ข้อความจะแสดงที่นี่</p></div>}
+                {!inboxLoading && inboxItems.map((item) => {
+                    const isUnread = !item.readAt;
+                    const isExpanded = expandedInboxIds.has(item.notificationLogId);
+                    const emailStatusText = item.channel === 'email'
+                        ? (item.status === 'queued'
+                            ? 'รอส่งอีเมลอีกครั้ง'
+                            : item.status === 'failed'
+                                ? 'ส่งอีเมลไม่สำเร็จ'
+                                : item.status === 'skipped'
+                                    ? 'ไม่ได้ส่งอีเมล'
+                                    : 'ส่งอีเมลแล้ว')
+                        : 'ข้อความในเว็บ';
+
+                    return (
+                        <article key={item.notificationLogId} className={`gl-team-inbox-message ${isUnread ? 'is-unread' : ''} ${isExpanded ? 'is-expanded' : ''}`}>
+                            <button type="button" className="gl-team-inbox-summary" onClick={() => toggleInboxMessage(item.notificationLogId)} aria-expanded={isExpanded}>
+                                <span className="gl-team-inbox-summary-main">
+                                    <span className="gl-team-inbox-title-row">
+                                        {isUnread && <span className="gl-team-inbox-unread-dot" aria-label="ยังไม่ได้อ่าน" />}
+                                        <strong>{item.subject || 'กล่องข้อความ'}</strong>
+                                    </span>
+                                    <span className="gl-team-inbox-meta">จากผู้จัดงาน • ถึงทีม {team?.name || ''} • {formatDateTime(item.createdAt)}</span>
+                                </span>
+                                <ChevronDown className="gl-team-inbox-chevron" size={18} />
+                            </button>
+                            <div className="gl-team-inbox-detail" aria-hidden={!isExpanded}>
+                                <div className="gl-team-inbox-detail-inner">
+                                    <div className="gl-team-inbox-message-body">{item.message || '-'}</div>
+                                    <div className="gl-team-inbox-delivery">
+                                        <Mail size={15} />
+                                        <span>{emailStatusText}{item.recipientEmail ? ` ไปที่ ${item.recipientEmail}` : ''}</span>
+                                    </div>
+                                    <div className="gl-team-inbox-actions">
+                                        {isUnread ? (
+                                            <button type="button" onClick={() => markInboxMessageRead(item.notificationLogId)} disabled={markingInboxId === item.notificationLogId}>
+                                                {markingInboxId === item.notificationLogId ? 'กำลังบันทึก...' : 'ทำเครื่องหมายว่าอ่านแล้ว'}
+                                            </button>
+                                        ) : (
+                                            <span>อ่านแล้ว {formatDateTime(item.readAt)}</span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="sub-advisor-detail">{item.message || '-'}</div>
-                            <div className="sub-advisor-detail">
-                                ช่องทาง: {item.channel} | สถานะ: {item.status} | เวลา: {formatDateTime(item.createdAt)}
-                            </div>
-                        </div>
-                    </div>
-                ))}
+                        </article>
+                    );
+                })}
             </div>
         )),
         works: () => {

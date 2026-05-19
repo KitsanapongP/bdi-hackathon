@@ -261,16 +261,32 @@ body:has(.gt-page) {
 .gt-auth-btn {
     display: inline-flex !important;
     align-items: center;
+    justify-content: center;
     gap: 5px;
+    height: 34px;
     font-size: 0.82rem !important;
+    line-height: 1.2 !important;
     font-weight: 600 !important;
-    padding: 6px 14px !important;
+    padding: 0 14px !important;
     border-radius: 99px !important;
     border: none;
     cursor: pointer;
     transition: all 0.25s;
     text-decoration: none;
     white-space: nowrap;
+}
+
+.gt-auth-label {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    transform: translateY(1.5px);
+}
+
+.gt-auth-btn svg,
+.gt-notification-nav-btn svg {
+    display: block;
+    flex-shrink: 0;
 }
 
 .gt-auth-btn.gt-login {
@@ -298,6 +314,42 @@ body:has(.gt-page) {
 
 .gt-auth-btn.gt-team-btn:hover {
     background: rgba(124, 58, 237, 0.16);
+}
+
+.gt-notification-nav-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    color: #d97706;
+    background: rgba(245, 158, 11, 0.14);
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.gt-notification-nav-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(245, 158, 11, 0.24);
+}
+
+.gt-notification-nav-btn span {
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 999px;
+    color: #fff;
+    background: #f59e0b;
+    font-size: 0.66rem;
+    font-weight: 800;
+    line-height: 17px;
+    text-align: center;
 }
 
 .gt-auth-btn.active {

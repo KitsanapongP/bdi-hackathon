@@ -12,6 +12,54 @@ import {
 } from './notifications.schema.js';
 import type { JwtPayload } from '../auth/auth.types.js';
 
+export async function handleGetUserInbox(
+  req: FastifyRequest<{ Querystring: { limit?: string } }>,
+  reply: FastifyReply,
+) {
+  const limit = Number(req.query.limit || 50);
+  const user = req.user as JwtPayload;
+
+  try {
+    const rows = await service.getUserNotificationInbox(req.server.ctx.db, user.userId, limit);
+    return reply.send(ok(rows));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleGetUserUnreadCount(req: FastifyRequest, reply: FastifyReply) {
+  const user = req.user as JwtPayload;
+
+  try {
+    const data = await service.getUserNotificationUnreadCount(req.server.ctx.db, user.userId);
+    return reply.send(ok(data));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleMarkUserInboxRead(
+  req: FastifyRequest<{ Params: { notificationLogId: string } }>,
+  reply: FastifyReply,
+) {
+  const notificationLogId = Number(req.params.notificationLogId);
+  if (!Number.isFinite(notificationLogId)) {
+    return reply.status(400).send({ ok: false, message: 'notificationLogId ไม่ถูกต้อง' });
+  }
+
+  const user = req.user as JwtPayload;
+  await service.markInboxAsRead(req.server.ctx.db, notificationLogId, user.userId);
+  return reply.send(ok(null, 'อ่านข้อความแล้ว'));
+}
+
+export async function handleMarkAllUserInboxRead(req: FastifyRequest, reply: FastifyReply) {
+  const user = req.user as JwtPayload;
+  await service.markAllInboxAsRead(req.server.ctx.db, user.userId);
+  return reply.send(ok(null, 'อ่านข้อความทั้งหมดแล้ว'));
+}
+
 export async function handleGetNotificationSettings(req: FastifyRequest, reply: FastifyReply) {
   try {
     const rows = await service.getAdminNotificationSettings(req.server.ctx.db);

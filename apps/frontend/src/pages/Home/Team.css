@@ -1325,6 +1325,161 @@
     line-height: 1.6;
 }
 
+.gl-team-inbox-card {
+    display: grid;
+    gap: 12px;
+}
+
+.gl-team-inbox-intro {
+    padding: 14px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--gl-radius-md);
+    background: rgba(14, 165, 233, 0.12);
+}
+
+.gl-team-inbox-intro h4 {
+    margin-bottom: 6px;
+}
+
+.gl-team-inbox-message {
+    border: 1px solid var(--gl-border);
+    border-radius: var(--gl-radius-md);
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.gl-team-inbox-message:hover,
+.gl-team-inbox-message.is-expanded {
+    border-color: rgba(14, 165, 233, 0.42);
+    background: rgba(14, 165, 233, 0.1);
+}
+
+.gl-team-inbox-message.is-unread {
+    border-color: rgba(14, 165, 233, 0.6);
+}
+
+.gl-team-inbox-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 16px;
+    border: none;
+    background: transparent;
+    color: var(--gl-text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.gl-team-inbox-summary-main {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+}
+
+.gl-team-inbox-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.gl-team-inbox-title-row strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gl-team-inbox-unread-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #38bdf8;
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.16);
+    flex-shrink: 0;
+}
+
+.gl-team-inbox-meta {
+    color: var(--gl-text-dim);
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.gl-team-inbox-chevron {
+    color: var(--gl-text-dim);
+    flex-shrink: 0;
+    transition: transform 0.22s;
+}
+
+.gl-team-inbox-message.is-expanded .gl-team-inbox-chevron {
+    transform: rotate(180deg);
+}
+
+.gl-team-inbox-detail {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, transform 0.24s ease;
+    overflow: hidden;
+}
+
+.gl-team-inbox-message.is-expanded .gl-team-inbox-detail {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.gl-team-inbox-detail-inner {
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 16px 14px;
+}
+
+.gl-team-inbox-message-body {
+    padding: 13px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.65;
+    white-space: pre-line;
+}
+
+.gl-team-inbox-delivery {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    color: var(--gl-text-dim);
+    font-size: 0.86rem;
+}
+
+.gl-team-inbox-actions {
+    margin-top: 12px;
+}
+
+.gl-team-inbox-actions button {
+    border: none;
+    border-radius: 999px;
+    padding: 8px 12px;
+    color: #082f49;
+    background: #7dd3fc;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.gl-team-inbox-actions button:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+.gl-team-inbox-actions span {
+    color: var(--gl-text-dim);
+    font-size: 0.86rem;
+}
+
 /* Team member profile detail view */
 .gl-member-profile-view {
     animation: gl-member-profile-enter 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;

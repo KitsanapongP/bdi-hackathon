@@ -119,6 +119,306 @@
     color: #ef4444;
 }
 
+.gt-notifications-panel {
+    overflow: hidden;
+}
+
+.gt-notifications-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.gt-notifications-kicker {
+    margin: 0 0 6px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gt-primary);
+}
+
+.gt-notifications-head h1 {
+    margin-bottom: 8px;
+}
+
+.gt-notifications-subtitle {
+    margin: 0;
+    color: var(--gt-text-muted);
+    line-height: 1.7;
+}
+
+.gt-notifications-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 999px;
+    color: var(--gt-primary);
+    background: rgba(124, 58, 237, 0.1);
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, transform 0.2s;
+}
+
+.gt-notifications-count:not(:disabled):hover {
+    color: #fff;
+    background: var(--gt-primary);
+    transform: translateY(-1px);
+}
+
+.gt-notifications-count:disabled {
+    cursor: default;
+    opacity: 0.72;
+}
+
+.gt-notifications-count-hover {
+    display: none;
+}
+
+.gt-notifications-count:not(:disabled):hover .gt-notifications-count-default {
+    display: none;
+}
+
+.gt-notifications-count:not(:disabled):hover .gt-notifications-count-hover {
+    display: inline;
+}
+
+.gt-notifications-state,
+.gt-notifications-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 240px;
+    text-align: center;
+    color: var(--gt-text-muted);
+}
+
+.gt-notifications-spinner {
+    animation: gt-spin 0.9s linear infinite;
+}
+
+.gt-notifications-error {
+    color: #ef4444;
+}
+
+.gt-notifications-empty h2 {
+    margin: 0;
+    color: var(--gt-text);
+    font-size: 1.2rem;
+}
+
+.gt-notifications-empty p {
+    margin: 0;
+    max-width: 460px;
+    line-height: 1.7;
+}
+
+.gt-notifications-list {
+    display: grid;
+    gap: 14px;
+}
+
+.gt-notification-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid var(--gt-border);
+    border-radius: 18px;
+    background: var(--gt-surface-alt);
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.gt-notification-card.is-unread {
+    border-color: color-mix(in srgb, var(--gt-primary) 42%, var(--gt-border));
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(255, 255, 255, 0.88));
+}
+
+.dark .gt-notification-card.is-unread {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(15, 23, 42, 0.8));
+}
+
+.gt-notification-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    color: var(--gt-primary);
+    background: rgba(124, 58, 237, 0.12);
+}
+
+.gt-notification-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.gt-notification-summary h2 {
+    margin: 0 0 6px;
+    font-size: 1.05rem;
+    color: var(--gt-text);
+}
+
+.gt-notification-summary time {
+    color: var(--gt-text-muted);
+    font-size: 0.82rem;
+}
+
+.gt-notification-chevron {
+    flex-shrink: 0;
+    color: var(--gt-text-muted);
+    transition: transform 0.2s;
+}
+
+.gt-notification-card.is-expanded .gt-notification-chevron {
+    transform: rotate(180deg);
+}
+
+.gt-notification-detail {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.2s ease,
+        transform 0.24s ease,
+        margin-top 0.24s ease;
+    overflow: hidden;
+    margin-top: 0;
+}
+
+.gt-notification-card.is-expanded .gt-notification-detail {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+    margin-top: 12px;
+}
+
+.gt-notification-detail-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.gt-notification-body p {
+    margin: 0;
+    color: var(--gt-text-muted);
+    line-height: 1.7;
+    white-space: pre-line;
+}
+
+.gt-notification-channels {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid color-mix(in srgb, var(--gt-primary) 16%, var(--gt-border));
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.62);
+}
+
+.dark .gt-notification-channels {
+    background: rgba(15, 23, 42, 0.34);
+}
+
+.gt-notification-channel {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    color: var(--gt-text-muted);
+}
+
+.gt-notification-channel svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.gt-notification-channel div {
+    display: grid;
+    gap: 3px;
+}
+
+.gt-notification-channel strong {
+    color: var(--gt-text);
+    font-size: 0.92rem;
+    line-height: 1.35;
+}
+
+.gt-notification-channel span {
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.gt-notification-channel.is-sent {
+    color: #16a34a;
+}
+
+.gt-notification-channel.is-queued,
+.gt-notification-channel.is-skipped {
+    color: #d97706;
+}
+
+.gt-notification-channel.is-failed {
+    color: #dc2626;
+}
+
+.gt-notification-actions {
+    margin-top: 12px;
+}
+
+.gt-notification-actions button {
+    border: none;
+    border-radius: 999px;
+    padding: 8px 12px;
+    color: #fff;
+    background: var(--gt-primary);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.gt-notification-actions button:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.gt-notification-actions span {
+    color: var(--gt-text-muted);
+    font-size: 0.88rem;
+}
+
+@keyframes gt-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 768px) {
+    .gt-notifications-head {
+        flex-direction: column;
+    }
+
+    .gt-notifications-count {
+        width: fit-content;
+    }
+}
+
 .gt-contact-page-subtitle {
     margin: 0 0 22px;
     color: var(--gt-text-muted);

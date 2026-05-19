@@ -11,6 +11,7 @@ import {
     Mail,
     LogIn,
     LogOut,
+    Bell,
     Facebook,
     ExternalLink,
 } from 'lucide-react';
@@ -33,6 +34,7 @@ function HomeShell({ children }) {
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [user, setUser] = useState(null);
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [navScrolled, setNavScrolled] = useState(false);
     const [coOrganizerSponsors, setCoOrganizerSponsors] = useState(() => getCachedCoOrganizerSponsors() || []);
     const [bannerMarquee, setBannerMarquee] = useState(false);
@@ -105,6 +107,36 @@ function HomeShell({ children }) {
                 // ignore
             });
     }, []);
+
+    useEffect(() => {
+        if (!user) {
+            setUnreadNotifications(0);
+            return;
+        }
+
+        let cancelled = false;
+
+        const fetchUnreadNotifications = () => {
+            fetch(apiUrl('/api/notifications/inbox/unread-count'), { credentials: 'include' })
+                .then((res) => res.json())
+                .then((payload) => {
+                    if (!cancelled && payload?.ok) {
+                        setUnreadNotifications(Number(payload.data?.unreadCount || 0));
+                    }
+                })
+                .catch(() => {
+                    if (!cancelled) setUnreadNotifications(0);
+                });
+        };
+
+        fetchUnreadNotifications();
+        window.addEventListener('focus', fetchUnreadNotifications);
+
+        return () => {
+            cancelled = true;
+            window.removeEventListener('focus', fetchUnreadNotifications);
+        };
+    }, [user]);
 
     useEffect(() => {
         const cached = getCachedCoOrganizerSponsors();
@@ -236,18 +268,22 @@ function HomeShell({ children }) {
                         {user ? (
                             <>
                                 <button className="gt-pill-link gt-auth-btn gt-team-btn" onClick={() => navigate('/home', { state: { open: 'team' } })}>
-                                    <Users size={15} /> ทีมของฉัน
+                                    <Users size={15} /> <span className="gt-auth-label">ทีมของฉัน</span>
                                 </button>
                                 <button className="gt-pill-link gt-auth-btn gt-login" onClick={() => navigate('/home', { state: { open: 'profile' } })}>
-                                    <User size={15} /> โปรไฟล์
+                                    <User size={15} /> <span className="gt-auth-label">โปรไฟล์</span>
+                                </button>
+                                <button className="gt-notification-nav-btn" onClick={() => navigate('/home/notifications')} aria-label="การแจ้งเตือน" title="การแจ้งเตือน">
+                                    <Bell size={17} />
+                                    {unreadNotifications > 0 ? <span>{unreadNotifications > 99 ? '99+' : unreadNotifications}</span> : null}
                                 </button>
                                 <button className="gt-pill-link gt-auth-btn gt-logout" onClick={handleLogout}>
-                                    <LogOut size={15} /> ออกจากระบบ
+                                    <LogOut size={15} /> <span className="gt-auth-label">ออกจากระบบ</span>
                                 </button>
                             </>
                         ) : (
                             <Link to="/login" className="gt-pill-link gt-auth-btn gt-login">
-                                <LogIn size={15} /> เข้าสู่ระบบ
+                                <LogIn size={15} /> <span className="gt-auth-label">เข้าสู่ระบบ</span>
                             </Link>
                         )}
                         <ThemeToggle />
@@ -278,6 +314,9 @@ function HomeShell({ children }) {
                             <>
                                 <button className="gt-collapse-link" onClick={() => { setMobileOpen(false); navigate('/home', { state: { open: 'profile' } }); }}>
                                     <User size={16} /> โปรไฟล์
+                                </button>
+                                <button className="gt-collapse-link" onClick={() => { setMobileOpen(false); navigate('/home/notifications'); }}>
+                                    <Bell size={16} /> การแจ้งเตือน{unreadNotifications > 0 ? ` (${unreadNotifications > 99 ? '99+' : unreadNotifications})` : ''}
                                 </button>
                                 <div className="gt-collapse-divider" />
                                 <button className="gt-collapse-link gt-collapse-logout" onClick={() => { setMobileOpen(false); handleLogout(); }}>

@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 import type { DB } from '../../config/db.js';
 import * as repo from './notifications.repo.js';
-import type { NotificationEventCode } from './notifications.types.js';
+import type { NotificationEventCode, NotificationLogRow } from './notifications.types.js';
 import { AppError, NotFoundError } from '../../shared/errors.js';
 import { createTeamAuditLog } from '../teams/teams.repo.js';
 
@@ -459,6 +459,33 @@ async function sendEmailWithLog(
   return { sent, failed, skipped, queued, totalRecipients: input.recipients.length };
 }
 
+async function createInAppNotificationLogs(
+  db: DB,
+  input: {
+    eventCode: string;
+    teamId: number;
+    actorUserId: number | null;
+    templateCode: string | null;
+    subject: string;
+    logMessage: string;
+    recipients: Array<{ user_id: number; email: string | null }>;
+  },
+) {
+  for (const recipient of input.recipients) {
+    await repo.createNotificationLog(db, {
+      eventCode: input.eventCode,
+      channel: 'in_app',
+      teamId: input.teamId,
+      recipientUserId: recipient.user_id,
+      actorUserId: input.actorUserId,
+      templateCode: input.templateCode,
+      subjectText: input.subject,
+      messageText: input.logMessage,
+      status: 'sent',
+    });
+  }
+}
+
 export async function processQueuedEmailRetries(db: DB, limit = 100) {
   const { transporter, reason } = getTransporter();
   if (!transporter) {
@@ -545,7 +572,18 @@ export async function triggerNotificationEvent(db: DB, input: TriggerEventInput)
     input.extra,
   );
 
-  if (!setting.email) return;
+  if (!setting.email) {
+    await createInAppNotificationLogs(db, {
+      eventCode: input.eventCode,
+      teamId: input.teamId,
+      actorUserId: input.actorUserId,
+      templateCode: null,
+      subject: composed.subject,
+      logMessage: composed.logMessage,
+      recipients,
+    });
+    return;
+  }
 
   await sendEmailWithLog(db, {
     eventCode: input.eventCode,
@@ -838,6 +876,8 @@ export async function getTeamNotificationInbox(db: DB, teamId: number, userId: n
     subject: row.subject_text,
     message: row.message_text,
     status: row.status,
+    recipientEmail: row.recipient_email,
+    retryAfterAt: row.retry_after_at,
     providerMessageId: row.provider_message_id,
     errorMessage: row.error_message,
     sentAt: row.sent_at,
@@ -846,6 +886,62 @@ export async function getTeamNotificationInbox(db: DB, teamId: number, userId: n
   }));
 }
 
+function toEmailDeliveryUserMessage(status: NotificationLogRow['status'], recipientEmail: string | null): string {
+  const emailText = recipientEmail ? `ไปที่ ${recipientEmail}` : '';
+
+  if (status === 'sent' || status === 'read') {
+    return `ส่งอีเมลแล้ว${emailText ? ` ${emailText}` : ''}`;
+  }
+
+  if (status === 'queued') {
+    return `ระบบกำลังรอส่งอีเมลอีกครั้ง${emailText ? ` ${emailText}` : ''}`;
+  }
+
+  if (status === 'skipped') {
+    return recipientEmail
+      ? `ยังไม่ได้ส่งอีเมล${emailText}`
+      : 'ไม่ได้ส่งอีเมล เพราะไม่พบอีเมลปลายทางในโปรไฟล์';
+  }
+
+  return `ส่งอีเมลไม่สำเร็จ${emailText ? ` ${emailText}` : ''}`;
+}
+
+export async function getUserNotificationInbox(db: DB, userId: number, limit = 50) {
+  const rows = await repo.getUserInbox(db, userId, Math.max(1, Math.min(limit, 200)));
+  return rows.map((row) => {
+    const emailDelivery = row.channel === 'email' ? {
+      status: row.status,
+      recipientEmail: row.recipient_email,
+      sentAt: row.sent_at,
+      retryAfterAt: row.retry_after_at,
+      userMessage: toEmailDeliveryUserMessage(row.status, row.recipient_email),
+    } : null;
+
+    return {
+      notificationLogId: row.notification_log_id,
+      eventCode: row.event_code,
+      channel: row.channel,
+      teamId: row.team_id,
+      recipientUserId: row.recipient_user_id,
+      actorUserId: row.actor_user_id,
+      subject: row.subject_text,
+      message: row.message_text,
+      status: row.status,
+      readAt: row.read_at,
+      createdAt: row.created_at,
+      emailDelivery,
+    };
+  });
+}
+
+export async function getUserNotificationUnreadCount(db: DB, userId: number) {
+  return { unreadCount: await repo.countUnreadUserInbox(db, userId) };
+}
+
 export async function markInboxAsRead(db: DB, notificationLogId: number, userId: number): Promise<void> {
   await repo.markNotificationAsRead(db, notificationLogId, userId);
+}
+
+export async function markAllInboxAsRead(db: DB, userId: number): Promise<void> {
+  await repo.markAllUserNotificationsAsRead(db, userId);
 }

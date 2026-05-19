@@ -2,6 +2,10 @@
 import { authRequired } from '../../middleware/authRequired.js';
 import { isAdmin } from '../../middleware/isAdmin.js';
 import {
+  handleGetUserInbox,
+  handleGetUserUnreadCount,
+  handleMarkAllUserInboxRead,
+  handleMarkUserInboxRead,
   handleGetNotificationSettings,
   handleUpdateNotificationSetting,
   handleGetTeamInbox,
@@ -15,6 +19,10 @@ import {
 export async function notificationsRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authRequired);
 
+  app.get('/inbox', handleGetUserInbox);
+  app.get('/inbox/unread-count', handleGetUserUnreadCount);
+  app.post('/inbox/read-all', handleMarkAllUserInboxRead);
+  app.post('/inbox/:notificationLogId/read', handleMarkUserInboxRead);
   app.get('/team/:teamId/inbox', handleGetTeamInbox);
   app.post('/team/inbox/:notificationLogId/read', handleMarkTeamInboxRead);
 

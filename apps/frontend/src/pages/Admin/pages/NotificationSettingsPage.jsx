@@ -19,22 +19,16 @@ export default function NotificationSettingsPage() {
   const [updatingRecipientUserId, setUpdatingRecipientUserId] = useState(null)
 
   const loadSelectionTeamOptions = useCallback(async () => {
-    const statuses = ['submitted', 'passed', 'failed', 'confirmed', 'not_joined']
-    const responses = await Promise.all(
-      statuses.map(async (status) => {
-        const res = await fetch(apiUrl(`/api/admin/selection/teams?status=${status}`), { credentials: 'include' })
-        const payload = await res.json()
-        if (!res.ok || !payload?.ok) return []
-        return payload.data || []
-      }),
-    )
-
     const dedup = new Map()
-    responses.flat().forEach((row) => {
+    const res = await fetch(apiUrl('/api/admin/selection/teams'), { credentials: 'include' })
+    const payload = await res.json()
+    if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'โหลดรายชื่อทีมไม่สำเร็จ')
+
+    ;(payload.data || []).forEach((row) => {
       if (!row?.team_id || dedup.has(row.team_id)) return
       dedup.set(row.team_id, {
         teamId: row.team_id,
-        label: `${row.team_name_th || '-'} [${row.team_code}]`,
+        label: `${row.team_name_th || '-'} [${row.team_code}] (${row.status || '-'})`,
       })
     })
 

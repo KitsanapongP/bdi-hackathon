@@ -118,11 +118,40 @@ export async function getTeamInbox(
     FROM notification_logs nl
     WHERE nl.team_id = :teamId
       AND nl.recipient_user_id = :userId
-      AND nl.channel = 'email'
-    ORDER BY nl.created_at DESC
+      AND nl.channel IN ('email', 'in_app')
+      AND nl.event_code IN ('ADMIN_CUSTOM_EMAIL', 'ADMIN_TEAM_MESSAGE')
+    ORDER BY nl.created_at DESC, nl.notification_log_id DESC
     LIMIT :limit
   `, { teamId, userId, limit });
   return rows as NotificationLogRow[];
+}
+
+export async function getUserInbox(
+  db: DB,
+  userId: number,
+  limit: number,
+): Promise<NotificationLogRow[]> {
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT nl.*
+    FROM notification_logs nl
+    WHERE nl.recipient_user_id = :userId
+      AND nl.channel IN ('in_app', 'email')
+    ORDER BY nl.created_at DESC, nl.notification_log_id DESC
+    LIMIT :limit
+  `, { userId, limit });
+  return rows as NotificationLogRow[];
+}
+
+export async function countUnreadUserInbox(db: DB, userId: number): Promise<number> {
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT COUNT(*) AS unread_count
+    FROM notification_logs nl
+    WHERE nl.recipient_user_id = :userId
+      AND nl.channel IN ('in_app', 'email')
+      AND nl.read_at IS NULL
+  `, { userId });
+
+  return Number((rows[0] as { unread_count?: number | string } | undefined)?.unread_count ?? 0);
 }
 
 export async function getQueuedEmailLogs(
@@ -216,6 +245,16 @@ export async function markNotificationAsRead(
     WHERE notification_log_id = :notificationLogId
       AND recipient_user_id = :userId
   `, { notificationLogId, userId });
+}
+
+export async function markAllUserNotificationsAsRead(db: DB, userId: number): Promise<void> {
+  await db.query(`
+    UPDATE notification_logs
+    SET status = IF(status = 'sent', 'read', status), read_at = COALESCE(read_at, NOW())
+    WHERE recipient_user_id = :userId
+      AND channel IN ('in_app', 'email')
+      AND read_at IS NULL
+  `, { userId });
 }
 
 export async function getTeamRecipients(db: DB, teamId: number): Promise<Array<{ user_id: number; email: string | null }>> {
