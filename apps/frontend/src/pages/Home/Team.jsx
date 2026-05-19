@@ -241,7 +241,7 @@ export default function TeamContent({ user }) {
     const [editingTeamDescription, setEditingTeamDescription] = useState(false);
     const [newTeamDescriptionInput, setNewTeamDescriptionInput] = useState('');
 
-    // โ”€โ”€ Verification state โ”€โ”€
+    // Verification state 
     const [verifyData, setVerifyData] = useState(null);
     const [verifyLoading, setVerifyLoading] = useState(false);
     const [profileData, setProfileData] = useState(null);
@@ -260,7 +260,7 @@ export default function TeamContent({ user }) {
     const [advisorForm, setAdvisorForm] = useState({ open: false, editId: null, prefix: '', fullNameTh: '', fullNameEn: '', email: '', phone: '', institutionNameTh: '' });
     const resetAdvisorForm = () => setAdvisorForm({ open: false, editId: null, prefix: '', fullNameTh: '', fullNameEn: '', email: '', phone: '', institutionNameTh: '' });
 
-    // โ”€โ”€ Verification fetch (hook must be before ANY conditional returns) โ”€โ”€
+    // Verification fetch (hook must be before ANY conditional returns)
     const fetchVerifyStatus = useCallback(async () => {
         if (!team?.id) return;
         setVerifyLoading(true);
@@ -960,7 +960,7 @@ export default function TeamContent({ user }) {
             <div className="gl-page-container">
                 <div className={`gl-frame gl-frame-center ${activeView ? 'gl-frame-inner-active' : ''}`}>
 
-                    {/* โ”€โ”€ Lobby Home (2x2 grid) โ”€โ”€ */}
+                    {/* Lobby Home (2x2 grid) */}
                     {activeView === null && (
                         <div className="gl-lobby-home">
                             <div className="gl-lobby-welcome">
@@ -1022,7 +1022,7 @@ export default function TeamContent({ user }) {
                         </div>
                     )}
 
-                    {/* โ”€โ”€ Create Team View โ”€โ”€ */}
+                    {/* Create Team */}
                     {activeView === 'create' && (
                         <div className="gl-inner-view">
                             <div className="gl-inner-header">
@@ -1075,7 +1075,7 @@ export default function TeamContent({ user }) {
                         </div>
                     )}
 
-                    {/* โ”€โ”€ Join by Code View โ”€โ”€ */}
+                    {/* Join Team by Code */}
                     {activeView === 'join' && (
                         <div className="gl-inner-view">
                             <div className="gl-inner-header">
@@ -1089,7 +1089,7 @@ export default function TeamContent({ user }) {
                             <div className="gl-inner-form">
                                 <div className="gl-form-field">
                                     <label className="gl-form-label">รหัสเชิญ</label>
-                                    <input className="gl-form-input gl-form-code-input" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="เช่น ABC123" />
+                                    <input className="gl-form-input gl-form-code-input" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="เช่น TM1234" />
                                 </div>
                                 <button className="gl-form-submit gl-btn-blue" disabled={!isTeamRecruitmentOpen || actionLoading || !joinCode.trim()} onClick={handleJoinByCode}>
                                     <UserPlus size={18} /> ส่งคำขอเข้าร่วม
@@ -1098,7 +1098,7 @@ export default function TeamContent({ user }) {
                         </div>
                     )}
 
-                    {/* โ”€โ”€ Browse Public Teams View โ”€โ”€ */}
+                    {/* Browse Public Teams */}
                     {activeView === 'browse' && (
                         <div className="gl-inner-view gl-inner-wide">
                             <div className="gl-inner-header">
@@ -1154,7 +1154,7 @@ export default function TeamContent({ user }) {
                         </div>
                     )}
 
-                    {/* โ”€โ”€ Invitations View โ”€โ”€ */}
+                    {/* Invitations View */}
                     {activeView === 'invitations' && (
                         <div className="gl-inner-view gl-inner-wide">
                             <div className="gl-inner-header">

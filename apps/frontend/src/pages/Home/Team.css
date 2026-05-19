@@ -2809,6 +2809,12 @@
     text-align: center;
 }
 
+.gl-form-code-input::placeholder {
+    font-family: inherit;
+    letter-spacing: normal;
+    font-weight: 400;
+}
+
 /* ── Toggle row ── */
 .gl-form-toggle-row {
     display: flex;
