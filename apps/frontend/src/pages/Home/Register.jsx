@@ -221,7 +221,7 @@ function RegisterPage() {
     const isRegistrationOpen = registrationWindow.status === SYSTEM_WINDOW_STATUS.OPEN;
     const registerUnavailableMessage = registrationWindow.status === SYSTEM_WINDOW_STATUS.NOT_OPEN
         ? 'ยังไม่ถึงเวลาที่เปิดลงทะเบียน'
-        : (registrationWindow.status === SYSTEM_WINDOW_STATUS.CLOSED ? 'หมดเขตการลงทะเบียน' : '');
+        : (registrationWindow.status === SYSTEM_WINDOW_STATUS.CLOSED ? 'หมดเขตการลงทะเบียนแล้ว' : '');
     const registerActionDisabled = isLoading || !isRegistrationOpen;
 
     const resetVerificationState = () => {

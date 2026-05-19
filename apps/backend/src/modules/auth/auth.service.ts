@@ -327,7 +327,7 @@ export async function requestRegistrationVerification(
         throw new AppError('ยังไม่ถึงเวลาที่เปิดลงทะเบียน', 400);
     }
     if (registrationStatus === 'closed') {
-        throw new AppError('หมดเขตการลงทะเบียน', 400);
+        throw new AppError('หมดเขตการลงทะเบียนแล้ว', 400);
     }
 
     const normalizedEmail = normalizeEmail(input.email);
@@ -474,7 +474,7 @@ export async function resendRegistrationVerification(
         throw new AppError('ยังไม่ถึงเวลาที่เปิดลงทะเบียน', 400);
     }
     if (registrationStatus === 'closed') {
-        throw new AppError('หมดเขตการลงทะเบียน', 400);
+        throw new AppError('หมดเขตการลงทะเบียนแล้ว', 400);
     }
 
     const normalizedEmail = normalizeEmail(input.email);
@@ -567,7 +567,7 @@ export async function verifyRegistrationCode(db: DB, input: RegisterVerifyInput)
         throw new AppError('ยังไม่ถึงเวลาที่เปิดลงทะเบียน', 400);
     }
     if (registrationStatus === 'closed') {
-        throw new AppError('หมดเขตการลงทะเบียน', 400);
+        throw new AppError('หมดเขตการลงทะเบียนแล้ว', 400);
     }
 
     const normalizedEmail = normalizeEmail(input.email);
@@ -610,7 +610,7 @@ export async function verifyRegistrationLink(db: DB, input: RegisterVerifyLinkIn
         throw new AppError('ยังไม่ถึงเวลาที่เปิดลงทะเบียน', 400);
     }
     if (registrationStatus === 'closed') {
-        throw new AppError('หมดเขตการลงทะเบียน', 400);
+        throw new AppError('หมดเขตการลงทะเบียนแล้ว', 400);
     }
 
     const tokenHash = hashVerificationLinkToken(input.token.trim());
