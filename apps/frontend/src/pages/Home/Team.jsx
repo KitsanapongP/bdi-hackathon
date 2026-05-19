@@ -57,6 +57,12 @@ const TEAM_MEMBER_MAX_DEFAULT = 5;
 const TEAM_MEMBER_MIN_DEFAULT = 3;
 const TEAM_NAME_MAX_LENGTH = 50;
 const TEAM_DESCRIPTION_MAX_LENGTH = 500;
+const PDF_FILE_ACCEPT = 'application/pdf,.pdf';
+const VERIFICATION_MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const SUBMISSION_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const VERIFICATION_FILE_REQUIREMENT_TEXT = 'อัปโหลดได้เฉพาะไฟล์นามสกุล PDF เท่านั้นและมีขนาดไม่เกิน 5 MB เป็นจำนวน 1 ไฟล์';
+const SUBMISSION_FILE_REQUIREMENT_TEXT = 'อัปโหลดได้เฉพาะไฟล์นามสกุล PDF เท่านั้นและมีขนาดไม่เกิน 10 MB เป็นจำนวน 1 ไฟล์';
+const FILE_NAME_REQUIREMENT_TEXT_VERIFICATION = 'กรุณาตั้งชื่อไฟล์ให้สอดคล้องกับข้อมูลในไฟล์ เช่น CV_นายสมชาย_ใจดี.pdf เพื่อความสะดวกในการตรวจสอบและยืนยันตัวตน';
 
 const CARDS = [
     { id: 'verify', icon: <ShieldCheck />, label: 'ยืนยันตัวตน', color: '#14b8a6' },
@@ -233,7 +239,6 @@ export default function TeamContent({ user }) {
     const [copied, setCopied] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', variant: 'danger', onConfirm: null, hideCancel: false, confirmLabel: 'ยืนยัน', cancelLabel: 'ยกเลิก' });
-    const [renameState, setRenameState] = useState({ open: false, doc: null, value: '' });
     const [toast, setToast] = useState(null);
     const [toastExiting, setToastExiting] = useState(false);
     const [editingTeamName, setEditingTeamName] = useState(false);
@@ -1296,26 +1301,31 @@ export default function TeamContent({ user }) {
             showToast('ทีมถูกล็อกแล้ว ไม่สามารถอัปโหลดเอกสารได้', 'error');
             return;
         }
-        const maxDocumentCount = 5;
-        if (myDocs.length + files.length > maxDocumentCount) {
-            showToast(`อัปโหลดเอกสารได้สูงสุด ${maxDocumentCount} ไฟล์`, 'error');
+        const currentDocs = verifyData?.myDocuments || [];
+        const selectedFiles = Array.from(files).filter(Boolean);
+        if (selectedFiles.length !== 1 || currentDocs.length >= 1) {
+            showToast('อัปโหลดเอกสารได้สูงสุด 1 ไฟล์ กรุณารวมเป็น PDF ไฟล์เดียวก่อนแนบ', 'error');
             return;
         }
-        const maxFileSizeBytes = 10 * 1024 * 1024;
-        const oversizedFile = files.find((file) => file.size > maxFileSizeBytes);
+        const invalidFile = selectedFiles.find((file) => file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name));
+        if (invalidFile) {
+            showToast(`รองรับเฉพาะไฟล์ PDF เท่านั้น: ${invalidFile.name}`, 'error');
+            return;
+        }
+        const oversizedFile = selectedFiles.find((file) => file.size > VERIFICATION_MAX_FILE_SIZE_BYTES);
         if (oversizedFile) {
-            showToast(`ไฟล์ PDF ต้องมีขนาดไม่เกิน 10MB: ${oversizedFile.name}`, 'error');
+            showToast(`ไฟล์ PDF ต้องมีขนาดไม่เกิน 5 MB: ${oversizedFile.name}`, 'error');
             return;
         }
         await withAction(async () => {
             const formData = new FormData();
-            for (const f of files) formData.append('files', f);
+            formData.append('files', selectedFiles[0]);
             const res = await fetch(apiUrl(`/api/verification/team/${team.id}/documents`), {
                 method: 'POST', credentials: 'include', body: formData,
             });
             const payload = await res.json();
             if (!payload.ok) throw new Error(payload.message || 'อัปโหลดไม่สำเร็จ');
-            showToast(`อัปโหลดสำเร็จ ${payload.data.length} ไฟล์`, 'success');
+            showToast('อัปโหลดสำเร็จ 1 ไฟล์', 'success');
             fetchVerifyStatus();
         }, { toastError: true });
     };
@@ -1349,42 +1359,6 @@ export default function TeamContent({ user }) {
         if (!team?.id) return;
         const url = apiUrl(`/api/verification/team/${team.id}/documents/${documentId}/file?download=1`);
         window.open(url, '_blank', 'noopener,noreferrer');
-    };
-
-    const handleRenameDoc = (doc) => {
-        if (isTeamEditLocked || isMyVerificationConfirmed) {
-            showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขชื่อเอกสารได้', 'error');
-            return;
-        }
-        if (!doc?.document_id) return;
-        setRenameState({ open: true, doc, value: doc.file_original_name || '' });
-    };
-
-    const closeRenameModal = () => setRenameState({ open: false, doc: null, value: '' });
-
-    const confirmRenameDoc = () => {
-        if (isTeamEditLocked || isMyVerificationConfirmed) {
-            showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขชื่อเอกสารได้', 'error');
-            return;
-        }
-        if (!team?.id || !renameState.doc?.document_id) return;
-        const trimmed = renameState.value.trim();
-        const current = renameState.doc.file_original_name || '';
-        if (!trimmed || trimmed === current) return;
-
-        withAction(async () => {
-            const res = await fetch(apiUrl(`/api/verification/team/${team.id}/documents/${renameState.doc.document_id}/name`), {
-                method: 'PUT',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fileOriginalName: trimmed }),
-            });
-            const payload = await res.json();
-            if (!payload.ok) throw new Error(payload.message || 'แก้ไขชื่อไฟล์ไม่สำเร็จ');
-            showToast('แก้ไขชื่อไฟล์สำเร็จ', 'success');
-            closeRenameModal();
-            fetchVerifyStatus();
-        }, { toastError: true });
     };
 
     const handleSaveVerificationProfile = async () => {
@@ -1770,7 +1744,7 @@ export default function TeamContent({ user }) {
                     {/* 3. Team Description */}
                     <div className="gl-team-info-card gl-manage-glass-card gl-team-description-card">
                         <div className="gl-info-header gl-team-description-header">
-                            <span className="gl-team-info-label" style={{ marginBottom: 0 }}><Info size={16} /> คำอธิบายทีม</span>
+                            <span className="gl-team-info-label" style={{ marginBottom: 0 }}><Info size={16} /> คำอธิบายทีม (ผู้ที่สนใจเข้าร่วมทีมจะเห็นข้อความนี้)</span>
                             {isLeader && !editingTeamDescription && (
                                 <button
                                     className="gl-icon-btn gl-team-name-edit-trigger"
@@ -2260,15 +2234,31 @@ export default function TeamContent({ user }) {
                     showToast('ทีมถูกล็อกแล้ว ไม่สามารถอัปโหลดไฟล์ผลงานได้', 'error');
                     return;
                 }
+                const existingFiles = Array.isArray(task.files) ? task.files : [];
+                const selectedFiles = Array.from(fileList).filter(Boolean);
+                if (selectedFiles.length !== 1 || existingFiles.length >= 1) {
+                    showToast('อัปโหลดไฟล์ผลงานได้สูงสุด 1 ไฟล์ กรุณารวมเป็น PDF ไฟล์เดียวก่อนแนบ', 'error');
+                    return;
+                }
+                const invalidFile = selectedFiles.find((file) => file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name));
+                if (invalidFile) {
+                    showToast(`รองรับเฉพาะไฟล์ PDF เท่านั้น: ${invalidFile.name}`, 'error');
+                    return;
+                }
+                const oversizedFile = selectedFiles.find((file) => file.size > SUBMISSION_MAX_FILE_SIZE_BYTES);
+                if (oversizedFile) {
+                    showToast(`ไฟล์ PDF ต้องมีขนาดไม่เกิน 10 MB: ${oversizedFile.name}`, 'error');
+                    return;
+                }
                 await withAction(async () => {
                     const formData = new FormData();
-                    for (const f of fileList) formData.append('files', f);
+                    formData.append('files', selectedFiles[0]);
                     const res = await fetch(apiUrl(`/api/submissions/team/${team.id}/tasks/${task.teamSubmissionTaskId}/files`), {
                         method: 'POST', credentials: 'include', body: formData,
                     });
                     const payload = await res.json();
                     if (!payload.ok) throw new Error(payload.message || 'อัปโหลดไม่สำเร็จ');
-                    showToast(`อัปโหลดสำเร็จ ${payload.data.length} ไฟล์`, 'success');
+                    showToast('อัปโหลดสำเร็จ 1 ไฟล์', 'success');
                     fetchSubmissionData();
                 }, { toastError: true });
             };
@@ -2328,6 +2318,7 @@ export default function TeamContent({ user }) {
                                 <div className="sub-task-card-header">
                                     <span className="gl-team-info-label">
                                         {task.taskType === 'link' ? <Link size={13} /> : <Paperclip size={13} />} <span className="sub-task-name">{task.taskName}</span>
+                                        {task.taskType === 'file' && files.length > 0 && <span className="vf-profile-check ok">✓</span>}
                                     </span>
                                     <div className="sub-task-header-badges">
                                         <span className={`sub-task-required ${requiredClass}`}>{requiredLabel}</span>
@@ -2374,10 +2365,7 @@ export default function TeamContent({ user }) {
                                         )}
                                     </>
                                 ) : (
-                                    <>
-                                        <p className="vf-hint" style={{ marginBottom: 8 }}>
-                                            รองรับไฟล์ {Array.isArray(task.allowedExtensions) && task.allowedExtensions.length > 0 ? task.allowedExtensions.join(', ') : '.pdf,.csv'}
-                                        </p>
+                                    <>                                
                                         {files.length === 0 && <p className="vf-hint">ยังไม่มีไฟล์แนบ</p>}
                                         {files.map((f) => (
                                             <div key={f.file_id} className="vf-doc-row">
@@ -2401,15 +2389,12 @@ export default function TeamContent({ user }) {
                                                 </div>
                                             </div>
                                         ))}
-                                        {isLeader && !isTaskLocked && (
+                                        {isLeader && !isTaskLocked && files.length === 0 && (
                                             <label className="vf-upload-btn">
                                                 <Upload size={16} /> เลือกไฟล์
                                                 <input
                                                     type="file"
-                                                    accept={(Array.isArray(task.allowedExtensions) && task.allowedExtensions.length > 0)
-                                                        ? task.allowedExtensions.join(',')
-                                                        : '.pdf,.csv'}
-                                                    multiple
+                                                    accept={PDF_FILE_ACCEPT}
                                                     hidden
                                                     onChange={(e) => {
                                                         handleUploadSubmissionFiles(task, Array.from(e.target.files));
@@ -2418,6 +2403,9 @@ export default function TeamContent({ user }) {
                                                 />
                                             </label>
                                         )}
+                                        <p className="vf-hint" style={{ marginBottom: 8 }}>
+                                            {SUBMISSION_FILE_REQUIREMENT_TEXT}
+                                        </p>    
                                     </>
                                 )}
                             </div>
@@ -2428,7 +2416,7 @@ export default function TeamContent({ user }) {
         },
         verify: () => {
             if (!verifyData && !verifyLoading) fetchVerifyStatus();
-            if (verifyLoading) return renderSimpleDetail('ยืนยันตัวตน', <ShieldCheck size={20} />, <div className="gl-empty-state"><ShieldCheck size={40} /><h3>กำลังโหลด...</h3></div>);
+            if (verifyLoading && !verifyData) return renderSimpleDetail('ยืนยันตัวตน', <ShieldCheck size={20} />, <div className="gl-empty-state"><ShieldCheck size={40} /><h3>กำลังโหลด...</h3></div>);
 
             const vd = verifyData;
             const myMember = vd?.members?.find(m => m.user_id === user?.userId);
@@ -2593,11 +2581,17 @@ export default function TeamContent({ user }) {
 
                     {/* My documents section */}
                     <div className="gl-team-info-card">
-                        <span className="gl-team-info-label"><FileText size={13} /> เอกสารของฉัน ({myDocs.length} ไฟล์)</span>
-                        <p className="vf-hint">
+                        <span className="gl-team-info-label">
+                            <FileText size={13} /> เอกสารของฉัน
+                            {myDocs.length > 0 && <span className="vf-profile-check ok">✓</span>}
+                        </span>
+                        <p className="vf-hint vf-doc-description">
                             CV อธิบาย Background ของตนเอง เช่น สถาบันการศึกษา สาขาที่กำลังศึกษา ประสบการณ์ ความเชี่ยวชาญ หรือรางวัลที่เคยได้รับ ซึ่งมีส่วนสนับสนุนต่อการแข่งขันครั้งนี้ และภายใน CV ควรแนบหลักฐานระบุตัวตนที่เป็นทางการ เช่น บัตรประจำตัวนักศึกษา เพื่อแสดงคุณสมบัติการเข้าร่วมการแข่งขัน
                         </p>
-
+                        <br/>
+                        <strong className="vf-hint vf-doc-description">{VERIFICATION_FILE_REQUIREMENT_TEXT}</strong>
+                        <br/>
+                        <strong className="vf-hint vf-doc-description">{FILE_NAME_REQUIREMENT_TEXT_VERIFICATION}</strong>
                         {myDocs.length === 0 && (
                             <div className="vf-empty-docs">
                                 <Upload size={28} />
@@ -2620,11 +2614,6 @@ export default function TeamContent({ user }) {
                                         <Download size={14} /> ดาวน์โหลด
                                     </button>
                                     {!isSubmitted && !myConfirmed && (
-                                        <button type="button" className="vf-doc-rename" aria-label="แก้ไขชื่อเอกสาร" onClick={() => handleRenameDoc(doc)}>
-                                            <Edit2 size={14} /> แก้ไขชื่อเอกสาร
-                                        </button>
-                                    )}
-                                    {!isSubmitted && !myConfirmed && (
                                         <button className="vf-doc-delete" aria-label="ลบเอกสาร" disabled={actionLoading} onClick={() => handleDeleteDoc(doc.document_id, doc.file_original_name)}>
                                             <Trash2 size={14} />
                                         </button>
@@ -2634,16 +2623,16 @@ export default function TeamContent({ user }) {
                         ))}
 
                         {/* Upload button */}
-                        {!isSubmitted && !myConfirmed && myDocs.length < 5 && (
+                        {!isSubmitted && !myConfirmed && myDocs.length < 1 && (
                             <label className="vf-upload-btn">
                                 <Upload size={16} /> เลือกไฟล์ PDF
-                                <input type="file" accept="application/pdf" multiple hidden
+                                <input type="file" accept={PDF_FILE_ACCEPT} hidden
                                     onChange={(e) => { handleUploadDocs(Array.from(e.target.files)); e.target.value = ''; }}
                                 />
                             </label>
                         )}
-                        {!isSubmitted && !myConfirmed && myDocs.length >= 5 && (
-                            <p className="vf-hint">อัปโหลดเอกสารได้สูงสุด 5 ไฟล์</p>
+                        {!isSubmitted && !myConfirmed && myDocs.length >= 1 && (
+                            <p className="vf-hint">อัปโหลดเอกสารได้สูงสุด 1 ไฟล์ หากมีหลายไฟล์ให้รวมเป็น PDF ไฟล์เดียวก่อนแนบ</p>
                         )}
                     </div>
 
@@ -3073,26 +3062,6 @@ export default function TeamContent({ user }) {
                 onConfirm={confirmState.onConfirm}
                 onCancel={closeConfirm}
             />
-            <ConfirmModal
-                open={renameState.open}
-                title="เปลี่ยนชื่อไฟล์เอกสาร"
-                message={renameState.doc?.file_original_name ? `ชื่อเดิม: ${renameState.doc.file_original_name}` : ''}
-                variant="info"
-                confirmLabel="บันทึก"
-                cancelLabel="ยกเลิก"
-                confirmDisabled={isTeamEditLocked || isMyVerificationConfirmed || !renameState.value.trim() || renameState.value.trim() === (renameState.doc?.file_original_name || '') || actionLoading}
-                onConfirm={confirmRenameDoc}
-                onCancel={closeRenameModal}
-            >
-                <input
-                    className="cm-input"
-                    value={renameState.value}
-                    onChange={(e) => setRenameState((s) => ({ ...s, value: e.target.value }))}
-                    placeholder="กรอกชื่อไฟล์ใหม่"
-                    maxLength={255}
-                    autoFocus
-                />
-            </ConfirmModal>
             {toast && (
                 <div className={`pf-toast show ${toast.type}${toastExiting ? ' exiting' : ''}`}>
                     {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}

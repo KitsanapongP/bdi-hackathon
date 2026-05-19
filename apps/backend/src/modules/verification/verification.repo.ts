@@ -229,14 +229,6 @@ export async function softDeleteDocument(db: DB, documentId: number): Promise<vo
     `, { documentId });
 }
 
-export async function updateDocumentOriginalName(db: DB, documentId: number, fileOriginalName: string): Promise<void> {
-    await db.query(`
-        UPDATE verify_member_documents
-        SET file_original_name = :fileOriginalName
-        WHERE document_id = :documentId
-    `, { documentId, fileOriginalName });
-}
-
 // ── Team Status ──
 
 export async function updateTeamStatus(db: DB, teamId: number, status: string): Promise<void> {

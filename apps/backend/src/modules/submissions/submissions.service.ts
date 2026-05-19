@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 
 const UPLOADS_BASE_DIR = path.join(process.cwd(), 'public', 'uploads', 'verification');
 const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
+const MAX_SUBMISSION_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 function sanitizePathSegment(value: string | null | undefined, fallback: string): string {
     const raw = String(value || '').trim();
@@ -28,11 +29,9 @@ function parseAllowedExtensions(allowedExtensions: string | null): string[] {
         .map((ext) => (ext.startsWith('.') ? ext : `.${ext}`));
 }
 
-function assertTeamFileExtension(fileName: string, allowedExtensions: string[]): void {
-    if (allowedExtensions.length === 0) return;
-    const ext = path.extname(fileName).toLowerCase();
-    if (!ext || !allowedExtensions.includes(ext)) {
-        throw new BadRequestError(`ไฟล์นามสกุล ${ext || '(ไม่มีนามสกุล)'} ไม่ได้รับอนุญาต`);
+function assertPdfFile(fileName: string, mimeType: string): void {
+    if (mimeType !== 'application/pdf' || path.extname(fileName).toLowerCase() !== '.pdf') {
+        throw new BadRequestError('รองรับเฉพาะไฟล์ PDF เท่านั้น');
     }
 }
 
@@ -174,8 +173,12 @@ export async function uploadSubmissionFile(
         throw new BadRequestError('งานนี้ไม่ใช่ประเภทไฟล์');
     }
     assertTaskSubmissionOpen(task);
-    const allowedExtensions = parseAllowedExtensions(task.allowed_extensions);
-    assertTeamFileExtension(file.filename, allowedExtensions);
+    assertPdfFile(file.filename, file.mimetype);
+
+    const currentFiles = await repo.getSubmissionFilesByTeamTask(db, teamSubmissionTaskId);
+    if (currentFiles.length >= 1) {
+        throw new BadRequestError('อัปโหลดไฟล์ผลงานได้สูงสุด 1 ไฟล์ หากมีหลายไฟล์ให้รวมเป็น PDF ไฟล์เดียวก่อนแนบ');
+    }
 
     const team = await repo.getTeamById(db, teamId);
     const teamName = sanitizePathSegment(team?.team_name_th, `team-${teamId}`);
@@ -187,16 +190,15 @@ export async function uploadSubmissionFile(
     const filePath = path.join(dir, storedName);
     const storageKey = path.relative(path.join(process.cwd(), 'public'), filePath).replace(/\\/g, '/');
 
-    const writeStream = fs.createWriteStream(filePath);
-    const stream = file.file as NodeJS.ReadableStream;
-    await new Promise<void>((resolve, reject) => {
-        (stream as NodeJS.ReadableStream).pipe(writeStream);
-        writeStream.on('finish', resolve);
-        writeStream.on('error', reject);
-        (stream as NodeJS.ReadableStream).on('error', reject);
-    });
-
-    const stat = fs.statSync(filePath);
+    const chunks: Buffer[] = [];
+    for await (const chunk of file.file) {
+        chunks.push(chunk as Buffer);
+    }
+    const buffer = Buffer.concat(chunks);
+    if (buffer.length > MAX_SUBMISSION_FILE_SIZE_BYTES) {
+        throw new BadRequestError('ไฟล์ PDF ต้องมีขนาดไม่เกิน 10 MB');
+    }
+    fs.writeFileSync(filePath, buffer);
 
     const fileId = await repo.insertSubmissionFile(db, {
         teamId,
@@ -204,7 +206,7 @@ export async function uploadSubmissionFile(
         fileStorageKey: storageKey,
         fileOriginalName: file.filename,
         fileMimeType: file.mimetype,
-        fileSizeBytes: stat.size,
+        fileSizeBytes: buffer.length,
         uploadedByUserId: userId,
     });
 

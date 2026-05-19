@@ -58,16 +58,6 @@ export async function downloadMyDocument(req: FastifyRequest, reply: FastifyRepl
     return reply.send(fs.createReadStream(file.absolutePath));
 }
 
-export async function renameMyDocument(req: FastifyRequest, reply: FastifyReply) {
-    const { teamId, documentId } = req.params as { teamId: string; documentId: string };
-    const userId = (req.user as any).userId;
-    const db = req.server.ctx.db;
-    const { fileOriginalName } = req.body as { fileOriginalName: string };
-
-    await service.renameMyDocument(db, Number(teamId), userId, Number(documentId), fileOriginalName);
-    return reply.send(ok(null, 'แก้ไขชื่อไฟล์สำเร็จ'));
-}
-
 export async function confirmMember(req: FastifyRequest, reply: FastifyReply) {
     const { teamId } = req.params as { teamId: string };
     const userId = (req.user as any).userId;

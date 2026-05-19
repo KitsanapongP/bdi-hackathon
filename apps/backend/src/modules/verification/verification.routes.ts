@@ -17,7 +17,6 @@ export async function verificationRoutes(app: FastifyInstance) {
     // Upload identity document(s) — multipart
     app.post('/team/:teamId/documents', ctrl.uploadDocument);
     app.get('/team/:teamId/documents/:documentId/file', ctrl.downloadMyDocument);
-    app.put('/team/:teamId/documents/:documentId/name', ctrl.renameMyDocument);
 
     // Delete a document
     app.delete('/team/:teamId/documents/:documentId', ctrl.deleteDocument);
