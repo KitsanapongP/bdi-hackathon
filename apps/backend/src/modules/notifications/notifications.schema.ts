@@ -27,6 +27,26 @@ export const adminSendCustomEmailSchema = z.object({
   message: z.string().trim().min(1),
 });
 
+export const adminSendInAppNotificationSchema = z.object({
+  target: z.enum(['all', 'selected']),
+  userIds: z.array(z.number().int().positive()).optional().default([]),
+  subject: z.string().trim().min(1).max(255),
+  message: z.string().trim().min(1),
+}).refine(
+  (value) => value.target === 'all' || value.userIds.length > 0,
+  { message: 'กรุณาเลือกผู้รับอย่างน้อยหนึ่งคน' },
+);
+
+export const adminSendOrientationEmailSchema = z.object({
+  target: z.enum(['all', 'selected']),
+  userIds: z.array(z.number().int().positive()).optional().default([]),
+  subject: z.string().trim().min(1).max(255),
+  orientationLink: z.string().trim().url('ลิงก์ Orientation Day ไม่ถูกต้อง'),
+}).refine(
+  (value) => value.target === 'all' || value.userIds.length > 0,
+  { message: 'กรุณาเลือกผู้รับอย่างน้อยหนึ่งคน' },
+);
+
 export const adminSendBurstTestEmailSchema = z.object({
   recipientEmail: z.string().trim().email('รูปแบบอีเมลไม่ถูกต้อง'),
 });

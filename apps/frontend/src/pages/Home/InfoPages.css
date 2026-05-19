@@ -227,23 +227,20 @@
 }
 
 .gt-notification-card {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 14px;
     padding: 16px;
     border: 1px solid var(--gt-border);
     border-radius: 18px;
-    background: var(--gt-surface-alt);
+    background: #ffffff;
     transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
 
 .gt-notification-card.is-unread {
     border-color: color-mix(in srgb, var(--gt-primary) 42%, var(--gt-border));
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(255, 255, 255, 0.88));
+    background: rgba(124, 58, 237, 0.08);
 }
 
 .dark .gt-notification-card.is-unread {
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(15, 23, 42, 0.8));
+    background: rgba(124, 58, 237, 0.14);
 }
 
 .gt-notification-icon {
@@ -258,9 +255,9 @@
 }
 
 .gt-notification-summary {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
     gap: 14px;
     width: 100%;
     padding: 0;
@@ -269,6 +266,10 @@
     color: inherit;
     cursor: pointer;
     text-align: left;
+}
+
+.gt-notification-summary-text {
+    min-width: 0;
 }
 
 .gt-notification-summary h2 {
@@ -322,6 +323,18 @@
     color: var(--gt-text-muted);
     line-height: 1.7;
     white-space: pre-line;
+}
+
+.gt-notification-message-link {
+    color: #2563eb;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    word-break: break-word;
+}
+
+.gt-notification-message-link:hover {
+    color: #1d4ed8;
 }
 
 .gt-notification-channels {

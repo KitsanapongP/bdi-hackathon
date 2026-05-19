@@ -653,6 +653,43 @@ function toRecipientDisplayName(row: {
   return fullNameEn || row.user_name;
 }
 
+function toRecipientFirstLastName(row: {
+  user_name: string;
+  first_name_th: string | null;
+  last_name_th: string | null;
+  first_name_en: string | null;
+  last_name_en: string | null;
+}) {
+  const firstName = (row.first_name_th || row.first_name_en || row.user_name || '').trim();
+  const lastName = (row.last_name_th || row.last_name_en || '').trim();
+  return { firstName, lastName };
+}
+
+function buildOrientationEmailText(row: {
+  user_name: string;
+  first_name_th: string | null;
+  last_name_th: string | null;
+  first_name_en: string | null;
+  last_name_en: string | null;
+}, orientationLink: string): string {
+  const { firstName, lastName } = toRecipientFirstLastName(row);
+  return [
+    `เรียนคุณ ${firstName} ${lastName}`.trim(),
+    '',
+    'ขอแจ้งข่าวสารเกี่ยวกับกิจกรรม BDI Young Innovator Hackathon',
+    'วัน Orientation Day (Online) อบรมออนไลน์',
+    '',
+    'คุณมีสิทธิ์ในการเข้าร่วม Orientation day แบบออนไลน์ โดยสามารถเข้าร่วมกิจกรรมได้ตามลิงก์ด้านล่าง',
+    orientationLink,
+    '',
+    'การเข้าร่วมกิจกรรมครั้งนี้จะได้รับประกาศนียบัตร เมื่อผู้เข้าร่วมกิจกรรม Orientation day',
+    'และทีมของท่านได้ส่งโครงร่างพร้อมวิดีโอนำเสนอ',
+    '',
+    'ขอบคุณครับ/ค่ะ',
+    'ทีมงาน BDI Young Innovator Hackathon',
+  ].join('\n');
+}
+
 export async function getAdminNotificationRecipients(db: DB) {
   const rows = await repo.getAdminNotificationRecipients(db);
   return rows.map((row) => ({
@@ -662,6 +699,85 @@ export async function getAdminNotificationRecipients(db: DB) {
     email: row.email,
     enabled: row.is_enabled === 1,
   }));
+}
+
+export async function getAdminNotificationUsers(db: DB) {
+  const rows = await repo.getActiveNotificationUsers(db);
+  return rows.map((row) => ({
+    userId: row.user_id,
+    userName: row.user_name,
+    displayName: toRecipientDisplayName(row),
+    email: row.email,
+  }));
+}
+
+export async function sendInAppNotificationToUsers(
+  db: DB,
+  data: {
+    target: 'all' | 'selected';
+    userIds: number[];
+    actorUserId: number;
+    subject: string;
+    message: string;
+  },
+) {
+  const recipients = data.target === 'all'
+    ? await repo.getActiveNotificationUsers(db)
+    : await repo.getActiveNotificationUsersByIds(db, Array.from(new Set(data.userIds)));
+
+  for (const recipient of recipients) {
+    await repo.createNotificationLog(db, {
+      eventCode: 'ADMIN_IN_APP_MESSAGE',
+      channel: 'in_app',
+      teamId: null,
+      recipientUserId: recipient.user_id,
+      actorUserId: data.actorUserId,
+      templateCode: null,
+      subjectText: data.subject.trim(),
+      messageText: data.message.trim(),
+      status: 'sent',
+      sentAt: new Date(),
+    });
+  }
+
+  return {
+    target: data.target,
+    totalRecipients: recipients.length,
+  };
+}
+
+export async function sendOrientationInAppToUsers(
+  db: DB,
+  data: {
+    target: 'all' | 'selected';
+    userIds: number[];
+    actorUserId: number;
+    subject: string;
+    orientationLink: string;
+  },
+) {
+  const recipients = data.target === 'all'
+    ? await repo.getActiveNotificationUsers(db)
+    : await repo.getActiveNotificationUsersByIds(db, Array.from(new Set(data.userIds)));
+
+  for (const recipient of recipients) {
+    const messageText = buildOrientationEmailText(recipient, data.orientationLink);
+
+    await repo.createNotificationLog(db, {
+      eventCode: 'ORIENTATION_DAY_IN_APP',
+      channel: 'in_app',
+      teamId: null,
+      recipientUserId: recipient.user_id,
+      actorUserId: data.actorUserId,
+      templateCode: 'ORIENTATION_DAY_ONLINE',
+      subjectText: data.subject,
+      messageText,
+      status: 'sent',
+      sentAt: new Date(),
+    });
+  }
+
+  return { target: data.target, totalRecipients: recipients.length };
 }
 
 export async function updateAdminNotificationRecipient(

@@ -314,6 +314,67 @@ export async function getAdminNotificationRecipients(db: DB): Promise<AdminNotif
   return rows as AdminNotificationRecipientRow[];
 }
 
+export async function getActiveNotificationUsers(db: DB): Promise<Array<{
+  user_id: number;
+  user_name: string;
+  email: string | null;
+  first_name_th: string | null;
+  last_name_th: string | null;
+  first_name_en: string | null;
+  last_name_en: string | null;
+}>> {
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT user_id, user_name, email, first_name_th, last_name_th, first_name_en, last_name_en
+    FROM user_users
+    WHERE is_active = 1
+      AND deleted_at IS NULL
+    ORDER BY
+      COALESCE(NULLIF(TRIM(CONCAT(COALESCE(first_name_th, ''), ' ', COALESCE(last_name_th, ''))), ''), user_name) ASC,
+      user_id ASC
+  `);
+  return rows as Array<{
+    user_id: number;
+    user_name: string;
+    email: string | null;
+    first_name_th: string | null;
+    last_name_th: string | null;
+    first_name_en: string | null;
+    last_name_en: string | null;
+  }>;
+}
+
+export async function getActiveNotificationUsersByIds(
+  db: DB,
+  userIds: number[],
+): Promise<Array<{
+  user_id: number;
+  user_name: string;
+  email: string | null;
+  first_name_th: string | null;
+  last_name_th: string | null;
+  first_name_en: string | null;
+  last_name_en: string | null;
+}>> {
+  if (userIds.length === 0) return [];
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT user_id, user_name, email, first_name_th, last_name_th, first_name_en, last_name_en
+    FROM user_users
+    WHERE is_active = 1
+      AND deleted_at IS NULL
+      AND user_id IN (?)
+    ORDER BY user_id ASC
+  `, [userIds]);
+  return rows as Array<{
+    user_id: number;
+    user_name: string;
+    email: string | null;
+    first_name_th: string | null;
+    last_name_th: string | null;
+    first_name_en: string | null;
+    last_name_en: string | null;
+  }>;
+}
+
 export async function setAdminNotificationRecipient(
   db: DB,
   userId: number,

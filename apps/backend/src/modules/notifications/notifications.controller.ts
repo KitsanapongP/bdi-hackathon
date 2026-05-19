@@ -5,6 +5,8 @@ import * as service from './notifications.service.js';
 import {
   adminSendBurstTestEmailSchema,
   adminSendCustomEmailSchema,
+  adminSendInAppNotificationSchema,
+  adminSendOrientationEmailSchema,
   eventCodeSchema,
   notificationRecipientParamSchema,
   updateNotificationRecipientSchema,
@@ -144,6 +146,60 @@ export async function handleAdminSendCustomEmail(req: FastifyRequest, reply: Fas
       actorUserId: user.userId,
     });
     return reply.send(ok(result, 'ส่งอีเมลสำเร็จ'));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleGetAdminNotificationUsers(req: FastifyRequest, reply: FastifyReply) {
+  try {
+    const rows = await service.getAdminNotificationUsers(req.server.ctx.db);
+    return reply.send(ok(rows));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleAdminSendInAppNotification(req: FastifyRequest, reply: FastifyReply) {
+  const parsed = adminSendInAppNotificationSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
+  }
+
+  try {
+    const user = req.user as JwtPayload;
+    const result = await service.sendInAppNotificationToUsers(req.server.ctx.db, {
+      target: parsed.data.target,
+      userIds: parsed.data.userIds,
+      subject: parsed.data.subject,
+      message: parsed.data.message,
+      actorUserId: user.userId,
+    });
+    return reply.send(ok(result, 'ส่งการแจ้งเตือนในเว็บสำเร็จ'));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleAdminSendOrientationInApp(req: FastifyRequest, reply: FastifyReply) {
+  const parsed = adminSendOrientationEmailSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
+  }
+
+  try {
+    const user = req.user as JwtPayload;
+    const result = await service.sendOrientationInAppToUsers(req.server.ctx.db, {
+      target: parsed.data.target,
+      userIds: parsed.data.userIds,
+      subject: parsed.data.subject,
+      orientationLink: parsed.data.orientationLink,
+      actorUserId: user.userId,
+    });
+    return reply.send(ok(result, 'ส่งการแจ้งเตือน Orientation Day สำเร็จ'));
   } catch (err) {
     if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
     throw err;

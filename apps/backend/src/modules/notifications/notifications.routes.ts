@@ -10,8 +10,11 @@ import {
   handleUpdateNotificationSetting,
   handleGetTeamInbox,
   handleMarkTeamInboxRead,
+  handleAdminSendInAppNotification,
+  handleAdminSendOrientationInApp,
   handleAdminSendCustomEmail,
   handleAdminSendBurstTestEmail,
+  handleGetAdminNotificationUsers,
   handleGetAdminNotificationRecipients,
   handleUpdateAdminNotificationRecipient,
 } from './notifications.controller.js';
@@ -31,6 +34,9 @@ export async function notificationsRoutes(app: FastifyInstance) {
 
     adminApp.get('/admin/settings', handleGetNotificationSettings);
     adminApp.put('/admin/settings/:eventCode', handleUpdateNotificationSetting);
+    adminApp.get('/admin/users', handleGetAdminNotificationUsers);
+    adminApp.post('/admin/in-app', handleAdminSendInAppNotification);
+    adminApp.post('/admin/orientation-in-app', handleAdminSendOrientationInApp);
     adminApp.post('/admin/custom-email', handleAdminSendCustomEmail);
     adminApp.post('/admin/test-burst-email', handleAdminSendBurstTestEmail);
     adminApp.get('/admin/recipients', handleGetAdminNotificationRecipients);

@@ -35,6 +35,43 @@ function getEmailDeliveryMeta(delivery) {
     return { icon: <MailWarning size={16} />, className: 'is-failed', label: delivery.userMessage || 'ส่งอีเมลไม่สำเร็จ' };
 }
 
+function openInFreshTab(url) {
+    const nextWindow = window.open('about:blank', '_blank');
+    if (!nextWindow) return false;
+
+    nextWindow.opener = null;
+    nextWindow.location.href = url;
+    return true;
+}
+
+function renderMessageWithLinks(message) {
+    const text = String(message || '');
+    if (!text) return null;
+
+    return text.split(/(https?:\/\/[^\s]+)/g).map((part, index) => {
+        if (/^https?:\/\/[^\s]+$/.test(part)) {
+            return (
+                <a
+                    key={`${part}-${index}`}
+                    className="gt-notification-message-link"
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        openInFreshTab(part);
+                    }}
+                >
+                    {part}
+                </a>
+            );
+        }
+
+        return part;
+    });
+}
+
 function NotificationsPage() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -131,9 +168,9 @@ function NotificationsPage() {
                 <section className="gt-info-panel gt-notifications-panel">
                     <div className="gt-notifications-head">
                         <div>
-                            <p className="gt-notifications-kicker">Notification Center</p>
+                            {/* <p className="gt-notifications-kicker">Notification Center</p> */}
                             <h1>การแจ้งเตือน</h1>
-                            <p className="gt-notifications-subtitle">ติดตามผลการคัดเลือก การยืนยันสิทธิ์ และเหตุการณ์สำคัญของทีม</p>
+                            {/* <p className="gt-notifications-subtitle">ติดตามผลการคัดเลือก การยืนยันสิทธิ์ และเหตุการณ์สำคัญของทีม</p> */}
                         </div>
                         <button
                             type="button"
@@ -169,9 +206,6 @@ function NotificationsPage() {
                                 const emailMeta = getEmailDeliveryMeta(item.emailDelivery);
                                 return (
                                     <article key={item.notificationLogId} className={`gt-notification-card ${isUnread ? 'is-unread' : ''} ${isExpanded ? 'is-expanded' : ''}`}>
-                                        <div className="gt-notification-icon" aria-hidden="true">
-                                            {isUnread ? <Bell size={18} /> : <CheckCircle2 size={18} />}
-                                        </div>
                                         <div className="gt-notification-body">
                                             <button
                                                 type="button"
@@ -179,7 +213,10 @@ function NotificationsPage() {
                                                 onClick={() => toggleExpanded(item.notificationLogId)}
                                                 aria-expanded={isExpanded}
                                             >
-                                                <div>
+                                                <span className="gt-notification-icon" aria-hidden="true">
+                                                    {isUnread ? <Bell size={18} /> : <CheckCircle2 size={18} />}
+                                                </span>
+                                                <div className="gt-notification-summary-text">
                                                     <h2>{item.subject || 'การแจ้งเตือน'}</h2>
                                                     <time>{formatNotificationDate(item.createdAt)}</time>
                                                 </div>
@@ -187,7 +224,7 @@ function NotificationsPage() {
                                             </button>
                                             <div className="gt-notification-detail" aria-hidden={!isExpanded}>
                                                 <div className="gt-notification-detail-inner">
-                                                    {item.message ? <p>{item.message}</p> : null}
+                                                    {item.message ? <p>{renderMessageWithLinks(item.message)}</p> : null}
                                                     {emailMeta ? (
                                                         <div className="gt-notification-channels" aria-label="ช่องทางการแจ้งเตือน">
                                                             <div className={`gt-notification-channel ${emailMeta.className}`}>

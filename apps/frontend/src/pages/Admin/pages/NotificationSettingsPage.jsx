@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Mail, Save } from 'lucide-react'
+import { Bell, Mail, Save } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
 import PageHeader from '../shared/PageHeader'
@@ -10,11 +10,21 @@ export default function NotificationSettingsPage() {
   const [settings, setSettings] = useState([])
   const [recipients, setRecipients] = useState([])
   const [teamOptions, setTeamOptions] = useState([])
+  const [userOptions, setUserOptions] = useState([])
   const [eventDrafts, setEventDrafts] = useState({})
   const [customEmail, setCustomEmail] = useState({ teamId: '', subject: '', message: '' })
+  const [inAppMessage, setInAppMessage] = useState({ target: 'all', userIds: [], subject: '', message: '' })
+  const [orientationInApp, setOrientationInApp] = useState({
+    target: 'selected',
+    userIds: [],
+    subject: 'แจ้งสิทธิ์เข้าร่วม Orientation Day (Online)',
+    orientationLink: 'https://www.facebook.com/bdihackathon',
+  })
   const [burstTestRecipientEmail, setBurstTestRecipientEmail] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [sendingInApp, setSendingInApp] = useState(false)
+  const [sendingOrientationInApp, setSendingOrientationInApp] = useState(false)
   const [sendingBurstTest, setSendingBurstTest] = useState(false)
   const [updatingRecipientUserId, setUpdatingRecipientUserId] = useState(null)
 
@@ -38,18 +48,22 @@ export default function NotificationSettingsPage() {
   const load = useCallback(async () => {
     try {
       setLoading(true)
-      const [settingsRes, recipientsRes] = await Promise.all([
+      const [settingsRes, recipientsRes, usersRes] = await Promise.all([
         fetch(apiUrl('/api/notifications/admin/settings'), { credentials: 'include' }),
         fetch(apiUrl('/api/notifications/admin/recipients'), { credentials: 'include' }),
+        fetch(apiUrl('/api/notifications/admin/users'), { credentials: 'include' }),
       ])
       const settingsPayload = await settingsRes.json()
       const recipientsPayload = await recipientsRes.json()
+      const usersPayload = await usersRes.json()
       if (!settingsRes.ok || !settingsPayload?.ok) throw new Error(settingsPayload?.message || 'โหลดการตั้งค่าไม่สำเร็จ')
       if (!recipientsRes.ok || !recipientsPayload?.ok) throw new Error(recipientsPayload?.message || 'โหลดรายชื่อผู้รับไม่สำเร็จ')
+      if (!usersRes.ok || !usersPayload?.ok) throw new Error(usersPayload?.message || 'โหลดรายชื่อผู้ใช้ไม่สำเร็จ')
 
       const settingsRows = settingsPayload.data || []
       setSettings(settingsRows)
       setRecipients(recipientsPayload.data || [])
+      setUserOptions(usersPayload.data || [])
       setEventDrafts(
         settingsRows.reduce((acc, row) => {
           acc[row.eventCode] = {
@@ -147,6 +161,78 @@ export default function NotificationSettingsPage() {
       pushToast({ type: 'error', title: error?.message || 'ส่งอีเมลไม่สำเร็จ' })
     } finally {
       setSending(false)
+    }
+  }
+
+  const sendInAppNotification = async () => {
+    const subject = inAppMessage.subject.trim()
+    const message = inAppMessage.message.trim()
+    if (!subject || !message) {
+      pushToast({ type: 'error', title: 'กรุณากรอกหัวข้อและข้อความให้ครบ' })
+      return
+    }
+    if (inAppMessage.target === 'selected' && inAppMessage.userIds.length === 0) {
+      pushToast({ type: 'error', title: 'กรุณาเลือกผู้รับอย่างน้อยหนึ่งคน' })
+      return
+    }
+
+    try {
+      setSendingInApp(true)
+      const res = await fetch(apiUrl('/api/notifications/admin/in-app'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target: inAppMessage.target,
+          userIds: inAppMessage.userIds.map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0),
+          subject,
+          message,
+        }),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ส่งการแจ้งเตือนในเว็บไม่สำเร็จ')
+      pushToast({ title: `ส่งการแจ้งเตือนในเว็บสำเร็จ (${payload.data?.totalRecipients || 0} คน)` })
+      setInAppMessage({ target: 'all', userIds: [], subject: '', message: '' })
+    } catch (error) {
+      pushToast({ type: 'error', title: error?.message || 'ส่งการแจ้งเตือนในเว็บไม่สำเร็จ' })
+    } finally {
+      setSendingInApp(false)
+    }
+  }
+
+  const sendOrientationInApp = async () => {
+    const subject = orientationInApp.subject.trim()
+    const orientationLink = orientationInApp.orientationLink.trim()
+    if (!subject || !orientationLink) {
+      pushToast({ type: 'error', title: 'กรุณากรอกหัวข้อและลิงก์ Orientation Day' })
+      return
+    }
+    if (orientationInApp.target === 'selected' && orientationInApp.userIds.length === 0) {
+      pushToast({ type: 'error', title: 'กรุณาเลือกผู้รับอย่างน้อยหนึ่งคน' })
+      return
+    }
+
+    try {
+      setSendingOrientationInApp(true)
+      const res = await fetch(apiUrl('/api/notifications/admin/orientation-in-app'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target: orientationInApp.target,
+          userIds: orientationInApp.userIds.map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0),
+          subject,
+          orientationLink,
+        }),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ส่งการแจ้งเตือน Orientation Day ไม่สำเร็จ')
+      pushToast({ title: `ส่งการแจ้งเตือน Orientation Day สำเร็จ (${payload.data?.totalRecipients || 0} คน)` })
+      setOrientationInApp((prev) => ({ ...prev, userIds: [] }))
+    } catch (error) {
+      pushToast({ type: 'error', title: error?.message || 'ส่งการแจ้งเตือน Orientation Day ไม่สำเร็จ' })
+    } finally {
+      setSendingOrientationInApp(false)
     }
   }
 
@@ -335,6 +421,127 @@ export default function NotificationSettingsPage() {
           <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={sending} onClick={sendCustomEmail}>
             <Mail size={14} />
             {sending ? 'กำลังส่ง...' : 'ส่งอีเมล'}
+          </button>
+        </div>
+      </article>
+
+      <article className="admin-ui-panel">
+        <h3>ส่งการแจ้งเตือนในเว็บ (Custom In-App Notifications)</h3>
+        <div className="admin-ui-form">
+          <label>
+            กลุ่มผู้รับ
+            <select
+              value={inAppMessage.target}
+              onChange={(event) => setInAppMessage((prev) => ({ ...prev, target: event.target.value, userIds: [] }))}
+            >
+              <option value="all">ผู้ใช้ทั้งหมด ({userOptions.length} คน)</option>
+              <option value="selected">เลือกผู้ใช้บางคน</option>
+            </select>
+          </label>
+          {inAppMessage.target === 'selected' && (
+            <label>
+              ผู้รับ
+              <select
+                multiple
+                size={Math.min(10, Math.max(4, userOptions.length || 4))}
+                value={inAppMessage.userIds.map(String)}
+                onChange={(event) => {
+                  const values = Array.from(event.target.selectedOptions).map((option) => option.value)
+                  setInAppMessage((prev) => ({ ...prev, userIds: values }))
+                }}
+              >
+                {userOptions.map((user) => (
+                  <option key={user.userId} value={user.userId}>
+                    {user.displayName || user.userName} ({user.userName}){user.email ? ` - ${user.email}` : ''}
+                  </option>
+                ))}
+              </select>
+              <span className="admin-ui-text-muted">เลือกแล้ว {inAppMessage.userIds.length} คน</span>
+            </label>
+          )}
+          <label>
+            หัวข้อ
+            <input
+              value={inAppMessage.subject}
+              onChange={(event) => setInAppMessage((prev) => ({ ...prev, subject: event.target.value }))}
+              placeholder="หัวข้อที่จะแสดงใน Notification Center"
+            />
+          </label>
+          <label>
+            ข้อความ
+            <textarea
+              rows={5}
+              value={inAppMessage.message}
+              onChange={(event) => setInAppMessage((prev) => ({ ...prev, message: event.target.value }))}
+              placeholder="ข้อความที่จะส่งเป็น in-app notification"
+            />
+          </label>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={sendingInApp} onClick={sendInAppNotification}>
+            <Bell size={14} />
+            {sendingInApp ? 'กำลังส่ง...' : 'ส่งการแจ้งเตือนในเว็บ'}
+          </button>
+        </div>
+      </article>
+
+      <article className="admin-ui-panel">
+        <h3>ส่งการแจ้งเตือน Orientation Day (Online) ส่งเฉพาะ In-App Notifications</h3>
+        <div className="admin-ui-form">
+          <label>
+            กลุ่มผู้รับ
+            <select
+              value={orientationInApp.target}
+              onChange={(event) => setOrientationInApp((prev) => ({ ...prev, target: event.target.value, userIds: [] }))}
+            >
+              <option value="all">ผู้ใช้ทั้งหมด ({userOptions.length} คน)</option>
+              <option value="selected">เลือกผู้ใช้บางคน</option>
+            </select>
+          </label>
+          {orientationInApp.target === 'selected' && (
+            <label>
+              ผู้รับ
+              <select
+                multiple
+                size={Math.min(10, Math.max(4, userOptions.length || 4))}
+                value={orientationInApp.userIds.map(String)}
+                onChange={(event) => {
+                  const values = Array.from(event.target.selectedOptions).map((option) => option.value)
+                  setOrientationInApp((prev) => ({ ...prev, userIds: values }))
+                }}
+              >
+                {userOptions.map((user) => (
+                  <option key={user.userId} value={user.userId}>
+                    {user.displayName || user.userName} ({user.userName}){user.email ? ` - ${user.email}` : ''}
+                  </option>
+                ))}
+              </select>
+              <span className="admin-ui-text-muted">เลือกแล้ว {orientationInApp.userIds.length} คน</span>
+            </label>
+          )}
+          <label>
+            หัวข้อ
+            <input
+              value={orientationInApp.subject}
+              onChange={(event) => setOrientationInApp((prev) => ({ ...prev, subject: event.target.value }))}
+              placeholder="หัวข้อที่จะแสดงใน Notification Center"
+            />
+          </label>
+          <label>
+            ลิงก์ Orientation Day
+            <input
+              value={orientationInApp.orientationLink}
+              onChange={(event) => setOrientationInApp((prev) => ({ ...prev, orientationLink: event.target.value }))}
+              placeholder="https://www.facebook.com/bdihackathon"
+            />
+          </label>
+          <div className="admin-ui-panel" style={{ marginBottom: 0 }}>
+            <strong>Template ที่จะส่ง</strong>
+            <p className="admin-ui-text-muted">
+              ระบบจะแทนชื่อผู้รับในรูปแบบ “เรียนคุณ {'{{first_name}}'} {'{{last_name}}'}” และสร้างเป็น in-app notification เท่านั้น
+            </p>
+          </div>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={sendingOrientationInApp} onClick={sendOrientationInApp}>
+            <Bell size={14} />
+            {sendingOrientationInApp ? 'กำลังส่ง...' : 'ส่งการแจ้งเตือน Orientation Day'}
           </button>
         </div>
       </article>
