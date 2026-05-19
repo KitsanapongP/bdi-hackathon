@@ -227,13 +227,14 @@ body:has(.gt-page) {
     background: none;
     border: none;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s, transform 0.2s;
     white-space: nowrap;
 }
 
 .gt-pill-link:hover {
     color: var(--gt-text);
     background: rgba(124, 58, 237, 0.08);
+    transform: translateY(-1px);
 }
 
 .gt-pill-right {
@@ -414,13 +415,14 @@ body:has(.gt-page) {
         text-align: left;
         text-decoration: none;
         white-space: nowrap;
-        transition: background 0.2s, color 0.2s;
+        transition: background 0.2s, color 0.2s, transform 0.2s;
     }
 
     .gt-collapse-link:hover,
     .gt-collapse-link:active {
         background: rgba(124, 58, 237, 0.08);
         color: var(--gt-primary);
+        transform: translateY(-1px);
     }
 
     .gt-collapse-divider {
