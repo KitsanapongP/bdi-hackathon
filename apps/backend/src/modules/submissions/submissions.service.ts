@@ -1,4 +1,5 @@
 import type { DB } from '../../config/db.js';
+import type { SubmissionTrack } from './submissions.types.js';
 import * as repo from './submissions.repo.js';
 import { AppError, BadRequestError, NotFoundError, ConflictError } from '../../shared/errors.js';
 import path from 'node:path';
@@ -8,6 +9,17 @@ import crypto from 'node:crypto';
 const UPLOADS_BASE_DIR = path.join(process.cwd(), 'public', 'uploads', 'verification');
 const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
 const MAX_SUBMISSION_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const SUBMISSION_TRACKS = new Set<SubmissionTrack>(['Phenome', 'Health', 'City']);
+
+function assertSubmissionTrack(value: string): asserts value is SubmissionTrack {
+    if (!SUBMISSION_TRACKS.has(value as SubmissionTrack)) {
+        throw new BadRequestError('Invalid submission track');
+    }
+}
+
+function taskRequiresSubmissionTrack(task: { task_type: string; sort_order: number }): boolean {
+    return task.task_type !== 'link';
+}
 
 function sanitizePathSegment(value: string | null | undefined, fallback: string): string {
     const raw = String(value || '').trim();
@@ -124,6 +136,8 @@ export async function getSubmissionData(db: DB, teamId: number, userId: number) 
             allowedExtensions: parseAllowedExtensions(task.allowed_extensions),
             sortOrder: task.sort_order,
             linkUrl: task.link_url,
+            submissionTrack: task.submission_track,
+            requiresSubmissionTrack: taskRequiresSubmissionTrack(task),
             deadlineAt: task.task_deadline_at,
             isSubmissionOpen: task.is_submission_open === 1,
             isDeadlinePassed: isTaskDeadlinePassed(task.task_deadline_at),
@@ -131,6 +145,24 @@ export async function getSubmissionData(db: DB, teamId: number, userId: number) 
         })),
         advisors,
     };
+}
+
+export async function saveSubmissionTrack(
+    db: DB,
+    teamId: number,
+    userId: number,
+    teamSubmissionTaskId: number,
+    submissionTrack: string,
+) {
+    await ensureLeader(db, teamId, userId);
+    const task = await getTeamSubmissionTaskOrThrow(db, teamId, teamSubmissionTaskId);
+    if (!taskRequiresSubmissionTrack(task)) {
+        throw new BadRequestError('This submission does not require a track');
+    }
+    assertTaskSubmissionOpen(task);
+    const normalized = String(submissionTrack || '').trim();
+    assertSubmissionTrack(normalized);
+    await repo.updateTeamTaskTrack(db, teamSubmissionTaskId, normalized);
 }
 
 export async function saveTaskLink(

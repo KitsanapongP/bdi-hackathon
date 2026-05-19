@@ -16,6 +16,7 @@ export async function submissionsRoutes(app: FastifyInstance) {
 
     // Submission tasks
     app.put('/team/:teamId/tasks/:teamSubmissionTaskId/link', ctrl.saveTaskLink);
+    app.put('/team/:teamId/tasks/:teamSubmissionTaskId/track', ctrl.saveSubmissionTrack);
     app.post('/team/:teamId/tasks/:teamSubmissionTaskId/files', ctrl.uploadTaskFiles);
 
     // Submission file actions

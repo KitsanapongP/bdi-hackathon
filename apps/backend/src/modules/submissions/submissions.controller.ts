@@ -50,6 +50,21 @@ export async function saveTaskLink(req: FastifyRequest, reply: FastifyReply) {
     }
 }
 
+export async function saveSubmissionTrack(req: FastifyRequest, reply: FastifyReply) {
+    const { teamId, teamSubmissionTaskId } = req.params as { teamId: string; teamSubmissionTaskId: string };
+    const userId = (req.user as any).userId;
+    const db = req.server.ctx.db;
+    const { submissionTrack } = req.body as { submissionTrack: string };
+
+    try {
+        await service.saveSubmissionTrack(db, Number(teamId), userId, Number(teamSubmissionTaskId), submissionTrack);
+        return reply.send(ok(null, 'Saved submission track'));
+    } catch (err) {
+        if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        throw err;
+    }
+}
+
 export async function uploadTaskFiles(req: FastifyRequest, reply: FastifyReply) {
     const { teamId, teamSubmissionTaskId } = req.params as { teamId: string; teamSubmissionTaskId: string };
     const userId = (req.user as any).userId;

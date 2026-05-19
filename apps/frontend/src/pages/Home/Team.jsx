@@ -117,6 +117,12 @@ const SUBMISSION_STAGE_LABELS = {
     onsite: 'onsite (ในงาน hackathon)',
 };
 
+const SUBMISSION_TRACK_OPTIONS = [
+    { value: 'Phenome', label: 'Phenome' },
+    { value: 'Health', label: 'Health' },
+    { value: 'City', label: 'City' },
+];
+
 const getSubmissionStageLabel = (stageCode) => {
     const key = String(stageCode || '').toLowerCase();
     return SUBMISSION_STAGE_LABELS[key] || stageCode || '-';
@@ -260,6 +266,7 @@ export default function TeamContent({ user }) {
     const [submissionLoading, setSubmissionLoading] = useState(false);
     const [taskLinkInputs, setTaskLinkInputs] = useState({});
     const [savingTaskLinkId, setSavingTaskLinkId] = useState(null);
+    const [savingTaskTrackId, setSavingTaskTrackId] = useState(null);
 
     // ── Advisor state ──
     const [advisorForm, setAdvisorForm] = useState({ open: false, editId: null, prefix: '', fullNameTh: '', fullNameEn: '', email: '', phone: '', institutionNameTh: '' });
@@ -1259,14 +1266,22 @@ export default function TeamContent({ user }) {
         if (task.taskType === 'file') return !Array.isArray(task.files) || task.files.length === 0;
         return false;
     });
+    const hasMissingSubmissionTrackForReadiness = requiredSubmissionTasksForReadiness.some((task) => (
+        task.requiresSubmissionTrack && !SUBMISSION_TRACK_OPTIONS.some((option) => option.value === task.submissionTrack)
+    ));
     const hasMissingRequiredTaskForCard = requiredSubmissionTasksForCard.some((task) => {
         if (task.taskType === 'link') return !String(task.linkUrl || '').trim();
         if (task.taskType === 'file') return !Array.isArray(task.files) || task.files.length === 0;
         return false;
     });
+    const hasMissingSubmissionTrackForCard = requiredSubmissionTasksForCard.some((task) => (
+        task.requiresSubmissionTrack && !SUBMISSION_TRACK_OPTIONS.some((option) => option.value === task.submissionTrack)
+    ));
     const isMinMembersReady = memberCountForSubmit >= minSubmitMembers;
+    const isWorksCardRequired = true;
 
     const submitReadinessRules = [
+        { id: 'submission-track', ok: !hasMissingSubmissionTrackForReadiness, label: 'กรุณาเลือก Track ของผลงานที่บังคับ' },
         { id: 'members-confirmed', ok: allMembersConfirmed, label: 'สมาชิกทุกคนต้องยืนยันเอกสารยืนยันตัวตนให้ครบ' },
         { id: 'min-members', ok: isMinMembersReady, label: `ทีมจะต้องมีสมาชิก ${minSubmitMembers} คนในทีม (ปัจจุบัน ${memberCountForSubmit} คน)` },
         { id: 'required-submission-tasks', ok: !hasMissingRequiredTaskForReadiness, label: 'กรุณาส่งข้อมูลงานที่บังคับให้ครบก่อนยืนยันเข้าร่วมการคัดเลือก' },
@@ -1285,8 +1300,8 @@ export default function TeamContent({ user }) {
         ? (allMembersConfirmed ? 'success' : 'danger')
         : (isMyVerificationConfirmed ? 'success' : 'danger');
     const advisorNotify = hasAdvisor ? 'success' : 'optional';
-    const workNotify = hasRequiredSubmissionTaskForCard
-        ? (hasMissingRequiredTaskForCard ? 'danger' : 'success')
+    const workNotify = isWorksCardRequired
+        ? (hasMissingRequiredTaskForCard || hasMissingSubmissionTrackForCard ? 'danger' : 'success')
         : 'optional';
     const cardNotifyById = {
         verify: verifyNotify,
@@ -1484,6 +1499,12 @@ export default function TeamContent({ user }) {
                 const requiredTasks = Array.isArray(latestSubmission.tasks)
                     ? latestSubmission.tasks.filter((task) => task.isRequired && task.isDefault)
                     : [];
+                const missingTrackTask = requiredTasks.find((task) => (
+                    task.requiresSubmissionTrack && !SUBMISSION_TRACK_OPTIONS.some((option) => option.value === task.submissionTrack)
+                ));
+                if (missingTrackTask) {
+                    throw new Error(`กรุณาเลือก Track ของผลงาน: ${missingTrackTask.taskName}`);
+                }
                 const missingRequiredTask = requiredTasks.find((task) => {
                     if (task.taskType === 'link') return !String(task.linkUrl || '').trim();
                     if (task.taskType === 'file') return !Array.isArray(task.files) || task.files.length === 0;
@@ -2206,6 +2227,48 @@ export default function TeamContent({ user }) {
 
             const tasks = Array.isArray(submissionData?.tasks) ? submissionData.tasks : [];
             const isWorksLocked = ['disbanded', 'not_joined'].includes(String(team?.status || ''));
+            const handleSaveSubmissionTrack = async (task, nextTrack) => {
+                if (!team?.id || !task?.teamSubmissionTaskId || !nextTrack) return;
+                if (isWorksLocked) {
+                    showToast('ทีมอยู่ในสถานะที่ไม่สามารถแก้ไขงานส่งผลงานได้', 'error');
+                    return;
+                }
+                const previousTrack = task.submissionTrack || '';
+                setSavingTaskTrackId(task.teamSubmissionTaskId);
+                setSubmissionData((prev) => prev ? {
+                    ...prev,
+                    tasks: (prev.tasks || []).map((item) => (
+                        item.teamSubmissionTaskId === task.teamSubmissionTaskId
+                            ? { ...item, submissionTrack: nextTrack }
+                            : item
+                    )),
+                } : prev);
+                try {
+                    const res = await fetch(apiUrl(`/api/submissions/team/${team.id}/tasks/${task.teamSubmissionTaskId}/track`), {
+                        method: 'PUT',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ submissionTrack: nextTrack }),
+                    });
+                    const payload = await res.json();
+                    if (!payload.ok) throw new Error(payload.message || 'บันทึก Track ไม่สำเร็จ');
+                    showToast('บันทึก Track สำเร็จ', 'success');
+                    fetchSubmissionData();
+                } catch (err) {
+                    setSubmissionData((prev) => prev ? {
+                        ...prev,
+                        tasks: (prev.tasks || []).map((item) => (
+                            item.teamSubmissionTaskId === task.teamSubmissionTaskId
+                                ? { ...item, submissionTrack: previousTrack }
+                                : item
+                        )),
+                    } : prev);
+                    showToast(getReadableErrorMessage(err, 'บันทึก Track ไม่สำเร็จ'), 'error');
+                } finally {
+                    setSavingTaskTrackId(null);
+                }
+            };
+
             const handleSaveTaskLink = async (task) => {
                 if (!team?.id || !task?.teamSubmissionTaskId) return;
                 if (isWorksLocked) {
@@ -2312,33 +2375,85 @@ export default function TeamContent({ user }) {
                         const isTaskLocked = isWorksLocked || !task.isSubmissionOpen || task.isDeadlinePassed;
                         const stageLabel = getSubmissionStageLabel(task.stage);
                         const descriptionText = String(task.description || '').trim();
+                        const showTrackSelect = Boolean(task.requiresSubmissionTrack);
+                        const isTrackSaving = savingTaskTrackId === task.teamSubmissionTaskId;
+                        const hasSelectedSubmissionTrack = !showTrackSelect || SUBMISSION_TRACK_OPTIONS.some((option) => option.value === task.submissionTrack);
+                        const hasSubmittedTaskContent = task.taskType === 'link'
+                            ? Boolean(String(task.linkUrl || '').trim())
+                            : files.length > 0;
+                        const isTaskSubmissionComplete = hasSubmittedTaskContent && hasSelectedSubmissionTrack;
+                        const missingSubmissionReasons = [
+                            !hasSubmittedTaskContent ? (task.taskType === 'link' ? 'ยังไม่ได้ส่งวิดีโอนำเสนอ' : 'ยังไม่ได้แนบไฟล์') : null,
+                            !hasSelectedSubmissionTrack ? 'ยังไม่ได้เลือก Track ที่จะส่ง' : null,
+                        ].filter(Boolean);
 
                         return (
                             <div key={task.teamSubmissionTaskId} className="gl-team-info-card">
                                 <div className="sub-task-card-header">
                                     <span className="gl-team-info-label">
                                         {task.taskType === 'link' ? <Link size={13} /> : <Paperclip size={13} />} <span className="sub-task-name">{task.taskName}</span>
-                                        {task.taskType === 'file' && files.length > 0 && <span className="vf-profile-check ok">✓</span>}
+                                        {(task.isRequired || isTaskSubmissionComplete) && (
+                                            <span className={`vf-profile-check ${isTaskSubmissionComplete ? 'ok' : 'bad'}`}>{isTaskSubmissionComplete ? '✓' : '✗'}</span>
+                                        )}
+                                        {task.isRequired && !isTaskSubmissionComplete && missingSubmissionReasons.length > 0 && (
+                                            <span className="sub-task-missing-warning">
+                                                {missingSubmissionReasons.join(' / ')}
+                                            </span>
+                                        )}
                                     </span>
                                     <div className="sub-task-header-badges">
                                         <span className={`sub-task-required ${requiredClass}`}>{requiredLabel}</span>
-                                        <span className="sub-task-required stage"><Info size={12} /> ขั้นตอน: {stageLabel}</span>
+                                        <span className="sub-task-required stage">{stageLabel}</span>
                                         {!task.isSubmissionOpen && <span className="sub-task-required warning"><Lock size={12} /> งานนี้ปิดการส่งแล้ว</span>}
                                         {task.isDeadlinePassed && <span className="sub-task-required warning"><Clock size={12} /> หมดเวลาส่ง</span>}
                                     </div>
                                 </div>
 
-                                <div className="sub-task-hint-row">
-                                    <span className="sub-task-required info"><Clock size={12} /> กำหนดส่ง: {formatDateTime(task.deadlineAt)}</span>
+                                <div className="sub-task-meta-row">
+                                    <div className="sub-task-hint-row">
+                                        <span className="sub-task-required info"><Clock size={12} /> กำหนดส่ง: {formatDateTime(task.deadlineAt)}</span>
+                                    </div>
                                 </div>
 
                                 {descriptionText && (
                                     <p className="sub-task-description">{descriptionText}</p>
                                 )}
 
+                                {showTrackSelect && (
+                                    <div className="sub-track-row">
+                                        <div className="sub-track-control">
+                                            <span className="sub-track-label">เลือก Track ที่ส่ง</span>
+                                            <div className="sub-track-options" role="radiogroup" aria-label="เลือก Track ผลงาน">
+                                                {SUBMISSION_TRACK_OPTIONS.map((option) => {
+                                                    const isSelected = task.submissionTrack === option.value;
+                                                    const isDisabled = !isLeader || isTaskLocked || isTrackSaving;
+
+                                                    return (
+                                                        <button
+                                                            key={option.value}
+                                                            type="button"
+                                                            className={`sub-track-option${isSelected ? ' selected' : ''}`}
+                                                            role="radio"
+                                                            aria-checked={isSelected}
+                                                            disabled={isDisabled}
+                                                            onClick={() => {
+                                                                if (!isSelected) handleSaveSubmissionTrack(task, option.value);
+                                                            }}
+                                                        >
+                                                            {isSelected && <CheckCircle size={13} />}
+                                                            <span>{option.label}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            {isTrackSaving && <span className="sub-track-saving"><Loader2 size={12} /> บันทึก...</span>}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {task.taskType === 'link' ? (
                                     <>
-                                        <p className="vf-hint" style={{ marginBottom: 8 }}>กรอกลิงก์ผลงานของงานนี้</p>
+                                        <p className="vf-hint" style={{ marginBottom: 8 }}>กรอกลิงก์วิดีโอนำเสนอ</p>
                                         <div className="sub-video-input-row">
                                             <input
                                                 className="pf-input"
@@ -2583,7 +2698,12 @@ export default function TeamContent({ user }) {
                     <div className="gl-team-info-card">
                         <span className="gl-team-info-label">
                             <FileText size={13} /> เอกสารของฉัน
-                            {myDocs.length > 0 && <span className="vf-profile-check ok">✓</span>}
+                            <span className={`vf-profile-check ${myDocs.length > 0 ? 'ok' : 'bad'}`}>{myDocs.length > 0 ? '✓' : '✗'}</span>
+                            {myDocs.length === 0 && (
+                                <span className="sub-task-missing-warning">
+                                    ยังไม่ได้แนบเอกสาร
+                                </span>
+                            )}
                         </span>
                         <p className="vf-hint vf-doc-description">
                             CV อธิบาย Background ของตนเอง เช่น สถาบันการศึกษา สาขาที่กำลังศึกษา ประสบการณ์ ความเชี่ยวชาญ หรือรางวัลที่เคยได้รับ ซึ่งมีส่วนสนับสนุนต่อการแข่งขันครั้งนี้ และภายใน CV ควรแนบหลักฐานระบุตัวตนที่เป็นทางการ เช่น บัตรประจำตัวนักศึกษา เพื่อแสดงคุณสมบัติการเข้าร่วมการแข่งขัน
@@ -2639,7 +2759,13 @@ export default function TeamContent({ user }) {
                     {/* Confirm / Unconfirm buttons */}
                     {!isSubmitted && (
                         <div className="gl-team-info-card">
-                            <span className="gl-team-info-label"><ShieldCheck size={13} /> การยืนยัน</span>
+                            <span className="gl-team-info-label">
+                                <ShieldCheck size={13} /> การยืนยัน
+                                <span className={`vf-profile-check ${myConfirmed ? 'ok' : 'bad'}`}>{myConfirmed ? '✓' : '✗'}</span>
+                                {!myConfirmed && (
+                                    <span className="sub-task-missing-warning">ยังไม่ได้กดยืนยัน</span>
+                                )}
+                            </span>
                             {!myConfirmed ? (
                                 <button
                                     className="vf-action-btn vf-btn-confirm"
@@ -3019,7 +3145,7 @@ export default function TeamContent({ user }) {
                                 const notifyConfig = {
                                     verify: { require: true, label: 'บังคับ' },
                                     advisor: { require: false, label: 'ไม่บังคับ' },
-                                    works: { require: hasRequiredSubmissionTaskForCard, label: hasRequiredSubmissionTaskForCard ? 'บังคับ' : 'ไม่บังคับ' },
+                                    works: { require: isWorksCardRequired, label: isWorksCardRequired ? 'บังคับ' : 'ไม่บังคับ' },
                                 };
                                 const cfg = notifyConfig[card.id];
                                 return (

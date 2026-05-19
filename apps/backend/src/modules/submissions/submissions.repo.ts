@@ -3,6 +3,7 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import type {
     SubmissionFileRow,
     SubmissionTaskRow,
+    SubmissionTrack,
     TeamAdvisorRow,
     TeamSubmissionTaskRow,
     TeamSubmissionTaskWithMetaRow,
@@ -94,6 +95,21 @@ export async function updateTeamTaskLink(db: DB, teamSubmissionTaskId: number, l
          WHERE team_submission_task_id = :teamSubmissionTaskId
            AND deleted_at IS NULL`,
         { teamSubmissionTaskId, linkUrl }
+    );
+}
+
+export async function updateTeamTaskTrack(
+    db: DB,
+    teamSubmissionTaskId: number,
+    submissionTrack: SubmissionTrack | null,
+): Promise<void> {
+    await db.query(
+        `UPDATE team_submission_tasks
+         SET submission_track = :submissionTrack,
+             updated_at = NOW()
+         WHERE team_submission_task_id = :teamSubmissionTaskId
+           AND deleted_at IS NULL`,
+        { teamSubmissionTaskId, submissionTrack }
     );
 }
 

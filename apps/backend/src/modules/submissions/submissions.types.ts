@@ -2,6 +2,7 @@ import type { RowDataPacket } from 'mysql2/promise';
 
 export type SubmissionTaskType = 'link' | 'file';
 export type SubmissionTaskStage = 'pre_selection' | 'training' | 'onsite';
+export type SubmissionTrack = 'Phenome' | 'Health' | 'City';
 
 export interface SubmissionTaskRow extends RowDataPacket {
     submission_task_id: number;
@@ -26,6 +27,7 @@ export interface TeamSubmissionTaskRow extends RowDataPacket {
     team_id: number;
     submission_task_id: number;
     link_url: string | null;
+    submission_track: SubmissionTrack | null;
     is_submission_open: number;
     assigned_by_user_id: number | null;
     assigned_source: 'default' | 'admin_team' | 'admin_status' | 'system_backfill';
