@@ -692,11 +692,14 @@ function RegisterPage() {
                         </form>
                     )}
 
-                    <p style={{ textAlign: 'center', marginTop: 16, fontSize: '0.85rem', color: 'var(--gt-text-muted)' }}>
-                        {isRegisterMode
-                            ? <>มีบัญชีแล้ว? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); resetVerificationState(); setIsRegisterMode(false); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>เข้าสู่ระบบ</a></>
-                            : <>ยังไม่มีบัญชี? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); resetVerificationState(); if (isRegistrationOpen) { setIsRegisterMode(true); } else { setErrorMsg(registerUnavailableMessage || 'ไม่สามารถลงทะเบียนได้ในขณะนี้'); } }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600, opacity: isRegistrationOpen ? 1 : 0.7, cursor: isRegistrationOpen ? 'pointer' : 'not-allowed' }}>ลงทะเบียน</a></>}
-                    </p>
+                    {/* REGISTRATION_CLOSED_UI: hide the guest no-account register switch on /login.
+                        Old code to restore:
+                        : <>ยังไม่มีบัญชี? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); resetVerificationState(); if (isRegistrationOpen) { setIsRegisterMode(true); } else { setErrorMsg(registerUnavailableMessage || 'ไม่สามารถลงทะเบียนได้ในขณะนี้'); } }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600, opacity: isRegistrationOpen ? 1 : 0.7, cursor: isRegistrationOpen ? 'pointer' : 'not-allowed' }}>ลงทะเบียน</a></> */}
+                    {isRegisterMode && (
+                        <p style={{ textAlign: 'center', marginTop: 16, fontSize: '0.85rem', color: 'var(--gt-text-muted)' }}>
+                            มีบัญชีแล้ว? <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); resetVerificationState(); setIsRegisterMode(false); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>เข้าสู่ระบบ</a>
+                        </p>
+                    )}
                     <p style={{ textAlign: 'center', marginTop: 8, fontSize: '0.85rem' }}>
                         <a href={USER_MANUAL_PATH} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             คู่มือการใช้งาน <ExternalLink size={14} />

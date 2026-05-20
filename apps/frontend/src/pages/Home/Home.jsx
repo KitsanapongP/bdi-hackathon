@@ -1388,7 +1388,10 @@ function HomePage() {
                     </a>
                     <div className="gt-pill-links">
                         {config.locale.nav.map((label, i) => {
-                            if (i === 7 && user) return null; // hide ลงทะเบียน when logged in
+                            // REGISTRATION_CLOSED_UI: temporarily hide the register nav button.
+                            // Restore old behavior by changing this back to:
+                            // if (i === 7 && user) return null; // hide ลงทะเบียน when logged in
+                            if (i === 7) return null;
 
                             const handleNavClick = () => {
                                 if (i === 1) {
@@ -1479,6 +1482,10 @@ function HomePage() {
                     <div className="gt-pill-collapse-inner">
                         {config.locale.nav.map((label, i) => {
                             const isRegister = i === 7;
+                            // REGISTRATION_CLOSED_UI: temporarily hide the mobile register nav item.
+                            // Old behavior below converted the register item to My Team for logged-in users
+                            // and showed the register link for guests.
+                            if (isRegister) return null;
                             if (isRegister && user) {
                                 return (
                                     <button key={i} className="gt-collapse-link" onClick={() => { setShowLobby(true); setShowProfile(false); setMobileOpen(false); window.scrollTo(0, 0); }}>

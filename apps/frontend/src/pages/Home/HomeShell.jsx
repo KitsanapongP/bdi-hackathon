@@ -258,7 +258,10 @@ function HomeShell({ children }) {
                     </a>
                     <div className="gt-pill-links">
                         {navItems.map((item) => {
-                            if (item.key === 'register' && user) return null;
+                            // REGISTRATION_CLOSED_UI: temporarily hide the register nav button.
+                            // Restore old behavior by changing this back to:
+                            // if (item.key === 'register' && user) return null;
+                            if (item.key === 'register') return null;
                             return (
                                 <button key={item.key} className="gt-pill-link" onClick={() => handleNavClick(item)}>
                                     {item.label}
@@ -299,6 +302,10 @@ function HomeShell({ children }) {
                     <div className="gt-pill-collapse-inner">
                         {navItems.map((item) => {
                             const isRegister = item.key === 'register';
+                            // REGISTRATION_CLOSED_UI: temporarily hide the mobile register nav item.
+                            // Old behavior below converted the register item to My Team for logged-in users
+                            // and showed the register link for guests.
+                            if (isRegister) return null;
                             if (isRegister && user) {
                                 return (
                                     <button key={item.key} className="gt-collapse-link" onClick={() => { setMobileOpen(false); navigate('/home', { state: { open: 'team' } }); }}>
