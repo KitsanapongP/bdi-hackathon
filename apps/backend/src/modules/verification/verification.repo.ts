@@ -163,10 +163,9 @@ export async function countMissingRequiredSubmissionTasks(db: DB, teamId: number
         FROM team_submission_tasks tst
         JOIN submission_tasks st
           ON st.submission_task_id = tst.submission_task_id
-         AND st.deleted_at IS NULL
-         AND st.is_enabled = 1
-         AND st.is_required = 1
-         AND st.is_default = 1
+          AND st.deleted_at IS NULL
+          AND st.is_enabled = 1
+          AND st.is_required = 1
         WHERE tst.team_id = :teamId
           AND tst.deleted_at IS NULL
           AND (
@@ -237,13 +236,13 @@ export async function updateTeamStatus(db: DB, teamId: number, status: string): 
     `, { teamId, status });
 }
 
-export async function closeDefaultSubmissionTasksByTeam(db: DB, teamId: number): Promise<void> {
+export async function closePreSelectionSubmissionTasksByTeam(db: DB, teamId: number): Promise<void> {
     await db.query(`
         UPDATE team_submission_tasks tst
         JOIN submission_tasks st
           ON st.submission_task_id = tst.submission_task_id
          AND st.deleted_at IS NULL
-         AND st.is_default = 1
+         AND st.stage = 'pre_selection'
         SET tst.is_submission_open = 0,
             tst.updated_at = NOW()
         WHERE tst.team_id = :teamId

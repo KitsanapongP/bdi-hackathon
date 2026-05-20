@@ -54,7 +54,7 @@ export async function saveSubmissionTrack(req: FastifyRequest, reply: FastifyRep
     const { teamId, teamSubmissionTaskId } = req.params as { teamId: string; teamSubmissionTaskId: string };
     const userId = (req.user as any).userId;
     const db = req.server.ctx.db;
-    const { submissionTrack } = req.body as { submissionTrack: string };
+    const { submissionTrack } = req.body as { submissionTrack: string | null };
 
     try {
         await service.saveSubmissionTrack(db, Number(teamId), userId, Number(teamSubmissionTaskId), submissionTrack);

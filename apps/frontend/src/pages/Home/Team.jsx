@@ -63,6 +63,7 @@ const SUBMISSION_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const VERIFICATION_FILE_REQUIREMENT_TEXT = 'อัปโหลดได้เฉพาะไฟล์นามสกุล PDF เท่านั้นและมีขนาดไม่เกิน 5 MB เป็นจำนวน 1 ไฟล์';
 const SUBMISSION_FILE_REQUIREMENT_TEXT = 'อัปโหลดได้เฉพาะไฟล์นามสกุล PDF เท่านั้นและมีขนาดไม่เกิน 10 MB เป็นจำนวน 1 ไฟล์';
 const FILE_NAME_REQUIREMENT_TEXT_VERIFICATION = 'กรุณาตั้งชื่อไฟล์ให้สอดคล้องกับข้อมูลในไฟล์ เช่น CV_นายสมชาย_ใจดี.pdf เพื่อความสะดวกในการตรวจสอบและยืนยันตัวตน';
+const TEAM_LOCKED_AFTER_SUBMIT_MESSAGE = 'ทีมจะไม่สามารถแก้ไขข้อมูลได้หากยืนยันส่งทีมเข้าคัดเลือกแล้ว';
 
 const CARDS = [
     { id: 'verify', icon: <ShieldCheck />, label: 'ยืนยันตัวตน', color: '#14b8a6' },
@@ -126,6 +127,21 @@ const SUBMISSION_TRACK_OPTIONS = [
 const getSubmissionStageLabel = (stageCode) => {
     const key = String(stageCode || '').toLowerCase();
     return SUBMISSION_STAGE_LABELS[key] || stageCode || '-';
+};
+
+const isSubmissionTaskEditableForTeamStatus = (teamStatus, stageCode) => {
+    const status = String(teamStatus || '').toLowerCase();
+    const stage = String(stageCode || '').toLowerCase();
+    if (stage === 'pre_selection') return status === 'forming';
+    if (stage === 'training' || stage === 'onsite') return status === 'confirmed';
+    return false;
+};
+
+const getSubmissionTaskLockMessage = (teamStatus, stageCode) => {
+    if (isSubmissionTaskEditableForTeamStatus(teamStatus, stageCode)) return '';
+    const stage = String(stageCode || '').toLowerCase();
+    if (stage === 'pre_selection') return 'งานก่อนคัดเลือกจะไม่สามารถแก้ไขได้เมื่อส่งทีมเข้าคัดเลือกแล้ว';
+    return 'ทีมยังอยู่ในสถานะที่ไม่สามารถแก้ไขงานขั้นตอนนี้ได้';
 };
 
 const formatDate = (dateStr) => {
@@ -1255,7 +1271,7 @@ export default function TeamContent({ user }) {
     const advisorCount = Array.isArray(submissionData?.advisors) ? submissionData.advisors.length : 0;
     const hasAdvisor = advisorCount > 0;
     const requiredSubmissionTasksForReadiness = Array.isArray(submissionData?.tasks)
-        ? submissionData.tasks.filter((task) => task.isRequired && task.isDefault)
+        ? submissionData.tasks.filter((task) => task.isRequired)
         : [];
     const requiredSubmissionTasksForCard = Array.isArray(submissionData?.tasks)
         ? submissionData.tasks.filter((task) => task.isRequired)
@@ -1497,7 +1513,7 @@ export default function TeamContent({ user }) {
                 if (!submissionPayload.ok) throw new Error(submissionPayload.message || 'ไม่สามารถตรวจสอบข้อมูลส่งผลงานได้');
                 const latestSubmission = submissionPayload?.data || {};
                 const requiredTasks = Array.isArray(latestSubmission.tasks)
-                    ? latestSubmission.tasks.filter((task) => task.isRequired && task.isDefault)
+                    ? latestSubmission.tasks.filter((task) => task.isRequired)
                     : [];
                 const missingTrackTask = requiredTasks.find((task) => (
                     task.requiresSubmissionTrack && !SUBMISSION_TRACK_OPTIONS.some((option) => option.value === task.submissionTrack)
@@ -1686,7 +1702,7 @@ export default function TeamContent({ user }) {
                         <div className="gl-team-name-body">
                             {!editingTeamName && (
                                 <div className="gl-team-name-display">
-                                    <div className="gl-bold-value gl-team-name-value">{team.name}</div>
+                                    <div className={`gl-bold-value gl-team-name-value ${isTeamEditLocked ? 'is-locked' : ''}`}>{team.name}</div>
                                     {isLeader && (
                                         <button
                                             className="gl-icon-btn gl-team-name-edit-trigger"
@@ -1779,7 +1795,7 @@ export default function TeamContent({ user }) {
                         </div>
 
                         {!editingTeamDescription && (
-                            <p className={`gl-team-description-value ${team.description ? '' : 'is-empty'}`}>
+                            <p className={`gl-team-description-value ${team.description ? '' : 'is-empty'} ${isTeamEditLocked ? 'is-locked' : ''}`}>
                                 {team.description || 'ทีมนี้ยังไม่ได้เพิ่มคำอธิบาย'}
                             </p>
                         )}
@@ -2226,11 +2242,16 @@ export default function TeamContent({ user }) {
             if (submissionLoading && !submissionData) return renderSimpleDetail('ส่งผลงาน', <Award size={20} />, <div className="gl-empty-state"><Loader2 size={40} /><h3>กำลังโหลด...</h3></div>);
 
             const tasks = Array.isArray(submissionData?.tasks) ? submissionData.tasks : [];
-            const isWorksLocked = ['disbanded', 'not_joined'].includes(String(team?.status || ''));
+            const isWorksLocked = ['submitted', 'passed', 'failed', 'not_joined', 'disbanded'].includes(String(team?.status || ''));
             const handleSaveSubmissionTrack = async (task, nextTrack) => {
-                if (!team?.id || !task?.teamSubmissionTaskId || !nextTrack) return;
+                if (!team?.id || !task?.teamSubmissionTaskId) return;
                 if (isWorksLocked) {
-                    showToast('ทีมอยู่ในสถานะที่ไม่สามารถแก้ไขงานส่งผลงานได้', 'error');
+                    showToast(TEAM_LOCKED_AFTER_SUBMIT_MESSAGE, 'error');
+                    return;
+                }
+                const taskLockMessage = getSubmissionTaskLockMessage(team?.status, task.stage);
+                if (taskLockMessage) {
+                    showToast(taskLockMessage, 'error');
                     return;
                 }
                 const previousTrack = task.submissionTrack || '';
@@ -2252,7 +2273,7 @@ export default function TeamContent({ user }) {
                     });
                     const payload = await res.json();
                     if (!payload.ok) throw new Error(payload.message || 'บันทึก Track ไม่สำเร็จ');
-                    showToast('บันทึก Track สำเร็จ', 'success');
+                    showToast(nextTrack ? 'บันทึก Track สำเร็จ' : 'ล้าง Track สำเร็จ', 'success');
                     fetchSubmissionData();
                 } catch (err) {
                     setSubmissionData((prev) => prev ? {
@@ -2275,6 +2296,11 @@ export default function TeamContent({ user }) {
                     showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขผลงานได้', 'error');
                     return;
                 }
+                const taskLockMessage = getSubmissionTaskLockMessage(team?.status, task.stage);
+                if (taskLockMessage) {
+                    showToast(taskLockMessage, 'error');
+                    return;
+                }
                 const currentValue = String(taskLinkInputs?.[task.teamSubmissionTaskId] ?? task.linkUrl ?? '').trim();
                 setSavingTaskLinkId(task.teamSubmissionTaskId);
                 try {
@@ -2295,6 +2321,11 @@ export default function TeamContent({ user }) {
                 if (!team?.id || !task?.teamSubmissionTaskId || !fileList?.length) return;
                 if (isWorksLocked) {
                     showToast('ทีมถูกล็อกแล้ว ไม่สามารถอัปโหลดไฟล์ผลงานได้', 'error');
+                    return;
+                }
+                const taskLockMessage = getSubmissionTaskLockMessage(team?.status, task.stage);
+                if (taskLockMessage) {
+                    showToast(taskLockMessage, 'error');
                     return;
                 }
                 const existingFiles = Array.isArray(task.files) ? task.files : [];
@@ -2331,6 +2362,12 @@ export default function TeamContent({ user }) {
                     showToast('ทีมถูกล็อกแล้ว ไม่สามารถลบไฟล์ผลงานได้', 'error');
                     return;
                 }
+                const fileTask = tasks.find((task) => Array.isArray(task.files) && task.files.some((file) => file.file_id === fileId));
+                const taskLockMessage = fileTask ? getSubmissionTaskLockMessage(team?.status, fileTask.stage) : '';
+                if (taskLockMessage) {
+                    showToast(taskLockMessage, 'error');
+                    return;
+                }
                 openConfirm('ลบไฟล์', `ต้องการลบไฟล์ "${fileName}" หรือไม่?`, () => {
                     closeConfirm();
                     withAction(async () => {
@@ -2354,7 +2391,7 @@ export default function TeamContent({ user }) {
                     {isWorksLocked && (
                         <div className="vf-info-banner vf-submitted">
                             <Lock size={16} />
-                            <span>ทีมอยู่ในสถานะที่ไม่สามารถแก้ไขงานส่งผลงานได้</span>
+                            <span>{TEAM_LOCKED_AFTER_SUBMIT_MESSAGE}</span>
                         </div>
                     )}
 
@@ -2371,13 +2408,16 @@ export default function TeamContent({ user }) {
                         const files = Array.isArray(task.files) ? task.files : [];
                         const linkValue = String(taskLinkInputs?.[task.teamSubmissionTaskId] ?? task.linkUrl ?? '');
                         const requiredClass = task.isRequired ? 'required' : 'optional';
-                        const requiredLabel = task.isRequired ? 'บังคับ' : 'ไม่บังคับ';
-                        const isTaskLocked = isWorksLocked || !task.isSubmissionOpen || task.isDeadlinePassed;
+                        const requiredLabel = task.isRequired ? 'บังคับส่ง' : 'ไม่บังคับส่ง';
                         const stageLabel = getSubmissionStageLabel(task.stage);
+                        const taskLockMessage = getSubmissionTaskLockMessage(team?.status, task.stage);
+                        const isTaskLocked = isWorksLocked || Boolean(taskLockMessage) || !task.isSubmissionOpen || task.isDeadlinePassed;
                         const descriptionText = String(task.description || '').trim();
                         const showTrackSelect = Boolean(task.requiresSubmissionTrack);
                         const isTrackSaving = savingTaskTrackId === task.teamSubmissionTaskId;
-                        const hasSelectedSubmissionTrack = !showTrackSelect || SUBMISSION_TRACK_OPTIONS.some((option) => option.value === task.submissionTrack);
+                        const hasSelectedTrackValue = SUBMISSION_TRACK_OPTIONS.some((option) => option.value === task.submissionTrack);
+                        const hasSelectedSubmissionTrack = !showTrackSelect || hasSelectedTrackValue;
+                        const canClearSubmissionTrack = showTrackSelect && !task.isRequired && hasSelectedTrackValue;
                         const hasSubmittedTaskContent = task.taskType === 'link'
                             ? Boolean(String(task.linkUrl || '').trim())
                             : files.length > 0;
@@ -2402,16 +2442,10 @@ export default function TeamContent({ user }) {
                                         )}
                                     </span>
                                     <div className="sub-task-header-badges">
-                                        <span className={`sub-task-required ${requiredClass}`}>{requiredLabel}</span>
-                                        <span className="sub-task-required stage">{stageLabel}</span>
-                                        {!task.isSubmissionOpen && <span className="sub-task-required warning"><Lock size={12} /> งานนี้ปิดการส่งแล้ว</span>}
-                                        {task.isDeadlinePassed && <span className="sub-task-required warning"><Clock size={12} /> หมดเวลาส่ง</span>}
-                                    </div>
-                                </div>
-
-                                <div className="sub-task-meta-row">
-                                    <div className="sub-task-hint-row">
                                         <span className="sub-task-required info"><Clock size={12} /> กำหนดส่ง: {formatDateTime(task.deadlineAt)}</span>
+                                        <span className={`sub-task-required ${requiredClass}`}>{requiredLabel}</span>
+                                        {!task.isSubmissionOpen && <span className="sub-task-required warning"><Lock size={12} /> ปิดการส่งแล้ว</span>}
+                                        {task.isDeadlinePassed && <span className="sub-task-required warning"><Clock size={12} /> หมดเวลาส่ง</span>}
                                     </div>
                                 </div>
 
@@ -2437,6 +2471,10 @@ export default function TeamContent({ user }) {
                                                             aria-checked={isSelected}
                                                             disabled={isDisabled}
                                                             onClick={() => {
+                                                                if (isSelected && !task.isRequired) {
+                                                                    handleSaveSubmissionTrack(task, null);
+                                                                    return;
+                                                                }
                                                                 if (!isSelected) handleSaveSubmissionTrack(task, option.value);
                                                             }}
                                                         >
@@ -2446,6 +2484,17 @@ export default function TeamContent({ user }) {
                                                     );
                                                 })}
                                             </div>
+                                            {canClearSubmissionTrack && (
+                                                <button
+                                                    type="button"
+                                                    className="sub-track-clear-btn"
+                                                    disabled={!isLeader || isTaskLocked || isTrackSaving}
+                                                    onClick={() => handleSaveSubmissionTrack(task, null)}
+                                                >
+                                                    <XCircle size={13} />
+                                                    <span>ล้าง</span>
+                                                </button>
+                                            )}
                                             {isTrackSaving && <span className="sub-track-saving"><Loader2 size={12} /> บันทึก...</span>}
                                         </div>
                                     </div>
@@ -2523,6 +2572,12 @@ export default function TeamContent({ user }) {
                                         </p>    
                                     </>
                                 )}
+                                {taskLockMessage && (
+                                    <div className="sub-task-lock-notice">
+                                        <Lock size={14} />
+                                        <span>{taskLockMessage}</span>
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
@@ -2553,12 +2608,18 @@ export default function TeamContent({ user }) {
                         <Info size={16} />
                         <span>หากกดยืนยันแล้ว จะไม่สามารถแก้ไขได้ กรุณาตรวจสอบความถูกต้อง</span>
                     </div>
+                    {isTeamEditLocked && (
+                        <div className="vf-info-banner vf-submitted">
+                            <Lock size={16} />
+                            <span>{TEAM_LOCKED_AFTER_SUBMIT_MESSAGE}</span>
+                        </div>
+                    )}
 
                     {team.status === 'passed' && !team.confirmedAt && (
                         <div className="gl-team-info-card">
                             <span className="gl-team-info-label"><Clock size={13} /> กำหนดเวลายืนยันของทีม</span>
                             <div className="gl-status-row"><div className="gl-status-label">หมดเขตยืนยัน</div><span>{formatDateTime(team.confirmationDeadlineAt)}</span></div>
-                            <div className="gl-status-row"><div className="gl-status-label"><Clock size={13} /> เวลาที่เหลือ</div><span>{countdownText}</span></div>
+                            <div className="gl-status-row"><div className="gl-status-label">เวลาที่เหลือ</div><span>{countdownText}</span></div>
                             {confirmationExpired ? (
                                 <p className="vf-hint">เลยเวลายืนยันแล้ว ระบบจะปรับสถานะเป็น "ไม่กดเข้าร่วมโครงการ" อัตโนมัติ</p>
                             ) : (
@@ -2733,11 +2794,9 @@ export default function TeamContent({ user }) {
                                     <button type="button" className="vf-doc-download" aria-label="ดาวน์โหลดเอกสาร" onClick={() => downloadDocumentPdf(doc.document_id)}>
                                         <Download size={14} /> ดาวน์โหลด
                                     </button>
-                                    {!isSubmitted && !myConfirmed && (
-                                        <button className="vf-doc-delete" aria-label="ลบเอกสาร" disabled={actionLoading} onClick={() => handleDeleteDoc(doc.document_id, doc.file_original_name)}>
+                                    <button className="vf-doc-delete" aria-label="ลบเอกสาร" disabled={actionLoading || isSubmitted || myConfirmed} onClick={() => handleDeleteDoc(doc.document_id, doc.file_original_name)}>
                                             <Trash2 size={14} />
-                                        </button>
-                                    )}
+                                    </button>
                                 </div>
                             </div>
                         ))}
@@ -2793,14 +2852,6 @@ export default function TeamContent({ user }) {
                                     {missingFields.map((field) => <li key={`confirm-${field}`}>{field}</li>)}
                                 </ul>
                             )}
-                        </div>
-                    )}
-
-                    {/* Read-only notice after submission */}
-                    {isSubmitted && (
-                        <div className="vf-info-banner vf-submitted">
-                            <Lock size={16} />
-                            <span>ทีมส่งเอกสารยืนยันตัวตนแล้ว ไม่สามารถแก้ไขได้</span>
                         </div>
                     )}
 
@@ -2911,7 +2962,7 @@ export default function TeamContent({ user }) {
                     {isAdvisorLocked && (
                         <div className="vf-info-banner vf-submitted">
                             <Lock size={16} />
-                            <span>ทีมส่งเข้าคัดเลือกแล้ว ไม่สามารถแก้ไขข้อมูลอาจารย์ที่ปรึกษาได้</span>
+                            <span>{TEAM_LOCKED_AFTER_SUBMIT_MESSAGE}</span>
                         </div>
                     )}
 

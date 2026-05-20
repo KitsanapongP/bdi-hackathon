@@ -562,7 +562,7 @@ function ProfileTab({ apiFetch, showToast, user }) {
                 {profileLocked && (
                     <div className="vf-info-banner vf-submitted">
                         <Lock size={16} />
-                        <span>โปรไฟล์ถูกล็อกเพราะทีมส่งเอกสารยืนยันตัวตนแล้ว หากต้องการแก้ไขให้ติดต่อผู้จัดงาน</span>
+                        <span>โปรไฟล์ไม่สามารถแก้ไขได้เนื่องจากทีมยืนยันส่งทีมเข้าคัดเลือกแล้ว</span>
                     </div>
                 )}
                 <fieldset disabled={profileLocked} className="pf-profile-form">

@@ -1952,10 +1952,23 @@
     color: white;
 }
 
-.gl-submit-btn:hover {
+.gl-submit-btn:hover:not(:disabled) {
     background: var(--gl-teal-light);
     box-shadow: 0 0 20px var(--gl-teal-glow);
     transform: translateY(-1px);
+}
+
+.gl-action-btn:disabled,
+.gl-submit-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.2);
+}
+
+.gl-action-btn:disabled:hover,
+.gl-submit-btn:disabled:hover {
+    box-shadow: none;
+    transform: none;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -3697,10 +3710,17 @@
     transition: all 0.2s;
 }
 
-.vf-doc-open:hover,
-.vf-doc-download:hover {
+.vf-doc-open:hover:not(:disabled),
+.vf-doc-download:hover:not(:disabled) {
     border-color: var(--gl-teal);
     background: rgba(45, 212, 191, 0.12);
+}
+
+.vf-doc-open:disabled,
+.vf-doc-download:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.2);
 }
 
 .vf-doc-delete {
@@ -3727,6 +3747,7 @@
 .vf-doc-delete:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+    filter: grayscale(0.2);
 }
 
 /* Empty docs prompt */
@@ -4112,6 +4133,26 @@
     white-space: pre-wrap;
 }
 
+.sub-task-lock-notice {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 12px;
+    padding: 9px 12px;
+    border: 1px solid rgba(248, 113, 113, 0.34);
+    border-radius: 10px;
+    background: rgba(127, 29, 29, 0.18);
+    color: #fecaca;
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.sub-task-lock-notice svg {
+    flex: 0 0 auto;
+    color: #f87171;
+}
+
 .sub-task-meta-row {
     display: flex;
     align-items: center;
@@ -4199,6 +4240,36 @@
 }
 
 .sub-track-option:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+}
+
+.sub-track-clear-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 28px;
+    padding: 4px 10px;
+    border: 1px solid rgba(248, 113, 113, 0.34);
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.14);
+    color: #fecaca;
+    font-size: 0.76rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.sub-track-clear-btn:hover:not(:disabled) {
+    border-color: rgba(248, 113, 113, 0.56);
+    background: rgba(239, 68, 68, 0.24);
+    color: #fee2e2;
+}
+
+.sub-track-clear-btn:disabled {
     cursor: not-allowed;
     opacity: 0.62;
 }
@@ -4635,6 +4706,16 @@
     word-break: break-word;
     text-align: left;
     flex: 1;
+}
+
+.gl-team-name-value.is-locked {
+    color: rgba(255, 255, 255, 0.52);
+    opacity: 0.72;
+}
+
+.gl-team-description-value.is-locked {
+    color: rgba(255, 255, 255, 0.52);
+    opacity: 0.72;
 }
 
 .gl-team-name-edit-trigger {

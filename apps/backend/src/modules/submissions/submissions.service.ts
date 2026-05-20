@@ -63,12 +63,25 @@ function assertTaskSubmissionOpen(task: { is_submission_open: number; task_deadl
     }
 }
 
-async function ensureLeader(db: DB, teamId: number, userId: number): Promise<void> {
+async function ensureLeader(db: DB, teamId: number, userId: number) {
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new NotFoundError('ไม่พบทีม');
     if (team.current_leader_user_id !== userId) {
         throw new AppError('เฉพาะหัวหน้าทีมเท่านั้นที่สามารถจัดการได้', 403);
     }
+    return team;
+}
+
+function assertSubmissionTaskEditableForTeam(teamStatus: string, taskStage: string): void {
+    const status = String(teamStatus || '').toLowerCase();
+    const stage = String(taskStage || '').toLowerCase();
+    if (stage === 'pre_selection' && status === 'forming') return;
+    if ((stage === 'training' || stage === 'onsite') && status === 'confirmed') return;
+
+    if (stage === 'pre_selection') {
+        throw new BadRequestError('งานก่อนคัดเลือกถูกล็อกหลังส่งทีมเข้าคัดเลือกแล้ว');
+    }
+    throw new BadRequestError('ทีมยังอยู่ในสถานะที่ไม่สามารถแก้ไขงานขั้นตอนนี้ได้');
 }
 
 function assertTeamEditable(status: string): void {
@@ -152,14 +165,24 @@ export async function saveSubmissionTrack(
     teamId: number,
     userId: number,
     teamSubmissionTaskId: number,
-    submissionTrack: string,
+    submissionTrack: string | null,
 ) {
-    await ensureLeader(db, teamId, userId);
+    const team = await ensureLeader(db, teamId, userId);
     const task = await getTeamSubmissionTaskOrThrow(db, teamId, teamSubmissionTaskId);
     if (!taskRequiresSubmissionTrack(task)) {
         throw new BadRequestError('This submission does not require a track');
     }
+    assertSubmissionTaskEditableForTeam(team.status, task.stage);
     assertTaskSubmissionOpen(task);
+
+    if (submissionTrack === null) {
+        if (task.is_required === 1) {
+            throw new BadRequestError('งานบังคับส่งต้องเลือก Track');
+        }
+        await repo.updateTeamTaskTrack(db, teamSubmissionTaskId, null);
+        return;
+    }
+
     const normalized = String(submissionTrack || '').trim();
     assertSubmissionTrack(normalized);
     await repo.updateTeamTaskTrack(db, teamSubmissionTaskId, normalized);
@@ -172,11 +195,12 @@ export async function saveTaskLink(
     teamSubmissionTaskId: number,
     linkUrl: string | null,
 ) {
-    await ensureLeader(db, teamId, userId);
+    const team = await ensureLeader(db, teamId, userId);
     const task = await getTeamSubmissionTaskOrThrow(db, teamId, teamSubmissionTaskId);
     if (task.task_type !== 'link') {
         throw new BadRequestError('งานนี้ไม่ใช่ประเภทลิงก์');
     }
+    assertSubmissionTaskEditableForTeam(team.status, task.stage);
     assertTaskSubmissionOpen(task);
 
     if (linkUrl) {
@@ -198,12 +222,13 @@ export async function uploadSubmissionFile(
     teamSubmissionTaskId: number,
     file: { filename: string; mimetype: string; file: NodeJS.ReadableStream }
 ): Promise<{ fileId: number; fileName: string }> {
-    await ensureLeader(db, teamId, userId);
+    const leaderTeam = await ensureLeader(db, teamId, userId);
 
     const task = await getTeamSubmissionTaskOrThrow(db, teamId, teamSubmissionTaskId);
     if (task.task_type !== 'file') {
         throw new BadRequestError('งานนี้ไม่ใช่ประเภทไฟล์');
     }
+    assertSubmissionTaskEditableForTeam(leaderTeam.status, task.stage);
     assertTaskSubmissionOpen(task);
     assertPdfFile(file.filename, file.mimetype);
 
@@ -246,7 +271,7 @@ export async function uploadSubmissionFile(
 }
 
 export async function deleteSubmissionFile(db: DB, teamId: number, userId: number, fileId: number) {
-    await ensureLeader(db, teamId, userId);
+    const team = await ensureLeader(db, teamId, userId);
 
     const file = await repo.getSubmissionFileById(db, fileId);
     if (!file || file.team_id !== teamId) throw new NotFoundError('ไม่พบไฟล์');
@@ -255,6 +280,7 @@ export async function deleteSubmissionFile(db: DB, teamId: number, userId: numbe
     if (!task || task.team_id !== teamId) {
         throw new NotFoundError('ไม่พบรายการงานของไฟล์นี้');
     }
+    assertSubmissionTaskEditableForTeam(team.status, task.stage);
     assertTaskSubmissionOpen(task);
 
     await repo.softDeleteSubmissionFile(db, fileId);

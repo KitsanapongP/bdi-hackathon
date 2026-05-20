@@ -342,7 +342,7 @@ export async function submitTeam(
     await repo.lockVerifyRound(db, round.verify_round_id);
     await repo.submitVerifyRound(db, round.verify_round_id);
     await repo.updateTeamStatus(db, teamId, 'submitted');
-    await repo.closeDefaultSubmissionTasksByTeam(db, teamId);
+    await repo.closePreSelectionSubmissionTasksByTeam(db, teamId);
 
     await repo.createVerifyAuditLog(db, {
         verifyRoundId: round.verify_round_id,
