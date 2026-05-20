@@ -266,6 +266,14 @@ export async function getAdvisors(db: DB, teamId: number): Promise<TeamAdvisorRo
     return rows;
 }
 
+export async function countAdvisors(db: DB, teamId: number): Promise<number> {
+    const [rows] = await db.query<Array<RowDataPacket & { advisor_count: number | string }>>(
+        'SELECT COUNT(*) AS advisor_count FROM team_advisors WHERE team_id = ?',
+        [teamId]
+    );
+    return Number(rows[0]?.advisor_count ?? 0);
+}
+
 export async function getAdvisorById(db: DB, advisorId: number): Promise<TeamAdvisorRow | null> {
     const [rows] = await db.query<TeamAdvisorRow[]>(
         'SELECT * FROM team_advisors WHERE advisor_id = ?',

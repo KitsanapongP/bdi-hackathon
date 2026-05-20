@@ -55,6 +55,7 @@ import './Profile.css';
 
 const TEAM_MEMBER_MAX_DEFAULT = 5;
 const TEAM_MEMBER_MIN_DEFAULT = 3;
+const TEAM_ADVISOR_MAX = 5;
 const TEAM_NAME_MAX_LENGTH = 50;
 const TEAM_DESCRIPTION_MAX_LENGTH = 500;
 const PDF_FILE_ACCEPT = 'application/pdf,.pdf';
@@ -2879,11 +2880,17 @@ export default function TeamContent({ user }) {
 
             const advisors = submissionData?.advisors || [];
             const isAdvisorLocked = isTeamEditLocked;
+            const isAdvisorLimitReached = advisors.length >= TEAM_ADVISOR_MAX && !advisorForm.editId;
+            const isAdvisorFormDisabled = isAdvisorLocked || isAdvisorLimitReached;
 
             const handleSaveAdvisor = async () => {
                 if (!team?.id) return;
                 if (isAdvisorLocked) {
                     showToast('ไม่สามารถแก้ไขข้อมูลอาจารย์ที่ปรึกษาได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
+                    return;
+                }
+                if (!advisorForm.editId && advisors.length >= TEAM_ADVISOR_MAX) {
+                    showToast(`สามารถเพิ่มอาจารย์ที่ปรึกษาได้สูงสุด ${TEAM_ADVISOR_MAX} ท่านต่อทีม`, 'error');
                     return;
                 }
                 const body = {
@@ -2955,7 +2962,7 @@ export default function TeamContent({ user }) {
                 <div>
                     <div className="vf-info-banner">
                         <Info size={16} />
-                        <span>สามารถมีอาจารย์ที่ปรึกษาได้มากกว่าหนึ่งท่าน และอาจารย์ที่ปรึกษาแต่ละท่านไม่สามารถอยู่หลายทีมได้<br />มีแค่หัวหน้าทีมเท่านั้นที่สามารถแก้ไขข้อมูลอาจารย์ที่ปรึกษาได้</span>
+                        <span>สามารถมีอาจารย์ที่ปรึกษาได้สูงสุด {TEAM_ADVISOR_MAX} ท่าน และอาจารย์ที่ปรึกษาแต่ละท่านไม่สามารถอยู่หลายทีมได้<br />มีแค่หัวหน้าทีมเท่านั้นที่สามารถแก้ไขข้อมูลอาจารย์ที่ปรึกษาได้</span>
                     </div>
                     {isAdvisorLocked && (
                         <div className="vf-info-banner vf-submitted">
@@ -2966,7 +2973,7 @@ export default function TeamContent({ user }) {
 
                     {/* Advisor list */}
                     <div className="gl-team-info-card">
-                        <span className="gl-team-info-label"><GraduationCap size={13} /> รายชื่ออาจารย์ที่ปรึกษา ({advisors.length} ท่าน)</span>
+                        <span className="gl-team-info-label"><GraduationCap size={13} /> รายชื่ออาจารย์ที่ปรึกษา ({advisors.length}/{TEAM_ADVISOR_MAX} ท่าน)</span>
 
                         {advisors.length === 0 && (
                             <div className="vf-empty-docs">
@@ -3006,31 +3013,31 @@ export default function TeamContent({ user }) {
                             <div className="pf-form-grid" style={{ marginTop: 8 }}>
                                 <div className="pf-field">
                                     <span className="pf-label">คำนำหน้า</span>
-                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.prefix} onChange={e => setAdvisorForm(f => ({ ...f, prefix: e.target.value }))} placeholder="เช่น ผศ.ดร." />
+                                    <input className="pf-input" disabled={isAdvisorFormDisabled} value={advisorForm.prefix} onChange={e => setAdvisorForm(f => ({ ...f, prefix: e.target.value }))} placeholder="เช่น ผศ.ดร." />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">ชื่อ-นามสกุล (TH) *</span>
-                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.fullNameTh} onChange={e => setAdvisorForm(f => ({ ...f, fullNameTh: e.target.value }))} placeholder="เช่น สมชาย ใจดี" />
+                                    <input className="pf-input" disabled={isAdvisorFormDisabled} value={advisorForm.fullNameTh} onChange={e => setAdvisorForm(f => ({ ...f, fullNameTh: e.target.value }))} placeholder="เช่น สมชาย ใจดี" />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">ชื่อ-นามสกุล (EN)</span>
-                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.fullNameEn} onChange={e => setAdvisorForm(f => ({ ...f, fullNameEn: e.target.value }))} placeholder="e.g. Somchai Jaidee" />
+                                    <input className="pf-input" disabled={isAdvisorFormDisabled} value={advisorForm.fullNameEn} onChange={e => setAdvisorForm(f => ({ ...f, fullNameEn: e.target.value }))} placeholder="e.g. Somchai Jaidee" />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">Email</span>
-                                    <input className="pf-input" type="email" disabled={isAdvisorLocked} value={advisorForm.email} onChange={e => setAdvisorForm(f => ({ ...f, email: e.target.value }))} placeholder="เช่น advisor@example.com" />
+                                    <input className="pf-input" type="email" disabled={isAdvisorFormDisabled} value={advisorForm.email} onChange={e => setAdvisorForm(f => ({ ...f, email: e.target.value }))} placeholder="เช่น advisor@example.com" />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">เบอร์โทร</span>
-                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.phone} onChange={e => setAdvisorForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="เช่น 0812345678" maxLength={10} />
+                                    <input className="pf-input" disabled={isAdvisorFormDisabled} value={advisorForm.phone} onChange={e => setAdvisorForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="เช่น 0812345678" maxLength={10} />
                                 </div>
                                 <div className="pf-field">
                                     <span className="pf-label">สถาบัน</span>
-                                    <input className="pf-input" disabled={isAdvisorLocked} value={advisorForm.institutionNameTh} onChange={e => setAdvisorForm(f => ({ ...f, institutionNameTh: e.target.value }))} placeholder="เช่น มหาวิทยาลัยขอนแก่น" />
+                                    <input className="pf-input" disabled={isAdvisorFormDisabled} value={advisorForm.institutionNameTh} onChange={e => setAdvisorForm(f => ({ ...f, institutionNameTh: e.target.value }))} placeholder="เช่น มหาวิทยาลัยขอนแก่น" />
                                 </div>
                             </div>
                             <div className="pf-actions" style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                                <button className="gl-action-btn gl-submit-btn" onClick={handleSaveAdvisor} disabled={actionLoading || isAdvisorLocked}>
+                                <button className="gl-action-btn gl-submit-btn" onClick={handleSaveAdvisor} disabled={actionLoading || isAdvisorFormDisabled}>
                                     <Save size={16} /> {advisorForm.editId ? 'บันทึก' : 'เพิ่ม'}
                                 </button>
                                 {advisorForm.editId && (
@@ -3038,6 +3045,7 @@ export default function TeamContent({ user }) {
                                 )}
                             </div>
                             {isAdvisorLocked && <p className="vf-hint mt-2">ไม่สามารถเพิ่มหรือแก้ไขอาจารย์ที่ปรึกษาได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว</p>}
+                            {isAdvisorLimitReached && <p className="vf-hint mt-2">ทีมมีอาจารย์ที่ปรึกษาครบ {TEAM_ADVISOR_MAX} ท่านแล้ว</p>}
                         </div>
                     )}
                 </div>

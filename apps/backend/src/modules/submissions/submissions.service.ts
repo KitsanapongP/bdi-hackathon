@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 const UPLOADS_BASE_DIR = path.join(process.cwd(), 'public', 'uploads', 'verification');
 const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
 const MAX_SUBMISSION_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_ADVISORS_PER_TEAM = 5;
 const SUBMISSION_TRACKS = new Set<SubmissionTrack>(['Phenome', 'Health', 'City']);
 
 function assertSubmissionTrack(value: string): asserts value is SubmissionTrack {
@@ -325,6 +326,11 @@ export async function addAdvisor(
     }
 ) {
     await ensureLeaderAndEditable(db, teamId, userId);
+
+    const advisorCount = await repo.countAdvisors(db, teamId);
+    if (advisorCount >= MAX_ADVISORS_PER_TEAM) {
+        throw new ConflictError(`สามารถเพิ่มอาจารย์ที่ปรึกษาได้สูงสุด ${MAX_ADVISORS_PER_TEAM} ท่านต่อทีม`);
+    }
 
     if (data.email) {
         const existing = await repo.findAdvisorByEmail(db, data.email);
