@@ -79,14 +79,14 @@ function assertSubmissionTaskEditableForTeam(teamStatus: string, taskStage: stri
     if ((stage === 'training' || stage === 'onsite') && status === 'confirmed') return;
 
     if (stage === 'pre_selection') {
-        throw new BadRequestError('งานก่อนคัดเลือกถูกล็อกหลังส่งทีมเข้าคัดเลือกแล้ว');
+        throw new BadRequestError('ไม่สามารถแก้ไขงานก่อนคัดเลือกได้หลังส่งทีมเข้าคัดเลือกแล้ว');
     }
     throw new BadRequestError('ทีมยังอยู่ในสถานะที่ไม่สามารถแก้ไขงานขั้นตอนนี้ได้');
 }
 
 function assertTeamEditable(status: string): void {
     if (!LOCKED_TEAM_STATUSES.has(String(status || '').toLowerCase())) return;
-    throw new BadRequestError('ทีมถูกล็อกหลังส่งเอกสารยืนยันตัวตนแล้ว ไม่สามารถแก้ไขข้อมูลส่งผลงานได้');
+    throw new BadRequestError('ไม่สามารถแก้ไขข้อมูลส่งผลงานได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว');
 }
 
 async function ensureLeaderAndEditable(db: DB, teamId: number, userId: number): Promise<void> {

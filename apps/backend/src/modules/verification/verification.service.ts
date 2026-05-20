@@ -21,7 +21,7 @@ const MAX_VERIFICATION_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 function assertTeamEditable(status: string): void {
     if (!LOCKED_TEAM_STATUSES.has(String(status || '').toLowerCase())) return;
-    throw new BadRequestError('ทีมถูกล็อกหลังส่งเอกสารยืนยันตัวตนแล้ว ไม่สามารถแก้ไขได้');
+    throw new BadRequestError('ไม่สามารถแก้ไขข้อมูลได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว');
 }
 
 function sanitizePathSegment(value: string | null | undefined, fallback: string): string {

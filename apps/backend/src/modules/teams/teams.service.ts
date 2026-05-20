@@ -59,7 +59,7 @@ function isTeamLockedForEdit(status: string): boolean {
 
 function assertTeamEditable(status: string, actionLabel: string): void {
     if (!isTeamLockedForEdit(status)) return;
-    throw new AppError(`ไม่สามารถ${actionLabel}ได้ เนื่องจากทีมถูกล็อกหลังส่งเอกสารยืนยันตัวตนแล้ว`, 400);
+    throw new AppError(`ไม่สามารถ${actionLabel}ได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว`, 400);
 }
 
 async function assertTeamRecruitmentOpen(db: DB): Promise<void> {

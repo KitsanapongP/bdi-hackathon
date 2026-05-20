@@ -457,7 +457,7 @@ function ProfileTab({ apiFetch, showToast, user }) {
     const handleAvatarUpload = useCallback(async (file) => {
         if (!file) return;
         if (profileLocked) {
-            showToast('ข้อมูลโปรไฟล์ถูกล็อกหลังยืนยันตัวตนแล้ว', 'error');
+            showToast('ไม่สามารถแก้ไขข้อมูลโปรไฟล์หลังยืนยันตัวตนแล้ว', 'error');
             return;
         }
 
@@ -493,7 +493,7 @@ function ProfileTab({ apiFetch, showToast, user }) {
 
     const handleAvatarDelete = useCallback(async () => {
         if (profileLocked) {
-            showToast('ข้อมูลโปรไฟล์ถูกล็อกหลังยืนยันตัวตนแล้ว', 'error');
+            showToast('ไม่สามารถแก้ไขข้อมูลโปรไฟล์หลังยืนยันตัวตนแล้ว', 'error');
             return;
         }
         if (!data?.avatarUrl) return;
@@ -515,7 +515,7 @@ function ProfileTab({ apiFetch, showToast, user }) {
 
     const handleSave = async () => {
         if (profileLocked) {
-            showToast('ข้อมูลโปรไฟล์ถูกล็อกหลังยืนยันตัวตนแล้ว', 'error');
+            showToast('ไม่สามารถแก้ไขข้อมูลโปรไฟล์หลังยืนยันตัวตนแล้ว', 'error');
             return;
         }
         setSaving(true);

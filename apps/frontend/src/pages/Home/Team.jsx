@@ -63,7 +63,7 @@ const SUBMISSION_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const VERIFICATION_FILE_REQUIREMENT_TEXT = 'อัปโหลดได้เฉพาะไฟล์นามสกุล PDF เท่านั้นและมีขนาดไม่เกิน 5 MB เป็นจำนวน 1 ไฟล์';
 const SUBMISSION_FILE_REQUIREMENT_TEXT = 'อัปโหลดได้เฉพาะไฟล์นามสกุล PDF เท่านั้นและมีขนาดไม่เกิน 10 MB เป็นจำนวน 1 ไฟล์';
 const FILE_NAME_REQUIREMENT_TEXT_VERIFICATION = 'กรุณาตั้งชื่อไฟล์ให้สอดคล้องกับข้อมูลในไฟล์ เช่น CV_นายสมชาย_ใจดี.pdf เพื่อความสะดวกในการตรวจสอบและยืนยันตัวตน';
-const TEAM_LOCKED_AFTER_SUBMIT_MESSAGE = 'ทีมจะไม่สามารถแก้ไขข้อมูลได้หากยืนยันส่งทีมเข้าคัดเลือกแล้ว';
+const TEAM_LOCKED_AFTER_SUBMIT_MESSAGE = 'ไม่สามารถแก้ไขข้อมูลได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว';
 
 const CARDS = [
     { id: 'verify', icon: <ShieldCheck />, label: 'ยืนยันตัวตน', color: '#14b8a6' },
@@ -835,7 +835,7 @@ export default function TeamContent({ user }) {
 
     const handleRespondJoinRequest = (requestId, status) => withAction(async () => {
         if (isTeamEditLocked) {
-            throw new Error('ทีมถูกล็อกแล้ว ไม่สามารถจัดการคำขอเข้าร่วมได้');
+            throw new Error('ไม่สามารถจัดการคำขอเข้าร่วมทีมได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว');
         }
         const res = await fetch(apiUrl(`/api/teams/${team.id}/join-requests/${requestId}`), {
             method: 'PUT',
@@ -851,7 +851,7 @@ export default function TeamContent({ user }) {
 
     const confirmRespondJoinRequest = (req, status) => {
         if (isTeamEditLocked) {
-            showToast('ทีมถูกล็อกแล้ว ไม่สามารถจัดการคำขอเข้าร่วมได้', 'error');
+            showToast('ไม่สามารถจัดการคำขอเข้าร่วมทีมได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
         const requesterName = req.requester_user_name || `ผู้ใช้ ${req.requester_user_id}`;
@@ -892,7 +892,7 @@ export default function TeamContent({ user }) {
 
     const handleRemoveMember = (memberUserId) => {
         if (isTeamEditLocked) {
-            showToast('ทีมถูกล็อกแล้ว ไม่สามารถเตะสมาชิกออกได้', 'error');
+            showToast('ไม่สามารถนำสมาชิกออกจากทีมได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
         openConfirm('เตะสมาชิกออกจากทีม', 'คุณแน่ใจหรือไม่ว่าต้องการเตะสมาชิกคนนี้ออกจากทีม?', () => {
@@ -913,7 +913,7 @@ export default function TeamContent({ user }) {
 
     const handleLeaveCurrentTeam = () => {
         if (isTeamEditLocked) {
-            showToast('ทีมถูกล็อกแล้ว ไม่สามารถออกจากทีมในตอนนี้ได้', 'error');
+            showToast('ไม่สามารถออกจากทีมในตอนนี้ได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
         const leaveMessage = isSingleLeaderTeam
@@ -936,7 +936,7 @@ export default function TeamContent({ user }) {
 
     const handleTransferLeader = (newLeaderUserId) => {
         if (isTeamEditLocked) {
-            showToast('ทีมถูกล็อกแล้ว ไม่สามารถโอนหัวหน้าทีมได้', 'error');
+            showToast('ไม่สามารถโอนหัวหน้าทีมได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
         const targetMember = sortedMembers.find((m) => m.id === newLeaderUserId);
@@ -961,7 +961,7 @@ export default function TeamContent({ user }) {
     const handleUpdateVisibility = (visibility) => withAction(async () => {
         if (!team?.id) return;
         if (isTeamEditLocked) {
-            throw new Error('ทีมถูกล็อกแล้ว ไม่สามารถเปลี่ยนการมองเห็นทีมได้');
+            throw new Error('ไม่สามารถเปลี่ยนการมองเห็นทีมได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว');
         }
         const res = await fetch(apiUrl(`/api/teams/${team.id}/visibility`), {
             method: 'PUT',
@@ -1329,7 +1329,7 @@ export default function TeamContent({ user }) {
     const handleUploadDocs = async (files) => {
         if (!team?.id || !files?.length) return;
         if (isTeamEditLocked || isMyVerificationConfirmed) {
-            showToast('ทีมถูกล็อกแล้ว ไม่สามารถอัปโหลดเอกสารได้', 'error');
+            showToast('ไม่สามารถอัปโหลดเอกสารได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
         const currentDocs = verifyData?.myDocuments || [];
@@ -1363,7 +1363,7 @@ export default function TeamContent({ user }) {
 
     const handleDeleteDoc = (docId, fileName) => {
         if (isTeamEditLocked || isMyVerificationConfirmed) {
-            showToast('ทีมถูกล็อกแล้ว ไม่สามารถลบเอกสารได้', 'error');
+            showToast('ไม่สามารถลบเอกสารได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
         openConfirm('ลบเอกสาร', `ต้องการลบไฟล์ "${fileName}" หรือไม่?`, () => {
@@ -1394,7 +1394,7 @@ export default function TeamContent({ user }) {
 
     const handleSaveVerificationProfile = async () => {
         if (isTeamEditLocked || isMyVerificationConfirmed) {
-            showToast('ทีมถูกล็อกแล้ว ไม่สามารถบันทึกข้อมูลส่วนตัวได้', 'error');
+            showToast('ไม่สามารถบันทึกข้อมูลส่วนตัวได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
         if (!profileData) return;
@@ -1421,7 +1421,7 @@ export default function TeamContent({ user }) {
 
     const handleConfirmDocs = ({ hasDocs, profileComplete, missingFields, hasUnsavedProfileChanges }) => {
         if (isTeamEditLocked) {
-            showToast('ทีมส่งเอกสารแล้ว ไม่สามารถยืนยันเอกสารเพิ่มได้', 'error');
+            showToast('ไม่สามารถยืนยันเอกสารเพิ่มได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
         if (hasUnsavedProfileChanges) {
@@ -1459,7 +1459,7 @@ export default function TeamContent({ user }) {
 
     const handleUnconfirmDocs = () => {
         if (isTeamEditLocked) {
-            showToast('ทีมส่งเอกสารแล้ว ไม่สามารถยกเลิกการยืนยันได้', 'error');
+            showToast('ไม่สามารถยกเลิกการยืนยันได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
         openConfirm('ยกเลิกการยืนยัน', 'ต้องการยกเลิกการยืนยันเอกสารเพื่อแก้ไขหรือไม่?', () => {
@@ -1627,7 +1627,7 @@ export default function TeamContent({ user }) {
 
     const handleUpdateTeamName = () => {
         if (isTeamEditLocked) {
-            showToast('ทีมถูกล็อกแล้ว ไม่สามารถเปลี่ยนชื่อทีมได้', 'error');
+            showToast('ไม่สามารถเปลี่ยนชื่อทีมได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
         if (!isEditTeamNameValid) {
@@ -1652,7 +1652,7 @@ export default function TeamContent({ user }) {
 
     const handleUpdateTeamDescription = () => {
         if (isTeamEditLocked) {
-            showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขคำอธิบายทีมได้', 'error');
+            showToast('ไม่สามารถแก้ไขคำอธิบายทีมได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
         if (!isEditTeamDescriptionValid) {
@@ -1858,7 +1858,7 @@ export default function TeamContent({ user }) {
                                 className={`gl-fancy-toggle ${team.visibility === 'public' ? 'on' : 'off'}`}
                                 disabled={!isLeader || actionLoading || isTeamEditLocked}
                                 onClick={() => handleUpdateVisibility(team.visibility === 'public' ? 'private' : 'public')}
-                                title={isTeamEditLocked ? 'ทีมถูกล็อกแล้ว ไม่สามารถเปลี่ยนสถานะได้' : 'สลับการมองเห็นทีม'}
+                                title={isTeamEditLocked ? 'ไม่สามารถเปลี่ยนสถานะได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว' : 'สลับการมองเห็นทีม'}
                             >
                                 <div className="gl-toggle-thumb">
                                     {team.visibility === 'public' ? <Globe size={14} /> : <Lock size={14} />}
@@ -2309,7 +2309,7 @@ export default function TeamContent({ user }) {
             const handleSaveTaskLink = async (task) => {
                 if (!team?.id || !task?.teamSubmissionTaskId) return;
                 if (isWorksLocked) {
-                    showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขผลงานได้', 'error');
+                    showToast('ไม่สามารถแก้ไขผลงานได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
                     return;
                 }
                 const taskLockMessage = getSubmissionTaskLockMessage(team?.status, task.stage);
@@ -2336,7 +2336,7 @@ export default function TeamContent({ user }) {
             const handleUploadSubmissionFiles = async (task, fileList) => {
                 if (!team?.id || !task?.teamSubmissionTaskId || !fileList?.length) return;
                 if (isWorksLocked) {
-                    showToast('ทีมถูกล็อกแล้ว ไม่สามารถอัปโหลดไฟล์ผลงานได้', 'error');
+                    showToast('ไม่สามารถอัปโหลดไฟล์ผลงานได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
                     return;
                 }
                 const taskLockMessage = getSubmissionTaskLockMessage(team?.status, task.stage);
@@ -2375,7 +2375,7 @@ export default function TeamContent({ user }) {
 
             const handleDeleteSubmissionFile = (fileId, fileName) => {
                 if (isWorksLocked) {
-                    showToast('ทีมถูกล็อกแล้ว ไม่สามารถลบไฟล์ผลงานได้', 'error');
+                    showToast('ไม่สามารถลบไฟล์ผลงานได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
                     return;
                 }
                 const fileTask = tasks.find((task) => Array.isArray(task.files) && task.files.some((file) => file.file_id === fileId));
@@ -2883,7 +2883,7 @@ export default function TeamContent({ user }) {
             const handleSaveAdvisor = async () => {
                 if (!team?.id) return;
                 if (isAdvisorLocked) {
-                    showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขข้อมูลอาจารย์ที่ปรึกษาได้', 'error');
+                    showToast('ไม่สามารถแก้ไขข้อมูลอาจารย์ที่ปรึกษาได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
                     return;
                 }
                 const body = {
@@ -2919,7 +2919,7 @@ export default function TeamContent({ user }) {
 
             const handleDeleteAdvisor = (advisorId, name) => {
                 if (isAdvisorLocked) {
-                    showToast('ทีมถูกล็อกแล้ว ไม่สามารถลบอาจารย์ที่ปรึกษาได้', 'error');
+                    showToast('ไม่สามารถลบอาจารย์ที่ปรึกษาได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
                     return;
                 }
                 openConfirm('ลบอาจารย์ที่ปรึกษา', `ต้องการลบ "${name}" หรือไม่?`, () => {
@@ -2938,7 +2938,7 @@ export default function TeamContent({ user }) {
 
             const handleEditAdvisor = (adv) => {
                 if (isAdvisorLocked) {
-                    showToast('ทีมถูกล็อกแล้ว ไม่สามารถแก้ไขข้อมูลอาจารย์ที่ปรึกษาได้', 'error');
+                    showToast('ไม่สามารถแก้ไขข้อมูลอาจารย์ที่ปรึกษาได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
                     return;
                 }
                 setAdvisorForm({
@@ -3037,7 +3037,7 @@ export default function TeamContent({ user }) {
                                     <button className="gt-btn" onClick={resetAdvisorForm}>ยกเลิก</button>
                                 )}
                             </div>
-                            {isAdvisorLocked && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว ไม่สามารถเพิ่มหรือแก้ไขอาจารย์ที่ปรึกษาได้</p>}
+                            {isAdvisorLocked && <p className="vf-hint mt-2">ไม่สามารถเพิ่มหรือแก้ไขอาจารย์ที่ปรึกษาได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว</p>}
                         </div>
                     )}
                 </div>
@@ -3179,7 +3179,7 @@ export default function TeamContent({ user }) {
                                         <span className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> ทีมผ่านการคัดเลือกแล้ว กรุณากดยืนยันเข้าร่วมโครงการ หรือกดปฏิเสธหากไม่ประสงค์เข้าร่วม</span>
                                     )}
                                     {shouldShowParticipationConfirm && !isGlobalSelectionConfirmOpen && <span className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> {globalSelectionConfirmMessage || 'ยังไม่อยู่ในช่วงเวลายืนยันการเข้าร่วมโครงการ'}</span>}
-                                    {!shouldShowParticipationConfirm && isTeamEditLocked && <span className="gl-top-hint-item"><Lock size={12} /> ทีมอยู่ในสถานะที่แก้ไขไม่ได้</span>}
+                                    {!shouldShowParticipationConfirm && isTeamEditLocked && <span className="gl-top-hint-item"><Lock size={12} /> ไม่สามารถแก้ไขข้อมูลได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว</span>}
                                     {shouldShowParticipationConfirm && confirmationExpired && <span className="gl-top-hint-item gl-top-hint-warn"><AlertTriangle size={12} /> เลยเวลายืนยันการเข้าร่วมโครงการแล้ว</span>}
                                 </div>
                             )}
