@@ -872,7 +872,7 @@ export default function TeamContent({ user }) {
     const handleInviteMember = () => withAction(async () => {
         if (!team?.id) return;
         if (isTeamEditLocked) {
-            throw new Error('ทีมถูกล็อกแล้ว ไม่สามารถเชิญสมาชิกเพิ่มได้');
+            throw new Error('ไม่สามารถเชิญสมาชิกเพิ่มได้ หากยืนยันส่งทีมเข้าคัดเลือกแล้ว');
         }
         const inviteeUserName = inviteUserNameInput.trim();
         if (!inviteeUserName) {
@@ -1570,7 +1570,7 @@ export default function TeamContent({ user }) {
             showToast('กรุณากรอกเหตุผลในการยุบทีมก่อนกดยืนยัน', 'error');
             return;
         }
-        openConfirm('ยุบทีม', `ยืนยันการยุบทีม? เหตุผล: "${disbandReason}" — สมาชิกทุกคนจะถูกนำออกจากทีม`, () => {
+        openConfirm('ยุบทีม', `ยืนยันการยุบทีม? เหตุผล: "${disbandReason}" โดยสมาชิกทุกคนจะถูกนำออกจากทีม และได้รับการแจ้งเตือน`, () => {
             closeConfirm();
             withAction(async () => {
                 const res = await fetch(apiUrl(`/api/verification/team/${team.id}/disband`), {
@@ -1866,7 +1866,7 @@ export default function TeamContent({ user }) {
                             </button>
                             <span className={`gl-toggle-label ${team.visibility === 'public' ? 'active' : ''}`}>Public</span>
                         </div>
-                        {isTeamEditLocked && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว</p>}
+                        {isTeamEditLocked && <p className="vf-hint mt-2">ไม่สามารถเปลี่ยนสถานะการมองเห็นทีมได้ หากยืนยันส่งทีมเข้าคัดเลือกแล้ว</p>}
                     </div>
 
                     {/* 5. Invite Code */}
@@ -1906,7 +1906,7 @@ export default function TeamContent({ user }) {
                                         <Mail size={16} /> ส่งคำเชิญ
                                     </button>
                                 </div>
-                                {isTeamEditLocked && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว ไม่สามารถเชิญสมาชิกเพิ่มได้</p>}
+                                {isTeamEditLocked && <p className="vf-hint mt-2">ไม่สามารถเชิญสมาชิกเพิ่มได้ หากยืนยันส่งทีมเข้าคัดเลือกแล้ว</p>}
                             </div>
 
                             <div className="gl-team-info-card gl-manage-glass-card">
@@ -1954,7 +1954,7 @@ export default function TeamContent({ user }) {
                                         ))
                                     )}
                                 </div>
-                                {isTeamEditLocked && pendingJoinRequests.length > 0 && <p className="vf-hint mt-2">ทีมถูกล็อกแล้ว จัดการคำขอไม่ได้</p>}
+                                {isTeamEditLocked && pendingJoinRequests.length > 0 && <p className="vf-hint mt-2">ไม่สามารถจัดการคำขอได้ หากยืนยันส่งทีมเข้าคัดเลือกแล้ว</p>}
                             </div>
                         </div>
                     </div>
@@ -1999,7 +1999,7 @@ export default function TeamContent({ user }) {
                             </div>
                         ))}
                     </div>
-                    {isTeamEditLocked && isLeader && <p className="vf-hint mt-3">ทีมถูกล็อกแล้ว ไม่สามารถโอนหัวหน้า/เตะสมาชิกได้</p>}
+                    {isTeamEditLocked && isLeader && <p className="vf-hint mt-3">ไม่สามารถโอนหัวหน้าหรือเตะสมาชิกได้ หากยืนยันส่งทีมเข้าคัดเลือกแล้ว</p>}
                 </div>
             </div>
 
@@ -2018,6 +2018,22 @@ export default function TeamContent({ user }) {
                         </button>
                     </div>
                 </div>
+                {isLeader && isTeamEditLocked && (
+                    <div className="gl-team-info-card gl-manage-danger-card gl-manage-span-full vf-disband-card">
+                        <span className="gl-team-info-label"><AlertTriangle size={13} /> ยุบทีม (หัวหน้าทีม)</span>
+                        <div className="vf-info-banner vf-warning-small">
+                            <AlertTriangle size={14} />
+                            <span>การยุบทีมควรทำเมื่อมีเหตุจำเป็นเท่านั้น และหัวหน้าทีมควรแจ้งสมาชิกทุกคนก่อนทำการยุบทีม เมื่อยุบแล้วทุกคนในทีมจะถูกนำออกจากทีม</span>
+                        </div>
+                        <div className="gl-form-field" style={{ marginBottom: 12 }}>
+                            <label className="gl-form-label">เหตุผลในการยุบทีม</label>
+                            <input className="gl-form-input" value={disbandReason} onChange={e => setDisbandReason(e.target.value)} placeholder="กรอกเหตุผลการยุบทีม" />
+                        </div>
+                        <button className="vf-action-btn vf-btn-disband" disabled={actionLoading || !disbandReason.trim()} onClick={handleDisbandTeam}>
+                            <AlertTriangle size={16} /> ยุบทีม
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -2852,24 +2868,6 @@ export default function TeamContent({ user }) {
                                     {missingFields.map((field) => <li key={`confirm-${field}`}>{field}</li>)}
                                 </ul>
                             )}
-                        </div>
-                    )}
-
-                    {/* Leader: Disband team */}
-                    {isLeader && isSubmitted && (
-                        <div className="gl-team-info-card vf-disband-card">
-                            <span className="gl-team-info-label"><AlertTriangle size={13} /> ยุบทีม (หัวหน้าทีม)</span>
-                            <div className="vf-info-banner vf-warning-small">
-                                <AlertTriangle size={14} />
-                                <span>การยุบทีมควรทำเมื่อมีเหตุจำเป็นเท่านั้น และหัวหน้าทีมควรแจ้งสมาชิกทุกคนก่อนทำการยุบทีม เมื่อยุบแล้วทุกคนในทีมจะถูกนำออกจากทีม</span>
-                            </div>
-                            <div className="gl-form-field" style={{ marginBottom: 12 }}>
-                                <label className="gl-form-label">เหตุผลในการยุบทีม</label>
-                                <input className="gl-form-input" value={disbandReason} onChange={e => setDisbandReason(e.target.value)} placeholder="กรอกเหตุผลการยุบทีม" />
-                            </div>
-                            <button className="vf-action-btn vf-btn-disband" disabled={actionLoading || !disbandReason.trim()} onClick={handleDisbandTeam}>
-                                <AlertTriangle size={16} /> ยุบทีม
-                            </button>
                         </div>
                     )}
                 </div>
