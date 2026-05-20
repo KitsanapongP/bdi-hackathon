@@ -77,12 +77,14 @@ function renderMessageWithLinks(message) {
 }
 
 function NotificationsPage() {
+    const pageSize = 10;
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [markingId, setMarkingId] = useState(null);
     const [markingAll, setMarkingAll] = useState(false);
     const [expandedIds, setExpandedIds] = useState(() => new Set());
+    const [visibleCount, setVisibleCount] = useState(pageSize);
 
     const loadNotifications = useCallback(async (showSpinner = false) => {
         if (showSpinner) {
@@ -187,6 +189,8 @@ function NotificationsPage() {
     };
 
     const unreadCount = items.filter((item) => !item.readAt).length;
+    const visibleItems = items.slice(0, visibleCount);
+    const hasMoreItems = visibleCount < items.length;
 
     return (
         <HomeShell>
@@ -226,7 +230,7 @@ function NotificationsPage() {
                         </div>
                     ) : (
                         <div className="gt-notifications-list">
-                            {items.map((item) => {
+                            {visibleItems.map((item) => {
                                 const isUnread = !item.readAt;
                                 const isExpanded = expandedIds.has(item.notificationLogId);
                                 const emailMeta = getEmailDeliveryMeta(item.emailDelivery);
@@ -287,6 +291,15 @@ function NotificationsPage() {
                                     </article>
                                 );
                             })}
+                            {hasMoreItems ? (
+                                <button
+                                    type="button"
+                                    className="gt-notifications-load-more"
+                                    onClick={() => setVisibleCount((current) => Math.min(current + pageSize, items.length))}
+                                >
+                                    แสดงเพิ่มเติม ({items.length - visibleCount} รายการ)
+                                </button>
+                            ) : null}
                         </div>
                     )}
                 </section>

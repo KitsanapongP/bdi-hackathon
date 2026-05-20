@@ -166,6 +166,11 @@
     transition: background 0.2s, color 0.2s, transform 0.2s;
 }
 
+.dark .gt-notifications-count {
+    color: var(--gt-primary);
+    background: rgba(124, 58, 237, 0.08);
+}
+
 .gt-notifications-count:not(:disabled):hover {
     color: #fff;
     background: var(--gt-primary);
@@ -226,12 +231,41 @@
     gap: 14px;
 }
 
+.gt-notifications-load-more {
+    justify-self: center;
+    margin-top: 4px;
+    border: none;
+    border-radius: 999px;
+    padding: 10px 16px;
+    color: var(--gt-primary);
+    background: rgba(124, 58, 237, 0.1);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, transform 0.2s;
+}
+
+.dark .gt-notifications-load-more {
+    color: var(--gt-primary);
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.gt-notifications-load-more:hover {
+    color: #fff;
+    background: var(--gt-primary);
+    transform: translateY(-1px);
+}
+
 .gt-notification-card {
     padding: 16px;
     border: 1px solid var(--gt-border);
     border-radius: 18px;
-    background: #ffffff;
+    background: var(--gt-surface);
     transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.dark .gt-notification-card {
+    background: rgba(15, 23, 42, 0.72);
+    border-color: rgba(148, 163, 184, 0.22);
 }
 
 .gt-notification-card.is-unread {
@@ -240,6 +274,7 @@
 }
 
 .dark .gt-notification-card.is-unread {
+    border-color: rgba(167, 139, 250, 0.46);
     background: rgba(124, 58, 237, 0.14);
 }
 
@@ -252,6 +287,11 @@
     border-radius: 50%;
     color: var(--gt-primary);
     background: rgba(124, 58, 237, 0.12);
+}
+
+.dark .gt-notification-icon {
+    color: var(--gt-primary);
+    background: rgba(124, 58, 237, 0.08);
 }
 
 .gt-notification-summary {
@@ -333,8 +373,16 @@
     word-break: break-word;
 }
 
+.dark .gt-notification-message-link {
+    color: #93c5fd;
+}
+
 .gt-notification-message-link:hover {
     color: #1d4ed8;
+}
+
+.dark .gt-notification-message-link:hover {
+    color: #bfdbfe;
 }
 
 .gt-notification-channels {
@@ -349,6 +397,7 @@
 
 .dark .gt-notification-channels {
     background: rgba(15, 23, 42, 0.34);
+    border-color: rgba(148, 163, 184, 0.22);
 }
 
 .gt-notification-channel {
@@ -383,13 +432,26 @@
     color: #16a34a;
 }
 
+.dark .gt-notification-channel.is-sent {
+    color: #4ade80;
+}
+
 .gt-notification-channel.is-queued,
 .gt-notification-channel.is-skipped {
     color: #d97706;
 }
 
+.dark .gt-notification-channel.is-queued,
+.dark .gt-notification-channel.is-skipped {
+    color: #fbbf24;
+}
+
 .gt-notification-channel.is-failed {
     color: #dc2626;
+}
+
+.dark .gt-notification-channel.is-failed {
+    color: #f87171;
 }
 
 .gt-notification-actions {
@@ -430,6 +492,7 @@
     .gt-notifications-count {
         width: fit-content;
     }
+
 }
 
 .gt-contact-page-subtitle {
