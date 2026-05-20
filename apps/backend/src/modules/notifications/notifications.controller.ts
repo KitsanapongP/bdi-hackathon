@@ -197,6 +197,7 @@ export async function handleAdminSendOrientationInApp(req: FastifyRequest, reply
       userIds: parsed.data.userIds,
       subject: parsed.data.subject,
       orientationLink: parsed.data.orientationLink,
+      orientationLink2: parsed.data.orientationLink2,
       actorUserId: user.userId,
     });
     return reply.send(ok(result, 'ส่งการแจ้งเตือน Orientation Day สำเร็จ'));

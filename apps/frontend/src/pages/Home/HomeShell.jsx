@@ -130,10 +130,12 @@ function HomeShell({ children }) {
         };
 
         fetchUnreadNotifications();
+        const intervalId = window.setInterval(fetchUnreadNotifications, 15000);
         window.addEventListener('focus', fetchUnreadNotifications);
 
         return () => {
             cancelled = true;
+            window.clearInterval(intervalId);
             window.removeEventListener('focus', fetchUnreadNotifications);
         };
     }, [user]);

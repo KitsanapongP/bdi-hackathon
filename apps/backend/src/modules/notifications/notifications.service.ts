@@ -666,24 +666,37 @@ function toRecipientFirstLastName(row: {
 }
 
 function buildOrientationEmailText(row: {
+  user_code: string | null;
   user_name: string;
   first_name_th: string | null;
   last_name_th: string | null;
   first_name_en: string | null;
   last_name_en: string | null;
-}, orientationLink: string): string {
+}, orientationLink: string, orientationLink2: string): string {
   const { firstName, lastName } = toRecipientFirstLastName(row);
+  const userCode = (row.user_code || '').trim() || 'CPXXXX';
   return [
-    `เรียนคุณ ${firstName} ${lastName}`.trim(),
+    `**เรียนคุณ** ${firstName} ${lastName}`.trim(),
+    `รหัสการลงทะเบียนของคุณคือ **${userCode}** โปรดนำรหัสนี้ไปใช้ในการตั้งชื่อตามขั้นตอนด้านล่าง`,
     '',
-    'ขอแจ้งข่าวสารเกี่ยวกับกิจกรรม BDI Young Innovator Hackathon',
-    'วัน Orientation Day (Online) อบรมออนไลน์',
+    '📢 ขอแจ้งข่าวสารเกี่ยวกับกิจกรรม **วัน Orientation Day (Online) อบรมออนไลน์**',
     '',
-    'คุณมีสิทธิ์ในการเข้าร่วม Orientation day แบบออนไลน์ โดยสามารถเข้าร่วมกิจกรรมได้ตามลิงก์ด้านล่าง',
+    '✅ คุณมีสิทธิ์ในการเข้าร่วม **Orientation Day แบบออนไลน์** ในวันที่ **24 พฤษภาคม 2569 เวลา 13:00 - 16:00 น.** โดยสามารถเข้าร่วมกิจกรรมได้ตามลิงก์ด้านล่าง',
+    '',
+    '📌 **กติกาในการเข้าร่วมกิจกรรมดังนี้**',
+    `1. ผู้ที่มีสิทธิ์เข้าร่วมกิจกรรมจำเป็นต้องตั้งชื่อการเข้าร่วมด้วย รหัสการลงทะเบียน แล้วตามด้วยชื่อจริงของท่าน เช่น **${userCode}-${firstName}**`,
+    '2. หากตั้งชื่อไม่ถูกต้องตามรูปแบบที่กำหนด เจ้าหน้าที่ที่คุมห้อง Zoom **จะไม่อนุมัติให้เข้าห้อง Zoom**',
+    '3. ขอให้เข้าห้อง Zoom ระหว่าง**เวลา 12:30 - 13:00 น.** หากเลยช่วงเวลาที่กำหนด**จะไม่อนุญาตให้เข้า Zoom**',
+    '',
+    '🔗 **ลิงก์ Zoom 1:**',
     orientationLink,
     '',
-    'การเข้าร่วมกิจกรรมครั้งนี้จะได้รับประกาศนียบัตร เมื่อผู้เข้าร่วมกิจกรรม Orientation day',
-    'และทีมของท่านได้ส่งโครงร่างพร้อมวิดีโอนำเสนอ',
+    '🔗 **ลิงก์ Zoom 2:**',
+    orientationLink2,
+    '',
+    '**หมายเหตุ:** เนื่องจากผู้สนใจเข้าร่วมกิจกรรมจำนวนมาก หากไม่สามารถเข้าร่วม Zoom ห้องใดห้องหนึ่งได้ กรุณาลองเข้าอีกห้องหนึ่งแทน',
+    '',
+    'การเข้าร่วมกิจกรรมครั้งนี้ผู้เข้าร่วมจะได้รับประกาศนียบัตร เมื่อผู้เข้าร่วมกิจกรรม **Orientation Day** และทีมของท่านได้**ส่งโครงร่างพร้อมวิดีโอนำเสนอ**',
     '',
     'ขอบคุณครับ/ค่ะ',
     'ทีมงาน BDI Young Innovator Hackathon',
@@ -705,8 +718,13 @@ export async function getAdminNotificationUsers(db: DB) {
   const rows = await repo.getActiveNotificationUsers(db);
   return rows.map((row) => ({
     userId: row.user_id,
+    userCode: row.user_code,
     userName: row.user_name,
     displayName: toRecipientDisplayName(row),
+    firstNameTh: row.first_name_th,
+    lastNameTh: row.last_name_th,
+    firstNameEn: row.first_name_en,
+    lastNameEn: row.last_name_en,
     email: row.email,
   }));
 }
@@ -754,6 +772,7 @@ export async function sendOrientationInAppToUsers(
     actorUserId: number;
     subject: string;
     orientationLink: string;
+    orientationLink2: string;
   },
 ) {
   const recipients = data.target === 'all'
@@ -761,7 +780,7 @@ export async function sendOrientationInAppToUsers(
     : await repo.getActiveNotificationUsersByIds(db, Array.from(new Set(data.userIds)));
 
   for (const recipient of recipients) {
-    const messageText = buildOrientationEmailText(recipient, data.orientationLink);
+    const messageText = buildOrientationEmailText(recipient, data.orientationLink, data.orientationLink2);
 
     await repo.createNotificationLog(db, {
       eventCode: 'ORIENTATION_DAY_IN_APP',

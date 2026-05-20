@@ -5,6 +5,77 @@ import AdminDataTable from '../shared/AdminDataTable'
 import PageHeader from '../shared/PageHeader'
 import { useAdminToast } from '../shared/adminContexts'
 
+const DEFAULT_ORIENTATION_ZOOM_1 = `Topic: Orientation Day (Online) 1
+Time: May 24, 2026 12:30 PM Bangkok
+Join Zoom Meeting
+https://kku-th.zoom.us/j/99056138821?pwd=rt7y9zMTU5tNB8mDZaMnEcpxzFDqWT.1
+
+Meeting ID: 990 5613 8821
+Passcode: 960406`
+
+const DEFAULT_ORIENTATION_ZOOM_2 = `Topic: Orientation Day (Online) 2
+Time: May 24, 2026 12:30 PM Bangkok
+Join Zoom Meeting
+https://kku-th.zoom.us/j/92219759247?pwd=MWAWLrJ8wUkggAwQHJpf49f4uGnFPP.1
+
+Meeting ID: 922 1975 9247
+Passcode: 495885`
+
+function getOrientationPreviewUser(users, selectedIds, target) {
+  if (target === 'selected' && selectedIds.length > 0) {
+    const selected = new Set(selectedIds.map(String))
+    return users.find((user) => selected.has(String(user.userId))) || null
+  }
+  return users[0] || null
+}
+
+function buildOrientationPreviewMessage(user, orientationLink, orientationLink2) {
+  const firstName = (user?.firstNameTh || user?.firstNameEn || user?.userName || 'สมชาย').trim()
+  const lastName = (user?.lastNameTh || user?.lastNameEn || '').trim()
+  const userCode = (user?.userCode || 'CP0001').trim()
+
+  return [
+    `**เรียนคุณ** ${firstName} ${lastName}`.trim(),
+    `รหัสการลงทะเบียนของคุณคือ **${userCode}** โปรดนำรหัสนี้ไปใช้ในการตั้งชื่อตามขั้นตอนด้านล่าง`,
+    '',
+    '📢 ขอแจ้งข่าวสารเกี่ยวกับกิจกรรม **วัน Orientation Day (Online) อบรมออนไลน์**',
+    '',
+    '✅ คุณมีสิทธิ์ในการเข้าร่วม **Orientation Day แบบออนไลน์** ในวันที่ **24 พฤษภาคม 2569 เวลา 13:00 - 16:00 น.** โดยสามารถเข้าร่วมกิจกรรมได้ตามลิงก์ด้านล่าง',
+    '',
+    '📌 **กติกาในการเข้าร่วมกิจกรรมดังนี้**',
+    `1. ผู้ที่มีสิทธิ์เข้าร่วมกิจกรรมจำเป็นต้องตั้งชื่อการเข้าร่วมด้วย รหัสการลงทะเบียน แล้วตามด้วยชื่อของท่าน เช่น **${userCode}-${firstName}**`,
+    '2. หากตั้งชื่อไม่ถูกต้องตามรูปแบบที่กำหนด เจ้าหน้าที่ที่คุมห้อง Zoom **จะไม่อนุมัติให้เข้าห้อง Zoom**',
+    '3. ขอให้เข้าห้อง Zoom ระหว่าง**เวลา 12:30 - 13:00 น.** หากเลยช่วงเวลาที่กำหนด**จะไม่อนุญาตให้เข้า Zoom**',
+    '',
+    '🔗 **ลิงก์ Zoom 1:**',
+    orientationLink || DEFAULT_ORIENTATION_ZOOM_1,
+    '',
+    '🔗 **ลิงก์ Zoom 2:**',
+    orientationLink2 || DEFAULT_ORIENTATION_ZOOM_2,
+    '',
+    '**หมายเหตุ:** เนื่องจากผู้สนใจเข้าร่วมกิจกรรมจำนวนมาก หากไม่สามารถเข้าร่วม Zoom ห้องใดห้องหนึ่งได้ กรุณาลองเข้าอีกห้องหนึ่งแทน',
+    '',
+    'การเข้าร่วมกิจกรรมครั้งนี้ผู้เข้าร่วมจะได้รับประกาศนียบัตร เมื่อผู้เข้าร่วมกิจกรรม **Orientation Day** และทีมของท่านได้**ส่งโครงร่างพร้อมวิดีโอนำเสนอ**',
+    '',
+    'ขอบคุณครับ/ค่ะ',
+    'ทีมงาน BDI Young Innovator Hackathon',
+  ].join('\n')
+}
+
+function renderOrientationPreviewText(message) {
+  return String(message || '').split(/(\*\*[^*]+\*\*|https?:\/\/[^\s]+)/g).map((part, index) => {
+    if (/^\*\*[^*]+\*\*$/.test(part)) {
+      return <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>
+    }
+
+    if (/^https?:\/\/[^\s]+$/.test(part)) {
+      return <a key={`${part}-${index}`} href={part} target="_blank" rel="noopener noreferrer">{part}</a>
+    }
+
+    return part
+  })
+}
+
 export default function NotificationSettingsPage() {
   const { pushToast } = useAdminToast()
   const [settings, setSettings] = useState([])
@@ -18,8 +89,10 @@ export default function NotificationSettingsPage() {
     target: 'selected',
     userIds: [],
     subject: 'แจ้งสิทธิ์เข้าร่วม Orientation Day (Online)',
-    orientationLink: 'https://www.facebook.com/bdihackathon',
+    orientationLink: DEFAULT_ORIENTATION_ZOOM_1,
+    orientationLink2: DEFAULT_ORIENTATION_ZOOM_2,
   })
+  const [editingOrientationLinks, setEditingOrientationLinks] = useState(false)
   const [burstTestRecipientEmail, setBurstTestRecipientEmail] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -203,8 +276,9 @@ export default function NotificationSettingsPage() {
   const sendOrientationInApp = async () => {
     const subject = orientationInApp.subject.trim()
     const orientationLink = orientationInApp.orientationLink.trim()
-    if (!subject || !orientationLink) {
-      pushToast({ type: 'error', title: 'กรุณากรอกหัวข้อและลิงก์ Orientation Day' })
+    const orientationLink2 = orientationInApp.orientationLink2.trim()
+    if (!subject || !orientationLink || !orientationLink2) {
+      pushToast({ type: 'error', title: 'กรุณากรอกหัวข้อและลิงก์ Orientation Day ทั้ง 2 ลิงก์' })
       return
     }
     if (orientationInApp.target === 'selected' && orientationInApp.userIds.length === 0) {
@@ -223,6 +297,7 @@ export default function NotificationSettingsPage() {
           userIds: orientationInApp.userIds.map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0),
           subject,
           orientationLink,
+          orientationLink2,
         }),
       })
       const payload = await res.json()
@@ -262,6 +337,22 @@ export default function NotificationSettingsPage() {
       setSendingBurstTest(false)
     }
   }
+
+  const orientationSelectedUsers = orientationInApp.target === 'all'
+    ? userOptions
+    : userOptions.filter((user) => orientationInApp.userIds.map(String).includes(String(user.userId)))
+  const orientationRecipientCount = orientationInApp.target === 'all' ? userOptions.length : orientationSelectedUsers.length
+  const orientationPreviewUser = getOrientationPreviewUser(userOptions, orientationInApp.userIds, orientationInApp.target)
+  const orientationPreviewMessage = buildOrientationPreviewMessage(
+    orientationPreviewUser,
+    orientationInApp.orientationLink.trim(),
+    orientationInApp.orientationLink2.trim(),
+  )
+  const canSendOrientation = !sendingOrientationInApp
+    && orientationInApp.subject.trim()
+    && orientationInApp.orientationLink.trim()
+    && orientationInApp.orientationLink2.trim()
+    && orientationRecipientCount > 0
 
   return (
     <div className="admin-ui-stack">
@@ -486,6 +577,12 @@ export default function NotificationSettingsPage() {
       <article className="admin-ui-panel">
         <h3>ส่งการแจ้งเตือน Orientation Day (Online) ส่งเฉพาะ In-App Notifications</h3>
         <div className="admin-ui-form">
+          <div className="admin-ui-panel" style={{ marginBottom: 0, background: 'var(--admin-ui-surface-soft)' }}>
+            <strong>สรุปก่อนส่ง</strong>
+            <p className="admin-ui-text-muted" style={{ margin: '6px 0 0' }}>
+              ผู้รับ {orientationRecipientCount} คน | ส่งเฉพาะผู้ใช้ที่ active | ข้อความจะแสดงใน Notification Center เท่านั้น
+            </p>
+          </div>
           <label>
             กลุ่มผู้รับ
             <select
@@ -514,7 +611,23 @@ export default function NotificationSettingsPage() {
                   </option>
                 ))}
               </select>
-              <span className="admin-ui-text-muted">เลือกแล้ว {orientationInApp.userIds.length} คน</span>
+              <div className="admin-ui-header-actions" style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="admin-ui-btn"
+                  onClick={() => setOrientationInApp((prev) => ({ ...prev, userIds: userOptions.map((user) => String(user.userId)) }))}
+                >
+                  เลือกทั้งหมด
+                </button>
+                <button
+                  type="button"
+                  className="admin-ui-btn"
+                  onClick={() => setOrientationInApp((prev) => ({ ...prev, userIds: [] }))}
+                >
+                  ล้างรายการ
+                </button>
+                <span className="admin-ui-text-muted">เลือกแล้ว {orientationInApp.userIds.length} คน</span>
+              </div>
             </label>
           )}
           <label>
@@ -525,23 +638,77 @@ export default function NotificationSettingsPage() {
               placeholder="หัวข้อที่จะแสดงใน Notification Center"
             />
           </label>
-          <label>
-            ลิงก์ Orientation Day
-            <input
-              value={orientationInApp.orientationLink}
-              onChange={(event) => setOrientationInApp((prev) => ({ ...prev, orientationLink: event.target.value }))}
-              placeholder="https://www.facebook.com/bdihackathon"
-            />
-          </label>
           <div className="admin-ui-panel" style={{ marginBottom: 0 }}>
-            <strong>Template ที่จะส่ง</strong>
-            <p className="admin-ui-text-muted">
-              ระบบจะแทนชื่อผู้รับในรูปแบบ “เรียนคุณ {'{{first_name}}'} {'{{last_name}}'}” และสร้างเป็น in-app notification เท่านั้น
-            </p>
+            <div className="admin-ui-page-header" style={{ alignItems: 'center', gap: 12 }}>
+              <div className="admin-ui-page-header-main">
+                <h2 style={{ fontSize: '1rem' }}>ลิงก์ Zoom สำหรับ Orientation Day</h2>
+                <span className="admin-ui-text-muted">
+                  {editingOrientationLinks ? 'กำลังแก้ไขลิงก์จริง โปรดตรวจสอบก่อนส่ง' : 'ล็อกไว้เพื่อป้องกันการแก้ไขลิงก์จริงโดยไม่ตั้งใจ'}
+                </span>
+              </div>
+              <div className="admin-ui-header-actions">
+                {editingOrientationLinks ? (
+                  <button
+                    type="button"
+                    className="admin-ui-btn"
+                    onClick={() => setOrientationInApp((prev) => ({
+                      ...prev,
+                      orientationLink: DEFAULT_ORIENTATION_ZOOM_1,
+                      orientationLink2: DEFAULT_ORIENTATION_ZOOM_2,
+                    }))}
+                  >
+                    รีเซ็ตลิงก์จริง
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className={`admin-ui-btn ${editingOrientationLinks ? 'admin-ui-btn-primary' : ''}`}
+                  onClick={() => setEditingOrientationLinks((prev) => !prev)}
+                >
+                  {editingOrientationLinks ? 'บันทึกและล็อกลิงก์' : 'แก้ไขลิงก์ Zoom'}
+                </button>
+              </div>
+            </div>
+
+            <div className="admin-ui-two-col" style={{ marginTop: 14 }}>
+              <label>
+                ห้อง Zoom 1
+                <textarea
+                  rows={8}
+                  value={orientationInApp.orientationLink}
+                  disabled={!editingOrientationLinks}
+                  onChange={(event) => setOrientationInApp((prev) => ({ ...prev, orientationLink: event.target.value }))}
+                  placeholder="ข้อมูล Zoom 1"
+                />
+              </label>
+              <label>
+                ห้อง Zoom 2
+                <textarea
+                  rows={8}
+                  value={orientationInApp.orientationLink2}
+                  disabled={!editingOrientationLinks}
+                  onChange={(event) => setOrientationInApp((prev) => ({ ...prev, orientationLink2: event.target.value }))}
+                  placeholder="ข้อมูล Zoom 2"
+                />
+              </label>
+            </div>
           </div>
-          <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={sendingOrientationInApp} onClick={sendOrientationInApp}>
+          <div className="admin-ui-panel" style={{ marginBottom: 0 }}>
+            <strong>Preview ข้อความที่จะส่ง</strong>
+            <p className="admin-ui-text-muted">
+              ตัวอย่างนี้ใช้ข้อมูลของ {orientationPreviewUser ? (orientationPreviewUser.displayName || orientationPreviewUser.userName) : 'ผู้รับตัวอย่าง'} เพื่อให้ตรวจรูปแบบก่อนส่งจริง
+            </p>
+            <div
+              className="admin-ui-panel"
+              style={{ marginTop: 12, marginBottom: 0, whiteSpace: 'pre-line', boxShadow: 'none', background: 'var(--admin-ui-surface-soft)' }}
+            >
+              <strong>{orientationInApp.subject || 'แจ้งสิทธิ์เข้าร่วม Orientation Day (Online)'}</strong>
+              <p style={{ margin: '10px 0 0' }}>{renderOrientationPreviewText(orientationPreviewMessage)}</p>
+            </div>
+          </div>
+          <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={!canSendOrientation} onClick={sendOrientationInApp}>
             <Bell size={14} />
-            {sendingOrientationInApp ? 'กำลังส่ง...' : 'ส่งการแจ้งเตือน Orientation Day'}
+            {sendingOrientationInApp ? 'กำลังส่ง...' : `ส่งการแจ้งเตือน Orientation Day (${orientationRecipientCount} คน)`}
           </button>
         </div>
       </article>

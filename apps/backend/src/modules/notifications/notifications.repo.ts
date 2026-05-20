@@ -316,6 +316,7 @@ export async function getAdminNotificationRecipients(db: DB): Promise<AdminNotif
 
 export async function getActiveNotificationUsers(db: DB): Promise<Array<{
   user_id: number;
+  user_code: string | null;
   user_name: string;
   email: string | null;
   first_name_th: string | null;
@@ -324,7 +325,7 @@ export async function getActiveNotificationUsers(db: DB): Promise<Array<{
   last_name_en: string | null;
 }>> {
   const [rows] = await db.query<RowDataPacket[]>(`
-    SELECT user_id, user_name, email, first_name_th, last_name_th, first_name_en, last_name_en
+    SELECT user_id, user_code, user_name, email, first_name_th, last_name_th, first_name_en, last_name_en
     FROM user_users
     WHERE is_active = 1
       AND deleted_at IS NULL
@@ -334,6 +335,7 @@ export async function getActiveNotificationUsers(db: DB): Promise<Array<{
   `);
   return rows as Array<{
     user_id: number;
+    user_code: string | null;
     user_name: string;
     email: string | null;
     first_name_th: string | null;
@@ -348,6 +350,7 @@ export async function getActiveNotificationUsersByIds(
   userIds: number[],
 ): Promise<Array<{
   user_id: number;
+  user_code: string | null;
   user_name: string;
   email: string | null;
   first_name_th: string | null;
@@ -357,7 +360,7 @@ export async function getActiveNotificationUsersByIds(
 }>> {
   if (userIds.length === 0) return [];
   const [rows] = await db.query<RowDataPacket[]>(`
-    SELECT user_id, user_name, email, first_name_th, last_name_th, first_name_en, last_name_en
+    SELECT user_id, user_code, user_name, email, first_name_th, last_name_th, first_name_en, last_name_en
     FROM user_users
     WHERE is_active = 1
       AND deleted_at IS NULL
@@ -366,6 +369,7 @@ export async function getActiveNotificationUsersByIds(
   `, [userIds]);
   return rows as Array<{
     user_id: number;
+    user_code: string | null;
     user_name: string;
     email: string | null;
     first_name_th: string | null;

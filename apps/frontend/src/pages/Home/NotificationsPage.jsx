@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Bell, CheckCircle2, ChevronDown, Clock, Inbox, Loader2, MailCheck, MailQuestion, MailWarning } from 'lucide-react';
 import HomeShell from './HomeShell';
 import { apiUrl } from '../../lib/api';
@@ -48,7 +48,11 @@ function renderMessageWithLinks(message) {
     const text = String(message || '');
     if (!text) return null;
 
-    return text.split(/(https?:\/\/[^\s]+)/g).map((part, index) => {
+    return text.split(/(\*\*[^*]+\*\*|https?:\/\/[^\s]+)/g).map((part, index) => {
+        if (/^\*\*[^*]+\*\*$/.test(part)) {
+            return <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>;
+        }
+
         if (/^https?:\/\/[^\s]+$/.test(part)) {
             return (
                 <a
@@ -80,32 +84,54 @@ function NotificationsPage() {
     const [markingAll, setMarkingAll] = useState(false);
     const [expandedIds, setExpandedIds] = useState(() => new Set());
 
-    useEffect(() => {
-        const loadNotifications = async () => {
+    const loadNotifications = useCallback(async (showSpinner = false) => {
+        if (showSpinner) {
             setLoading(true);
-            setError(null);
+        }
+        setError(null);
 
-            try {
-                const response = await fetch(apiUrl('/api/notifications/inbox?limit=100'), {
-                    credentials: 'include',
-                });
-                const payload = await response.json().catch(() => null);
+        try {
+            const response = await fetch(apiUrl('/api/notifications/inbox?limit=100'), {
+                credentials: 'include',
+            });
+            const payload = await response.json().catch(() => null);
 
-                if (!response.ok || !payload?.ok) {
-                    throw new Error(payload?.message || 'ไม่สามารถโหลดการแจ้งเตือนได้');
-                }
+            if (!response.ok || !payload?.ok) {
+                throw new Error(payload?.message || 'ไม่สามารถโหลดการแจ้งเตือนได้');
+            }
 
-                setItems(Array.isArray(payload.data) ? payload.data : []);
-            } catch (err) {
+            setItems(Array.isArray(payload.data) ? payload.data : []);
+        } catch (err) {
+            if (showSpinner) {
                 setError(err.message || 'ไม่สามารถโหลดการแจ้งเตือนได้');
                 setItems([]);
-            } finally {
+            }
+        } finally {
+            if (showSpinner) {
                 setLoading(false);
             }
+        }
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const refreshNotifications = (showSpinner = false) => {
+            if (!cancelled) loadNotifications(showSpinner);
         };
 
-        loadNotifications();
-    }, []);
+        const handleFocus = () => refreshNotifications(false);
+
+        refreshNotifications(true);
+        const intervalId = window.setInterval(() => refreshNotifications(false), 15000);
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [loadNotifications]);
 
     const markAsRead = async (notificationLogId) => {
         if (!notificationLogId) return;
