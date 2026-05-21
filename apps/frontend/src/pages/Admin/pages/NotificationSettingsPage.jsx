@@ -88,7 +88,7 @@ export default function NotificationSettingsPage() {
   const [orientationInApp, setOrientationInApp] = useState({
     target: 'selected',
     userIds: [],
-    subject: 'แจ้งสิทธิ์เข้าร่วม Orientation Day (Online)',
+    subject: 'แจ้งสิทธิ์เข้าร่วมกิจกรรม Orientation Day (Online)',
     orientationLink: DEFAULT_ORIENTATION_ZOOM_1,
     orientationLink2: DEFAULT_ORIENTATION_ZOOM_2,
   })
