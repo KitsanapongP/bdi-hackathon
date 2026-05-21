@@ -42,7 +42,7 @@ function toUserSafe(row: {
     institution_name_en?: string | null;
     home_province?: string | null;
     is_active: number;
-}, accessRole: 'admin' | 'judge' | null = null, teamInfo: { teamId: number; teamCode: string; role: string } | null = null): UserSafe {
+}, accessRole: 'admin' | 'judge' | null = null, teamInfo: { teamId: number; teamCode: string; role: string } | null = null, orientationDenied = false): UserSafe {
     return {
         userId: row.user_id,
         userName: row.user_name,
@@ -61,6 +61,7 @@ function toUserSafe(row: {
         homeProvince: row.home_province ?? null,
         isActive: row.is_active === 1,
         accessRole,
+        orientationDenied,
         hasTeam: teamInfo !== null,
         ...(teamInfo ? {
             teamId: teamInfo.teamId,
@@ -282,7 +283,8 @@ async function buildUserResponse(db: DB, input: {
     homeProvince: string;
 }): Promise<UserSafe> {
     const accessRole = await repo.findAccessRole(db, input.userId);
-    const teamInfo = await repo.findUserTeam(db, input.userId);
+    const orientationDenied = await repo.isUserOrientationDenied(db, input.userId);
+    const teamInfo = orientationDenied ? null : await repo.findUserTeam(db, input.userId);
 
     return {
         userId: input.userId,
@@ -302,6 +304,7 @@ async function buildUserResponse(db: DB, input: {
         homeProvince: input.homeProvince,
         isActive: true,
         accessRole,
+        orientationDenied,
         hasTeam: teamInfo !== null,
         ...(teamInfo ? {
             teamId: teamInfo.teamId,
@@ -556,8 +559,9 @@ async function completePendingRegistration(db: DB, pending: { registration_id: n
         throw new UnauthorizedError('ไม่พบผู้ใช้');
     }
     const accessRole = await repo.findAccessRole(db, row.user_id);
-    const teamInfo = await repo.findUserTeam(db, row.user_id);
-    return toUserSafe(row, accessRole, teamInfo);
+    const orientationDenied = await repo.isUserOrientationDenied(db, row.user_id);
+    const teamInfo = orientationDenied ? null : await repo.findUserTeam(db, row.user_id);
+    return toUserSafe(row, accessRole, teamInfo, orientationDenied);
 }
 
 export async function verifyRegistrationCode(db: DB, input: RegisterVerifyInput): Promise<UserSafe> {
@@ -687,7 +691,8 @@ export async function registerUser(db: DB, input: RegisterInput): Promise<UserSa
 
     // Look up access role and team info
     const accessRole = await repo.findAccessRole(db, userId);
-    const teamInfo = await repo.findUserTeam(db, userId);
+    const orientationDenied = await repo.isUserOrientationDenied(db, userId);
+    const teamInfo = orientationDenied ? null : await repo.findUserTeam(db, userId);
 
     return {
         userId,
@@ -707,6 +712,7 @@ export async function registerUser(db: DB, input: RegisterInput): Promise<UserSa
         homeProvince: input.homeProvince,
         isActive: true,
         accessRole,
+        orientationDenied,
         hasTeam: teamInfo !== null,
         ...(teamInfo ? {
             teamId: teamInfo.teamId,
@@ -730,8 +736,9 @@ export async function loginUser(db: DB, input: LoginInput): Promise<UserSafe> {
     }
 
     const accessRole = await repo.findAccessRole(db, row.user_id);
-    const teamInfo = await repo.findUserTeam(db, row.user_id);
-    return toUserSafe(row, accessRole, teamInfo);
+    const orientationDenied = await repo.isUserOrientationDenied(db, row.user_id);
+    const teamInfo = orientationDenied ? null : await repo.findUserTeam(db, row.user_id);
+    return toUserSafe(row, accessRole, teamInfo, orientationDenied);
 }
 
 /** Get user by ID */
@@ -741,6 +748,7 @@ export async function getUserById(db: DB, userId: number): Promise<UserSafe> {
         throw new UnauthorizedError('ไม่พบผู้ใช้');
     }
     const accessRole = await repo.findAccessRole(db, userId);
-    const teamInfo = await repo.findUserTeam(db, userId);
-    return toUserSafe(row, accessRole, teamInfo);
+    const orientationDenied = await repo.isUserOrientationDenied(db, userId);
+    const teamInfo = orientationDenied ? null : await repo.findUserTeam(db, userId);
+    return toUserSafe(row, accessRole, teamInfo, orientationDenied);
 }

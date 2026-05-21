@@ -379,6 +379,16 @@ export async function getActiveNotificationUsersByIds(
   }>;
 }
 
+export async function getOrientationDeniedUserIds(db: DB, userIds: number[]): Promise<Set<number>> {
+  if (userIds.length === 0) return new Set();
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT user_id
+    FROM user_orientation_denials
+    WHERE user_id IN (?)
+  `, [Array.from(new Set(userIds))]);
+  return new Set(rows.map((row) => Number(row.user_id)).filter((userId) => Number.isFinite(userId)));
+}
+
 export async function setAdminNotificationRecipient(
   db: DB,
   userId: number,

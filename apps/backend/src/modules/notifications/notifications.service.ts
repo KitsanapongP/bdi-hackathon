@@ -680,7 +680,7 @@ function buildOrientationEmailText(row: {
     '',
     `**เรียนคุณ** ${firstName} ${lastName}`.trim(),
     '',
-    '✅ คุณมีสิทธิ์ในการเข้าร่วม **Orientation Day แบบออนไลน์** ในวันที่ **24 พฤษภาคม 2569 เวลา 13:00 - 16:00 น.** โดยสามารถเข้าร่วมกิจกรรมได้ตามลิงก์ด้านล่าง',
+    '✅ คุณมีสิทธิ์ในการเข้าร่วมกิจกรรม **Orientation Day แบบออนไลน์** ในวันที่ **24 พฤษภาคม 2569 เวลา 13:00 - 16:00 น.** โดยสามารถเข้าร่วมกิจกรรมได้ตามลิงก์ด้านล่าง',
     `รหัสการลงทะเบียนของคุณคือ **${userCode}** โปรดนำรหัสนี้ไปใช้ในการตั้งชื่อตามขั้นตอนด้านล่าง`,
     '',
     '📌 **กติกาในการเข้าร่วมกิจกรรมดังนี้**',
@@ -697,6 +697,33 @@ function buildOrientationEmailText(row: {
     '**หมายเหตุ:** เนื่องจากผู้สนใจเข้าร่วมกิจกรรมจำนวนมาก หากไม่สามารถเข้าร่วม Zoom ห้องใดห้องหนึ่งได้ กรุณาลองเข้าอีกห้องหนึ่งแทน',
     '',
     'การเข้าร่วมกิจกรรมครั้งนี้ผู้เข้าร่วมจะได้รับประกาศนียบัตร เมื่อผู้เข้าร่วมกิจกรรม **Orientation Day** และทีมของท่านได้**ส่งโครงร่างพร้อมวิดีโอนำเสนอ**',
+    '',
+    'ขอบคุณครับ/ค่ะ',
+    'ทีมงาน BDI Young Innovator Hackathon',
+  ].join('\n');
+}
+
+function buildOrientationDeniedText(row: {
+  user_name: string;
+  first_name_th: string | null;
+  last_name_th: string | null;
+  first_name_en: string | null;
+  last_name_en: string | null;
+}): string {
+  const { firstName, lastName } = toRecipientFirstLastName(row);
+  return [
+    '📢 ขอแจ้งข่าวสารเกี่ยวกับกิจกรรม **วัน Orientation Day (Online) อบรมออนไลน์**',
+    '',
+    `**เรียนคุณ** ${firstName} ${lastName}`.trim(),
+    '',
+    '❌ บัญชีนี้ **ไม่ได้รับสิทธิ์เข้าร่วมกิจกรรม Orientation Day (Online)**',
+    '',
+    'เนื่องจากตรวจสอบพบความซ้ำซ้อนของชื่อผู้ลงทะเบียน',
+    'ผู้ที่ลงทะเบียนมากกว่า 1 บัญชี จะได้รับสิทธิ์เพียง 1 บัญชีเท่านั้น',
+    'บัญชีนี้จึงจะไม่สามารถใช้สิทธิ์เข้าร่วมกิจกรรม Orientation Day และไม่สามารถเข้าใช้งานหน้าทีมได้',
+    'กรุณาตรวจสอบบัญชีที่ท่านใช้ลงทะเบียน และใช้บัญชีที่มีสิทธิ์เข้าร่วมกิจกรรมตามที่ทีมงานได้แจ้งไปทางอีเมล',
+    '',
+    'หากท่านมีข้อสงสัยหรือต้องการสอบถามข้อมูลเพิ่มเติม กรุณาติดต่อทีมงาน',
     '',
     'ขอบคุณครับ/ค่ะ',
     'ทีมงาน BDI Young Innovator Hackathon',
@@ -778,25 +805,36 @@ export async function sendOrientationInAppToUsers(
   const recipients = data.target === 'all'
     ? await repo.getActiveNotificationUsers(db)
     : await repo.getActiveNotificationUsersByIds(db, Array.from(new Set(data.userIds)));
+  const deniedUserIds = await repo.getOrientationDeniedUserIds(db, recipients.map((recipient) => recipient.user_id));
+  let deniedRecipients = 0;
 
   for (const recipient of recipients) {
-    const messageText = buildOrientationEmailText(recipient, data.orientationLink, data.orientationLink2);
+    const isDenied = deniedUserIds.has(recipient.user_id);
+    const messageText = isDenied
+      ? buildOrientationDeniedText(recipient)
+      : buildOrientationEmailText(recipient, data.orientationLink, data.orientationLink2);
+    if (isDenied) deniedRecipients += 1;
 
     await repo.createNotificationLog(db, {
-      eventCode: 'ORIENTATION_DAY_IN_APP',
+      eventCode: isDenied ? 'ORIENTATION_DAY_DENIED_IN_APP' : 'ORIENTATION_DAY_IN_APP',
       channel: 'in_app',
       teamId: null,
       recipientUserId: recipient.user_id,
       actorUserId: data.actorUserId,
-      templateCode: 'ORIENTATION_DAY_ONLINE',
-      subjectText: data.subject,
+      templateCode: isDenied ? 'ORIENTATION_DAY_DUPLICATE_DENIED' : 'ORIENTATION_DAY_ONLINE',
+      subjectText: isDenied ? 'แจ้งสิทธิ์เข้าร่วมกิจกรรม Orientation Day (Online)' : data.subject,
       messageText,
       status: 'sent',
       sentAt: new Date(),
     });
   }
 
-  return { target: data.target, totalRecipients: recipients.length };
+  return {
+    target: data.target,
+    totalRecipients: recipients.length,
+    eligibleRecipients: recipients.length - deniedRecipients,
+    deniedRecipients,
+  };
 }
 
 export async function updateAdminNotificationRecipient(

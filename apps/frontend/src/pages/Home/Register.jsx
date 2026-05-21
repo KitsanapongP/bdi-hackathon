@@ -245,6 +245,7 @@ function RegisterPage() {
             name: user.userName,
             email: user.email,
             accessRole: user.accessRole || null,
+            orientationDenied: user.orientationDenied || false,
             hasTeam: user.hasTeam || false,
             teamId: user.teamId || null,
             avatarUrl: user.avatarUrl || null,

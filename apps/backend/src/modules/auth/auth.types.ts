@@ -105,6 +105,7 @@ export interface UserSafe {
     homeProvince: string | null;
     isActive: boolean;
     accessRole: 'admin' | 'judge' | null;
+    orientationDenied?: boolean;
     hasTeam?: boolean;
     teamId?: number;
     teamCode?: string;

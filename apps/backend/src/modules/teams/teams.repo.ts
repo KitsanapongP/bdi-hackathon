@@ -195,6 +195,16 @@ export async function checkUserInAnyTeam(db: DB, userId: number): Promise<boolea
     return rows.length > 0;
 }
 
+export async function isUserOrientationDenied(db: DB, userId: number): Promise<boolean> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT 1
+        FROM user_orientation_denials
+        WHERE user_id = :userId
+        LIMIT 1
+    `, { userId });
+    return rows.length > 0;
+}
+
 export async function removeTeamMember(db: DB, teamId: number, userId: number): Promise<void> {
     await db.query(`
         UPDATE team_members SET member_status = 'left', left_at = NOW() 

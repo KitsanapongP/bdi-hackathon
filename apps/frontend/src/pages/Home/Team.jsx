@@ -468,9 +468,13 @@ export default function TeamContent({ user }) {
     const maxMembers = Math.max(1, Number(teamMemberLimits.max) || TEAM_MEMBER_MAX_DEFAULT);
     const minSubmitMembers = Math.max(1, Number(teamMemberLimits.min) || TEAM_MEMBER_MIN_DEFAULT);
     const isTeamRecruitmentOpen = teamRecruitmentWindow.status === SYSTEM_WINDOW_STATUS.OPEN;
+    const isTeamAccessDenied = Boolean(user?.orientationDenied);
+    const canUseTeamLobbyActions = isTeamRecruitmentOpen && !isTeamAccessDenied;
+    const teamAccessDeniedMessage = 'ไม่มีสิทธิ์เข้าใช้งานหน้าทีม เนื่องจากตรวจสอบพบความซ้ำซ้อนของชื่อผู้ลงทะเบียน';
     const teamRecruitmentMessage = teamRecruitmentWindow.status === SYSTEM_WINDOW_STATUS.NOT_OPEN
         ? `การสร้างทีมจะเปิดในวันที่ ${formatThaiDate(teamRecruitmentWindow.openAtMs)}`
         : (teamRecruitmentWindow.status === SYSTEM_WINDOW_STATUS.CLOSED ? 'หมดเขตการรับสมัคร' : '');
+    const teamLobbyDisabledMessage = isTeamAccessDenied ? teamAccessDeniedMessage : teamRecruitmentMessage;
     const isTeamSelectionSubmissionOpen = teamSelectionSubmissionWindow.status === SYSTEM_WINDOW_STATUS.OPEN;
     const teamSelectionSubmissionMessage = teamSelectionSubmissionWindow.status === SYSTEM_WINDOW_STATUS.NOT_OPEN
         ? `การส่งทีมเข้าคัดเลือกจะเปิดในวันที่ ${formatThaiDate(teamSelectionSubmissionWindow.openAtMs)}`
@@ -554,9 +558,9 @@ export default function TeamContent({ user }) {
     }, []);
 
     useEffect(() => {
-        if (isTeamRecruitmentOpen) return;
+        if (canUseTeamLobbyActions) return;
         setActiveView(null);
-    }, [isTeamRecruitmentOpen]);
+    }, [canUseTeamLobbyActions]);
 
     useEffect(() => {
         if (!user?.hasTeam || !user?.teamId) return;
@@ -603,7 +607,7 @@ export default function TeamContent({ user }) {
     }, [user]);
 
     useEffect(() => {
-        if (activeView !== 'browse') return;
+        if (activeView !== 'browse' || isTeamAccessDenied) return;
         fetch(apiUrl('/api/teams?visibility=public'), { credentials: 'include' })
             .then((res) => res.json())
             .then((payload) => {
@@ -616,9 +620,13 @@ export default function TeamContent({ user }) {
                 })));
             })
             .catch((err) => console.error('failed to fetch public teams', err));
-    }, [activeView]);
+    }, [activeView, isTeamAccessDenied]);
 
     useEffect(() => {
+        if (isTeamAccessDenied) {
+            setMyInvitations([]);
+            return;
+        }
         if (user?.hasTeam) {
             setMyInvitations([]);
             return;
@@ -629,7 +637,7 @@ export default function TeamContent({ user }) {
                 if (payload.ok && Array.isArray(payload.data)) setMyInvitations(payload.data);
             })
             .catch((err) => console.error('failed to fetch invitations', err));
-    }, [user]);
+    }, [user, isTeamAccessDenied]);
 
     useEffect(() => {
         if (!user?.hasTeam || !user?.teamId || !isLeader) {
@@ -999,35 +1007,35 @@ export default function TeamContent({ user }) {
                                 <h2>ค้นหาทีมของคุณ</h2>
                                 <p>เริ่มต้นการแข่งขันโดยสร้างทีมใหม่ หรือเข้าร่วมทีมที่มีอยู่แล้ว</p>
                             </div>
-                            {teamRecruitmentMessage && (
+                            {teamLobbyDisabledMessage && (
                                 <div className="gl-team-window-info">
                                     <Info size={18} />
-                                    <span>{teamRecruitmentMessage}</span>
+                                    <span>{teamLobbyDisabledMessage}</span>
                                 </div>
                             )}
                             <div className="gl-lobby-cards gl-lobby-2x2">
-                                <div className={`gl-lobby-card create-card ${!isTeamRecruitmentOpen ? 'is-disabled' : ''}`} onClick={() => { if (isTeamRecruitmentOpen) setActiveView('create'); }}>
+                                <div className={`gl-lobby-card create-card ${!canUseTeamLobbyActions ? 'is-disabled' : ''}`} onClick={() => { if (canUseTeamLobbyActions) setActiveView('create'); }}>
                                     <div className="gl-lobby-card-icon"><Plus size={28} /></div>
                                     <div className="gl-lobby-card-text">
                                         <h4>สร้างทีม</h4>
                                         <p>สร้างทีมใหม่และเชิญเพื่อนเข้าร่วม</p>
                                     </div>
                                 </div>
-                                <div className={`gl-lobby-card join-card ${!isTeamRecruitmentOpen ? 'is-disabled' : ''}`} onClick={() => { if (isTeamRecruitmentOpen) setActiveView('join'); }}>
+                                <div className={`gl-lobby-card join-card ${!canUseTeamLobbyActions ? 'is-disabled' : ''}`} onClick={() => { if (canUseTeamLobbyActions) setActiveView('join'); }}>
                                     <div className="gl-lobby-card-icon"><Lock size={28} /></div>
                                     <div className="gl-lobby-card-text">
-                                        <h4>เข้าทีมด้วยโค้ด</h4>
+                                        <h4>เข้าทีมด้วยรหัสเชิญ</h4>
                                         <p>ใช้รหัสเชิญเพื่อเข้าร่วมทีมส่วนตัว</p>
                                     </div>
                                 </div>
-                                <div className={`gl-lobby-card browse-card ${!isTeamRecruitmentOpen ? 'is-disabled' : ''}`} onClick={() => { if (isTeamRecruitmentOpen) setActiveView('browse'); }}>
+                                <div className={`gl-lobby-card browse-card ${!canUseTeamLobbyActions ? 'is-disabled' : ''}`} onClick={() => { if (canUseTeamLobbyActions) setActiveView('browse'); }}>
                                     <div className="gl-lobby-card-icon"><Globe size={28} /></div>
                                     <div className="gl-lobby-card-text">
                                         <h4>ค้นหาทีมสาธารณะ</h4>
                                         <p>ดูรายชื่อทีมที่เปิดรับสมาชิก</p>
                                     </div>
                                 </div>
-                                <div className={`gl-lobby-card invite-card ${!isTeamRecruitmentOpen ? 'is-disabled' : ''}`} onClick={() => { if (isTeamRecruitmentOpen) setActiveView('invitations'); }}>
+                                <div className={`gl-lobby-card invite-card ${!canUseTeamLobbyActions ? 'is-disabled' : ''}`} onClick={() => { if (canUseTeamLobbyActions) setActiveView('invitations'); }}>
                                     {myInvitations.length > 0 && (
                                         <span className="gl-lobby-card-badge">{myInvitations.length}</span>
                                     )}
@@ -1068,6 +1076,7 @@ export default function TeamContent({ user }) {
                                     <input
                                         className="gl-form-input"
                                         value={createName}
+                                        disabled={isTeamAccessDenied}
                                         maxLength={TEAM_NAME_MAX_LENGTH}
                                         onChange={(e) => setCreateName(e.target.value.slice(0, TEAM_NAME_MAX_LENGTH))}
                                         placeholder="กรอกชื่อทีม"
@@ -1081,6 +1090,7 @@ export default function TeamContent({ user }) {
                                     <textarea
                                         className="gl-form-input gl-form-textarea"
                                         value={createDescription}
+                                        disabled={isTeamAccessDenied}
                                         maxLength={TEAM_DESCRIPTION_MAX_LENGTH}
                                         onChange={(e) => setCreateDescription(e.target.value.slice(0, TEAM_DESCRIPTION_MAX_LENGTH))}
                                         placeholder="เช่น จุดประสงค์ของทีม ทักษะที่กำลังมองหา หรือแนวทางโปรเจกต์"
@@ -1095,9 +1105,9 @@ export default function TeamContent({ user }) {
                                         <span className="gl-form-toggle-label">{createPublic ? 'สาธารณะ' : 'ส่วนตัว'}</span>
                                         <span className="gl-form-toggle-desc">{createPublic ? 'ทุกคนสามารถค้นหาและขอเข้าร่วมทีมได้' : 'เข้าร่วมได้ด้วยรหัสเชิญเท่านั้น'}</span>
                                     </div>
-                                    <button type="button" className={`gl-form-toggle ${createPublic ? 'on' : ''}`} onClick={() => setCreatePublic((v) => !v)} />
+                                    <button type="button" className={`gl-form-toggle ${createPublic ? 'on' : ''}`} disabled={isTeamAccessDenied} onClick={() => setCreatePublic((v) => !v)} />
                                 </div>
-                                <button className="gl-form-submit gl-btn-pink" disabled={!isTeamRecruitmentOpen || actionLoading || !isCreateTeamNameValid || !isCreateTeamDescriptionValid} onClick={handleCreateTeam}>
+                                <button className="gl-form-submit gl-btn-pink" disabled={!canUseTeamLobbyActions || actionLoading || !isCreateTeamNameValid || !isCreateTeamDescriptionValid} onClick={handleCreateTeam}>
                                     <Plus size={18} /> สร้างทีม
                                 </button>
                             </div>
@@ -1118,9 +1128,9 @@ export default function TeamContent({ user }) {
                             <div className="gl-inner-form">
                                 <div className="gl-form-field">
                                     <label className="gl-form-label">รหัสเชิญ</label>
-                                    <input className="gl-form-input gl-form-code-input" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="เช่น TM1234" />
+                                    <input className="gl-form-input gl-form-code-input" value={joinCode} disabled={isTeamAccessDenied} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="เช่น TM1234" />
                                 </div>
-                                <button className="gl-form-submit gl-btn-blue" disabled={!isTeamRecruitmentOpen || actionLoading || !joinCode.trim()} onClick={handleJoinByCode}>
+                                <button className="gl-form-submit gl-btn-blue" disabled={!canUseTeamLobbyActions || actionLoading || !joinCode.trim()} onClick={handleJoinByCode}>
                                     <UserPlus size={18} /> ส่งคำขอเข้าร่วม
                                 </button>
                             </div>
@@ -1141,7 +1151,7 @@ export default function TeamContent({ user }) {
                             <div className="gl-inner-form">
                                 <div className="gl-search-wrap">
                                     <Search size={18} className="gl-search-icon" />
-                                    <input className="gl-form-input gl-search-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="ค้นหาชื่อทีม" />
+                                    <input className="gl-form-input gl-search-input" value={searchQuery} disabled={isTeamAccessDenied} onChange={(e) => setSearchQuery(e.target.value)} placeholder="ค้นหาชื่อทีม" />
                                 </div>
                                 <div className="gl-browse-list">
                                     {filteredTeams.length === 0 && (
@@ -1172,7 +1182,7 @@ export default function TeamContent({ user }) {
                                                         <span className="gl-browse-team-meta"><Users size={13} /> {t.memberCount}/{maxMembers} คน</span>
                                                     </div>
                                                 </div>
-                                                <button className="gl-browse-join-btn gl-btn-green" disabled={!isTeamRecruitmentOpen || actionLoading} onClick={() => handleRequestPublicTeam(t.id)}>
+                                                <button className="gl-browse-join-btn gl-btn-green" disabled={!canUseTeamLobbyActions || actionLoading} onClick={() => handleRequestPublicTeam(t.id)}>
                                                     <UserPlus size={15} /> ขอเข้าร่วม
                                                 </button>
                                             </div>
@@ -1215,10 +1225,10 @@ export default function TeamContent({ user }) {
                                                 </div>
                                             </div>
                                             <div className="gl-inv-actions">
-                                                <button className="gl-inv-btn gl-inv-accept" disabled={!isTeamRecruitmentOpen || actionLoading} onClick={() => handleRespondInvitation(inv.invitation_id, 'accepted')}>
+                                                <button className="gl-inv-btn gl-inv-accept" disabled={!canUseTeamLobbyActions || actionLoading} onClick={() => handleRespondInvitation(inv.invitation_id, 'accepted')}>
                                                     <CheckCircle size={15} /> ยอมรับ
                                                 </button>
-                                                <button className="gl-inv-btn gl-inv-decline" disabled={!isTeamRecruitmentOpen || actionLoading} onClick={() => handleRespondInvitation(inv.invitation_id, 'declined')}>
+                                                <button className="gl-inv-btn gl-inv-decline" disabled={!canUseTeamLobbyActions || actionLoading} onClick={() => handleRespondInvitation(inv.invitation_id, 'declined')}>
                                                     <X size={15} /> ปฏิเสธ
                                                 </button>
                                             </div>

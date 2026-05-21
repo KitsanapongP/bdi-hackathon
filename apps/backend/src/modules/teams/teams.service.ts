@@ -15,6 +15,7 @@ import {
 } from '../sys-config/sys-config-window.js';
 
 const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
+const ORIENTATION_DENIED_TEAM_ACCESS_MESSAGE = 'ไม่มีสิทธิ์เข้าใช้งานหน้าทีม เนื่องจากตรวจสอบพบความซ้ำซ้อนของชื่อผู้ลงทะเบียน';
 
 function generateRandomCode(length: number = 6): string {
     return crypto.randomBytes(3).toString('hex').toUpperCase().substring(0, length);
@@ -82,6 +83,11 @@ async function assertSelectionConfirmWindowOpen(db: DB): Promise<void> {
     throw new AppError('หมดเวลายืนยันการเข้าร่วมโครงการแล้ว', 400);
 }
 
+async function assertUserAllowedTeamAccess(db: DB, userId: number): Promise<void> {
+    if (!(await repo.isUserOrientationDenied(db, userId))) return;
+    throw new AppError(ORIENTATION_DENIED_TEAM_ACCESS_MESSAGE, 403);
+}
+
 function normalizeTeamDescription(value?: string | null): string | null {
     const trimmed = String(value ?? '').trim();
     return trimmed.length > 0 ? trimmed : null;
@@ -100,6 +106,7 @@ async function assertTeamNameAvailable(db: DB, teamNameTh: string, excludeTeamId
 
 export async function createTeam(db: DB, userId: number, data: { teamNameTh: string; teamDescription?: string | null | undefined; visibility: 'public' | 'private' }) {
     await assertTeamRecruitmentOpen(db);
+    await assertUserAllowedTeamAccess(db, userId);
 
     const teamNameTh = normalizeTeamName(data.teamNameTh);
     await assertTeamNameAvailable(db, teamNameTh);
@@ -300,6 +307,7 @@ export async function transferLeader(db: DB, teamId: number, currentLeaderUserId
 
 export async function submitJoinRequest(db: DB, teamId: number, userId: number, inviteCode?: string) {
     await assertTeamRecruitmentOpen(db);
+    await assertUserAllowedTeamAccess(db, userId);
 
     const team = await repo.getTeamById(db, teamId);
     if (!team) throw new AppError('ไม่พบทีม (Team not found)', 404);
@@ -386,6 +394,7 @@ export async function respondJoinRequest(db: DB, teamId: number, requestId: numb
 
         if (status === 'approved') {
             await repo.lockUserForTeamAssignment(txDb, request.requester_user_id);
+            await assertUserAllowedTeamAccess(txDb, request.requester_user_id);
             const requesterInAnyTeam = await repo.checkUserInAnyTeam(txDb, request.requester_user_id);
             if (requesterInAnyTeam) {
                 throw new AppError('ผู้ใช้นี้อยู่ในทีมอื่นแล้ว', 400);
@@ -570,6 +579,7 @@ export async function sendInvitation(
     if (members.some(m => m.user_id === inviteeUserId)) {
         throw new AppError('ผู้ใช้นี้เป็นสมาชิกในทีมอยู่แล้ว (Already a member)', 400);
     }
+    await assertUserAllowedTeamAccess(db, inviteeUserId);
 
     const existingInvitation = await repo.getPendingInvitationByUserAndTeam(db, inviteeUserId, teamId);
     if (existingInvitation) {
@@ -593,6 +603,7 @@ export async function sendInvitation(
 }
 
 export async function getMyInvitations(db: DB, userId: number) {
+    if (await repo.isUserOrientationDenied(db, userId)) return [];
     return repo.getPendingInvitationsByUser(db, userId);
 }
 
@@ -620,6 +631,7 @@ export async function respondToInvitation(db: DB, invitationId: number, userId: 
         if (status === 'accepted') {
             assertTeamEditable(team.status, 'รับคำเชิญเข้าร่วมทีม');
             await repo.lockUserForTeamAssignment(txDb, userId);
+            await assertUserAllowedTeamAccess(txDb, userId);
             const inTeam = await repo.checkUserInAnyTeam(txDb, userId);
             if (inTeam) {
                 throw new AppError('คุณอยู่ในทีมอื่นแล้ว (You are already in a team)', 400);

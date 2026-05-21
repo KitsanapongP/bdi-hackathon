@@ -985,6 +985,7 @@ function HomePage() {
                             name: data.data.userName,
                             email: data.data.email,
                             accessRole: data.data.accessRole || null,
+                            orientationDenied: data.data.orientationDenied || false,
                             hasTeam: data.data.hasTeam || false,
                             teamId: data.data.teamId || null,
                             avatarUrl: data.data.avatarUrl || null,

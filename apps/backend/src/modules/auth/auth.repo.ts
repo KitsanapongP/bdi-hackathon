@@ -522,6 +522,16 @@ export async function findAccessRole(db: DB, userId: number): Promise<'admin' | 
     return (rows[0]?.access_role as 'admin' | 'judge' | undefined) ?? null;
 }
 
+export async function isUserOrientationDenied(db: DB, userId: number): Promise<boolean> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT 1
+        FROM user_orientation_denials
+        WHERE user_id = :userId
+        LIMIT 1
+    `, { userId });
+    return rows.length > 0;
+}
+
 /** Find active team info for a user */
 export async function findUserTeam(db: DB, userId: number): Promise<{ teamId: number; teamCode: string; role: string } | null> {
     const [rows] = await db.query<RowDataPacket[]>(`
@@ -529,6 +539,11 @@ export async function findUserTeam(db: DB, userId: number): Promise<{ teamId: nu
         FROM team_members m
         JOIN team_teams t ON m.team_id = t.team_id
         WHERE m.user_id = :userId AND m.member_status = 'active' AND t.deleted_at IS NULL
+          AND NOT EXISTS (
+              SELECT 1
+              FROM user_orientation_denials d
+              WHERE d.user_id = m.user_id
+          )
         LIMIT 1
     `, { userId });
     const row = rows[0] as { team_id: number; team_code: string; role: string } | undefined;

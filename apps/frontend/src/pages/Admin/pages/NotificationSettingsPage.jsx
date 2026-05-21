@@ -702,7 +702,7 @@ export default function NotificationSettingsPage() {
               className="admin-ui-panel"
               style={{ marginTop: 12, marginBottom: 0, whiteSpace: 'pre-line', boxShadow: 'none', background: 'var(--admin-ui-surface-soft)' }}
             >
-              <strong>{orientationInApp.subject || 'แจ้งสิทธิ์เข้าร่วม Orientation Day (Online)'}</strong>
+              <strong>{orientationInApp.subject || 'แจ้งสิทธิ์เข้าร่วมกิจกรรม Orientation Day (Online)'}</strong>
               <p style={{ margin: '10px 0 0' }}>{renderOrientationPreviewText(orientationPreviewMessage)}</p>
             </div>
           </div>
