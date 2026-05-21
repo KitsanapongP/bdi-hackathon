@@ -488,6 +488,30 @@ body:has(.gr-page) {
     color: #b91c1c;
 }
 
+.gr-reset-help {
+    margin: 0 0 16px;
+    color: var(--gt-text-muted);
+    text-align: center;
+    line-height: 1.5;
+    font-size: 0.9rem;
+}
+
+.gr-forgot-link {
+    margin: -6px 0 14px;
+    text-align: right;
+    font-size: 0.85rem;
+}
+
+.gr-forgot-link a {
+    color: var(--gt-primary, #7c3aed);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.gr-forgot-link a:hover {
+    text-decoration: underline;
+}
+
 .gr-input {
     width: 100%;
     padding: 11px 14px;

@@ -38,3 +38,15 @@ export const registerVerifyLinkSchema = z.object({
 export const registerResendSchema = z.object({
     email: z.string().email('อีเมลไม่ถูกต้อง'),
 });
+
+export const forgotPasswordSchema = z.object({
+    email: z.string().email('อีเมลไม่ถูกต้อง'),
+});
+
+export const resetPasswordSchema = z.object({
+    token: z.string().trim().min(24, 'ลิงก์ตั้งรหัสผ่านไม่ถูกต้อง').max(255, 'ลิงก์ตั้งรหัสผ่านไม่ถูกต้อง'),
+    password: z
+        .string()
+        .min(8, 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร')
+        .regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, 'รหัสผ่านต้องมีทั้งตัวอักษรและตัวเลข'),
+});

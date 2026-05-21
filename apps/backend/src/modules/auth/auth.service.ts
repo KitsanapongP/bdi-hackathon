@@ -9,6 +9,8 @@ import type {
     RegisterVerifyInput,
     RegisterResendInput,
     RegisterVerifyLinkInput,
+    ForgotPasswordInput,
+    ResetPasswordInput,
 } from './auth.types.js';
 import { AppError, BadRequestError, ConflictError, UnauthorizedError } from '../../shared/errors.js';
 import * as repo from './auth.repo.js';
@@ -19,9 +21,13 @@ import {
 
 const SALT_ROUNDS = 10;
 const VERIFICATION_CODE_EXPIRES_IN_SECONDS = 5 * 60;
+const PASSWORD_RESET_EXPIRES_IN_SECONDS = 10 * 60;
+const PASSWORD_RESET_COOLDOWN_SECONDS = 60;
 const VERIFICATION_MAX_ATTEMPTS = 5;
 const REGISTER_OTP_SUBJECT = 'รหัสยืนยันการสมัครสมาชิก';
 const REGISTER_OTP_LOG_MESSAGE = 'registration_verification_email';
+const PASSWORD_RESET_SUBJECT = 'ตั้งรหัสผ่านใหม่';
+const PASSWORD_RESET_LOG_MESSAGE = 'password_reset_email';
 const requireModule = createRequire(import.meta.url);
 
 /** Convert a DB row to a safe user object */
@@ -140,6 +146,12 @@ function buildRegisterVerifyLink(token: string, requestOrigin?: string): string 
     return url.toString();
 }
 
+function buildPasswordResetLink(token: string, requestOrigin?: string): string {
+    const url = new URL('/reset-password', getFrontendBaseUrl(requestOrigin));
+    url.searchParams.set('token', token);
+    return url.toString();
+}
+
 function getTransporter() {
     const host = process.env['SMTP_HOST']?.trim();
     if (!host) return { transporter: null, reason: 'SMTP_HOST is empty' as const };
@@ -195,6 +207,26 @@ function buildAuthEmailHtml(input: {
     `;
 }
 
+function buildPasswordResetEmailHtml(input: { resetLink: string; expiresInMinutes: number }): string {
+    return `
+        <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; color: #0f172a; line-height: 1.6;">
+            <div style="padding: 18px 20px; background: #0b2545; color: #ffffff; border-radius: 12px 12px 0 0;">
+                <div style="font-size: 12px; letter-spacing: 0.08em; opacity: 0.9; text-transform: uppercase;">BDI Young Innovator Hackathon: Intelligent Living</div>
+                <h2 style="margin: 8px 0 0 0; font-size: 20px;">ตั้งรหัสผ่านใหม่</h2>
+            </div>
+            <div style="padding: 20px; border: 1px solid #dbe3ef; border-top: 0; border-radius: 0 0 12px 12px; background: #ffffff;">
+                <h3 style="margin: 0 0 12px 0; font-size: 18px; color: #102a43;">คำขอตั้งรหัสผ่านใหม่</h3>
+                <p style="margin: 0 0 16px 0; color: #243b53;">กรุณากดปุ่มด้านล่างเพื่อตั้งรหัสผ่านใหม่ ลิงก์นี้ใช้ได้ครั้งเดียวและจะหมดอายุภายใน ${input.expiresInMinutes} นาที</p>
+                <p style="margin: 0 0 18px 0; text-align: center;">
+                    <a href="${input.resetLink}" style="display: inline-block; background: #0b5ed7; color: #ffffff; font-weight: 700; text-decoration: none; border-radius: 10px; padding: 12px 18px;">ตั้งรหัสผ่านใหม่</a>
+                </p>
+                <p style="margin: 0 0 12px 0; color: #243b53; font-size: 13px;">หากปุ่มไม่ทำงาน ให้คัดลอกลิงก์นี้ไปเปิดในเบราว์เซอร์:<br><a href="${input.resetLink}" style="color: #0b5ed7; word-break: break-all;">${input.resetLink}</a></p>
+                <p style="margin: 0; font-size: 13px; color: #627d98;">หากคุณไม่ได้ขอตั้งรหัสผ่านใหม่ กรุณาเพิกเฉยอีเมลฉบับนี้</p>
+            </div>
+        </div>
+    `;
+}
+
 async function sendRegistrationVerificationEmail(email: string, code: string, verifyLink: string): Promise<string | null> {
     const { transporter, reason } = getTransporter();
     if (!transporter) {
@@ -222,10 +254,32 @@ async function sendRegistrationVerificationEmail(email: string, code: string, ve
     return result?.messageId ? String(result.messageId) : null;
 }
 
+async function sendPasswordResetEmail(email: string, resetLink: string): Promise<string | null> {
+    const { transporter, reason } = getTransporter();
+    if (!transporter) {
+        throw new AppError(`ระบบอีเมลยังไม่พร้อมใช้งาน (${reason})`, 500);
+    }
+
+    const fromEmail = process.env['SMTP_FROM']?.trim() || process.env['SMTP_USER']?.trim() || 'noreply@hackathon.local';
+    const html = buildPasswordResetEmailHtml({
+        resetLink,
+        expiresInMinutes: Math.floor(PASSWORD_RESET_EXPIRES_IN_SECONDS / 60),
+    });
+
+    const result = await transporter.sendMail({
+        from: fromEmail,
+        to: email,
+        subject: PASSWORD_RESET_SUBJECT,
+        html,
+    });
+
+    return result?.messageId ? String(result.messageId) : null;
+}
+
 async function safeCreateAuthEmailLog(
     db: DB,
     data: {
-        eventCode: 'REGISTER_OTP' | 'REGISTER_OTP_RESEND';
+        eventCode: 'REGISTER_OTP' | 'REGISTER_OTP_RESEND' | 'PASSWORD_RESET';
         registrationId: number | null;
         pendingUserId: number | null;
         recipientEmail: string;
@@ -233,6 +287,8 @@ async function safeCreateAuthEmailLog(
         providerMessageId?: string | null;
         errorMessage?: string | null;
         sentAt?: Date | null;
+        subjectText?: string | null;
+        messageText?: string | null;
     },
 ): Promise<void> {
     try {
@@ -242,8 +298,8 @@ async function safeCreateAuthEmailLog(
             registrationId: data.registrationId,
             pendingUserId: data.pendingUserId,
             recipientEmail: data.recipientEmail,
-            subjectText: REGISTER_OTP_SUBJECT,
-            messageText: REGISTER_OTP_LOG_MESSAGE,
+            subjectText: data.subjectText ?? REGISTER_OTP_SUBJECT,
+            messageText: data.messageText ?? REGISTER_OTP_LOG_MESSAGE,
             status: data.status,
             providerMessageId: data.providerMessageId ?? null,
             errorMessage: data.errorMessage ?? null,
@@ -633,6 +689,110 @@ export async function verifyRegistrationLink(db: DB, input: RegisterVerifyLinkIn
     }
 
     return completePendingRegistration(db, pending);
+}
+
+export async function requestPasswordReset(
+    db: DB,
+    input: ForgotPasswordInput,
+    meta?: { origin?: string },
+): Promise<{ email: string; expiresInSeconds: number; cooldownSeconds: number }> {
+    const normalizedEmail = normalizeEmail(input.email);
+    const user = await repo.findActiveUserCredentialByEmail(db, normalizedEmail);
+
+    if (!user) {
+        return {
+            email: normalizedEmail,
+            expiresInSeconds: PASSWORD_RESET_EXPIRES_IN_SECONDS,
+            cooldownSeconds: PASSWORD_RESET_COOLDOWN_SECONDS,
+        };
+    }
+
+    const latestResetToken = await repo.findLatestPasswordResetTokenByUser(db, user.user_id);
+    if (latestResetToken) {
+        const createdAtMs = new Date(latestResetToken.created_at).getTime();
+        const secondsSinceLatestRequest = Math.floor((Date.now() - createdAtMs) / 1000);
+        const remainingCooldown = PASSWORD_RESET_COOLDOWN_SECONDS - secondsSinceLatestRequest;
+        if (Number.isFinite(remainingCooldown) && remainingCooldown > 0) {
+            throw new AppError(`กรุณารอ ${remainingCooldown} วินาทีก่อนส่งลิงก์ตั้งรหัสผ่านใหม่อีกครั้ง`, 429);
+        }
+    }
+
+    const token = generateVerificationLinkToken();
+    const tokenHash = hashVerificationLinkToken(token);
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRES_IN_SECONDS * 1000);
+
+    await repo.createPasswordResetToken(db, {
+        userId: user.user_id,
+        email: normalizedEmail,
+        tokenHash,
+        expiresAt,
+    });
+
+    try {
+        const providerMessageId = await sendPasswordResetEmail(
+            normalizedEmail,
+            buildPasswordResetLink(token, meta?.origin),
+        );
+        await safeCreateAuthEmailLog(db, {
+            eventCode: 'PASSWORD_RESET',
+            registrationId: null,
+            pendingUserId: user.user_id,
+            recipientEmail: normalizedEmail,
+            status: 'sent',
+            providerMessageId,
+            sentAt: new Date(),
+            subjectText: PASSWORD_RESET_SUBJECT,
+            messageText: PASSWORD_RESET_LOG_MESSAGE,
+        });
+    } catch (error: any) {
+        await safeCreateAuthEmailLog(db, {
+            eventCode: 'PASSWORD_RESET',
+            registrationId: null,
+            pendingUserId: user.user_id,
+            recipientEmail: normalizedEmail,
+            status: 'failed',
+            errorMessage: String(error?.message || error),
+            subjectText: PASSWORD_RESET_SUBJECT,
+            messageText: PASSWORD_RESET_LOG_MESSAGE,
+        });
+        throw error;
+    }
+
+    return {
+        email: normalizedEmail,
+        expiresInSeconds: PASSWORD_RESET_EXPIRES_IN_SECONDS,
+        cooldownSeconds: PASSWORD_RESET_COOLDOWN_SECONDS,
+    };
+}
+
+export async function resetPasswordWithToken(db: DB, input: ResetPasswordInput): Promise<void> {
+    const tokenHash = hashVerificationLinkToken(input.token.trim());
+    const resetToken = await repo.findPasswordResetTokenByHash(db, tokenHash);
+
+    if (!resetToken) {
+        throw new BadRequestError('ลิงก์ตั้งรหัสผ่านไม่ถูกต้องหรือหมดอายุแล้ว');
+    }
+
+    if (resetToken.consumed_at) {
+        throw new BadRequestError('ลิงก์นี้ถูกใช้งานแล้ว');
+    }
+
+    const expiresAtMs = new Date(resetToken.expires_at).getTime();
+    if (!Number.isFinite(expiresAtMs) || expiresAtMs < Date.now()) {
+        throw new BadRequestError('ลิงก์ตั้งรหัสผ่านหมดอายุแล้ว กรุณาขอลิงก์ใหม่');
+    }
+
+    const user = await repo.findUserById(db, resetToken.user_id);
+    if (!user) {
+        throw new BadRequestError('ไม่พบผู้ใช้สำหรับลิงก์นี้');
+    }
+
+    const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
+    await repo.updateCredentialPassword(db, {
+        userId: resetToken.user_id,
+        passwordHash,
+    });
+    await repo.consumePasswordResetToken(db, resetToken.reset_id);
 }
 
 /** Register a new user */

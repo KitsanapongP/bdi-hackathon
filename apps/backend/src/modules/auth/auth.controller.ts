@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { registerSchema, loginSchema, registerVerifySchema, registerResendSchema, registerVerifyLinkSchema } from './auth.schema.js';
+import { registerSchema, loginSchema, registerVerifySchema, registerResendSchema, registerVerifyLinkSchema, forgotPasswordSchema, resetPasswordSchema } from './auth.schema.js';
 import * as service from './auth.service.js';
 import type { JwtPayload } from './auth.types.js';
 import { ok } from '../../shared/response.js';
@@ -112,6 +112,47 @@ export async function handleRegisterResend(req: FastifyRequest, reply: FastifyRe
             origin: String(req.headers.origin || ''),
         });
         return reply.send(ok(data, 'ส่งรหัสยืนยันใหม่เรียบร้อย'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+/** POST /api/auth/forgot-password */
+export async function handleForgotPassword(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = forgotPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const data = await service.requestPasswordReset(req.server.ctx.db, parsed.data, {
+            origin: String(req.headers.origin || ''),
+        });
+        return reply.send(ok(data, 'หากอีเมลนี้ได้ลงทะเบียนในระบบ ระบบจะส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปให้ทางอีเมล'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+/** POST /api/auth/reset-password */
+export async function handleResetPassword(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = resetPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await service.resetPasswordWithToken(req.server.ctx.db, parsed.data);
+        reply.clearCookie(COOKIE_NAME, { path: '/' });
+        return reply.send(ok(null, 'ตั้งรหัสผ่านใหม่สำเร็จ กรุณาเข้าสู่ระบบอีกครั้ง'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });

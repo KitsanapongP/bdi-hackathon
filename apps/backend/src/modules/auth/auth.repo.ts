@@ -1,5 +1,5 @@
 import type { DB } from '../../config/db.js';
-import type { UserRow, CredentialRow, PendingRegistrationRow, RegisterInput } from './auth.types.js';
+import type { UserRow, CredentialRow, PendingRegistrationRow, PasswordResetTokenRow, RegisterInput } from './auth.types.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 /** Find a user by email in user_credentials_local (join user_users) */
@@ -16,6 +16,21 @@ export async function findUserByEmail(db: DB, email: string): Promise<(UserRow &
         { email },
     );
     return (rows[0] as (UserRow & Pick<CredentialRow, 'password_hash' | 'cred_id'>) | undefined) ?? null;
+}
+
+export async function findActiveUserCredentialByEmail(db: DB, email: string): Promise<(UserRow & Pick<CredentialRow, 'cred_id'>) | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT u.*, c.cred_id
+         FROM user_users u
+         INNER JOIN user_credentials_local c ON c.user_id = u.user_id
+         WHERE c.login_email = :email
+           AND c.is_enabled = 1
+           AND u.is_active = 1
+           AND u.deleted_at IS NULL
+         LIMIT 1`,
+        { email },
+    );
+    return (rows[0] as (UserRow & Pick<CredentialRow, 'cred_id'>) | undefined) ?? null;
 }
 
 /** Find a user by user_id */
@@ -356,7 +371,7 @@ export async function refreshPendingRegistrationCode(
 export async function createAuthEmailLog(
     db: DB,
     data: {
-        eventCode: 'REGISTER_OTP' | 'REGISTER_OTP_RESEND';
+        eventCode: 'REGISTER_OTP' | 'REGISTER_OTP_RESEND' | 'PASSWORD_RESET';
         channel: 'email';
         registrationId: number | null;
         pendingUserId: number | null;
@@ -399,6 +414,77 @@ export async function createAuthEmailLog(
     );
 
     return result.insertId;
+}
+
+export async function createPasswordResetToken(
+    db: DB,
+    data: { userId: number; email: string; tokenHash: string; expiresAt: Date },
+): Promise<number> {
+    await db.query(
+        `UPDATE user_password_reset_tokens
+         SET consumed_at = NOW(),
+             updated_at = NOW()
+         WHERE user_id = :userId
+           AND consumed_at IS NULL`,
+        { userId: data.userId },
+    );
+
+    const [result] = await db.query<ResultSetHeader>(
+        `INSERT INTO user_password_reset_tokens (
+            user_id, email, token_hash, expires_at, consumed_at, created_at, updated_at
+        ) VALUES (
+            :userId, :email, :tokenHash, :expiresAt, NULL, NOW(), NOW()
+        )`,
+        data,
+    );
+
+    return result.insertId;
+}
+
+export async function findLatestPasswordResetTokenByUser(db: DB, userId: number): Promise<PasswordResetTokenRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM user_password_reset_tokens
+         WHERE user_id = :userId
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        { userId },
+    );
+    return (rows[0] as PasswordResetTokenRow | undefined) ?? null;
+}
+
+export async function findPasswordResetTokenByHash(db: DB, tokenHash: string): Promise<PasswordResetTokenRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM user_password_reset_tokens
+         WHERE token_hash = :tokenHash
+         LIMIT 1`,
+        { tokenHash },
+    );
+    return (rows[0] as PasswordResetTokenRow | undefined) ?? null;
+}
+
+export async function consumePasswordResetToken(db: DB, resetId: number): Promise<void> {
+    await db.query(
+        `UPDATE user_password_reset_tokens
+         SET consumed_at = NOW(),
+             token_hash = CONCAT('consumed:', reset_id, ':', token_hash),
+             updated_at = NOW()
+         WHERE reset_id = :resetId`,
+        { resetId },
+    );
+}
+
+export async function updateCredentialPassword(db: DB, data: { userId: number; passwordHash: string }): Promise<void> {
+    await db.query(
+        `UPDATE user_credentials_local
+         SET password_hash = :passwordHash,
+             password_updated_at = NOW(),
+             updated_at = NOW()
+         WHERE user_id = :userId
+           AND is_enabled = 1`,
+        data,
+    );
 }
 
 export async function incrementPendingRegistrationAttempt(db: DB, registrationId: number): Promise<void> {

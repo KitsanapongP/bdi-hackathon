@@ -40,9 +40,15 @@ const PRIVACY_DOC_CODES = ['PRIVACY', 'PDPA'];
 function RegisterPage() {
     const navigate = useNavigate();
     const location = useLocation();
+    const isResetPasswordRoute = location.pathname === '/reset-password';
     const [isRegisterMode, setIsRegisterMode] = useState(() => location.pathname === '/home/register');
+    const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPass, setLoginPass] = useState('');
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [forgotCooldown, setForgotCooldown] = useState(0);
+    const [resetPass, setResetPass] = useState('');
+    const [resetConfirmPass, setResetConfirmPass] = useState('');
 
     const [regUserName, setRegUserName] = useState('');
     const [regEmail, setRegEmail] = useState('');
@@ -65,7 +71,9 @@ function RegisterPage() {
     const [verificationCountdown, setVerificationCountdown] = useState(0);
 
     const [errorMsg, setErrorMsg] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
     const errorMsgRef = useRef(null);
+    const resetRedirectTimerRef = useRef(null);
     const [isLoading, setIsLoading] = useState(false);
     const [registrationWindow, setRegistrationWindow] = useState({
         status: SYSTEM_WINDOW_STATUS.UNKNOWN,
@@ -76,6 +84,8 @@ function RegisterPage() {
     const [showLoginPass, setShowLoginPass] = useState(false);
     const [showRegPass, setShowRegPass] = useState(false);
     const [showRegConfirmPass, setShowRegConfirmPass] = useState(false);
+    const [showResetPass, setShowResetPass] = useState(false);
+    const [showResetConfirmPass, setShowResetConfirmPass] = useState(false);
 
     const [consentDocs, setConsentDocs] = useState([]);
     const [hasAcceptedConsent, setHasAcceptedConsent] = useState(false);
@@ -84,10 +94,28 @@ function RegisterPage() {
 
     useEffect(() => {
         const saved = localStorage.getItem('gt_user');
-        if (saved) {
+        if (saved && !isResetPasswordRoute) {
             navigate('/home', { replace: true });
         }
-    }, [navigate]);
+    }, [isResetPasswordRoute, navigate]);
+
+    useEffect(() => {
+        return () => {
+            if (resetRedirectTimerRef.current) {
+                window.clearTimeout(resetRedirectTimerRef.current);
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!isForgotPasswordMode || forgotCooldown <= 0) return;
+
+        const timer = window.setInterval(() => {
+            setForgotCooldown((seconds) => Math.max(0, seconds - 1));
+        }, 1000);
+
+        return () => window.clearInterval(timer);
+    }, [forgotCooldown, isForgotPasswordMode]);
 
     useEffect(() => {
         const query = new URLSearchParams(location.search);
@@ -264,6 +292,7 @@ function RegisterPage() {
     const handleLogin = async (e) => {
         e.preventDefault();
         setErrorMsg('');
+        setSuccessMsg('');
         setIsLoading(true);
 
         try {
@@ -284,6 +313,107 @@ function RegisterPage() {
             saveUserAndRedirect(data.data);
         } catch {
             setErrorMsg('เกิดข้อผิดพลาด กรุณาลองใหม่');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const validateResetPassword = () => {
+        if (resetPass !== resetConfirmPass) {
+            setErrorMsg('รหัสผ่านไม่ตรงกัน');
+            return false;
+        }
+        if (resetPass.length < 8) {
+            setErrorMsg('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+            return false;
+        }
+        if (!/[A-Za-z]/.test(resetPass) || !/\d/.test(resetPass)) {
+            setErrorMsg('รหัสผ่านต้องมีทั้งตัวอักษรและตัวเลข');
+            return false;
+        }
+        return true;
+    };
+
+    const handleForgotPassword = async (e) => {
+        e.preventDefault();
+        setErrorMsg('');
+        setSuccessMsg('');
+
+        if (forgotCooldown > 0) {
+            setErrorMsg(`กรุณารอ ${forgotCooldown} วินาทีก่อนส่งลิงก์อีกครั้ง`);
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const res = await fetch(apiUrl('/api/auth/forgot-password'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ email: forgotEmail }),
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.ok) {
+                const message = data.message || 'ไม่สามารถส่งลิงก์ตั้งรหัสผ่านใหม่ได้';
+                if (res.status === 429) {
+                    const remaining = Number(message.match(/\d+/)?.[0] || 60);
+                    setForgotCooldown(Number.isFinite(remaining) ? remaining : 60);
+                }
+                setErrorMsg(message);
+                return;
+            }
+
+            setSuccessMsg(data.message || 'หากอีเมลนี้ได้ลงทะเบียนในระบบ ระบบจะส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปให้ทางอีเมล');
+            setForgotCooldown(data?.data?.cooldownSeconds || 60);
+        } catch (err) {
+            setErrorMsg(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleResetPassword = async (e) => {
+        e.preventDefault();
+        setErrorMsg('');
+        setSuccessMsg('');
+
+        const query = new URLSearchParams(location.search);
+        const token = query.get('token')?.trim() || '';
+        if (!token) {
+            setErrorMsg('ลิงก์ตั้งรหัสผ่านไม่ถูกต้องหรือหมดอายุแล้ว');
+            return;
+        }
+        if (!validateResetPassword()) return;
+
+        setIsLoading(true);
+        try {
+            const res = await fetch(apiUrl('/api/auth/reset-password'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ token, password: resetPass }),
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.ok) {
+                setErrorMsg(data.message || 'ไม่สามารถตั้งรหัสผ่านใหม่ได้');
+                return;
+            }
+
+            localStorage.removeItem('gt_user');
+            setResetPass('');
+            setResetConfirmPass('');
+            setSuccessMsg(data.message || 'ตั้งรหัสผ่านใหม่สำเร็จ กรุณาเข้าสู่ระบบอีกครั้ง');
+            if (resetRedirectTimerRef.current) {
+                window.clearTimeout(resetRedirectTimerRef.current);
+            }
+            resetRedirectTimerRef.current = window.setTimeout(() => {
+                navigate('/login', { replace: true });
+            }, 5000);
+        } catch (err) {
+            setErrorMsg(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
         } finally {
             setIsLoading(false);
         }
@@ -529,7 +659,7 @@ function RegisterPage() {
                         <Home size={16} /> BDI Young Innovator Hackathon
                     </div>
                     <h2 style={{ color: 'var(--gt-text)' }}>
-                        {isRegisterMode ? (registerStep === 'verify' ? 'ยืนยันอีเมล' : 'ลงทะเบียน') : 'เข้าสู่ระบบ'}
+                        {isResetPasswordRoute ? 'ตั้งรหัสผ่านใหม่' : (isForgotPasswordMode ? 'ลืมรหัสผ่าน' : (isRegisterMode ? (registerStep === 'verify' ? 'ยืนยันอีเมล' : 'ลงทะเบียน') : 'เข้าสู่ระบบ'))}
                     </h2>
 
                     {isRegisterMode && registerUnavailableMessage && (
@@ -539,11 +669,36 @@ function RegisterPage() {
                     )}
 
                     {errorMsg && <div ref={errorMsgRef} style={{ color: '#ef4444', textAlign: 'center', marginBottom: 16, fontSize: '0.9rem', background: '#fee2e2', padding: 8, borderRadius: 8 }}>{errorMsg}</div>}
+                    {successMsg && <div style={{ color: '#047857', textAlign: 'center', marginBottom: 16, fontSize: '0.9rem', background: '#d1fae5', padding: 8, borderRadius: 8 }}>{successMsg}</div>}
 
-                    {!isRegisterMode ? (
+                    {isResetPasswordRoute ? (
+                        <form onSubmit={handleResetPassword} autoComplete="off">
+                            <p className="gr-reset-help">กรุณาตั้งรหัสผ่านใหม่ รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร และมีทั้งตัวอักษรกับตัวเลข</p>
+                            <div className="gr-input-group"><label>รหัสผ่านใหม่</label><div className="gr-password-wrap"><input type={showResetPass ? 'text' : 'password'} name="resetPassword" autoComplete="new-password" className="gr-input" placeholder="รหัสผ่านใหม่" value={resetPass} onChange={(e) => setResetPass(e.target.value)} required disabled={isLoading} minLength={8} /><button type="button" className="gr-password-toggle" onClick={() => setShowResetPass(!showResetPass)} tabIndex={-1} disabled={isLoading}>{showResetPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
+                            <div className="gr-input-group"><label>ยืนยันรหัสผ่านใหม่</label><div className="gr-password-wrap"><input type={showResetConfirmPass ? 'text' : 'password'} name="resetConfirmPassword" autoComplete="new-password" className="gr-input" placeholder="ยืนยันรหัสผ่านใหม่" value={resetConfirmPass} onChange={(e) => setResetConfirmPass(e.target.value)} required disabled={isLoading} minLength={8} /><button type="button" className="gr-password-toggle" onClick={() => setShowResetConfirmPass(!showResetConfirmPass)} tabIndex={-1} disabled={isLoading}>{showResetConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
+                            <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={isLoading}>{isLoading ? <><Loader2 size={18} className="spin" /> กำลังตั้งรหัสผ่าน...</> : 'ตั้งรหัสผ่านใหม่'}</button>
+                            <p style={{ textAlign: 'center', marginTop: 16, fontSize: '0.85rem', color: 'var(--gt-text-muted)' }}>
+                                <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); setSuccessMsg(''); navigate('/login'); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>กลับไปเข้าสู่ระบบ</a>
+                            </p>
+                        </form>
+                    ) : isForgotPasswordMode ? (
+                        <form onSubmit={handleForgotPassword} autoComplete="on">
+                            <p className="gr-reset-help">
+                                กรอกอีเมลที่ต้องการตั้งรหัสผ่านใหม่
+                                <br />
+                                หากไม่พบอีเมล กรุณาตรวจสอบในจดหมายขยะ
+                            </p>
+                            <div className="gr-input-group"><label>อีเมล</label><input type="email" name="forgotEmail" autoComplete="username" className="gr-input" placeholder="อีเมลของคุณ" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required disabled={isLoading} /></div>
+                            <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={isLoading || forgotCooldown > 0}>{isLoading ? <><Loader2 size={18} className="spin" /> กำลังส่งลิงก์...</> : (forgotCooldown > 0 ? `ส่งได้อีกครั้งใน ${forgotCooldown} วินาที` : 'ส่งลิงก์ตั้งรหัสผ่านใหม่')}</button>
+                            <p style={{ textAlign: 'center', marginTop: 16, fontSize: '0.85rem', color: 'var(--gt-text-muted)' }}>
+                                <a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); setSuccessMsg(''); setIsForgotPasswordMode(false); }} style={{ color: 'var(--gt-primary, #7c3aed)', fontWeight: 600 }}>กลับไปเข้าสู่ระบบ</a>
+                            </p>
+                        </form>
+                    ) : !isRegisterMode ? (
                         <form onSubmit={handleLogin} autoComplete="on">
                             <div className="gr-input-group"><label>อีเมล</label><input type="email" name="loginEmail" autoComplete="username" className="gr-input" placeholder="อีเมลของคุณ" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required disabled={isLoading} /></div>
                             <div className="gr-input-group"><label>รหัสผ่าน</label><div className="gr-password-wrap"><input type={showLoginPass ? 'text' : 'password'} name="loginPassword" autoComplete="current-password" className="gr-input" placeholder="รหัสผ่าน" value={loginPass} onChange={(e) => setLoginPass(e.target.value)} required disabled={isLoading} /><button type="button" className="gr-password-toggle" onClick={() => setShowLoginPass(!showLoginPass)} tabIndex={-1}>{showLoginPass ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
+                            <p className="gr-forgot-link"><a href="#" onClick={(e) => { e.preventDefault(); setErrorMsg(''); setSuccessMsg(''); setForgotEmail(loginEmail); setIsForgotPasswordMode(true); }}>ลืมรหัสผ่าน?</a></p>
                             <button type="submit" className="gt-btn gt-btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={isLoading}>{isLoading ? <><Loader2 size={18} className="spin" /> กำลังเข้าสู่ระบบ...</> : 'เข้าสู่ระบบ'}</button>
                         </form>
                     ) : registerStep === 'verify' ? (

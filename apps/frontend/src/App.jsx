@@ -40,6 +40,7 @@ function App() {
         <Route path="/home/notifications" element={<NotificationsPage />} />
         <Route path="/home/register" element={<RegisterPage />} />
         <Route path="/login" element={<RegisterPage />} />
+        <Route path="/reset-password" element={<RegisterPage />} />
         <Route path="/home/team" element={<TeamPage />} />
         <Route path="/review/team/:shareId" element={<TeamReviewPage />} />
         <Route path="/admin/*" element={<AdminApp />} />

@@ -72,6 +72,17 @@ export interface RegisterResendInput {
     email: string;
 }
 
+/** Input for POST /api/auth/forgot-password */
+export interface ForgotPasswordInput {
+    email: string;
+}
+
+/** Input for POST /api/auth/reset-password */
+export interface ResetPasswordInput {
+    token: string;
+    password: string;
+}
+
 /** Input for POST /api/auth/login */
 export interface LoginInput {
     email: string;
@@ -123,6 +134,18 @@ export interface PendingRegistrationRow extends RowDataPacket {
     expires_at: Date;
     last_sent_at: Date;
     attempt_count: number;
+    consumed_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
+}
+
+/** Row from `user_password_reset_tokens` table */
+export interface PasswordResetTokenRow extends RowDataPacket {
+    reset_id: number;
+    user_id: number;
+    email: string;
+    token_hash: string;
+    expires_at: Date;
     consumed_at: Date | null;
     created_at: Date;
     updated_at: Date;
