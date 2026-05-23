@@ -2,7 +2,7 @@
 import type { TeamVerificationResponse } from './verification.types.js';
 import * as repo from './verification.repo.js';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../../shared/errors.js';
-import { failTeamIfConfirmationExpired, getTeamById, getTeamMembers } from '../teams/teams.repo.js';
+import { failTeamIfConfirmationExpired, getTeamById, getTeamMemberByTeamAndUser, getTeamMembers } from '../teams/teams.repo.js';
 import * as notificationService from '../notifications/notifications.service.js';
 import {
     evaluateWindowStatus,
@@ -24,6 +24,13 @@ function assertTeamEditable(status: string): void {
     throw new BadRequestError('ไม่สามารถแก้ไขข้อมูลได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว');
 }
 
+async function assertActiveTeamMember(db: DB, teamId: number, userId: number): Promise<void> {
+    const member = await getTeamMemberByTeamAndUser(db, teamId, userId);
+    if (!member || member.member_status !== 'active') {
+        throw new UnauthorizedError('คุณไม่ได้เป็นสมาชิกของทีมนี้');
+    }
+}
+
 function sanitizePathSegment(value: string | null | undefined, fallback: string): string {
     const raw = String(value || '').trim();
     if (!raw) return fallback;
@@ -43,6 +50,7 @@ export async function getTeamVerificationStatus(
     await failTeamIfConfirmationExpired(db, teamId);
     const team = await getTeamById(db, teamId);
     if (!team) throw new NotFoundError('\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e17\u0e35\u0e21');
+    await assertActiveTeamMember(db, teamId, userId);
 
     const round = await repo.getLatestVerifyRound(db, teamId);
     const members = await repo.getTeamVerificationMembers(db, teamId, round?.verify_round_id ?? null);
@@ -84,6 +92,7 @@ export async function uploadDocument(
     // Validate team membership
     const team = await getTeamById(db, teamId);
     if (!team) throw new NotFoundError('\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e17\u0e35\u0e21');
+    await assertActiveTeamMember(db, teamId, userId);
 
     // Check if team is already submitted (locked)
     const round = await repo.getLatestVerifyRound(db, teamId);
@@ -178,6 +187,7 @@ export async function deleteDocument(
 ): Promise<void> {
     const doc = await repo.getDocumentById(db, documentId);
     if (!doc) throw new NotFoundError('\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23');
+    await assertActiveTeamMember(db, teamId, userId);
     if (doc.team_id !== teamId || doc.user_id !== userId) {
         throw new UnauthorizedError('\u0e04\u0e38\u0e13\u0e44\u0e21\u0e48\u0e21\u0e35\u0e2a\u0e34\u0e17\u0e18\u0e34\u0e4c\u0e25\u0e1a\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23\u0e19\u0e35\u0e49');
     }
@@ -211,6 +221,7 @@ export async function getMyDocumentFileInfo(
 ): Promise<{ absolutePath: string; fileOriginalName: string; fileMimeType: string }> {
     const doc = await repo.getDocumentById(db, documentId);
     if (!doc) throw new NotFoundError('\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23');
+    await assertActiveTeamMember(db, teamId, userId);
     if (doc.team_id !== teamId || doc.user_id !== userId) {
         throw new UnauthorizedError('\u0e04\u0e38\u0e13\u0e44\u0e21\u0e48\u0e21\u0e35\u0e2a\u0e34\u0e17\u0e18\u0e34\u0e4c\u0e40\u0e02\u0e49\u0e32\u0e16\u0e36\u0e07\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23\u0e19\u0e35\u0e49');
     }
@@ -244,6 +255,7 @@ export async function confirmMember(
 ): Promise<void> {
     const team = await getTeamById(db, teamId);
     if (!team) throw new NotFoundError('\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e17\u0e35\u0e21');
+    await assertActiveTeamMember(db, teamId, userId);
 
     const round = await repo.getLatestVerifyRound(db, teamId);
     if (round && (round.status === 'submitted' || round.status === 'locked' || round.status === 'completed')) {
@@ -283,6 +295,7 @@ export async function unconfirmMember(
     userId: number
 ): Promise<void> {
     const round = await repo.getLatestVerifyRound(db, teamId);
+    await assertActiveTeamMember(db, teamId, userId);
     if (round && (round.status === 'submitted' || round.status === 'locked' || round.status === 'completed')) {
         throw new BadRequestError('\u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e01\u0e32\u0e23\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e44\u0e14\u0e49 \u0e40\u0e19\u0e37\u0e48\u0e2d\u0e07\u0e08\u0e32\u0e01\u0e2b\u0e31\u0e27\u0e2b\u0e19\u0e49\u0e32\u0e17\u0e35\u0e21\u0e2a\u0e48\u0e07\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23\u0e41\u0e25\u0e49\u0e27');
     }
@@ -305,6 +318,7 @@ export async function submitTeam(
 ): Promise<void> {
     const team = await getTeamById(db, teamId);
     if (!team) throw new NotFoundError('\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e17\u0e35\u0e21');
+    await assertActiveTeamMember(db, teamId, leaderUserId);
     if (team.current_leader_user_id !== leaderUserId) {
         throw new UnauthorizedError('\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e2b\u0e31\u0e27\u0e2b\u0e19\u0e49\u0e32\u0e17\u0e35\u0e21\u0e40\u0e17\u0e48\u0e32\u0e19\u0e31\u0e49\u0e19\u0e17\u0e35\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e2a\u0e48\u0e07\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23\u0e44\u0e14\u0e49');
     }
@@ -366,6 +380,7 @@ export async function disbandTeamAction(
 ): Promise<void> {
     const team = await getTeamById(db, teamId);
     if (!team) throw new NotFoundError('\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e17\u0e35\u0e21');
+    await assertActiveTeamMember(db, teamId, leaderUserId);
     if (team.current_leader_user_id !== leaderUserId) {
         throw new UnauthorizedError('\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e2b\u0e31\u0e27\u0e2b\u0e19\u0e49\u0e32\u0e17\u0e35\u0e21\u0e40\u0e17\u0e48\u0e32\u0e19\u0e31\u0e49\u0e19\u0e17\u0e35\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e22\u0e38\u0e1a\u0e17\u0e35\u0e21\u0e44\u0e14\u0e49');
     }
