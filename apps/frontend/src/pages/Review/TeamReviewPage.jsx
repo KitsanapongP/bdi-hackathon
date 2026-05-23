@@ -134,7 +134,7 @@ export default function TeamReviewPage() {
       anchor.click()
       anchor.remove()
       URL.revokeObjectURL(objectUrl)
-    } catch (err) {
+    } catch {
       window.open(downloadUrl, '_blank', 'noopener,noreferrer')
     } finally {
       setDownloadingKey('')

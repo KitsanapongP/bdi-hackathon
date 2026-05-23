@@ -168,6 +168,7 @@ export interface ExportSubmissionFileRow {
     team_submission_task_id: number | null;
     task_name: string | null;
     task_sort_order: number | null;
+    submission_track: 'Phenome' | 'Health' | 'City' | null;
     file_storage_key: string;
     file_original_name: string;
     uploaded_at: Date;

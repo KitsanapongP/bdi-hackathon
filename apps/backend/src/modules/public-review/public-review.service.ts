@@ -321,6 +321,7 @@ export async function getReviewTeamByShareId(db: DB, shareId: string, publicBase
             const fileUrl = buildPublicFileUrl(publicBaseUrl, fileShareId);
             return {
                 taskName: file.task_name || 'Untitled Task',
+                submissionTrack: file.submission_track,
                 fileName: file.file_original_name,
                 uploadedAt: file.uploaded_at,
                 contentType: getContentTypeFromName(file.file_original_name),

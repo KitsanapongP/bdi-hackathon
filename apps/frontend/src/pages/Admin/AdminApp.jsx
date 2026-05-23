@@ -3,6 +3,7 @@ import './shared/admin-shared.css'
 import { AdminGuard, AdminLayout } from './legacy/AdminAppLegacy'
 import { AdminToastProvider } from './shared/AdminToastProvider'
 import managementNavGroups from './config/managementNavGroups'
+import AdminExportsPage from './pages/AdminExportsPage'
 import DashboardPage from './pages/DashboardPage'
 import NotificationSettingsPage from './pages/NotificationSettingsPage'
 import PrivilegesAdminPage from './pages/PrivilegesAdminPage'
@@ -21,6 +22,7 @@ function AdminAppRoutes() {
     <Routes>
       <Route element={<AdminLayout navGroups={managementNavGroups} />}>
         <Route index element={<DashboardPage />} />
+        <Route path="exports" element={<AdminExportsPage />} />
 
         <Route path="static" element={<Navigate to="sponsors" replace />} />
         <Route path="static/sponsors" element={<StaticSponsorsPage />} />

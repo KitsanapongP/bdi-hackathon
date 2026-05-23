@@ -45,6 +45,14 @@ const TEAM_STATUS_SET = new Set<ExportTeamStatus>([
     'disbanded',
 ]);
 
+type SubmissionReviewTrack = 'Phenome' | 'Health' | 'City';
+type ReviewWorkSlot = 'work_1' | 'work_2';
+
+const REVIEW_WORK_TASK_NAMES: Record<ReviewWorkSlot, string> = {
+    work_1: 'ส่งผลงานลำดับที่ 1',
+    work_2: 'ส่งผลงานลำดับที่ 2',
+};
+
 function normalizeStatuses(values: string[]): ExportTeamStatus[] {
     const uniqueStatuses: ExportTeamStatus[] = [];
     for (const value of values) {
@@ -54,6 +62,13 @@ function normalizeStatuses(values: string[]): ExportTeamStatus[] {
         uniqueStatuses.push(status);
     }
     return uniqueStatuses;
+}
+
+function getReviewWorkSlot(taskName: string | null): ReviewWorkSlot | null {
+    const normalized = String(taskName || '').trim();
+    if (normalized === REVIEW_WORK_TASK_NAMES.work_1) return 'work_1';
+    if (normalized === REVIEW_WORK_TASK_NAMES.work_2) return 'work_2';
+    return null;
 }
 
 function buildPublicReviewUrl(baseUrl: string, shareId: string): string {
@@ -1086,6 +1101,158 @@ export async function exportTeamsReviewSheet(
     const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
     return {
         fileName: `teams_review_links_${timestamp}.xlsx`,
+        stream: output,
+    };
+}
+
+export async function exportTeamsReviewSheetByTrack(
+    db: DB,
+    inputStatuses: string[],
+    track: SubmissionReviewTrack,
+    publicBaseUrl: string,
+): Promise<{ fileName: string; stream: PassThrough }> {
+    const statuses = normalizeStatuses(inputStatuses);
+    if (statuses.length === 0) {
+        throw new BadRequestError('กรุณาเลือกสถานะทีมอย่างน้อย 1 สถานะ');
+    }
+
+    const teams = await repo.getTeamsForSheetExport(db, statuses);
+    if (teams.length === 0) {
+        throw new NotFoundError('ไม่พบทีมสำหรับ export review links');
+    }
+
+    const teamIds = teams.map((team) => team.team_id);
+    const [advisors, members, submissionFiles] = await Promise.all([
+        repo.getTeamAdvisorsForExport(db, teamIds),
+        repo.getTeamMembersForExport(db, teamIds),
+        repo.getSubmissionFilesForExport(db, teamIds),
+    ]);
+
+    const advisorsByTeam = new Map<number, ExportTeamAdvisorRow[]>();
+    const membersByTeam = new Map<number, ExportTeamMemberRow[]>();
+    const allReviewWorksByTeam = new Map<number, ExportSubmissionFileRow[]>();
+    const trackReviewWorksByTeam = new Map<number, ExportSubmissionFileRow[]>();
+
+    for (const row of advisors) {
+        const bucket = advisorsByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        advisorsByTeam.set(row.team_id, bucket);
+    }
+    for (const row of members) {
+        const bucket = membersByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        membersByTeam.set(row.team_id, bucket);
+    }
+    for (const row of submissionFiles) {
+        if (!getReviewWorkSlot(row.task_name)) continue;
+        const allBucket = allReviewWorksByTeam.get(row.team_id) ?? [];
+        allBucket.push(row);
+        allReviewWorksByTeam.set(row.team_id, allBucket);
+
+        if (row.submission_track === track) {
+            const trackBucket = trackReviewWorksByTeam.get(row.team_id) ?? [];
+            trackBucket.push(row);
+            trackReviewWorksByTeam.set(row.team_id, trackBucket);
+        }
+    }
+
+    const teamsWithTrack = teams.filter((team) => (trackReviewWorksByTeam.get(team.team_id) ?? []).length > 0);
+    if (teamsWithTrack.length === 0) {
+        throw new NotFoundError(`ไม่พบทีมที่ส่งผลงานประเภท ${track}`);
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet(`${track}_review_links`);
+    sheet.columns = [
+        { header: 'team_id', key: 'team_id', width: 12 },
+        { header: 'team_code', key: 'team_code', width: 14 },
+        { header: 'team_name_th', key: 'team_name_th', width: 28 },
+        { header: 'team_name_en', key: 'team_name_en', width: 28 },
+        { header: 'team_status', key: 'team_status', width: 14 },
+        { header: 'export_track', key: 'export_track', width: 14 },
+        { header: 'review_link', key: 'review_link', width: 42 },
+        { header: 'total_submitted_works', key: 'total_submitted_works', width: 22 },
+        { header: 'work_1_track', key: 'work_1_track', width: 16 },
+        { header: 'work_1_file_name', key: 'work_1_file_name', width: 32 },
+        { header: 'work_1_uploaded_at', key: 'work_1_uploaded_at', width: 20 },
+        { header: 'work_2_track', key: 'work_2_track', width: 16 },
+        { header: 'work_2_file_name', key: 'work_2_file_name', width: 32 },
+        { header: 'work_2_uploaded_at', key: 'work_2_uploaded_at', width: 20 },
+        { header: 'leader_user_name', key: 'leader_user_name', width: 24 },
+        { header: 'member_count', key: 'member_count', width: 12 },
+        { header: 'member_names', key: 'member_names', width: 42 },
+        { header: 'advisor_names', key: 'advisor_names', width: 34 },
+        { header: 'created_at', key: 'created_at', width: 20 },
+        { header: 'updated_at', key: 'updated_at', width: 20 },
+    ];
+
+    const hyperlinkStyle: Partial<ExcelJS.Font> = {
+        color: { argb: 'FF0563C1' },
+        underline: true,
+    };
+
+    for (const team of teamsWithTrack) {
+        const teamMembers = [...(membersByTeam.get(team.team_id) ?? [])].sort((a, b) => a.member_order - b.member_order);
+        const teamAdvisors = advisorsByTeam.get(team.team_id) ?? [];
+        const teamWorks = allReviewWorksByTeam.get(team.team_id) ?? [];
+        const worksBySlot = new Map<ReviewWorkSlot, ExportSubmissionFileRow>();
+        for (const work of teamWorks) {
+            const slot = getReviewWorkSlot(work.task_name);
+            if (!slot || worksBySlot.has(slot)) continue;
+            worksBySlot.set(slot, work);
+        }
+
+        const leader = teamMembers.find((member) => member.role === 'leader') || teamMembers[0] || null;
+        const leaderDisplayName = leader ? pickMemberDisplayName(leader) : (team.leader_user_name || '');
+        const teamShareId = await getOrCreateTeamReviewShareId(db, team.team_id);
+        const reviewUrl = buildPublicTeamReviewPageUrl(publicBaseUrl, teamShareId);
+        const work1 = worksBySlot.get('work_1');
+        const work2 = worksBySlot.get('work_2');
+
+        const row = sheet.addRow({
+            team_id: team.team_id,
+            team_code: team.team_code,
+            team_name_th: team.team_name_th || '',
+            team_name_en: team.team_name_en || '',
+            team_status: team.status,
+            export_track: track,
+            total_submitted_works: worksBySlot.size,
+            work_1_track: work1?.submission_track || '',
+            work_1_file_name: work1?.file_original_name || '',
+            work_1_uploaded_at: work1 ? formatDateTime(work1.uploaded_at) : '',
+            work_2_track: work2?.submission_track || '',
+            work_2_file_name: work2?.file_original_name || '',
+            work_2_uploaded_at: work2 ? formatDateTime(work2.uploaded_at) : '',
+            leader_user_name: leaderDisplayName,
+            member_count: teamMembers.length,
+            member_names: teamMembers.map(pickMemberDisplayName).filter(Boolean).join(', '),
+            advisor_names: teamAdvisors.map((advisor) => buildAdvisorDisplayNameTh(advisor) || buildAdvisorDisplayNameEn(advisor)).filter(Boolean).join(', '),
+            created_at: formatDateTime(team.created_at),
+            updated_at: formatDateTime(team.updated_at),
+        });
+
+        const reviewCell = row.getCell('review_link');
+        reviewCell.value = {
+            text: 'Open Team Review',
+            hyperlink: reviewUrl,
+        };
+        reviewCell.font = hyperlinkStyle;
+        row.getCell('member_names').alignment = { wrapText: true, vertical: 'top' };
+        row.getCell('advisor_names').alignment = { wrapText: true, vertical: 'top' };
+        row.height = 54;
+    }
+
+    sheet.getRow(1).font = { bold: true };
+
+    const output = new PassThrough();
+    void (async () => {
+        await workbook.xlsx.write(output);
+        output.end();
+    })();
+
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
+    return {
+        fileName: `teams_review_links_${track.toLowerCase()}_${timestamp}.xlsx`,
         stream: output,
     };
 }

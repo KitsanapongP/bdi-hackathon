@@ -205,6 +205,10 @@ export const exportTeamsSheetQuerySchema = z.object({
     statuses: z.string().trim().min(1, 'กรุณาเลือกสถานะทีมอย่างน้อย 1 สถานะ'),
 });
 
+export const exportTeamsReviewTrackSheetQuerySchema = exportTeamsSheetQuerySchema.extend({
+    track: z.enum(['Phenome', 'Health', 'City']),
+});
+
 export const selectionResultSchema = z.object({
     status: z.enum(['passed', 'failed']),
 });

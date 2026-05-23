@@ -539,6 +539,7 @@ export async function getSubmissionFilesForExport(db: DB, teamIds: number[]): Pr
             f.team_submission_task_id,
             st.task_name,
             st.sort_order AS task_sort_order,
+            tst.submission_track,
             f.file_storage_key,
             f.file_original_name,
             f.uploaded_at
