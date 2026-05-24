@@ -679,7 +679,7 @@ export async function getTotalActiveTeamCount(db: DB): Promise<number> {
         `SELECT COUNT(*) AS total
          FROM team_teams t
          WHERE t.deleted_at IS NULL
-           AND t.status <> 'disbanded'`
+           AND t.status = 'submitted'`
     );
 
     return Number(rows[0]?.total ?? 0);
@@ -715,7 +715,7 @@ export async function getTotalActiveTeamTrend(
         `SELECT ${periodExpression} AS period_start, COUNT(*) AS total
          FROM team_teams t
          WHERE t.deleted_at IS NULL
-           AND t.status <> 'disbanded'
+           AND t.status = 'submitted'
          GROUP BY period_start
          ORDER BY period_start ASC`
     );
