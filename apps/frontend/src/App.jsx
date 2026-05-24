@@ -37,6 +37,7 @@ function App() {
         <Route path="/home/sponsors" element={<Navigate to="/home/partner" replace />} />
         <Route path="/home/venues" element={<VenuesPage />} />
         <Route path="/home/datasets" element={<DatasetsPage />} />
+        <Route path="/home/datasets/:slug" element={<DatasetsPage />} />
         <Route path="/home/notifications" element={<NotificationsPage />} />
         <Route path="/home/register" element={<RegisterPage />} />
         <Route path="/login" element={<RegisterPage />} />
