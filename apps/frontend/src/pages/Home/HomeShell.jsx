@@ -322,6 +322,9 @@ function HomeShell({ children }) {
                         })}
                         {user ? (
                             <>
+                                <button className="gt-collapse-link" onClick={() => { setMobileOpen(false); navigate('/home', { state: { open: 'team' } }); }}>
+                                    <Users size={16} /> ทีมของฉัน
+                                </button>
                                 <button className="gt-collapse-link" onClick={() => { setMobileOpen(false); navigate('/home', { state: { open: 'profile' } }); }}>
                                     <User size={16} /> โปรไฟล์
                                 </button>

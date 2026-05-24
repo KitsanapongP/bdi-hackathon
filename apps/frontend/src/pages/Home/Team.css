@@ -2472,11 +2472,13 @@
     }
 
     .gl-lobby-cards {
-        gap: 12px;
+        max-width: 360px;
+        grid-template-columns: 1fr !important;
+        gap: 14px;
     }
 
     .gl-lobby-card {
-        padding: 20px 16px;
+        padding: 24px 20px;
         background: rgba(255, 255, 255, 0.1) !important;
     }
 
@@ -5195,6 +5197,10 @@
         overflow: visible;
     }
 
+    .gl-frame.gl-frame-center {
+        padding: 24px 18px !important;
+    }
+
     .gl-members-panel {
         max-height: none;
         padding: 12px;
@@ -5269,6 +5275,16 @@
 
     .gl-card-grid {
         gap: 10px;
+    }
+
+    .gl-lobby-cards.gl-lobby-2x2 {
+        grid-template-columns: 1fr !important;
+        max-width: 360px;
+        gap: 14px;
+    }
+
+    .gl-lobby-card {
+        padding: 24px 20px;
     }
 
     .gl-mode-card {
@@ -5463,5 +5479,23 @@
 
     .gl-frame-inner-active .gl-inner-view {
         max-width: 100%;
+    }
+
+    .gl-frame.gl-frame-center:not(.gl-frame-inner-active) {
+        padding: 24px 14px !important;
+    }
+
+    .gl-lobby-home {
+        padding: 12px 4px 18px;
+    }
+
+    .gl-lobby-2x2 {
+        grid-template-columns: 1fr !important;
+        max-width: 320px;
+        gap: 14px;
+    }
+
+    .gl-lobby-card {
+        padding: 22px 18px;
     }
 }
