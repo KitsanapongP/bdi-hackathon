@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 import HomeShell from './HomeShell';
 import { datasetsData, getDatasetBySlug } from './datasetsData';
 import './InfoPages.css';
@@ -117,6 +117,15 @@ function DatasetsOverview() {
                 <section className="gt-info-panel gt-datasets-page gt-datasets-md-page">
                     <div className="gt-dataset-page-head">
                         <h1>Data Overview</h1>
+                        <a
+                            className="gt-dataset-repo-link"
+                            href="https://github.com/anonymaew/bdi-hackathon-2026-sampled-dataset"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <ExternalLink size={16} aria-hidden="true" />
+                            เปิดบน Github
+                        </a>
                     </div>
 
                     <DatasetOverviewTable />
