@@ -1740,7 +1740,7 @@ function HomePage() {
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-orange"><Trophy color="#fff" size={24} /></div>
                                 <h3>อัปสกิลขั้นสุดแบบ Fast-Track (Exclusive Training &amp; Mentoring)</h3>
-                                <p>หากคุณคือ 1 ใน 14 ทีมสุดยอด ที่ผ่านเข้าสู่รอบ Hackathon คุณจะได้รับการอบรมเข้มข้นตั้งแต่ Data Science, Big Learning ไปจนถึง Deep Tech จากวิทยากรผู้เชี่ยวชาญ พร้อมมีทีม Mentor ระดับท็อปคอยประกบในรอบ Walk-in Session เพื่อให้คำปรึกษาและ Feedback อย่างใกล้ชิดทั้งด้าน Technical, Domain และ Business ตลอดการแข่งขัน</p>
+                                <p>หากคุณคือ 1 ใน 16 ทีมสุดยอด ที่ผ่านเข้าสู่รอบ Hackathon คุณจะได้รับการอบรมเข้มข้นตั้งแต่ Data Science, Big Learning ไปจนถึง Deep Tech จากวิทยากรผู้เชี่ยวชาญ พร้อมมีทีม Mentor ระดับท็อปคอยประกบในรอบ Walk-in Session เพื่อให้คำปรึกษาและ Feedback อย่างใกล้ชิดทั้งด้าน Technical, Domain และ Business ตลอดการแข่งขัน</p>
                             </div>
                             <div className="gt-bento-card gt-reveal">
                                 <div className="gt-bento-icon gt-icon-teal"><Target color="#fff" size={24} /></div>
@@ -1861,7 +1861,7 @@ function HomePage() {
                     {/* Benefits */}
                     <section id="benefits" className="gt-section gt-container">
                         <div className="gt-section-header gt-reveal">
-                            <h2>สิทธิประโยชน์ของผู้เข้าร่วมแข่งขัน (สำหรับ 14 ทีมที่ผ่านการคัดเลือก)</h2>
+                            <h2>สิทธิประโยชน์ของผู้เข้าร่วมแข่งขัน (สำหรับ 16 ทีมที่ผ่านการคัดเลือก)</h2>
                             <p>ครอบคลุมทั้งที่พัก การเดินทาง และการสนับสนุนระหว่างการแข่งขัน</p>
                         </div>
 
