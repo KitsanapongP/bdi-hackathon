@@ -4135,6 +4135,106 @@
     white-space: pre-wrap;
 }
 
+.sub-proposal-example-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 10px;
+    margin-bottom: 14px;
+    padding: 16px 18px;
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    border-left: 5px solid #eab308;
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.18), rgba(124, 58, 237, 0.14));
+    box-shadow: 0 16px 36px rgba(234, 179, 8, 0.12);
+}
+
+.sub-proposal-example-card:hover {
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.24), rgba(124, 58, 237, 0.18));
+}
+
+.sub-proposal-example-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.sub-proposal-example-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #fde68a;
+    background: rgba(234, 179, 8, 0.18);
+    border: 1px solid rgba(234, 179, 8, 0.42);
+}
+
+.sub-proposal-example-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.sub-proposal-example-label {
+    color: #fde68a;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+}
+
+.sub-proposal-example-text strong {
+    color: var(--gl-text);
+    font-size: 1rem;
+    line-height: 1.3;
+}
+
+.sub-proposal-example-meta {
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.sub-proposal-example-download {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    color: #171717;
+    background: #facc15;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    font-size: 0.86rem;
+    font-weight: 900;
+    white-space: nowrap;
+    box-shadow: 0 10px 24px rgba(249, 115, 22, 0.24);
+    transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+}
+
+.sub-proposal-example-download:hover {
+    color: #111827;
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+    box-shadow: 0 14px 30px rgba(249, 115, 22, 0.3);
+}
+
+@media (max-width: 640px) {
+    .sub-proposal-example-card {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .sub-proposal-example-download {
+        width: 100%;
+    }
+}
+
 .sub-task-lock-notice {
     display: flex;
     align-items: center;

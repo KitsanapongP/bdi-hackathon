@@ -47,7 +47,7 @@ import {
     formatThaiDate,
     SYSTEM_WINDOW_STATUS,
 } from '../../lib/systemWindow';
-import { USER_MANUAL_PATH } from '../../lib/userManual';
+import { PROPOSAL_TEMPLATE_PATH, USER_MANUAL_PATH } from '../../lib/userManual';
 import ConfirmModal from '../../components/ConfirmModal';
 import './Team.css';
 import './Register.css';
@@ -2433,6 +2433,20 @@ export default function TeamContent({ user }) {
                     <div className="vf-info-banner">
                         <Info size={16} />
                         <span>หัวหน้าทีมเท่านั้นที่สามารถแก้ไขรายการส่งผลงานได้</span>
+                    </div>
+                    <div className="gl-team-info-card sub-proposal-example-card">
+                        <div className="sub-proposal-example-content">
+                            <div className="sub-proposal-example-icon">
+                                <FileText size={22} />
+                            </div>
+                            <div className="sub-proposal-example-text">
+                                <strong>เกณฑ์การให้คะแนนและตัวอย่างการเขียน Proposal</strong>
+                                <span className="sub-proposal-example-meta">OrientationDay-hackathon-datasetV3.pptx</span>
+                            </div>
+                        </div>
+                        <a href={PROPOSAL_TEMPLATE_PATH} download className="sub-proposal-example-download">
+                            <Download size={16} /> ดาวน์โหลดไฟล์ตัวอย่าง
+                        </a>
                     </div>
                     {isWorksLocked && (
                         <div className="vf-info-banner vf-submitted">
