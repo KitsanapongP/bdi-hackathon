@@ -145,6 +145,7 @@ export async function getProfile(db: DB, userId: number): Promise<UserProfileSaf
         lastNameTh: row.last_name_th,
         firstNameEn: row.first_name_en,
         lastNameEn: row.last_name_en,
+        cv: row.cv,
     };
 }
 
@@ -164,6 +165,7 @@ export async function updateProfile(
         birthDate?: string | undefined;
         educationLevel?: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | undefined;
         homeProvince?: string | undefined;
+        cv?: string | undefined;
     },
 ): Promise<UserProfileSafe> {
     await assertProfileEditable(db, userId);

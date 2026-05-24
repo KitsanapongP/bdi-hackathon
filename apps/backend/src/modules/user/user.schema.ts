@@ -14,6 +14,7 @@ export const updateProfileSchema = z.object({
     birthDate: z.string().date('วันเดือนปีเกิดไม่ถูกต้อง').optional(),
     educationLevel: z.enum(['secondary', 'high_school', 'bachelor', 'master', 'doctorate']).optional(),
     homeProvince: z.string().max(100).optional(),
+    cv: z.string().trim().min(1, 'กรุณากรอก CV').max(1500).optional(),
 });
 
 /* ── 1.7 Privacy settings ── */

@@ -11,7 +11,7 @@ export async function getProfile(db: DB, userId: number): Promise<UserProfileRow
         `SELECT user_id, user_name, avatar_url, email, phone,
                 institution_name_th, institution_name_en,
                 first_name_th, last_name_th, first_name_en, last_name_en,
-                gender, birth_date, education_level, home_province,
+                gender, birth_date, education_level, home_province, cv,
                 is_active, created_at, updated_at
          FROM user_users
          WHERE user_id = :userId AND is_active = 1 AND deleted_at IS NULL
@@ -47,6 +47,7 @@ export async function updateProfile(
         birthDate?: string | undefined;
         educationLevel?: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | undefined;
         homeProvince?: string | undefined;
+        cv?: string | undefined;
     },
 ): Promise<void> {
     const sets: string[] = [];
@@ -64,6 +65,7 @@ export async function updateProfile(
     if (data.birthDate !== undefined) { sets.push('birth_date = :birthDate'); params.birthDate = data.birthDate; }
     if (data.educationLevel !== undefined) { sets.push('education_level = :educationLevel'); params.educationLevel = data.educationLevel; }
     if (data.homeProvince !== undefined) { sets.push('home_province = :homeProvince'); params.homeProvince = data.homeProvince; }
+    if (data.cv !== undefined) { sets.push('cv = :cv'); params.cv = data.cv; }
 
     if (sets.length === 0) return;
 

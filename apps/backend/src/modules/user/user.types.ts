@@ -15,6 +15,7 @@ export interface UserProfileRow {
     last_name_th: string | null;
     first_name_en: string | null;
     last_name_en: string | null;
+    cv: string | null;
     is_active: number;
     created_at: string;
     updated_at: string;
@@ -36,6 +37,7 @@ export interface UserProfileSafe {
     lastNameTh: string | null;
     firstNameEn: string | null;
     lastNameEn: string | null;
+    cv: string | null;
 }
 
 /* ── user_privacy_settings ── */

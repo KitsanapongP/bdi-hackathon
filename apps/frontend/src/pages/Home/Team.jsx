@@ -58,16 +58,17 @@ const TEAM_MEMBER_MIN_DEFAULT = 3;
 const TEAM_ADVISOR_MAX = 5;
 const TEAM_NAME_MAX_LENGTH = 50;
 const TEAM_DESCRIPTION_MAX_LENGTH = 500;
+const VERIFICATION_CV_MAX_LENGTH = 1500;
 const PDF_FILE_ACCEPT = 'application/pdf,.pdf';
 const VERIFICATION_MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const SUBMISSION_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const VERIFICATION_FILE_REQUIREMENT_TEXT = 'อัปโหลดได้เฉพาะไฟล์นามสกุล PDF เท่านั้นและมีขนาดไม่เกิน 5 MB เป็นจำนวน 1 ไฟล์';
 const SUBMISSION_FILE_REQUIREMENT_TEXT = 'อัปโหลดได้เฉพาะไฟล์นามสกุล PDF เท่านั้นและมีขนาดไม่เกิน 10 MB เป็นจำนวน 1 ไฟล์';
-const FILE_NAME_REQUIREMENT_TEXT_VERIFICATION = 'กรุณาตั้งชื่อไฟล์ให้สอดคล้องกับข้อมูลในไฟล์ เช่น CV_นายสมชาย_ใจดี.pdf เพื่อความสะดวกในการตรวจสอบและยืนยันตัวตน';
+const FILE_NAME_REQUIREMENT_TEXT_VERIFICATION = 'กรุณาตั้งชื่อไฟล์ให้สอดคล้องกับข้อมูลในไฟล์ เช่น หลักฐาน_นายสมชาย_ใจดี.pdf เพื่อความสะดวกในการตรวจสอบและยืนยันตัวตน';
 const TEAM_LOCKED_AFTER_SUBMIT_MESSAGE = 'ไม่สามารถแก้ไขข้อมูลได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว';
 
 const CARDS = [
-    { id: 'verify', icon: <ShieldCheck />, label: 'ยืนยันตัวตน', color: '#14b8a6' },
+    { id: 'verify', icon: <ShieldCheck />, label: 'ยืนยันตัวตนของฉัน', color: '#14b8a6' },
     { id: 'advisor', icon: <GraduationCap />, label: 'อาจารย์ที่ปรึกษา', color: '#6366f1' },
     { id: 'works', icon: <Award />, label: 'ส่งผลงาน', color: '#eab308' },
     { id: 'announce', icon: <Megaphone />, label: 'ประกาศ', color: '#f97316' },
@@ -209,7 +210,8 @@ const isProfileComplete = (profile) => {
     const hasBirthDate = String(profile.birthDate || '').trim().length > 0;
     const hasGender = String(profile.gender || '').trim().length > 0;
     const hasEducationLevel = String(profile.educationLevel || '').trim().length > 0;
-    return allTextFilled && phoneFilled && hasBirthDate && hasGender && hasEducationLevel;
+    const hasCv = String(profile.cv || '').trim().length > 0;
+    return allTextFilled && phoneFilled && hasBirthDate && hasGender && hasEducationLevel && hasCv;
 };
 
 const getProfileMissingFields = (profile) => {
@@ -236,6 +238,7 @@ const getProfileMissingFields = (profile) => {
     if (String(profile.birthDate || '').trim().length === 0) missing.push('วันเดือนปีเกิด');
     if (String(profile.gender || '').trim().length === 0) missing.push('เพศ');
     if (String(profile.educationLevel || '').trim().length === 0) missing.push('ระดับการศึกษา');
+    if (String(profile.cv || '').trim().length === 0) missing.push('CV');
 
     return missing;
 };
@@ -253,6 +256,7 @@ const toVerificationProfilePayload = (profile) => ({
     educationLevel: profile?.educationLevel || '',
     homeProvince: profile?.homeProvince || '',
     userName: profile?.userName || '',
+    cv: String(profile?.cv || '').slice(0, VERIFICATION_CV_MAX_LENGTH),
 });
 
 export default function TeamContent({ user }) {
@@ -1403,31 +1407,46 @@ export default function TeamContent({ user }) {
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
-    const handleSaveVerificationProfile = async () => {
+    const saveVerificationProfile = async (payloadToSave, fallbackMessage = 'บันทึกโปรไฟล์ไม่สำเร็จ') => {
         if (isTeamEditLocked || isMyVerificationConfirmed) {
             showToast('ไม่สามารถบันทึกข้อมูลส่วนตัวได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
         if (!profileData) return;
+        if (!payloadToSave || typeof payloadToSave !== 'object') return;
         setProfileSaving(true);
         try {
-            const profilePayload = toVerificationProfilePayload(profileData);
             const res = await fetch(apiUrl('/api/user/profile'), {
                 method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(profilePayload),
+                body: JSON.stringify(payloadToSave),
             });
             const payload = await res.json();
-            if (!payload.ok) throw new Error(payload.message || 'บันทึกโปรไฟล์ไม่สำเร็จ');
+            if (!payload.ok) throw new Error(payload.message || fallbackMessage);
             setProfileData(payload.data);
             setSavedProfileData(payload.data);
             showToast('บันทึกสำเร็จ', 'success');
         } catch (err) {
-            showToast(getReadableErrorMessage(err, 'บันทึกโปรไฟล์ไม่สำเร็จ'), 'error');
+            showToast(getReadableErrorMessage(err, fallbackMessage), 'error');
         } finally {
             setProfileSaving(false);
         }
+    };
+
+    const handleSaveVerificationProfile = async () => {
+        if (!profileData) return;
+        const profilePayload = toVerificationProfilePayload(profileData);
+        delete profilePayload.cv;
+        await saveVerificationProfile(profilePayload, 'บันทึกข้อมูลส่วนตัวไม่สำเร็จ');
+    };
+
+    const handleSaveVerificationCv = async () => {
+        if (!profileData) return;
+        await saveVerificationProfile(
+            { cv: String(profileData.cv || '').slice(0, VERIFICATION_CV_MAX_LENGTH) },
+            'บันทึก CV ไม่สำเร็จ',
+        );
     };
 
     const handleConfirmDocs = ({ hasDocs, profileComplete, missingFields, hasUnsavedProfileChanges }) => {
@@ -2622,10 +2641,22 @@ export default function TeamContent({ user }) {
             const myDocs = vd?.myDocuments || [];
             const profileComplete = isProfileComplete(profileData);
             const missingFields = getProfileMissingFields(profileData);
+            const hasCv = String(profileData?.cv || '').trim().length > 0;
+            const missingFieldsWithoutCv = missingFields.filter((field) => field !== 'CV');
             const canEditGeneralInfo = !isSubmitted && !myConfirmed;
             const hasUnsavedProfileChanges = profileData
                 ? JSON.stringify(toVerificationProfilePayload(profileData)) !== JSON.stringify(toVerificationProfilePayload(savedProfileData))
                 : false;
+            const hasUnsavedGeneralInfoChanges = profileData ? (() => {
+                const currentPayload = toVerificationProfilePayload(profileData);
+                const savedPayload = toVerificationProfilePayload(savedProfileData);
+                delete currentPayload.cv;
+                delete savedPayload.cv;
+                return JSON.stringify(currentPayload) !== JSON.stringify(savedPayload);
+            })() : false;
+            const profileGeneralComplete = missingFieldsWithoutCv.length === 0;
+            const profileGeneralReadyForConfirm = profileGeneralComplete && !hasUnsavedGeneralInfoChanges;
+            const profileGeneralStatusOk = profileGeneralReadyForConfirm;
             const profileReadyForConfirm = profileComplete && !hasUnsavedProfileChanges;
 
             return renderSimpleDetail('ยืนยันตัวตน', <ShieldCheck size={20} />, (
@@ -2660,7 +2691,10 @@ export default function TeamContent({ user }) {
                     <div className="gl-team-info-card">
                         <span className="gl-team-info-label">
                             <User size={13} /> ข้อมูลส่วนตัว
-                            <span className={`vf-profile-check ${profileReadyForConfirm ? 'ok' : 'bad'}`}>{profileReadyForConfirm ? '✓' : '✗'}</span>
+                            <span className={`vf-profile-check ${profileGeneralStatusOk ? 'ok' : 'bad'}`}>{profileGeneralStatusOk ? '✓' : '✗'}</span>
+                            {hasUnsavedGeneralInfoChanges && (
+                                <span className="sub-task-missing-warning">ยังไม่ได้บันทึก</span>
+                            )}
                         </span>
 
                         {profileLoading && (
@@ -2759,22 +2793,24 @@ export default function TeamContent({ user }) {
                                     </div>
                                 </div>
 
-                                {!profileComplete && (
+                                {!profileGeneralComplete && (
                                     <>
                                         <p className="vf-hint">ข้อมูลส่วนตัวยังไม่ครบ กรุณาตรวจสอบรายการด้านล่าง</p>
-                                        <ul className="vf-missing-list">
-                                            {missingFields.map((field) => <li key={field}>{field}</li>)}
-                                        </ul>
+                                        {missingFieldsWithoutCv.length > 0 && (
+                                            <ul className="vf-missing-list">
+                                                {missingFieldsWithoutCv.map((field) => <li key={field}>{field}</li>)}
+                                            </ul>
+                                        )}
                                     </>
                                 )}
                                 {!canEditGeneralInfo && (
                                     <p className="vf-hint">ข้อมูลส่วนตัวไม่สามารถแก้ไขได้หากกดยืนยันแล้ว</p>
                                 )}
                                 {canEditGeneralInfo && (
-                                    <div className="pf-actions" style={{ marginTop: 12 }}>
+                                    <div className="pf-actions" style={{ marginTop: 12, justifyContent: 'flex-end' }}>
                                         <button className="gl-action-btn gl-submit-btn" onClick={handleSaveVerificationProfile} disabled={profileSaving}>
                                             {profileSaving ? <Loader2 size={16} /> : <Save size={16} />}
-                                            บันทึก
+                                            บันทึกข้อมูลส่วนตัว
                                         </button>
                                     </div>
                                 )}
@@ -2785,7 +2821,7 @@ export default function TeamContent({ user }) {
                     {/* My documents section */}
                     <div className="gl-team-info-card">
                         <span className="gl-team-info-label">
-                            <FileText size={13} /> เอกสารของฉัน
+                            <FileText size={13} /> เอกสารยืนยันตัวตนของฉัน
                             <span className={`vf-profile-check ${myDocs.length > 0 ? 'ok' : 'bad'}`}>{myDocs.length > 0 ? '✓' : '✗'}</span>
                             {myDocs.length === 0 && (
                                 <span className="sub-task-missing-warning">
@@ -2794,7 +2830,7 @@ export default function TeamContent({ user }) {
                             )}
                         </span>
                         <p className="vf-hint vf-doc-description">
-                            CV อธิบาย Background ของตนเอง เช่น สถาบันการศึกษา สาขาที่กำลังศึกษา ประสบการณ์ ความเชี่ยวชาญ หรือรางวัลที่เคยได้รับ ซึ่งมีส่วนสนับสนุนต่อการแข่งขันครั้งนี้ และภายใน CV ควรแนบหลักฐานระบุตัวตนที่เป็นทางการ เช่น บัตรประจำตัวนักศึกษา เพื่อแสดงคุณสมบัติการเข้าร่วมการแข่งขัน
+                            หลักฐานแสดงตัวตนต้องเป็นไฟล์ PDF ที่มีข้อมูลตรงกับโปรไฟล์ที่กรอกไว้ เช่น ชื่อ-นามสกุล และสถาบันการศึกษา ภายในไฟล์ควรแนบหลักฐานระบุตัวตนที่เป็นทางการ เช่น บัตรประจำตัวนักศึกษา เพื่อแสดงคุณสมบัติการเข้าร่วมการแข่งขัน
                         </p>
                         <br/>
                         <strong className="vf-hint vf-doc-description">{VERIFICATION_FILE_REQUIREMENT_TEXT}</strong>
@@ -2842,6 +2878,46 @@ export default function TeamContent({ user }) {
                         )}
                     </div>
 
+                    <div className="gl-team-info-card">
+                        <span className="gl-team-info-label">
+                            <FileText size={13} /> CV
+                            <span className={`vf-profile-check ${hasCv ? 'ok' : 'bad'}`}>{hasCv ? '✓' : '✗'}</span>
+                            {!hasCv && (
+                                <span className="sub-task-missing-warning">
+                                    ยังไม่ได้กรอก CV
+                                </span>
+                            )}
+                        </span>
+                        <div className="pf-field full" style={{ marginTop: 12 }}>
+                            <p className="vf-hint vf-doc-description" style={{ marginBottom: 8 }}>
+                                CV อธิบาย Background ของตนเอง เช่น สถาบันการศึกษา สาขาที่กำลังศึกษา ประสบการณ์ ความเชี่ยวชาญ หรือรางวัลที่เคยได้รับ ซึ่งมีส่วนสนับสนุนต่อการแข่งขันครั้งนี้
+                            </p>
+                            <p className="vf-hint vf-doc-description" style={{ marginBottom: 8 }}>
+                                <strong className="sub-task-missing-warning">
+                                    ไม่ต้องระบุข้อมูลที่เป็นการเปิดเผยตัวตนของผู้เข้าแข่งขัน เช่น ชื่อบุคคล เพื่อใช้ส่งให้กรรมการพิจารณาแบบไม่เปิดเผยตัวตน
+                                </strong>
+                            </p>
+                            <textarea
+                                className="pf-input gl-form-textarea"
+                                disabled={!canEditGeneralInfo || profileSaving}
+                                value={profileData?.cv || ''}
+                                maxLength={VERIFICATION_CV_MAX_LENGTH}
+                                onChange={(e) => setProfileData((d) => ({ ...(d || {}), cv: e.target.value.slice(0, VERIFICATION_CV_MAX_LENGTH) }))}
+                                placeholder="พิมพ์ CV ของคุณ"
+                                rows={6}
+                            />
+                            <span className="vf-hint">{String(profileData?.cv || '').length}/{VERIFICATION_CV_MAX_LENGTH} ตัวอักษร</span>
+                            {canEditGeneralInfo && (
+                                <div className="pf-actions" style={{ marginTop: 12, justifyContent: 'flex-end' }}>
+                                    <button className="gl-action-btn gl-submit-btn" onClick={handleSaveVerificationCv} disabled={profileSaving}>
+                                        {profileSaving ? <Loader2 size={16} /> : <Save size={16} />}
+                                        บันทึก CV
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Confirm / Unconfirm buttons */}
                     {!isSubmitted && (
                         <div className="gl-team-info-card">
@@ -2875,9 +2951,11 @@ export default function TeamContent({ user }) {
                                 <p className="vf-hint">คุณมีการแก้ไขข้อมูลส่วนตัวที่ยังไม่บันทึก กรุณากดปุ่มบันทึกก่อนยืนยันเอกสาร</p>
                             )}
                             {!myConfirmed && !profileComplete && (
-                                <ul className="vf-missing-list">
-                                    {missingFields.map((field) => <li key={`confirm-${field}`}>{field}</li>)}
-                                </ul>
+                                missingFieldsWithoutCv.length > 0 && (
+                                    <ul className="vf-missing-list">
+                                        {missingFieldsWithoutCv.map((field) => <li key={`confirm-${field}`}>{field}</li>)}
+                                    </ul>
+                                )
                             )}
                         </div>
                     )}
