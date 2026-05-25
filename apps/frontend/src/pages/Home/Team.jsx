@@ -47,7 +47,7 @@ import {
     formatThaiDate,
     SYSTEM_WINDOW_STATUS,
 } from '../../lib/systemWindow';
-import { PROPOSAL_TEMPLATE_PATH, USER_MANUAL_PATH } from '../../lib/userManual';
+import { PROPOSAL_TEMPLATE_PATH, USER_MANUAL_PATH, VIDEO_PITCHING_CRITERIA_PATH } from '../../lib/userManual';
 import ConfirmModal from '../../components/ConfirmModal';
 import './Team.css';
 import './Register.css';
@@ -2440,12 +2440,26 @@ export default function TeamContent({ user }) {
                                 <FileText size={22} />
                             </div>
                             <div className="sub-proposal-example-text">
+                                <strong>ชี้แจงองค์ประกอบของ Video</strong>
+                                <span className="sub-proposal-example-meta">VDO-Pitching-Assignment-and-Criteria.pdf</span>
+                            </div>
+                        </div>
+                        <a href={VIDEO_PITCHING_CRITERIA_PATH} download className="sub-proposal-example-download">
+                            <Download size={16} /> ดาวน์โหลดไฟล์
+                        </a>
+                    </div>
+                    <div className="gl-team-info-card sub-proposal-example-card">
+                        <div className="sub-proposal-example-content">
+                            <div className="sub-proposal-example-icon">
+                                <FileText size={22} />
+                            </div>
+                            <div className="sub-proposal-example-text">
                                 <strong>เกณฑ์การให้คะแนนและตัวอย่างการเขียน Proposal</strong>
                                 <span className="sub-proposal-example-meta">OrientationDay-hackathon-datasetV3.pptx</span>
                             </div>
                         </div>
                         <a href={PROPOSAL_TEMPLATE_PATH} download className="sub-proposal-example-download">
-                            <Download size={16} /> ดาวน์โหลดไฟล์ตัวอย่าง
+                            <Download size={16} /> ดาวน์โหลดไฟล์
                         </a>
                     </div>
                     {isWorksLocked && (
@@ -2845,6 +2859,10 @@ export default function TeamContent({ user }) {
                         </span>
                         <p className="vf-hint vf-doc-description">
                             หลักฐานแสดงตัวตนต้องเป็นไฟล์ PDF ที่มีข้อมูลตรงกับโปรไฟล์ที่กรอกไว้ เช่น ชื่อ-นามสกุล และสถาบันการศึกษา ภายในไฟล์ควรแนบหลักฐานระบุตัวตนที่เป็นทางการ เช่น บัตรประจำตัวนักศึกษา เพื่อแสดงคุณสมบัติการเข้าร่วมการแข่งขัน
+                        </p>
+                        <br/>
+                        <p className="vf-hint vf-doc-description">
+                            ในกรณีที่มีประกาศนียบัตร หรือหลักฐานอื่นที่แสดงความสามารถของผู้สมัคร ให้รวมไฟล์ส่งพร้อมกับหลักฐานแสดงตัวตนใน PDF ไฟล์เดียว
                         </p>
                         <br/>
                         <strong className="vf-hint vf-doc-description">{VERIFICATION_FILE_REQUIREMENT_TEXT}</strong>
