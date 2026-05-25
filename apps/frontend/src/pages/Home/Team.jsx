@@ -47,7 +47,12 @@ import {
     formatThaiDate,
     SYSTEM_WINDOW_STATUS,
 } from '../../lib/systemWindow';
-import { PROPOSAL_TEMPLATE_PATH, USER_MANUAL_PATH, VIDEO_PITCHING_CRITERIA_PATH } from '../../lib/userManual';
+import {
+    PROPOSAL_TEMPLATE_2PAGE_PATH,
+    PROPOSAL_TEMPLATE_PATH,
+    USER_MANUAL_PATH,
+    VIDEO_PITCHING_CRITERIA_PATH,
+} from '../../lib/userManual';
 import ConfirmModal from '../../components/ConfirmModal';
 import './Team.css';
 import './Register.css';
@@ -2445,6 +2450,20 @@ export default function TeamContent({ user }) {
                             </div>
                         </div>
                         <a href={VIDEO_PITCHING_CRITERIA_PATH} download className="sub-proposal-example-download">
+                            <Download size={16} /> ดาวน์โหลดไฟล์
+                        </a>
+                    </div>
+                    <div className="gl-team-info-card sub-proposal-example-card">
+                        <div className="sub-proposal-example-content">
+                            <div className="sub-proposal-example-icon">
+                                <FileText size={22} />
+                            </div>
+                            <div className="sub-proposal-example-text">
+                                <strong>แบบฟอร์ม Proposal 2 หน้า</strong>
+                                <span className="sub-proposal-example-meta">BDI_Hackathon_2026_D01_Proposal_Template_2page.docx</span>
+                            </div>
+                        </div>
+                        <a href={PROPOSAL_TEMPLATE_2PAGE_PATH} download className="sub-proposal-example-download">
                             <Download size={16} /> ดาวน์โหลดไฟล์
                         </a>
                     </div>
