@@ -572,6 +572,7 @@ export async function getSubmissionLinksForExport(db: DB, teamIds: number[]): Pr
             tst.team_submission_task_id,
             st.task_name,
             st.sort_order AS task_sort_order,
+            tst.submission_track,
             tst.link_url,
             tst.updated_at
         FROM team_submission_tasks tst

@@ -15,6 +15,7 @@ import type {
 } from '../admin/admin.types.js';
 
 type ReviewFileKind = 'video' | 'submission_file' | 'member_document';
+type SubmissionReviewTrack = 'Phenome' | 'Health' | 'City';
 
 const REVIEW_BUNDLE_PREFIX = 'bundle_member_docs:';
 const REVIEW_CACHE_DIR = path.join(process.cwd(), 'public', 'uploads', 'review_cache');
@@ -31,6 +32,7 @@ interface ShareRow {
 interface TeamShareRow {
     share_id: string;
     team_id: number;
+    submission_track: SubmissionReviewTrack | null;
     revoked_at: Date | null;
 }
 
@@ -97,12 +99,14 @@ export async function ensureReviewTeamShareTable(db: DB): Promise<void> {
             review_team_share_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             share_id VARCHAR(64) NOT NULL,
             team_id BIGINT UNSIGNED NOT NULL,
+            submission_track ENUM('Phenome','Health','City') NULL,
             revoked_at DATETIME NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (review_team_share_id),
             UNIQUE KEY uq_team_share_id (share_id),
-            KEY idx_team_active (team_id, revoked_at)
+            KEY idx_team_active (team_id, revoked_at),
+            KEY idx_team_track_active (team_id, submission_track, revoked_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 }
@@ -146,26 +150,32 @@ export async function getOrCreateReviewShareId(
     return shareId;
 }
 
-export async function getOrCreateTeamReviewShareId(db: DB, teamId: number): Promise<string> {
+export async function getOrCreateTeamReviewShareId(
+    db: DB,
+    teamId: number,
+    submissionTrack: SubmissionReviewTrack | null = null,
+): Promise<string> {
     await ensureReviewTeamShareTable(db);
 
+    const trackCondition = submissionTrack ? 'submission_track = :submissionTrack' : 'submission_track IS NULL';
     const [existingRows] = await db.query<any[]>(`
         SELECT share_id
         FROM review_team_shares
         WHERE team_id = :teamId
+          AND ${trackCondition}
           AND revoked_at IS NULL
         ORDER BY review_team_share_id DESC
         LIMIT 1
-    `, { teamId });
+    `, { teamId, submissionTrack });
 
     const existingShareId = existingRows[0]?.share_id;
     if (existingShareId) return String(existingShareId);
 
     const shareId = crypto.randomBytes(24).toString('hex');
     await db.query(`
-        INSERT INTO review_team_shares (share_id, team_id)
-        VALUES (:shareId, :teamId)
-    `, { shareId, teamId });
+        INSERT INTO review_team_shares (share_id, team_id, submission_track)
+        VALUES (:shareId, :teamId, :submissionTrack)
+    `, { shareId, teamId, submissionTrack });
 
     return shareId;
 }
@@ -233,7 +243,7 @@ export async function getReviewFileByShareId(
 export async function getReviewTeamByShareId(db: DB, shareId: string, publicBaseUrl: string) {
     await ensureReviewTeamShareTable(db);
     const [rows] = await db.query<any[]>(`
-        SELECT share_id, team_id, revoked_at
+        SELECT share_id, team_id, submission_track, revoked_at
         FROM review_team_shares
         WHERE share_id = :shareId
         LIMIT 1
@@ -275,6 +285,13 @@ export async function getReviewTeamByShareId(db: DB, shareId: string, publicBase
         adminRepo.getSubmissionFilesForExport(db, teamIds),
         adminRepo.getSubmissionLinksForExport(db, teamIds),
     ]);
+    const reviewTrack = share.submission_track ?? null;
+    const visibleSubmissionFiles = reviewTrack
+        ? submissionFiles.filter((file) => file.submission_track === reviewTrack)
+        : submissionFiles;
+    const visibleSubmissionLinks = reviewTrack
+        ? submissionLinks.filter((link) => link.submission_track === reviewTrack)
+        : submissionLinks;
 
     const documentsByUser = new Map<number, ExportMemberDocumentRow[]>();
     for (const document of memberDocuments) {
@@ -312,7 +329,7 @@ export async function getReviewTeamByShareId(db: DB, shareId: string, publicBase
     );
 
     const filesPayload = await Promise.all(
-        submissionFiles.map(async (file: ExportSubmissionFileRow) => {
+        visibleSubmissionFiles.map(async (file: ExportSubmissionFileRow) => {
             const fileShareId = await getOrCreateReviewShareId(db, {
                 storageKey: file.file_storage_key,
                 fileKind: 'submission_file',
@@ -331,8 +348,9 @@ export async function getReviewTeamByShareId(db: DB, shareId: string, publicBase
         }),
     );
 
-    const linksPayload = submissionLinks.map((link: ExportSubmissionLinkRow) => ({
+    const linksPayload = visibleSubmissionLinks.map((link: ExportSubmissionLinkRow) => ({
         taskName: link.task_name || 'Untitled Link',
+        submissionTrack: link.submission_track,
         url: link.link_url,
         updatedAt: link.updated_at,
     }));
@@ -356,6 +374,9 @@ export async function getReviewTeamByShareId(db: DB, shareId: string, publicBase
             institution: advisor.institution_name_th || '',
         })),
         members: membersPayload,
+        reviewScope: {
+            track: reviewTrack,
+        },
         submissionLinks: linksPayload,
         submissionFiles: filesPayload,
     };

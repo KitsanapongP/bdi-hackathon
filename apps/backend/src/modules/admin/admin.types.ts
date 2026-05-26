@@ -179,6 +179,7 @@ export interface ExportSubmissionLinkRow {
     team_submission_task_id: number;
     task_name: string | null;
     task_sort_order: number | null;
+    submission_track: 'Phenome' | 'Health' | 'City' | null;
     link_url: string;
     updated_at: Date;
 }

@@ -56,6 +56,7 @@ function buildBackendReviewFallbackHtml(shareId: string): string {
     h1{margin:4px 0 0;font-size:28px}h2{margin:0 0 12px;font-size:18px}h3{margin:0 0 8px;font-size:16px}
     .muted{color:#617996}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .card{border:1px solid #e0eaf5;background:#fbfdff;border-radius:8px;padding:12px}.row{display:flex;gap:8px;flex-wrap:wrap}
+    .scope{display:inline-block;margin-top:8px;border:1px solid #bfd2ef;border-radius:999px;background:#f3f8ff;padding:4px 10px;color:#24559d;font-weight:800}
     a{color:#165bb4;font-weight:700;text-decoration:none}.btn{display:inline-block;border:1px solid #cfe0f4;border-radius:8px;padding:8px 10px;background:#fff;margin-right:8px}
     iframe,video,img{width:100%;height:260px;border:1px solid #dce7f3;border-radius:8px;background:#fff;margin-top:10px}
     img{object-fit:contain}.fallback{height:180px;display:grid;place-content:center;text-align:center;color:#617996;border:1px solid #dce7f3;border-radius:8px;background:#fff;margin-top:10px}
@@ -94,8 +95,9 @@ function buildBackendReviewFallbackHtml(shareId: string): string {
         const files = d.submissionFiles || [];
         const members = d.members || [];
         const advisors = d.advisors || [];
+        const reviewTrack = d.reviewScope && d.reviewScope.track ? String(d.reviewScope.track) : '';
         app.innerHTML =
-          '<section><span class="muted">'+esc(team.teamCode || '-')+'</span><h1>'+esc(team.teamNameTh || team.teamNameEn || 'Team Review')+'</h1><p class="muted">Status: '+esc(team.status || '-')+' / Leader: '+esc(team.leaderName || '-')+' / Updated: '+esc(fmt(team.updatedAt))+'</p></section>' +
+          '<section><span class="muted">'+esc(team.teamCode || '-')+'</span><h1>'+esc(team.teamNameTh || team.teamNameEn || 'Team Review')+'</h1><p class="muted">Status: '+esc(team.status || '-')+' / Leader: '+esc(team.leaderName || '-')+' / Updated: '+esc(fmt(team.updatedAt))+'</p>'+(reviewTrack ? '<p class="scope">Review Track: '+esc(reviewTrack)+'</p>' : '')+'</section>' +
           '<section><h2>Submission Links</h2><div class="row">'+(links.map((l) => '<a class="btn" target="_blank" href="'+esc(l.url)+'">'+esc(l.taskName || 'Open Link')+'</a>').join('') || '<p class="muted">No links</p>')+'</div></section>' +
           '<section><h2>Submission Files</h2><div class="grid">'+(files.map((f) => '<article class="card"><h3>'+esc(f.fileName)+'</h3><p class="muted">'+esc(f.taskName || '-')+' / '+esc(fmt(f.uploadedAt))+'</p>'+preview(f)+'<p><a class="btn" target="_blank" href="'+esc(f.url)+'">Open</a><a class="btn" download="'+esc(f.fileName || 'submission-file')+'" target="_blank" href="'+esc(f.downloadUrl || f.url)+'">Download</a></p></article>').join('') || '<p class="muted">No files</p>')+'</div></section>' +
           '<section><h2>Members</h2><div class="grid">'+(members.map((m) => '<div class="card"><b>'+esc(m.name)+'</b><p class="muted">'+esc([m.role,m.email,m.phone,m.institution].filter(Boolean).join(' / ') || '-')+'</p>'+(m.documentUrl ? '<a class="btn" target="_blank" href="'+esc(m.documentUrl)+'">Open ID Bundle</a>' : '')+'</div>').join('') || '<p class="muted">No members</p>')+'</div></section>' +

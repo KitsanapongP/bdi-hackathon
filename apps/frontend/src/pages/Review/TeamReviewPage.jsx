@@ -114,6 +114,7 @@ export default function TeamReviewPage() {
   }
 
   const team = payload?.team || {}
+  const reviewTrack = payload?.reviewScope?.track || ''
 
   const downloadFile = async (file) => {
     const downloadUrl = file?.downloadUrl || file?.url
@@ -148,6 +149,7 @@ export default function TeamReviewPage() {
           <span>{team.teamCode || '-'}</span>
           <h1>{team.teamNameTh || team.teamNameEn || 'Team Review'}</h1>
           {team.teamNameEn ? <p>{team.teamNameEn}</p> : null}
+          {reviewTrack ? <p className="team-review-scope">Review Track: {reviewTrack}</p> : null}
         </div>
         <dl>
           <div>

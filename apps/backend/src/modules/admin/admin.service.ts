@@ -1130,7 +1130,6 @@ export async function exportTeamsReviewSheetByTrack(
 
     const advisorsByTeam = new Map<number, ExportTeamAdvisorRow[]>();
     const membersByTeam = new Map<number, ExportTeamMemberRow[]>();
-    const allReviewWorksByTeam = new Map<number, ExportSubmissionFileRow[]>();
     const trackReviewWorksByTeam = new Map<number, ExportSubmissionFileRow[]>();
 
     for (const row of advisors) {
@@ -1145,10 +1144,6 @@ export async function exportTeamsReviewSheetByTrack(
     }
     for (const row of submissionFiles) {
         if (!getReviewWorkSlot(row.task_name)) continue;
-        const allBucket = allReviewWorksByTeam.get(row.team_id) ?? [];
-        allBucket.push(row);
-        allReviewWorksByTeam.set(row.team_id, allBucket);
-
         if (row.submission_track === track) {
             const trackBucket = trackReviewWorksByTeam.get(row.team_id) ?? [];
             trackBucket.push(row);
@@ -1194,7 +1189,7 @@ export async function exportTeamsReviewSheetByTrack(
     for (const team of teamsWithTrack) {
         const teamMembers = [...(membersByTeam.get(team.team_id) ?? [])].sort((a, b) => a.member_order - b.member_order);
         const teamAdvisors = advisorsByTeam.get(team.team_id) ?? [];
-        const teamWorks = allReviewWorksByTeam.get(team.team_id) ?? [];
+        const teamWorks = trackReviewWorksByTeam.get(team.team_id) ?? [];
         const worksBySlot = new Map<ReviewWorkSlot, ExportSubmissionFileRow>();
         for (const work of teamWorks) {
             const slot = getReviewWorkSlot(work.task_name);
@@ -1204,7 +1199,7 @@ export async function exportTeamsReviewSheetByTrack(
 
         const leader = teamMembers.find((member) => member.role === 'leader') || teamMembers[0] || null;
         const leaderDisplayName = leader ? pickMemberDisplayName(leader) : (team.leader_user_name || '');
-        const teamShareId = await getOrCreateTeamReviewShareId(db, team.team_id);
+        const teamShareId = await getOrCreateTeamReviewShareId(db, team.team_id, track);
         const reviewUrl = buildPublicTeamReviewPageUrl(publicBaseUrl, teamShareId);
         const work1 = worksBySlot.get('work_1');
         const work2 = worksBySlot.get('work_2');

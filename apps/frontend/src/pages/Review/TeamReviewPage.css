@@ -57,6 +57,18 @@
   color: #5c728e;
 }
 
+.team-review-hero .team-review-scope {
+  display: inline-flex;
+  margin-top: 10px;
+  border: 1px solid #bfd2ef;
+  border-radius: 999px;
+  background: #f3f8ff;
+  padding: 4px 10px;
+  color: #24559d;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .team-review-hero dl {
   margin: 0;
   display: grid;
