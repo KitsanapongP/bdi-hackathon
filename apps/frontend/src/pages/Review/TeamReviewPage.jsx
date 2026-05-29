@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Download, ExternalLink, FileArchive, FileText, Image as ImageIcon, Loader2, PlaySquare, Users } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AlertTriangle, Download, ExternalLink, FileArchive, FileText, Image as ImageIcon, Loader2, Maximize2, Minimize2, PlaySquare, ZoomIn, ZoomOut } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { apiUrl } from '../../lib/api'
 import './TeamReviewPage.css'
@@ -36,16 +36,28 @@ function getDownloadFileName(file) {
   return name || 'submission-file'
 }
 
-function FilePreview({ file }) {
+function FilePreview({ file, zoom = 100 }) {
   const kind = fileKind(file)
   if (kind === 'image') {
-    return <img className="review-file-preview-image" src={file.url} alt={file.fileName} loading="lazy" />
+    return (
+      <div className="review-file-preview-image-wrap">
+        <img
+          className="review-file-preview-image"
+          src={file.url}
+          alt={file.fileName}
+          loading="lazy"
+          style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'center top' }}
+        />
+      </div>
+    )
   }
   if (kind === 'video') {
     return <video className="review-file-preview-video" src={file.url} controls preload="metadata" />
   }
   if (kind === 'pdf') {
-    return <iframe className="review-file-preview-pdf" src={file.url} title={file.fileName} />
+    const zoomParam = zoom && zoom !== 100 ? `zoom=${zoom}` : 'zoom=page-width'
+    const src = `${file.url}#toolbar=1&view=FitH&${zoomParam}`
+    return <iframe className="review-file-preview-pdf" src={src} title={file.fileName} />
   }
   return (
     <div className="review-file-fallback">
@@ -61,6 +73,35 @@ export default function TeamReviewPage() {
   const [error, setError] = useState('')
   const [payload, setPayload] = useState(null)
   const [downloadingKey, setDownloadingKey] = useState('')
+  const [pdfZoom, setPdfZoom] = useState(100)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const proposalRef = useRef(null)
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+
+  const toggleFullscreen = useCallback(async () => {
+    const el = proposalRef.current
+    if (!el) return
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen()
+      } else if (el.requestFullscreen) {
+        await el.requestFullscreen()
+      } else {
+        setIsFullscreen((v) => !v)
+      }
+    } catch {
+      setIsFullscreen((v) => !v)
+    }
+  }, [])
+
+  const zoomOut = useCallback(() => setPdfZoom((z) => Math.max(50, z - 25)), [])
+  const zoomIn = useCallback(() => setPdfZoom((z) => Math.min(300, z + 25)), [])
+  const zoomReset = useCallback(() => setPdfZoom(100), [])
 
   useEffect(() => {
     let mounted = true
@@ -83,17 +124,6 @@ export default function TeamReviewPage() {
     }
   }, [shareId])
 
-  const groupedFiles = useMemo(() => {
-    const groups = new Map()
-    for (const file of payload?.submissionFiles || []) {
-      const key = file.taskName || 'Untitled Task'
-      const bucket = groups.get(key) || []
-      bucket.push(file)
-      groups.set(key, bucket)
-    }
-    return Array.from(groups.entries()).map(([taskName, files]) => ({ taskName, files }))
-  }, [payload])
-
   if (loading) {
     return (
       <main className="team-review-page team-review-center">
@@ -115,6 +145,11 @@ export default function TeamReviewPage() {
 
   const team = payload?.team || {}
   const reviewTrack = payload?.reviewScope?.track || ''
+  const submissionFiles = payload?.submissionFiles || []
+  const primaryFile = submissionFiles[0] || null
+  const extraFiles = submissionFiles.slice(1)
+  const submissionLinks = payload?.submissionLinks || []
+  const memberCvs = payload?.memberCvs || []
 
   const downloadFile = async (file) => {
     const downloadUrl = file?.downloadUrl || file?.url
@@ -144,119 +179,135 @@ export default function TeamReviewPage() {
 
   return (
     <main className="team-review-page">
-      <section className="team-review-hero">
-        <div>
-          <span>{team.teamCode || '-'}</span>
-          <h1>{team.teamNameTh || team.teamNameEn || 'Team Review'}</h1>
-          {team.teamNameEn ? <p>{team.teamNameEn}</p> : null}
-          {reviewTrack ? <p className="team-review-scope">Review Track: {reviewTrack}</p> : null}
-        </div>
-        <dl>
-          <div>
-            <dt>Status</dt>
-            <dd>{team.status || '-'}</dd>
-          </div>
-          <div>
-            <dt>Leader</dt>
-            <dd>{team.leaderName || '-'}</dd>
-          </div>
-          <div>
-            <dt>Updated</dt>
-            <dd>{formatDateTime(team.updatedAt)}</dd>
-          </div>
-        </dl>
+      <section className="team-review-team-box" aria-label="ชื่อทีม">
+        <span className="team-review-team-code">{team.teamCode || '-'}</span>
+        <h1>{team.teamNameTh || team.teamNameEn || 'Team Review'}</h1>
+        {team.teamNameEn && team.teamNameTh ? <p className="team-review-team-en">{team.teamNameEn}</p> : null}
+        {reviewTrack ? (
+          <span className="team-review-track-chip" data-track={reviewTrack}>{reviewTrack} Track</span>
+        ) : null}
       </section>
 
-      <section className="team-review-panel">
-        <h2>Submission Links</h2>
-        <div className="team-review-link-list">
-          {(payload?.submissionLinks || []).length ? payload.submissionLinks.map((link, index) => (
-            <a key={`${link.url}-${index}`} href={link.url} target="_blank" rel="noreferrer">
-              <span>{link.taskName}</span>
-              <ExternalLink size={15} />
-            </a>
-          )) : <p className="team-review-muted">ไม่มีลิงก์ส่งงาน</p>}
-        </div>
-      </section>
-
-      <section className="team-review-panel">
-        <h2>Submission Files</h2>
-        {groupedFiles.length ? (
-          <div className="team-review-file-groups">
-            {groupedFiles.map((group) => (
-              <div key={group.taskName} className="team-review-file-group">
-                <h3>{group.taskName}</h3>
-                <div className="team-review-file-list">
-                  {group.files.map((file, index) => {
-                    const kind = fileKind(file)
-                    return (
-                      <article key={`${file.url}-${index}`} className="team-review-file-card">
-                        <header>
-                          <div>
-                            {fileIcon(kind)}
-                            <strong>{file.fileName}</strong>
-                          </div>
-                          <span>{formatDateTime(file.uploadedAt)}</span>
-                        </header>
-                        <FilePreview file={file} />
-                        <footer>
-                          <a href={file.url} target="_blank" rel="noreferrer">
-                            <ExternalLink size={14} />
-                            Open
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => downloadFile(file)}
-                            disabled={downloadingKey === (file.downloadUrl || file.url)}
-                          >
-                            <Download size={14} />
-                            {downloadingKey === (file.downloadUrl || file.url) ? 'Downloading...' : 'Download'}
-                          </button>
-                        </footer>
-                      </article>
-                    )
-                  })}
-                </div>
-              </div>
+      <section className="team-review-links-box" aria-label="ลิงก์ส่งงาน">
+        <h2 className="team-review-eyebrow">Submission Links</h2>
+        {submissionLinks.length ? (
+          <div className="team-review-link-list">
+            {submissionLinks.map((link, index) => (
+              <a key={`${link.url}-${index}`} href={link.url} target="_blank" rel="noreferrer" title={link.taskName}>
+                <span>{link.taskName}</span>
+                <ExternalLink size={14} />
+              </a>
             ))}
           </div>
-        ) : <p className="team-review-muted">ไม่มีไฟล์ส่งงาน</p>}
+        ) : <p className="team-review-muted">ไม่มีลิงก์ส่งงาน</p>}
       </section>
 
-      <section className="team-review-grid team-review-people-grid">
-        <article className="team-review-panel team-review-panel-compact">
-          <h2><Users size={16} /> Members</h2>
-          <div className="team-review-member-list">
-            {(payload?.members || []).map((member) => (
-              <div key={member.userId} className="team-review-member">
-                <div>
-                  <strong>{member.name}</strong>
-                  <span>{member.role}</span>
+      <section className="team-review-cv-box" aria-label="CV ของผู้ส่ง">
+        <h2 className="team-review-eyebrow">CV</h2>
+        <div className="team-review-cv-scroll">
+          {memberCvs.length ? (
+            <div className="team-review-cv-list">
+              {memberCvs.map((cv, index) => (
+                <article key={index} className="team-review-cv-card">
+                  <header>
+                    <span className="team-review-cv-num">{index + 1}</span>
+                    <strong>คนที่ {index + 1}</strong>
+                  </header>
+                  <p>{cv}</p>
+                </article>
+              ))}
+            </div>
+          ) : <p className="team-review-muted">ไม่มีข้อมูล CV</p>}
+        </div>
+      </section>
+
+      <section
+        ref={proposalRef}
+        className={`team-review-proposal-box${isFullscreen ? ' is-fullscreen' : ''}`}
+        aria-label="Proposal"
+      >
+        {primaryFile ? (() => {
+          const primaryKind = fileKind(primaryFile)
+          const canZoom = primaryKind === 'pdf' || primaryKind === 'image'
+          return (
+            <>
+              <header className="team-review-proposal-header">
+                <div className="team-review-proposal-title">
+                  <span className="team-review-proposal-icon">
+                    {fileIcon(primaryKind)}
+                  </span>
+                  <div className="team-review-proposal-title-text">
+                    <strong>{primaryFile.fileName}</strong>
+                    <span className="team-review-proposal-title-meta">{primaryFile.taskName || 'Proposal'}</span>
+                  </div>
                 </div>
-                <p>{[member.email, member.phone, member.institution].filter(Boolean).join(' / ') || '-'}</p>
-                <p>{[member.educationLevel, member.homeProvince].filter(Boolean).join(' / ') || '-'}</p>
-                {member.documentUrl ? (
-                  <a href={member.documentUrl} target="_blank" rel="noreferrer">
-                    <ExternalLink size={13} />
-                    Open ID Bundle ({member.documentCount})
+                <div className="team-review-proposal-actions">
+                  {canZoom ? (
+                    <div className="team-review-zoom-group" role="group" aria-label="Zoom">
+                      <button type="button" onClick={zoomOut} disabled={pdfZoom <= 50} title="Zoom out" aria-label="Zoom out">
+                        <ZoomOut size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={zoomReset}
+                        className="team-review-zoom-label"
+                        title="Reset zoom"
+                        aria-label="Reset zoom"
+                      >
+                        {pdfZoom}%
+                      </button>
+                      <button type="button" onClick={zoomIn} disabled={pdfZoom >= 300} title="Zoom in" aria-label="Zoom in">
+                        <ZoomIn size={14} />
+                      </button>
+                    </div>
+                  ) : null}
+                  <a href={primaryFile.url} target="_blank" rel="noreferrer">
+                    <ExternalLink size={14} />
+                    Open
                   </a>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </article>
+                  <button
+                    type="button"
+                    onClick={() => downloadFile(primaryFile)}
+                    disabled={downloadingKey === (primaryFile.downloadUrl || primaryFile.url)}
+                  >
+                    <Download size={14} />
+                    {downloadingKey === (primaryFile.downloadUrl || primaryFile.url) ? 'Downloading...' : 'Download'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleFullscreen}
+                    className="team-review-fullscreen-btn"
+                    title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                    aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                  >
+                    {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                  </button>
+                </div>
+              </header>
 
-        <article className="team-review-panel team-review-panel-compact">
-          <h2>Advisors</h2>
-          <div className="team-review-advisor-list">
-            {(payload?.advisors || []).length ? payload.advisors.map((advisor, index) => (
-              <div key={`${advisor.name}-${index}`}>
-                <strong>{advisor.name}</strong>
-                <p>{[advisor.email, advisor.phone, advisor.institution].filter(Boolean).join(' / ') || '-'}</p>
+              {extraFiles.length ? (
+                <div className="team-review-proposal-extras">
+                  <span>ไฟล์อื่น ๆ ในประเภทเดียวกัน:</span>
+                  {extraFiles.map((file, index) => (
+                    <a key={`${file.url}-${index}`} href={file.url} target="_blank" rel="noreferrer" title={file.fileName}>
+                      {fileIcon(fileKind(file))}
+                      <span>{file.fileName}</span>
+                    </a>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="team-review-proposal-preview">
+                <FilePreview file={primaryFile} zoom={pdfZoom} />
               </div>
-            )) : <p className="team-review-muted">ไม่มีข้อมูลที่ปรึกษา</p>}
+            </>
+          )
+        })() : (
+          <div className="team-review-proposal-empty">
+            <FileText size={28} />
+            <p className="team-review-muted">ไม่มีไฟล์ Proposal</p>
           </div>
-        </article>
+        )}
       </section>
     </main>
   )

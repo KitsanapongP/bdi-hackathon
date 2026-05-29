@@ -300,6 +300,16 @@ export async function getReviewTeamByShareId(db: DB, shareId: string, publicBase
         documentsByUser.set(document.user_id, bucket);
     }
 
+    const memberCvs = members
+        .map((member) => String(member.cv || '').trim())
+        .filter((cv) => cv.length > 0)
+        .map((cv) => ({
+            cv,
+            sortKey: crypto.createHash('sha256').update(`${shareId}:${cv}`).digest('hex'),
+        }))
+        .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+        .map((entry) => entry.cv);
+
     const membersPayload = await Promise.all(
         [...members].sort((a, b) => a.member_order - b.member_order).map(async (member) => {
             const docs = documentsByUser.get(member.user_id) ?? [];
@@ -377,6 +387,7 @@ export async function getReviewTeamByShareId(db: DB, shareId: string, publicBase
         reviewScope: {
             track: reviewTrack,
         },
+        memberCvs,
         submissionLinks: linksPayload,
         submissionFiles: filesPayload,
     };

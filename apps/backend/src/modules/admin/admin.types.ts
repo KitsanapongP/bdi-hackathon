@@ -126,6 +126,7 @@ export interface ExportTeamMemberRow {
     birth_date: string | null;
     education_level: 'secondary' | 'high_school' | 'bachelor' | 'master' | 'doctorate' | null;
     home_province: string | null;
+    cv: string | null;
     verify_round_id: number | null;
     is_profile_complete: number | null;
     is_member_confirmed: number | null;

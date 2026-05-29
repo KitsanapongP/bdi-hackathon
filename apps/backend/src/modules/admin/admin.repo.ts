@@ -451,6 +451,7 @@ export async function getTeamMembersForExport(db: DB, teamIds: number[]): Promis
             u.birth_date,
             u.education_level,
             u.home_province,
+            u.cv,
             vr.verify_round_id,
             vp.is_profile_complete,
             vp.is_member_confirmed,
