@@ -412,50 +412,6 @@
   opacity: 0.6;
 }
 
-.team-review-zoom-group {
-  display: inline-flex;
-  align-items: stretch;
-  border: 1px solid var(--tr-border-strong);
-  border-radius: var(--tr-radius-sm);
-  background: var(--tr-bg-card);
-  overflow: hidden;
-}
-
-.team-review-zoom-group button {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  padding: 5px 8px;
-  color: var(--tr-ink);
-  font-family: var(--tr-font-latin);
-  font-weight: 600;
-  font-size: 0.76rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 120ms ease, color 120ms ease;
-}
-
-.team-review-zoom-group button + button {
-  border-left: 1px solid var(--tr-border);
-}
-
-.team-review-zoom-group button:hover:not(:disabled) {
-  background: var(--tr-accent-soft);
-  color: var(--tr-accent-hover);
-}
-
-.team-review-zoom-group button:disabled {
-  color: var(--tr-ink-faint);
-  cursor: not-allowed;
-}
-
-.team-review-zoom-label {
-  min-width: 40px;
-  font-variant-numeric: tabular-nums;
-}
-
 .team-review-fullscreen-btn {
   padding-left: 8px !important;
   padding-right: 8px !important;
@@ -506,6 +462,7 @@
   box-shadow: inset 0 1px 0 rgba(20, 34, 58, 0.04);
 }
 
+.review-file-preview-image,
 .review-file-preview-video,
 .review-file-preview-pdf,
 .review-file-fallback {
@@ -517,23 +474,8 @@
   background: #ffffff;
 }
 
-.review-file-preview-image-wrap {
-  flex: 1 1 auto;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  overflow: auto;
-  background: #ffffff;
-  display: flex;
-  justify-content: center;
-}
-
 .review-file-preview-image {
-  display: block;
-  max-width: 100%;
-  height: auto;
   object-fit: contain;
-  transition: transform 150ms ease;
 }
 
 .review-file-preview-pdf {

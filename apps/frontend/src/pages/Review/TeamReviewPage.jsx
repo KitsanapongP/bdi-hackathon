@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Download, ExternalLink, FileArchive, FileText, Image as ImageIcon, Loader2, Maximize2, Minimize2, PlaySquare, ZoomIn, ZoomOut } from 'lucide-react'
+import { AlertTriangle, Download, ExternalLink, FileArchive, FileText, Image as ImageIcon, Loader2, Maximize2, Minimize2, PlaySquare } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { apiUrl } from '../../lib/api'
 import './TeamReviewPage.css'
@@ -36,28 +36,16 @@ function getDownloadFileName(file) {
   return name || 'submission-file'
 }
 
-function FilePreview({ file, zoom = 100 }) {
+function FilePreview({ file }) {
   const kind = fileKind(file)
   if (kind === 'image') {
-    return (
-      <div className="review-file-preview-image-wrap">
-        <img
-          className="review-file-preview-image"
-          src={file.url}
-          alt={file.fileName}
-          loading="lazy"
-          style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'center top' }}
-        />
-      </div>
-    )
+    return <img className="review-file-preview-image" src={file.url} alt={file.fileName} loading="lazy" />
   }
   if (kind === 'video') {
     return <video className="review-file-preview-video" src={file.url} controls preload="metadata" />
   }
   if (kind === 'pdf') {
-    const zoomParam = zoom && zoom !== 100 ? `zoom=${zoom}` : 'zoom=page-width'
-    const src = `${file.url}#toolbar=1&view=FitH&${zoomParam}`
-    return <iframe className="review-file-preview-pdf" src={src} title={file.fileName} />
+    return <iframe className="review-file-preview-pdf" src={`${file.url}#toolbar=1&view=FitH`} title={file.fileName} />
   }
   return (
     <div className="review-file-fallback">
@@ -73,7 +61,6 @@ export default function TeamReviewPage() {
   const [error, setError] = useState('')
   const [payload, setPayload] = useState(null)
   const [downloadingKey, setDownloadingKey] = useState('')
-  const [pdfZoom, setPdfZoom] = useState(100)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const proposalRef = useRef(null)
 
@@ -98,10 +85,6 @@ export default function TeamReviewPage() {
       setIsFullscreen((v) => !v)
     }
   }, [])
-
-  const zoomOut = useCallback(() => setPdfZoom((z) => Math.max(50, z - 25)), [])
-  const zoomIn = useCallback(() => setPdfZoom((z) => Math.min(300, z + 25)), [])
-  const zoomReset = useCallback(() => setPdfZoom(100), [])
 
   useEffect(() => {
     let mounted = true
@@ -226,83 +209,60 @@ export default function TeamReviewPage() {
         className={`team-review-proposal-box${isFullscreen ? ' is-fullscreen' : ''}`}
         aria-label="Proposal"
       >
-        {primaryFile ? (() => {
-          const primaryKind = fileKind(primaryFile)
-          const canZoom = primaryKind === 'pdf' || primaryKind === 'image'
-          return (
-            <>
-              <header className="team-review-proposal-header">
-                <div className="team-review-proposal-title">
-                  <span className="team-review-proposal-icon">
-                    {fileIcon(primaryKind)}
-                  </span>
-                  <div className="team-review-proposal-title-text">
-                    <strong>{primaryFile.fileName}</strong>
-                    <span className="team-review-proposal-title-meta">{primaryFile.taskName || 'Proposal'}</span>
-                  </div>
+        {primaryFile ? (
+          <>
+            <header className="team-review-proposal-header">
+              <div className="team-review-proposal-title">
+                <span className="team-review-proposal-icon">
+                  {fileIcon(fileKind(primaryFile))}
+                </span>
+                <div className="team-review-proposal-title-text">
+                  <strong>{primaryFile.fileName}</strong>
+                  <span className="team-review-proposal-title-meta">{primaryFile.taskName || 'Proposal'}</span>
                 </div>
-                <div className="team-review-proposal-actions">
-                  {canZoom ? (
-                    <div className="team-review-zoom-group" role="group" aria-label="Zoom">
-                      <button type="button" onClick={zoomOut} disabled={pdfZoom <= 50} title="Zoom out" aria-label="Zoom out">
-                        <ZoomOut size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={zoomReset}
-                        className="team-review-zoom-label"
-                        title="Reset zoom"
-                        aria-label="Reset zoom"
-                      >
-                        {pdfZoom}%
-                      </button>
-                      <button type="button" onClick={zoomIn} disabled={pdfZoom >= 300} title="Zoom in" aria-label="Zoom in">
-                        <ZoomIn size={14} />
-                      </button>
-                    </div>
-                  ) : null}
-                  <a href={primaryFile.url} target="_blank" rel="noreferrer">
-                    <ExternalLink size={14} />
-                    Open
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => downloadFile(primaryFile)}
-                    disabled={downloadingKey === (primaryFile.downloadUrl || primaryFile.url)}
-                  >
-                    <Download size={14} />
-                    {downloadingKey === (primaryFile.downloadUrl || primaryFile.url) ? 'Downloading...' : 'Download'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={toggleFullscreen}
-                    className="team-review-fullscreen-btn"
-                    title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                    aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                  >
-                    {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-                  </button>
-                </div>
-              </header>
-
-              {extraFiles.length ? (
-                <div className="team-review-proposal-extras">
-                  <span>ไฟล์อื่น ๆ ในประเภทเดียวกัน:</span>
-                  {extraFiles.map((file, index) => (
-                    <a key={`${file.url}-${index}`} href={file.url} target="_blank" rel="noreferrer" title={file.fileName}>
-                      {fileIcon(fileKind(file))}
-                      <span>{file.fileName}</span>
-                    </a>
-                  ))}
-                </div>
-              ) : null}
-
-              <div className="team-review-proposal-preview">
-                <FilePreview file={primaryFile} zoom={pdfZoom} />
               </div>
-            </>
-          )
-        })() : (
+              <div className="team-review-proposal-actions">
+                <a href={primaryFile.url} target="_blank" rel="noreferrer">
+                  <ExternalLink size={14} />
+                  Open
+                </a>
+                <button
+                  type="button"
+                  onClick={() => downloadFile(primaryFile)}
+                  disabled={downloadingKey === (primaryFile.downloadUrl || primaryFile.url)}
+                >
+                  <Download size={14} />
+                  {downloadingKey === (primaryFile.downloadUrl || primaryFile.url) ? 'Downloading...' : 'Download'}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleFullscreen}
+                  className="team-review-fullscreen-btn"
+                  title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                  aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                >
+                  {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                </button>
+              </div>
+            </header>
+
+            {extraFiles.length ? (
+              <div className="team-review-proposal-extras">
+                <span>ไฟล์อื่น ๆ ในประเภทเดียวกัน:</span>
+                {extraFiles.map((file, index) => (
+                  <a key={`${file.url}-${index}`} href={file.url} target="_blank" rel="noreferrer" title={file.fileName}>
+                    {fileIcon(fileKind(file))}
+                    <span>{file.fileName}</span>
+                  </a>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="team-review-proposal-preview">
+              <FilePreview file={primaryFile} />
+            </div>
+          </>
+        ) : (
           <div className="team-review-proposal-empty">
             <FileText size={28} />
             <p className="team-review-muted">ไม่มีไฟล์ Proposal</p>
