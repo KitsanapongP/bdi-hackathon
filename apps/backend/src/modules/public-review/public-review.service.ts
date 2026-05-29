@@ -289,8 +289,11 @@ export async function getReviewTeamByShareId(db: DB, shareId: string, publicBase
     const visibleSubmissionFiles = reviewTrack
         ? submissionFiles.filter((file) => file.submission_track === reviewTrack)
         : submissionFiles;
+    // Link-type tasks never have a submission_track (it's always NULL in DB),
+    // so a track-scoped share would otherwise drop every link. Include link
+    // rows whose track is null in addition to ones that match the share track.
     const visibleSubmissionLinks = reviewTrack
-        ? submissionLinks.filter((link) => link.submission_track === reviewTrack)
+        ? submissionLinks.filter((link) => link.submission_track === reviewTrack || link.submission_track == null)
         : submissionLinks;
 
     const documentsByUser = new Map<number, ExportMemberDocumentRow[]>();

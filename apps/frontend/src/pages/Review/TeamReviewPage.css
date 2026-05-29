@@ -308,59 +308,67 @@
 /* ===== Proposal box ===== */
 
 .team-review-proposal-box {
-  padding: 14px;
+  padding: 10px 12px 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   min-height: 0;
   overflow: hidden;
 }
 
 .team-review-proposal-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 2px 4px;
+  gap: 12px;
+  padding: 0 2px;
 }
 
 .team-review-proposal-title {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 
 .team-review-proposal-icon {
   flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
   background: var(--tr-accent-soft);
   color: var(--tr-accent);
   display: grid;
   place-items: center;
 }
 
+.team-review-proposal-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
 .team-review-proposal-title-text {
   min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .team-review-proposal-title strong {
-  display: block;
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: var(--tr-ink);
   overflow-wrap: anywhere;
   font-family: var(--tr-font-latin);
+  line-height: 1.2;
 }
 
 .team-review-proposal-title-meta {
-  display: block;
-  margin-top: 3px;
   color: var(--tr-ink-muted);
   font-size: 0.76rem;
   font-family: var(--tr-font-thai);
+  line-height: 1.2;
 }
 
 .team-review-proposal-actions {
@@ -373,14 +381,14 @@
 .team-review-proposal-actions button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   border: 1px solid var(--tr-border-strong);
   background: var(--tr-bg-card);
   border-radius: var(--tr-radius-sm);
-  padding: 7px 12px;
+  padding: 5px 10px;
   color: var(--tr-ink);
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   text-decoration: none;
   cursor: pointer;
   font-family: var(--tr-font-latin);
@@ -417,11 +425,11 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  padding: 7px 9px;
+  padding: 5px 8px;
   color: var(--tr-ink);
   font-family: var(--tr-font-latin);
   font-weight: 600;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -444,13 +452,13 @@
 }
 
 .team-review-zoom-label {
-  min-width: 48px;
+  min-width: 40px;
   font-variant-numeric: tabular-nums;
 }
 
 .team-review-fullscreen-btn {
-  padding-left: 10px !important;
-  padding-right: 10px !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
 }
 
 .team-review-proposal-extras {
