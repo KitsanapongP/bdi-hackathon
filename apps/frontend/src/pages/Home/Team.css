@@ -4158,6 +4158,7 @@
     align-items: center;
     gap: 12px;
     min-width: 0;
+    max-width: 100%;
 }
 
 .sub-proposal-example-icon {
@@ -4178,6 +4179,7 @@
     flex-direction: column;
     gap: 3px;
     min-width: 0;
+    max-width: 100%;
 }
 
 .sub-proposal-example-label {
@@ -4191,12 +4193,14 @@
     color: var(--gl-text);
     font-size: 1rem;
     line-height: 1.3;
+    overflow-wrap: anywhere;
 }
 
 .sub-proposal-example-meta {
     color: rgba(255, 255, 255, 0.72);
     font-size: 0.82rem;
     font-weight: 700;
+    overflow-wrap: anywhere;
 }
 
 .sub-proposal-example-download {
@@ -4228,6 +4232,18 @@
     .sub-proposal-example-card {
         align-items: stretch;
         flex-direction: column;
+        gap: 12px;
+        padding: 14px 16px;
+    }
+
+    .sub-proposal-example-content {
+        align-items: flex-start;
+    }
+
+    .sub-proposal-example-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
     }
 
     .sub-proposal-example-download {
@@ -4397,16 +4413,39 @@
     }
 
     .sub-track-control {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 8px;
         margin-left: 0;
         width: 100%;
         border-radius: var(--gl-radius-sm, 10px);
-        justify-content: space-between;
+        padding: 9px;
+        justify-content: flex-start;
+    }
+
+    .sub-track-label {
+        width: 100%;
     }
 
     .sub-track-options {
-        flex: 1;
-        justify-content: flex-end;
-        overflow-x: auto;
+        display: flex;
+        flex-direction: column;
+        flex-wrap: nowrap;
+        gap: 5px;
+        width: 100%;
+        justify-content: stretch;
+        overflow: visible;
+        border-radius: var(--gl-radius-sm, 10px);
+    }
+
+    .sub-track-option {
+        width: 100%;
+        flex: 0 0 auto;
+    }
+
+    .sub-track-clear-btn,
+    .sub-track-saving {
+        align-self: flex-start;
     }
 }
 

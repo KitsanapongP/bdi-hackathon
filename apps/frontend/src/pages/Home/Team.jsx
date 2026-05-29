@@ -2941,12 +2941,15 @@ export default function TeamContent({ user }) {
                         </span>
                         <div className="pf-field full" style={{ marginTop: 12 }}>
                             <p className="vf-hint vf-doc-description" style={{ marginBottom: 8 }}>
-                                CV อธิบาย Background ของตนเอง เช่น สถาบันการศึกษา สาขาที่กำลังศึกษา ประสบการณ์ ความเชี่ยวชาญ หรือรางวัลที่เคยได้รับ ซึ่งมีส่วนสนับสนุนต่อการแข่งขันครั้งนี้
+                                <strong className="sub-task-missing-warning">
+                                    🚫 ห้ามระบุข้อมูลที่เป็นการเปิดเผยตัวตนของผู้เข้าแข่งขัน เช่น ชื่อบุคคล ชื่อสถาบันที่กำลังศึกษา หรือข้อมูลอื่นใดที่สามารถระบุตัวตนได้ เพื่อรักษาความเป็นธรรมในการประเมินผลงาน
+                                </strong>
                             </p>
                             <p className="vf-hint vf-doc-description" style={{ marginBottom: 8 }}>
-                                <strong className="sub-task-missing-warning">
-                                    ไม่ต้องระบุข้อมูลที่เป็นการเปิดเผยตัวตนของผู้เข้าแข่งขัน เช่น ชื่อบุคคล เพื่อใช้ส่งให้กรรมการพิจารณาแบบไม่เปิดเผยตัวตน
-                                </strong>
+                                CV ควรอธิบาย Background ของตนเอง เช่น ประสบการณ์ ความเชี่ยวชาญ หรือรางวัลที่เคยได้รับ ซึ่งมีส่วนสนับสนุนต่อการแข่งขันครั้งนี้
+                            </p>
+                            <p className="vf-hint vf-doc-description" style={{ marginBottom: 8 }}>
+                                ก่อนบันทึก CV กรุณาตรวจสอบอีกครั้งว่าไม่มีข้อมูลที่สามารถเปิดเผยตัวตนของผู้เข้าแข่งขันได้ ทั้งทางตรงและทางอ้อม
                             </p>
                             <textarea
                                 className="pf-input gl-form-textarea"
