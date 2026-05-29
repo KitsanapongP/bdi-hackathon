@@ -1,8 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, Download, ExternalLink, FileArchive, FileText, Image as ImageIcon, Loader2, Maximize2, Minimize2, PlaySquare } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { apiUrl } from '../../lib/api'
 import './TeamReviewPage.css'
+
+const EDUCATION_LABEL = {
+  secondary: 'ม.ต้น',
+  high_school: 'ม.ปลาย',
+  bachelor: 'ป.ตรี',
+  master: 'ป.โท',
+  doctorate: 'ป.เอก',
+}
+const EDUCATION_ORDER = ['doctorate', 'master', 'bachelor', 'high_school', 'secondary']
 
 function formatDateTime(value) {
   if (!value) return '-'
@@ -86,6 +95,18 @@ export default function TeamReviewPage() {
     }
   }, [])
 
+  const educationMix = useMemo(() => {
+    const counts = {}
+    for (const member of payload?.members || []) {
+      const level = member?.educationLevel
+      if (!level) continue
+      counts[level] = (counts[level] || 0) + 1
+    }
+    return EDUCATION_ORDER
+      .filter((level) => counts[level])
+      .map((level) => ({ level, count: counts[level] }))
+  }, [payload])
+
   useEffect(() => {
     let mounted = true
     ;(async () => {
@@ -163,11 +184,22 @@ export default function TeamReviewPage() {
   return (
     <main className="team-review-page">
       <section className="team-review-team-box" aria-label="ชื่อทีม">
-        <span className="team-review-team-code">{team.teamCode || '-'}</span>
-        <h1>{team.teamNameTh || team.teamNameEn || 'Team Review'}</h1>
-        {team.teamNameEn && team.teamNameTh ? <p className="team-review-team-en">{team.teamNameEn}</p> : null}
-        {reviewTrack ? (
-          <span className="team-review-track-chip" data-track={reviewTrack}>{reviewTrack} Track</span>
+        <div className="team-review-team-row">
+          <span className="team-review-team-code">{team.teamCode || '-'}</span>
+          {reviewTrack ? (
+            <span className="team-review-track-chip" data-track={reviewTrack}>{reviewTrack} Track</span>
+          ) : null}
+        </div>
+        <h1>{team.teamNameTh || 'Team Review'}</h1>
+        {educationMix.length ? (
+          <div className="team-review-edu-mix" aria-label="ระดับการศึกษาของสมาชิกในทีม">
+            <span className="team-review-edu-label">ระดับการศึกษา</span>
+            {educationMix.map(({ level, count }) => (
+              <span key={level} className="team-review-edu-pill">
+                <strong>{count}</strong> {EDUCATION_LABEL[level]}
+              </span>
+            ))}
+          </div>
         ) : null}
       </section>
 
