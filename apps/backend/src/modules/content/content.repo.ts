@@ -677,9 +677,16 @@ export async function getInterestedParticipantCount(db: DB): Promise<number> {
 export async function getTotalActiveTeamCount(db: DB): Promise<number> {
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT COUNT(*) AS total
-         FROM team_teams t
+         FROM (
+            SELECT vr.team_id
+            FROM verify_review_rounds vr
+            WHERE vr.submitted_at IS NOT NULL
+            GROUP BY vr.team_id
+         ) submitted_teams
+         JOIN team_teams t
+           ON t.team_id = submitted_teams.team_id
          WHERE t.deleted_at IS NULL
-           AND t.status = 'submitted'`
+           AND t.status <> 'disbanded'`
     );
 
     return Number(rows[0]?.total ?? 0);
@@ -710,12 +717,19 @@ export async function getTotalActiveTeamTrend(
     db: DB,
     granularity: ParticipationTrendGranularity,
 ): Promise<ContentParticipationPeriodCountRow[]> {
-    const periodExpression = getPeriodStartExpression('t.created_at', granularity);
+    const periodExpression = getPeriodStartExpression('submitted_teams.submitted_at', granularity);
     const [rows] = await db.query<RowDataPacket[]>(
         `SELECT ${periodExpression} AS period_start, COUNT(*) AS total
-         FROM team_teams t
+         FROM (
+            SELECT vr.team_id, MIN(vr.submitted_at) AS submitted_at
+            FROM verify_review_rounds vr
+            WHERE vr.submitted_at IS NOT NULL
+            GROUP BY vr.team_id
+         ) submitted_teams
+         JOIN team_teams t
+           ON t.team_id = submitted_teams.team_id
          WHERE t.deleted_at IS NULL
-           AND t.status = 'submitted'
+           AND t.status <> 'disbanded'
          GROUP BY period_start
          ORDER BY period_start ASC`
     );
