@@ -1321,7 +1321,7 @@ export default function TeamContent({ user }) {
         { id: 'members-confirmed', ok: allMembersConfirmed, label: 'สมาชิกทุกคนต้องยืนยันเอกสารยืนยันตัวตนให้ครบ' },
         { id: 'min-members', ok: isMinMembersReady, label: `ทีมจะต้องมีสมาชิก ${minSubmitMembers} คนในทีม (ปัจจุบัน ${memberCountForSubmit} คน)` },
         { id: 'required-submission-tasks', ok: !hasMissingRequiredTaskForReadiness, label: 'กรุณาส่งข้อมูลงานที่บังคับให้ครบก่อนยืนยันเข้าร่วมการคัดเลือก' },
-        { id: 'submission-window', ok: isTeamSelectionSubmissionOpen, label: teamSelectionSubmissionMessage || 'ยังไม่อยู่ในช่วงเวลาส่งทีมเข้าคัดเลือก' },
+        { id: 'submission-window', ok: isTeamSelectionSubmissionOpen || isTeamLocked || isSubmittedByVerify, label: teamSelectionSubmissionMessage || 'ยังไม่อยู่ในช่วงเวลาส่งทีมเข้าคัดเลือก' },
     ];
     const submitMissing = readinessLoaded
         ? submitReadinessRules.filter((item) => !item.ok).map((item) => item.label)
