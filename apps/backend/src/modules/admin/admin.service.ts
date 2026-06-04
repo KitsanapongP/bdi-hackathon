@@ -48,6 +48,8 @@ const TEAM_STATUS_SET = new Set<ExportTeamStatus>([
 type SubmissionReviewTrack = 'Phenome' | 'Health' | 'City';
 type ReviewWorkSlot = 'work_1' | 'work_2';
 
+const PRESENTATION_VIDEO_TASK_NAME = 'ส่งวิดีโอนำเสนอผลงาน';
+
 const REVIEW_WORK_TASK_NAMES: Record<ReviewWorkSlot, string> = {
     work_1: 'ส่งผลงานลำดับที่ 1',
     work_2: 'ส่งผลงานลำดับที่ 2',
@@ -69,6 +71,10 @@ function getReviewWorkSlot(taskName: string | null): ReviewWorkSlot | null {
     if (normalized === REVIEW_WORK_TASK_NAMES.work_1) return 'work_1';
     if (normalized === REVIEW_WORK_TASK_NAMES.work_2) return 'work_2';
     return null;
+}
+
+function isPresentationVideoTask(taskName: string | null): boolean {
+    return String(taskName || '').trim() === PRESENTATION_VIDEO_TASK_NAME;
 }
 
 function buildPublicReviewUrl(baseUrl: string, shareId: string): string {
@@ -1122,15 +1128,17 @@ export async function exportTeamsReviewSheetByTrack(
     }
 
     const teamIds = teams.map((team) => team.team_id);
-    const [advisors, members, submissionFiles] = await Promise.all([
+    const [advisors, members, submissionFiles, submissionLinks] = await Promise.all([
         repo.getTeamAdvisorsForExport(db, teamIds),
         repo.getTeamMembersForExport(db, teamIds),
         repo.getSubmissionFilesForExport(db, teamIds),
+        repo.getSubmissionLinksForExport(db, teamIds),
     ]);
 
     const advisorsByTeam = new Map<number, ExportTeamAdvisorRow[]>();
     const membersByTeam = new Map<number, ExportTeamMemberRow[]>();
     const trackReviewWorksByTeam = new Map<number, ExportSubmissionFileRow[]>();
+    const presentationVideoByTeam = new Map<number, ExportSubmissionLinkRow>();
 
     for (const row of advisors) {
         const bucket = advisorsByTeam.get(row.team_id) ?? [];
@@ -1150,6 +1158,11 @@ export async function exportTeamsReviewSheetByTrack(
             trackReviewWorksByTeam.set(row.team_id, trackBucket);
         }
     }
+    for (const row of submissionLinks) {
+        if (!isPresentationVideoTask(row.task_name)) continue;
+        if (presentationVideoByTeam.has(row.team_id)) continue;
+        presentationVideoByTeam.set(row.team_id, row);
+    }
 
     const teamsWithTrack = teams.filter((team) => (trackReviewWorksByTeam.get(team.team_id) ?? []).length > 0);
     if (teamsWithTrack.length === 0) {
@@ -1166,6 +1179,7 @@ export async function exportTeamsReviewSheetByTrack(
         { header: 'team_status', key: 'team_status', width: 14 },
         { header: 'export_track', key: 'export_track', width: 14 },
         { header: 'review_link', key: 'review_link', width: 42 },
+        { header: 'ส่งวิดีโอนำเสนอผลงาน', key: 'presentation_video_link', width: 34 },
         { header: 'total_submitted_works', key: 'total_submitted_works', width: 22 },
         { header: 'work_1_track', key: 'work_1_track', width: 16 },
         { header: 'work_1_file_name', key: 'work_1_file_name', width: 32 },
@@ -1176,6 +1190,7 @@ export async function exportTeamsReviewSheetByTrack(
         { header: 'leader_user_name', key: 'leader_user_name', width: 24 },
         { header: 'member_count', key: 'member_count', width: 12 },
         { header: 'member_names', key: 'member_names', width: 42 },
+        { header: 'CV', key: 'cv', width: 60 },
         { header: 'advisor_names', key: 'advisor_names', width: 34 },
         { header: 'created_at', key: 'created_at', width: 20 },
         { header: 'updated_at', key: 'updated_at', width: 20 },
@@ -1201,6 +1216,11 @@ export async function exportTeamsReviewSheetByTrack(
         const leaderDisplayName = leader ? pickMemberDisplayName(leader) : (team.leader_user_name || '');
         const teamShareId = await getOrCreateTeamReviewShareId(db, team.team_id, track);
         const reviewUrl = buildPublicTeamReviewPageUrl(publicBaseUrl, teamShareId);
+        const presentationVideo = presentationVideoByTeam.get(team.team_id) || null;
+        const memberCvs = teamMembers
+            .map((member) => String(member.cv || '').trim())
+            .filter((cv) => cv.length > 0)
+            .join('\n\n---\n\n');
         const work1 = worksBySlot.get('work_1');
         const work2 = worksBySlot.get('work_2');
 
@@ -1221,6 +1241,7 @@ export async function exportTeamsReviewSheetByTrack(
             leader_user_name: leaderDisplayName,
             member_count: teamMembers.length,
             member_names: teamMembers.map(pickMemberDisplayName).filter(Boolean).join(', '),
+            cv: memberCvs,
             advisor_names: teamAdvisors.map((advisor) => buildAdvisorDisplayNameTh(advisor) || buildAdvisorDisplayNameEn(advisor)).filter(Boolean).join(', '),
             created_at: formatDateTime(team.created_at),
             updated_at: formatDateTime(team.updated_at),
@@ -1232,7 +1253,18 @@ export async function exportTeamsReviewSheetByTrack(
             hyperlink: reviewUrl,
         };
         reviewCell.font = hyperlinkStyle;
+        const presentationVideoCell = row.getCell('presentation_video_link');
+        if (presentationVideo?.link_url) {
+            presentationVideoCell.value = {
+                text: PRESENTATION_VIDEO_TASK_NAME,
+                hyperlink: presentationVideo.link_url,
+            };
+            presentationVideoCell.font = hyperlinkStyle;
+        } else {
+            presentationVideoCell.value = '';
+        }
         row.getCell('member_names').alignment = { wrapText: true, vertical: 'top' };
+        row.getCell('cv').alignment = { wrapText: true, vertical: 'top' };
         row.getCell('advisor_names').alignment = { wrapText: true, vertical: 'top' };
         row.height = 54;
     }
