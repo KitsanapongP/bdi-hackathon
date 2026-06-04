@@ -22,7 +22,7 @@ const DEFAULT_EVENT_SUBJECTS: Record<NotificationEventCode, string> = {
 };
 
 const DEFAULT_EVENT_MESSAGES: Record<NotificationEventCode, string> = {
-  IDENTITY_SUBMITTED: 'ทีม {{team_name}} [{{team_code}}] ได้ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว กรุณาตรวจสอบข้อมูลในระบบผู้ดูแล',
+  IDENTITY_SUBMITTED: 'ทีม {{team_name}} [{{team_code}}] ได้ส่งเอกสารยืนยันตัวตนเรียบร้อยแล้ว กรุณาตรวจสอบข้อมูลในเว็ปไซต์เพื่อตรวจสอบข้อมูลเอกสาร',
   SELECTION_PASSED: 'ทีม {{team_name}} [{{team_code}}] ผ่านการคัดเลือกแล้ว กรุณาดำเนินการยืนยันสิทธิ์เข้าร่วมภายในกำหนดเวลา {{confirmation_deadline_at}}',
   SELECTION_FAILED: 'ทีม {{team_name}} [{{team_code}}] ไม่ผ่านการคัดเลือกในรอบนี้ ขอขอบคุณที่เข้าร่วมโครงการ',
   TEAM_CONFIRMED: 'ทีม {{team_name}} [{{team_code}}] ได้ยืนยันเข้าร่วมโครงการเรียบร้อยแล้ว โดย {{actor_name}}',

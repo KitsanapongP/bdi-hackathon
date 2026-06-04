@@ -12,6 +12,7 @@ import {
     getGlobalSelectionConfirmWindow,
     getTeamMemberMax,
     getTeamRecruitmentWindow,
+    getTeamSelectionSubmissionWindow,
 } from '../sys-config/sys-config-window.js';
 
 const LOCKED_TEAM_STATUSES = new Set(['submitted', 'passed', 'confirmed', 'failed', 'not_joined', 'disbanded']);
@@ -71,6 +72,13 @@ async function assertTeamRecruitmentOpen(db: DB): Promise<void> {
         throw new AppError(`การสร้างทีมจะเปิดในวันที่ ${formatThaiDate(windowConfig.openAtMs)}`, 400);
     }
     throw new AppError('หมดเขตการรับสมัคร', 400);
+}
+
+async function assertTeamDisbandDeadlineOpen(db: DB): Promise<void> {
+    const windowConfig = await getTeamSelectionSubmissionWindow(db);
+    const status = evaluateWindowStatus(windowConfig);
+    if (status !== 'closed') return;
+    throw new AppError('หมดเขตการส่งทีมเข้าคัดเลือกแล้ว ไม่สามารถยุบทีมได้', 400);
 }
 
 async function assertSelectionConfirmWindowOpen(db: DB): Promise<void> {
@@ -205,6 +213,8 @@ export async function leaveTeam(db: DB, teamId: number, userId: number) {
         if (!isOnlyLeader) {
             throw new AppError('หัวหน้าทีมไม่สามารถออกจากทีมได้ (Leader cannot leave team)', 400);
         }
+
+        await assertTeamDisbandDeadlineOpen(db);
 
         const reason = 'หัวหน้าทีมออกจากทีมและไม่มีสมาชิกคนอื่นในทีม';
 

@@ -485,9 +485,11 @@ export default function TeamContent({ user }) {
         : (teamRecruitmentWindow.status === SYSTEM_WINDOW_STATUS.CLOSED ? 'หมดเขตการรับสมัคร' : '');
     const teamLobbyDisabledMessage = isTeamAccessDenied ? teamAccessDeniedMessage : teamRecruitmentMessage;
     const isTeamSelectionSubmissionOpen = teamSelectionSubmissionWindow.status === SYSTEM_WINDOW_STATUS.OPEN;
+    const isTeamSelectionSubmissionClosed = teamSelectionSubmissionWindow.status === SYSTEM_WINDOW_STATUS.CLOSED;
     const teamSelectionSubmissionMessage = teamSelectionSubmissionWindow.status === SYSTEM_WINDOW_STATUS.NOT_OPEN
         ? `การส่งทีมเข้าคัดเลือกจะเปิดในวันที่ ${formatThaiDate(teamSelectionSubmissionWindow.openAtMs)}`
         : (teamSelectionSubmissionWindow.status === SYSTEM_WINDOW_STATUS.CLOSED ? 'หมดเขตการส่งทีมเข้าคัดเลือก' : '');
+    const teamDisbandDeadlineMessage = 'หมดเขตการส่งทีมเข้าคัดเลือกแล้ว ไม่สามารถยุบทีมได้';
     const isGlobalSelectionConfirmOpen = globalSelectionConfirmWindow.status === SYSTEM_WINDOW_STATUS.OPEN;
     const globalSelectionConfirmMessage = globalSelectionConfirmWindow.status === SYSTEM_WINDOW_STATUS.NOT_OPEN
         ? `การยืนยันการเข้าร่วมโครงการจะเปิดในวันที่ ${formatThaiDate(globalSelectionConfirmWindow.openAtMs)}`
@@ -934,6 +936,10 @@ export default function TeamContent({ user }) {
             showToast('ไม่สามารถออกจากทีมในตอนนี้ได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว', 'error');
             return;
         }
+        if (isSingleLeaderTeam && isTeamSelectionSubmissionClosed) {
+            showToast(teamDisbandDeadlineMessage, 'error');
+            return;
+        }
         const leaveMessage = isSingleLeaderTeam
             ? 'คุณเป็นสมาชิกเพียงคนเดียวของทีม ระบบจะยุบทีมอัตโนมัติเมื่อออกจากทีมนี้'
             : 'คุณแน่ใจหรือไม่ว่าต้องการออกจากทีมนี้?';
@@ -1321,7 +1327,7 @@ export default function TeamContent({ user }) {
         { id: 'members-confirmed', ok: allMembersConfirmed, label: 'สมาชิกทุกคนต้องยืนยันเอกสารยืนยันตัวตนให้ครบ' },
         { id: 'min-members', ok: isMinMembersReady, label: `ทีมจะต้องมีสมาชิก ${minSubmitMembers} คนในทีม (ปัจจุบัน ${memberCountForSubmit} คน)` },
         { id: 'required-submission-tasks', ok: !hasMissingRequiredTaskForReadiness, label: 'กรุณาส่งข้อมูลงานที่บังคับให้ครบก่อนยืนยันเข้าร่วมการคัดเลือก' },
-        { id: 'submission-window', ok: isTeamSelectionSubmissionOpen, label: teamSelectionSubmissionMessage || 'ยังไม่อยู่ในช่วงเวลาส่งทีมเข้าคัดเลือก' },
+        { id: 'submission-window', ok: isTeamSelectionSubmissionOpen || isTeamLocked || isSubmittedByVerify, label: teamSelectionSubmissionMessage || 'ยังไม่อยู่ในช่วงเวลาส่งทีมเข้าคัดเลือก' },
     ];
     const submitMissing = readinessLoaded
         ? submitReadinessRules.filter((item) => !item.ok).map((item) => item.label)
@@ -1601,6 +1607,10 @@ export default function TeamContent({ user }) {
     };
 
     const handleDisbandTeam = () => {
+        if (isTeamSelectionSubmissionClosed) {
+            showToast(teamDisbandDeadlineMessage, 'error');
+            return;
+        }
         if (!disbandReason.trim()) {
             showToast('กรุณากรอกเหตุผลในการยุบทีมก่อนกดยืนยัน', 'error');
             return;
@@ -2047,8 +2057,9 @@ export default function TeamContent({ user }) {
                             <p className="gl-card-desc">หากคุณออกจากทีมแล้ว จะหมดสิทธิ์ในทีมนี้และต้องขอเข้าร่วมใหม่</p>
                             {isLeader && !isSingleLeaderTeam && <p className="vf-hint text-warning mt-1">หัวหน้าทีมต้องโอนสิทธิ์ให้สมาชิกคนอื่นก่อน ถึงจะออกจากทีมได้</p>}
                             {isSingleLeaderTeam && <p className="vf-hint text-warning mt-1">หากหัวหน้าทีมออก ระบบจะยุบทีมอัตโนมัติ</p>}
+                            {isSingleLeaderTeam && isTeamSelectionSubmissionClosed && <p className="vf-hint text-warning mt-1">{teamDisbandDeadlineMessage}</p>}
                         </div>
-                        <button className="gl-btn-danger gl-btn-lg" disabled={actionLoading || (isLeader && !isSingleLeaderTeam) || isTeamEditLocked} onClick={handleLeaveCurrentTeam}>
+                        <button className="gl-btn-danger gl-btn-lg" disabled={actionLoading || (isLeader && !isSingleLeaderTeam) || isTeamEditLocked || (isSingleLeaderTeam && isTeamSelectionSubmissionClosed)} onClick={handleLeaveCurrentTeam}>
                             <LogOut size={16} /> ออกจากทีม
                         </button>
                     </div>
@@ -2058,13 +2069,13 @@ export default function TeamContent({ user }) {
                         <span className="gl-team-info-label"><AlertTriangle size={13} /> ยุบทีม (หัวหน้าทีม)</span>
                         <div className="vf-info-banner vf-warning-small">
                             <AlertTriangle size={14} />
-                            <span>การยุบทีมควรทำเมื่อมีเหตุจำเป็นเท่านั้น และหัวหน้าทีมควรแจ้งสมาชิกทุกคนก่อนทำการยุบทีม เมื่อยุบแล้วทุกคนในทีมจะถูกนำออกจากทีม</span>
+                            <span>{isTeamSelectionSubmissionClosed ? teamDisbandDeadlineMessage : 'การยุบทีมควรทำเมื่อมีเหตุจำเป็นเท่านั้น และหัวหน้าทีมควรแจ้งสมาชิกทุกคนก่อนทำการยุบทีม เมื่อยุบแล้วทุกคนในทีมจะถูกนำออกจากทีม'}</span>
                         </div>
                         <div className="gl-form-field" style={{ marginBottom: 12 }}>
                             <label className="gl-form-label">เหตุผลในการยุบทีม</label>
-                            <input className="gl-form-input" value={disbandReason} onChange={e => setDisbandReason(e.target.value)} placeholder="กรอกเหตุผลการยุบทีม" />
+                            <input className="gl-form-input" value={disbandReason} onChange={e => setDisbandReason(e.target.value)} placeholder="กรอกเหตุผลการยุบทีม" disabled={isTeamSelectionSubmissionClosed} />
                         </div>
-                        <button className="vf-action-btn vf-btn-disband" disabled={actionLoading || !disbandReason.trim()} onClick={handleDisbandTeam}>
+                        <button className="vf-action-btn vf-btn-disband" disabled={actionLoading || isTeamSelectionSubmissionClosed || !disbandReason.trim()} onClick={handleDisbandTeam}>
                             <AlertTriangle size={16} /> ยุบทีม
                         </button>
                     </div>

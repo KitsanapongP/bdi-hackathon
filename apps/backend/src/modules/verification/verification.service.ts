@@ -24,6 +24,13 @@ function assertTeamEditable(status: string): void {
     throw new BadRequestError('ไม่สามารถแก้ไขข้อมูลได้ เนื่องจากทีมได้ยืนยันส่งทีมเข้าคัดเลือกแล้ว');
 }
 
+async function assertTeamDisbandDeadlineOpen(db: DB): Promise<void> {
+    const selectionSubmissionWindow = await getTeamSelectionSubmissionWindow(db);
+    const selectionSubmissionWindowStatus = evaluateWindowStatus(selectionSubmissionWindow);
+    if (selectionSubmissionWindowStatus !== 'closed') return;
+    throw new BadRequestError('หมดเขตการส่งทีมเข้าคัดเลือกแล้ว ไม่สามารถยุบทีมได้');
+}
+
 async function assertActiveTeamMember(db: DB, teamId: number, userId: number): Promise<void> {
     const member = await getTeamMemberByTeamAndUser(db, teamId, userId);
     if (!member || member.member_status !== 'active') {
@@ -384,6 +391,8 @@ export async function disbandTeamAction(
     if (team.current_leader_user_id !== leaderUserId) {
         throw new UnauthorizedError('\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e2b\u0e31\u0e27\u0e2b\u0e19\u0e49\u0e32\u0e17\u0e35\u0e21\u0e40\u0e17\u0e48\u0e32\u0e19\u0e31\u0e49\u0e19\u0e17\u0e35\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e22\u0e38\u0e1a\u0e17\u0e35\u0e21\u0e44\u0e14\u0e49');
     }
+
+    await assertTeamDisbandDeadlineOpen(db);
 
     if (!reason || reason.trim().length === 0) {
         throw new BadRequestError('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e23\u0e30\u0e1a\u0e38\u0e40\u0e2b\u0e15\u0e38\u0e1c\u0e25\u0e43\u0e19\u0e01\u0e32\u0e23\u0e22\u0e38\u0e1a\u0e17\u0e35\u0e21');
