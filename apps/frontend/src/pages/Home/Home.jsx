@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -1885,7 +1885,7 @@ function HomePage() {
                                         <span className="gt-benefit-icon"><Car size={18} /></span>
                                     </div>
                                     <h3>ค่าเดินทาง</h3>
-                                    <p>เหมาจ่ายทีมละไม่เกิน 5,000 บาท</p>
+                                    <p>ตามที่จ่ายจริง ทีมละไม่เกิน 5,000 บาท</p>
                                 </article>
 
                                 <article className="gt-benefit-card">
