@@ -139,13 +139,20 @@ export async function handleAdminSendCustomEmail(req: FastifyRequest, reply: Fas
 
   try {
     const user = req.user as JwtPayload;
-    const result = await service.sendCustomEmailToTeam(req.server.ctx.db, {
-      teamId: parsed.data.teamId,
-      subject: parsed.data.subject,
-      message: parsed.data.message,
-      actorUserId: user.userId,
-    });
-    return reply.send(ok(result, 'ส่งอีเมลสำเร็จ'));
+    const result = parsed.data.target === 'status'
+      ? await service.sendCustomEmailToTeamsByStatus(req.server.ctx.db, {
+        teamStatuses: parsed.data.teamStatuses,
+        subject: parsed.data.subject,
+        message: parsed.data.message,
+        actorUserId: user.userId,
+      })
+      : await service.sendCustomEmailToTeam(req.server.ctx.db, {
+        teamId: parsed.data.teamId!,
+        subject: parsed.data.subject,
+        message: parsed.data.message,
+        actorUserId: user.userId,
+      });
+    return reply.send(ok(result, 'ส่งการแจ้งเตือนในเว็บสำเร็จ'));
   } catch (err) {
     if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
     throw err;
