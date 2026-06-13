@@ -213,6 +213,11 @@ export const selectionResultSchema = z.object({
     status: z.enum(['passed', 'failed']),
 });
 
+export const selectionResultBulkSchema = z.object({
+    teamIds: z.array(z.number().int().positive()).min(1, 'กรุณาเลือกทีมอย่างน้อย 1 ทีม').max(500, 'เลือกได้สูงสุด 500 ทีมต่อครั้ง'),
+    status: z.enum(['passed', 'failed']),
+});
+
 export const updateGlobalSelectionDeadlineSchema = z.object({
     openAt: z.string().trim().min(1, 'กรุณาระบุวันเวลาเปิด'),
     closeAt: z.string().trim().min(1, 'กรุณาระบุวันเวลาปิด'),

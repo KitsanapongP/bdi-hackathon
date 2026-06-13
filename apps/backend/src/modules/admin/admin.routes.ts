@@ -68,6 +68,7 @@ import {
     handleDeleteSubmissionTaskAdmin,
     handleGetSelectionTeams,
     handleSetSelectionResult,
+    handleSetSelectionResultBulk,
     handleForfeitSelectionTeam,
     handleGetGlobalSelectionDeadline,
     handleSetGlobalSelectionDeadline,
@@ -152,6 +153,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.delete('/submission-tasks/:id', handleDeleteSubmissionTaskAdmin);
     fastify.get('/selection/teams', handleGetSelectionTeams);
     fastify.post('/selection/teams/:teamId/result', handleSetSelectionResult);
+    fastify.post('/selection/teams/bulk-result', handleSetSelectionResultBulk);
     fastify.post('/selection/teams/:teamId/forfeit', handleForfeitSelectionTeam);
     fastify.get('/selection/global-deadline', handleGetGlobalSelectionDeadline);
     fastify.put('/selection/global-deadline', handleSetGlobalSelectionDeadline);

@@ -32,6 +32,7 @@ import {
     reorderSubmissionTasksSchema,
     selectionTeamsQuerySchema,
     selectionResultSchema,
+    selectionResultBulkSchema,
     updateGlobalSelectionDeadlineSchema,
     exportTeamsSheetQuerySchema,
     exportTeamsReviewTrackSheetQuerySchema,
@@ -1415,6 +1416,29 @@ export async function handleSetSelectionResult(
             status: parsed.data.status,
         });
         return reply.send(ok(row, 'บันทึกผลคัดเลือกสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleSetSelectionResultBulk(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = selectionResultBulkSchema.safeParse(req.body);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const user = req.user as JwtPayload;
+        const result = await service.setSelectionResultBulk(req.server.ctx.db, {
+            teamIds: parsed.data.teamIds,
+            adminUserId: user.userId,
+            status: parsed.data.status,
+        });
+        return reply.send(ok(result, 'บันทึกผลคัดเลือกหลายทีมสำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });

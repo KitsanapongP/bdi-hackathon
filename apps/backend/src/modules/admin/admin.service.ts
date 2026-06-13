@@ -1606,6 +1606,44 @@ export async function setSelectionResult(
 }
 
 /**
+ * ตั้งผลคัดเลือกหลายทีมพร้อมกัน (bulk) — ใช้ตอนมาร์คทีมที่เหลือเป็น "ไม่ผ่าน" จำนวนมาก
+ * ทำทีละทีมโดยใช้ logic เดียวกับ setSelectionResult (audit log + deadline + ล้าง not_joined)
+ * คืนสรุปจำนวนสำเร็จ/ที่ข้าม เพื่อรองรับกรณีบางทีมไม่พบ
+ */
+export async function setSelectionResultBulk(
+    db: DB,
+    data: {
+        teamIds: number[];
+        adminUserId: number;
+        status: 'passed' | 'failed';
+    },
+): Promise<{ requested: number; updated: number; skipped: Array<{ teamId: number; reason: string }> }> {
+    const uniqueIds = Array.from(new Set(data.teamIds));
+
+    // ถ้าตั้งเป็น "ผ่าน" ต้องมี global confirm window ก่อน — เช็คครั้งเดียว fail fast
+    if (data.status === 'passed') {
+        const window = await getGlobalSelectionConfirmWindow(db);
+        if (!window.closeAt) {
+            throw new BadRequestError('ยังไม่ได้ตั้งค่า Global confirm close time จากหน้า admin');
+        }
+    }
+
+    const skipped: Array<{ teamId: number; reason: string }> = [];
+    let updated = 0;
+
+    for (const teamId of uniqueIds) {
+        try {
+            await setSelectionResult(db, { teamId, adminUserId: data.adminUserId, status: data.status });
+            updated += 1;
+        } catch (error) {
+            skipped.push({ teamId, reason: error instanceof Error ? error.message : 'unknown error' });
+        }
+    }
+
+    return { requested: uniqueIds.length, updated, skipped };
+}
+
+/**
  * ทีมสละสิทธิ์หลังยืนยันแล้ว (admin): เปลี่ยนสถานะเป็น not_joined, ล้างการยืนยัน และถอน privileges ที่มอบตอน confirm
  * ใช้เปิดที่ว่างให้ทีมสำรอง
  */

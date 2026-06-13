@@ -51,6 +51,9 @@ export default function SelectionPage() {
   const [forfeiting, setForfeiting] = useState(false)
   const [forfeitConfirmOpen, setForfeitConfirmOpen] = useState(false)
   const [forfeitCandidate, setForfeitCandidate] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const [bulkProcessing, setBulkProcessing] = useState(false)
+  const [bulkConfirm, setBulkConfirm] = useState(null)
 
   const fetchRows = useCallback(async () => {
     try {
@@ -219,6 +222,62 @@ export default function SelectionPage() {
     return allRows.filter((row) => String(row.status || '') === statusFilter)
   }, [allRows, statusFilter])
 
+  const visibleIds = useMemo(() => rows.map((row) => row.team_id), [rows])
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id))
+
+  const toggleSelect = useCallback((teamId) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(teamId)) next.delete(teamId)
+      else next.add(teamId)
+      return next
+    })
+  }, [])
+
+  const toggleSelectAllVisible = useCallback(() => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      const everySelected = visibleIds.length > 0 && visibleIds.every((id) => next.has(id))
+      if (everySelected) visibleIds.forEach((id) => next.delete(id))
+      else visibleIds.forEach((id) => next.add(id))
+      return next
+    })
+  }, [visibleIds])
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), [])
+
+  const runBulkResult = useCallback(async (status, teamIds) => {
+    try {
+      setBulkProcessing(true)
+      const res = await fetch(apiUrl('/api/admin/selection/teams/bulk-result'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamIds, status }),
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'อัปเดตหลายทีมไม่สำเร็จ')
+      const updated = Number(payload?.data?.updated || 0)
+      const skipped = Number(payload?.data?.skipped?.length || 0)
+      pushToast({
+        variant: 'success',
+        title: `อัปเดต ${updated} ทีมสำเร็จ${skipped ? ` (ข้าม ${skipped} ทีม)` : ''}`,
+      })
+      clearSelection()
+      fetchRows()
+    } catch (error) {
+      pushToast({ variant: 'danger', title: error?.message || 'อัปเดตหลายทีมไม่สำเร็จ' })
+    } finally {
+      setBulkProcessing(false)
+    }
+  }, [clearSelection, fetchRows, pushToast])
+
+  const confirmBulk = useCallback(async () => {
+    if (!bulkConfirm?.status || selectedIds.size === 0) return
+    await runBulkResult(bulkConfirm.status, Array.from(selectedIds))
+    setBulkConfirm(null)
+  }, [bulkConfirm, runBulkResult, selectedIds])
+
   return (
     <div className="admin-ui-stack admin-selection-v2">
       <PageHeader
@@ -297,6 +356,42 @@ export default function SelectionPage() {
         </ul>
       </article>
 
+      <article className="admin-ui-panel" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <strong>เลือกแล้ว {selectedIds.size} ทีม</strong>
+          <p className="admin-ui-text-muted" style={{ margin: '4px 0 0' }}>
+            ติ๊กช่องหน้าทีม หรือกดช่องหัวตารางเพื่อเลือกทุกทีมใน “สถานะ” ที่กรองอยู่ตอนนี้ แล้วตั้งผลทีเดียว
+            {statusFilter === 'all' ? ' (แนะนำเลือก filter สถานะก่อน เช่น submitted)' : ''}
+          </p>
+        </div>
+        <div className="admin-ui-header-actions">
+          <button
+            type="button"
+            className="admin-ui-btn"
+            disabled={bulkProcessing || selectedIds.size === 0}
+            onClick={() => setBulkConfirm({ status: 'passed', count: selectedIds.size })}
+          >
+            ตั้งเป็นผ่าน ({selectedIds.size})
+          </button>
+          <button
+            type="button"
+            className="admin-ui-btn"
+            disabled={bulkProcessing || selectedIds.size === 0}
+            onClick={() => setBulkConfirm({ status: 'failed', count: selectedIds.size })}
+          >
+            ตั้งเป็นไม่ผ่าน ({selectedIds.size})
+          </button>
+          <button
+            type="button"
+            className="admin-ui-mini-btn"
+            disabled={selectedIds.size === 0}
+            onClick={clearSelection}
+          >
+            ล้างการเลือก
+          </button>
+        </div>
+      </article>
+
       <AdminDataTable
         rows={rows.map((row) => ({ ...row, id: row.team_id }))}
         loading={loading}
@@ -315,6 +410,24 @@ export default function SelectionPage() {
           </label>
         }
         columns={[
+          {
+            key: 'select',
+            label: (
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                onChange={toggleSelectAllVisible}
+                title="เลือก/ยกเลิกทุกทีมในรายการที่กรองอยู่"
+              />
+            ),
+            render: (row) => (
+              <input
+                type="checkbox"
+                checked={selectedIds.has(row.team_id)}
+                onChange={() => toggleSelect(row.team_id)}
+              />
+            ),
+          },
           { key: 'team_code', label: 'รหัสทีม' },
           {
             key: 'team_name_th',
@@ -429,6 +542,19 @@ export default function SelectionPage() {
           }
         }}
         onConfirm={confirmForfeit}
+      />
+
+      <AdminConfirmModal
+        open={Boolean(bulkConfirm)}
+        danger={bulkConfirm?.status === 'failed'}
+        title="ยืนยันการตั้งผลหลายทีม"
+        description={`จะตั้ง ${bulkConfirm?.count || 0} ทีมที่เลือกเป็น "${selectionStatusLabelMap[bulkConfirm?.status] || '-'}" พร้อมกัน${bulkConfirm?.status === 'passed' ? ' (ต้องตั้งช่วงเวลายืนยันไว้ก่อน)' : ''}`}
+        confirmLabel={bulkProcessing ? 'กำลังบันทึก...' : 'ยืนยันตั้งผลทั้งหมด'}
+        cancelLabel="ยกเลิก"
+        onCancel={() => {
+          if (!bulkProcessing) setBulkConfirm(null)
+        }}
+        onConfirm={confirmBulk}
       />
     </div>
   )
