@@ -22,10 +22,18 @@ export const updateNotificationSettingSchema = z.object({
 );
 
 export const adminSendCustomEmailSchema = z.object({
-  teamId: z.number().int().positive(),
+  target: z.enum(['team', 'status']).optional().default('team'),
+  teamId: z.number().int().positive().optional(),
+  teamStatuses: z.array(z.enum(['forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined', 'disbanded'])).optional().default([]),
   subject: z.string().trim().min(1).max(255),
   message: z.string().trim().min(1),
-});
+}).refine(
+  (value) => value.target !== 'team' || value.teamId !== undefined,
+  { message: 'กรุณาเลือกทีม', path: ['teamId'] },
+).refine(
+  (value) => value.target !== 'status' || value.teamStatuses.length > 0,
+  { message: 'กรุณาเลือกสถานะทีมอย่างน้อยหนึ่งสถานะ', path: ['teamStatuses'] },
+);
 
 export const adminSendInAppNotificationSchema = z.object({
   target: z.enum(['all', 'selected']),

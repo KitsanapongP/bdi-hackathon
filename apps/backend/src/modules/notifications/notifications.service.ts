@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import type { DB } from '../../config/db.js';
 import * as repo from './notifications.repo.js';
 import type { NotificationEventCode, NotificationLogRow } from './notifications.types.js';
-import { AppError, NotFoundError } from '../../shared/errors.js';
+import { AppError, BadRequestError, NotFoundError } from '../../shared/errors.js';
 import { createTeamAuditLog } from '../teams/teams.repo.js';
 
 const EVENT_TITLES: Record<NotificationEventCode, string> = {
@@ -873,7 +873,7 @@ export async function sendCustomEmailToTeam(
 ) {
   const team = await repo.getTeamContext(db, data.teamId);
   if (!team) {
-    throw new NotFoundError('ไม่พบทีมที่ต้องการส่งอีเมล');
+    throw new NotFoundError('ไม่พบทีมที่ต้องการส่งการแจ้งเตือน');
   }
 
   const recipients = await repo.getTeamRecipients(db, data.teamId);
@@ -889,33 +889,60 @@ export async function sendCustomEmailToTeam(
     };
   }
 
-  const teamLabel = `${team.team_name_th || '-'} [${team.team_code}]`;
-  const subject = data.subject.startsWith(`${teamLabel} |`) ? data.subject : `${teamLabel} | ${data.subject}`;
-  const customMessage = data.message.trim();
-
-  const htmlMessage = buildStandardEmailHtml({
-    eventTitle: 'อีเมลแจ้งเตือนจากผู้ดูแลระบบ',
-    headline: subject,
-    message: customMessage,
+  const result = await sendCustomTeamMessageToResolvedTeam(db, {
+    team,
+    recipients,
+    actorUserId: data.actorUserId,
+    subject: data.subject,
+    message: data.message,
   });
 
-  const logMessage = customMessage;
-
-  const result = await sendEmailWithLog(db, {
-    eventCode: 'ADMIN_CUSTOM_EMAIL',
+  return {
     teamId: data.teamId,
+    subject: result.subject,
+    sent: result.sent,
+    failed: result.failed,
+    skipped: result.skipped,
+    queued: result.queued,
+    totalRecipients: result.totalRecipients,
+  };
+}
+
+async function sendCustomTeamMessageToResolvedTeam(
+  db: DB,
+  data: {
+    team: { team_id: number; team_name_th: string; team_name_en: string; team_code: string };
+    recipients: Array<{ user_id: number; email: string | null }>;
+    actorUserId: number;
+    subject: string;
+    message: string;
+  },
+) {
+  const teamLabel = `${data.team.team_name_th || '-'} [${data.team.team_code}]`;
+  const subject = data.subject.startsWith(`${teamLabel} |`) ? data.subject : `${teamLabel} | ${data.subject}`;
+  const customMessage = data.message.trim();
+  await createInAppNotificationLogs(db, {
+    eventCode: 'ADMIN_TEAM_MESSAGE',
+    teamId: data.team.team_id,
     actorUserId: data.actorUserId,
     templateCode: null,
     subject,
-    htmlMessage,
-    logMessage,
-    recipients,
+    logMessage: customMessage,
+    recipients: data.recipients,
   });
 
+  const result = {
+    sent: data.recipients.length,
+    failed: 0,
+    skipped: 0,
+    queued: 0,
+    totalRecipients: data.recipients.length,
+  };
+
   await createTeamAuditLog(db, {
-    teamId: data.teamId,
+    teamId: data.team.team_id,
     actorUserId: data.actorUserId,
-    actionCode: 'ADMIN_CUSTOM_EMAIL_SENT',
+    actionCode: 'ADMIN_TEAM_MESSAGE_SENT',
     actionDetail: {
       subject,
       totalRecipients: result.totalRecipients,
@@ -927,10 +954,61 @@ export async function sendCustomEmailToTeam(
   });
 
   return {
-    teamId: data.teamId,
+    teamId: data.team.team_id,
     subject,
     ...result,
   };
+}
+
+export async function sendCustomEmailToTeamsByStatus(
+  db: DB,
+  data: {
+    teamStatuses: Array<'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined' | 'disbanded'>;
+    actorUserId: number;
+    subject: string;
+    message: string;
+  },
+) {
+  const statuses = Array.from(new Set(data.teamStatuses));
+  if (statuses.length === 0) {
+    throw new BadRequestError('กรุณาเลือกสถานะทีมอย่างน้อยหนึ่งสถานะ');
+  }
+
+  const teams = await repo.getTeamContextsByStatuses(db, statuses);
+  if (teams.length === 0) {
+    throw new NotFoundError('ไม่พบทีมตามสถานะที่เลือก');
+  }
+
+  const totals = {
+    teamStatuses: statuses,
+    teamCount: teams.length,
+    totalRecipients: 0,
+    sent: 0,
+    failed: 0,
+    skipped: 0,
+    queued: 0,
+  };
+
+  for (const team of teams) {
+    const recipients = await repo.getTeamRecipients(db, team.team_id);
+    if (recipients.length === 0) continue;
+
+    const result = await sendCustomTeamMessageToResolvedTeam(db, {
+      team,
+      recipients,
+      actorUserId: data.actorUserId,
+      subject: data.subject,
+      message: data.message,
+    });
+
+    totals.totalRecipients += result.totalRecipients;
+    totals.sent += result.sent;
+    totals.failed += result.failed;
+    totals.skipped += result.skipped;
+    totals.queued += result.queued;
+  }
+
+  return totals;
 }
 
 export async function sendBurstTestEmail(db: DB, recipientEmail: string, actorUserId: number) {

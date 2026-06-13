@@ -433,6 +433,21 @@ export async function getTeamContext(db: DB, teamId: number): Promise<{ team_id:
   return (rows[0] as { team_id: number; team_name_th: string; team_name_en: string; team_code: string } | undefined) ?? null;
 }
 
+export async function getTeamContextsByStatuses(
+  db: DB,
+  statuses: Array<'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined' | 'disbanded'>,
+): Promise<Array<{ team_id: number; team_name_th: string; team_name_en: string; team_code: string; status: string }>> {
+  if (statuses.length === 0) return [];
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT team_id, team_name_th, team_name_en, team_code, status
+    FROM team_teams
+    WHERE deleted_at IS NULL
+      AND status IN (?)
+    ORDER BY team_id ASC
+  `, [Array.from(new Set(statuses))]);
+  return rows as Array<{ team_id: number; team_name_th: string; team_name_en: string; team_code: string; status: string }>;
+}
+
 export async function getTeamMemberDisplayNames(db: DB, teamId: number): Promise<string[]> {
   const [rows] = await db.query<RowDataPacket[]>(`
     SELECT

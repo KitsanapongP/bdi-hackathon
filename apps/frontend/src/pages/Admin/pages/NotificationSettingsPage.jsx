@@ -21,6 +21,45 @@ https://kku-th.zoom.us/j/92219759247?pwd=MWAWLrJ8wUkggAwQHJpf49f4uGnFPP.1
 Meeting ID: 922 1975 9247
 Passcode: 495885`
 
+const TEAM_STATUS_OPTIONS = [
+  { value: 'forming', label: 'forming - ยังไม่ได้ส่งโครงร่าง' },
+  { value: 'submitted', label: 'submitted - ส่งโครงร่างแล้ว' },
+  { value: 'passed', label: 'passed - ผ่านการคัดเลือก' },
+  { value: 'failed', label: 'failed - ไม่ผ่านการคัดเลือก' },
+  { value: 'confirmed', label: 'confirmed - ยืนยันเข้าร่วม' },
+  { value: 'not_joined', label: 'not_joined - ไม่เข้าร่วม' },
+  { value: 'disbanded', label: 'disbanded - ยุบทีม' },
+]
+
+const CUSTOM_EMAIL_TEMPLATES = {
+  submittedProposal: {
+    label: 'ทีมส่งโครงร่างแล้ว',
+    teamStatuses: ['submitted'],
+    subject: 'แจ้งสถานะการส่งโครงร่างและวิดีโอนำเสนอ',
+    message: `เรียน ผู้เข้าแข่งขัน Hackathon
+
+โครงร่างและวิดีโอนำเสนอของทีมท่านได้ถูกส่งให้คณะกรรมการพิจารณาเรียบร้อยแล้ว
+
+ขอให้ทีมติดตามประกาศผลการพิจารณาตามวันและเวลาที่ระบุไว้ในกำหนดการ ผ่านช่องทางประชาสัมพันธ์ของโครงการ
+
+ขอขอบคุณทุกท่าน
+ทีมงาน BDI Young Innovator Hackathon`,
+  },
+  missingProposal: {
+    label: 'ทีมไม่ได้ส่งโครงร่าง',
+    teamStatuses: ['forming'],
+    subject: 'แจ้งสถานะการส่งโครงร่างเข้ารับการพิจารณา',
+    message: `เรียน ผู้เข้าแข่งขัน Hackathon
+
+จากการตรวจสอบ พบว่าทีมของท่านไม่ได้ส่งโครงร่างเข้ารับการพิจารณาภายในระยะเวลาที่กำหนด
+
+ทีมงานจึงขอแจ้งให้ทราบว่า ทีมของท่านจะไม่ได้เข้าสู่กระบวนการพิจารณาคัดเลือก
+
+ขอขอบคุณทุกท่าน
+ทีมงาน BDI Young Innovator Hackathon`,
+  },
+}
+
 function getOrientationPreviewUser(users, selectedIds, target) {
   if (target === 'selected' && selectedIds.length > 0) {
     const selected = new Set(selectedIds.map(String))
@@ -83,7 +122,7 @@ export default function NotificationSettingsPage() {
   const [teamOptions, setTeamOptions] = useState([])
   const [userOptions, setUserOptions] = useState([])
   const [eventDrafts, setEventDrafts] = useState({})
-  const [customEmail, setCustomEmail] = useState({ teamId: '', subject: '', message: '' })
+  const [customEmail, setCustomEmail] = useState({ target: 'team', teamId: '', teamStatuses: [], subject: '', message: '' })
   const [inAppMessage, setInAppMessage] = useState({ target: 'all', userIds: [], subject: '', message: '' })
   const [orientationInApp, setOrientationInApp] = useState({
     target: 'selected',
@@ -111,6 +150,7 @@ export default function NotificationSettingsPage() {
       if (!row?.team_id || dedup.has(row.team_id)) return
       dedup.set(row.team_id, {
         teamId: row.team_id,
+        status: row.status || '',
         label: `${row.team_name_th || '-'} [${row.team_code}] (${row.status || '-'})`,
       })
     })
@@ -208,8 +248,16 @@ export default function NotificationSettingsPage() {
   }
 
   const sendCustomEmail = async () => {
-    if (!customEmail.teamId || !customEmail.subject.trim() || !customEmail.message.trim()) {
-      pushToast({ type: 'error', title: 'กรุณาเลือกทีม หัวข้อ และข้อความให้ครบ' })
+    if (!customEmail.subject.trim() || !customEmail.message.trim()) {
+      pushToast({ type: 'error', title: 'กรุณากรอกหัวข้อและข้อความให้ครบ' })
+      return
+    }
+    if (customEmail.target === 'team' && !customEmail.teamId) {
+      pushToast({ type: 'error', title: 'กรุณาเลือกทีม' })
+      return
+    }
+    if (customEmail.target === 'status' && customEmail.teamStatuses.length === 0) {
+      pushToast({ type: 'error', title: 'กรุณาเลือกสถานะทีมอย่างน้อยหนึ่งสถานะ' })
       return
     }
 
@@ -220,21 +268,37 @@ export default function NotificationSettingsPage() {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          teamId: Number(customEmail.teamId),
+          target: customEmail.target,
+          teamId: customEmail.target === 'team' ? Number(customEmail.teamId) : undefined,
+          teamStatuses: customEmail.target === 'status' ? customEmail.teamStatuses : undefined,
           subject: customEmail.subject,
           message: customEmail.message,
         }),
       })
       const payload = await res.json()
       if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ส่งข้อมูลไม่สำเร็จ')
-      pushToast({ title: `ส่งสำเร็จ (sent=${payload.data?.sent || 0}, failed=${payload.data?.failed || 0}, skipped=${payload.data?.skipped || 0})` })
-      setCustomEmail({ teamId: '', subject: '', message: '' })
+      const teamText = payload.data?.teamCount ? `teams=${payload.data.teamCount}, ` : ''
+      pushToast({ title: `ส่งการแจ้งเตือนในเว็บสำเร็จ (${teamText}sent=${payload.data?.sent || 0})` })
+      setCustomEmail({ target: 'team', teamId: '', teamStatuses: [], subject: '', message: '' })
       load()
     } catch (error) {
-      pushToast({ type: 'error', title: error?.message || 'ส่งอีเมลไม่สำเร็จ' })
+      pushToast({ type: 'error', title: error?.message || 'ส่งการแจ้งเตือนในเว็บไม่สำเร็จ' })
     } finally {
       setSending(false)
     }
+  }
+
+  const applyCustomEmailTemplate = (templateKey) => {
+    const template = CUSTOM_EMAIL_TEMPLATES[templateKey]
+    if (!template) return
+    setCustomEmail((prev) => ({
+      ...prev,
+      target: 'status',
+      teamId: '',
+      teamStatuses: template.teamStatuses,
+      subject: template.subject,
+      message: template.message,
+    }))
   }
 
   const sendInAppNotification = async () => {
@@ -353,6 +417,11 @@ export default function NotificationSettingsPage() {
     && orientationInApp.orientationLink.trim()
     && orientationInApp.orientationLink2.trim()
     && orientationRecipientCount > 0
+  const statusTeamCounts = teamOptions.reduce((acc, team) => {
+    if (team.status) acc[team.status] = (acc[team.status] || 0) + 1
+    return acc
+  }, {})
+  const selectedStatusTeamCount = customEmail.teamStatuses.reduce((sum, status) => sum + (statusTeamCounts[status] || 0), 0)
 
   return (
     <div className="admin-ui-stack">
@@ -476,28 +545,67 @@ export default function NotificationSettingsPage() {
       </article>
 
       <article className="admin-ui-panel">
-        <h3>ส่งอีเมลแบบกำหนดเองให้ทีม</h3>
+        <h3>ส่งการแจ้งเตือนในเว็บให้ทีม</h3>
         <div className="admin-ui-form">
+          <div className="admin-ui-header-actions">
+            {Object.entries(CUSTOM_EMAIL_TEMPLATES).map(([key, template]) => (
+              <button key={key} type="button" className="admin-ui-btn" onClick={() => applyCustomEmailTemplate(key)}>
+                ใช้ template: {template.label}
+              </button>
+            ))}
+          </div>
           <label>
-            ทีม
+            กลุ่มเป้าหมาย
             <select
-              value={customEmail.teamId}
-              onChange={(event) => setCustomEmail((prev) => ({ ...prev, teamId: event.target.value }))}
+              value={customEmail.target}
+              onChange={(event) => setCustomEmail((prev) => ({ ...prev, target: event.target.value, teamId: '', teamStatuses: [] }))}
             >
-              <option value="">เลือกทีม</option>
-              {teamOptions.map((item) => (
-                <option key={item.teamId} value={item.teamId}>
-                  {item.label}
-                </option>
-              ))}
+              <option value="team">เลือกทีมเดียว</option>
+              <option value="status">เลือกตามสถานะทีม</option>
             </select>
           </label>
+          {customEmail.target === 'team' ? (
+            <label>
+              ทีม
+              <select
+                value={customEmail.teamId}
+                onChange={(event) => setCustomEmail((prev) => ({ ...prev, teamId: event.target.value }))}
+              >
+                <option value="">เลือกทีม</option>
+                {teamOptions.map((item) => (
+                  <option key={item.teamId} value={item.teamId}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <label>
+              สถานะทีม
+              <select
+                multiple
+                size={TEAM_STATUS_OPTIONS.length}
+                value={customEmail.teamStatuses}
+                onChange={(event) => {
+                  const values = Array.from(event.target.selectedOptions).map((option) => option.value)
+                  setCustomEmail((prev) => ({ ...prev, teamStatuses: values }))
+                }}
+              >
+                {TEAM_STATUS_OPTIONS.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label} ({statusTeamCounts[status.value] || 0} ทีม)
+                  </option>
+                ))}
+              </select>
+              <span className="admin-ui-text-muted">เลือกแล้ว {customEmail.teamStatuses.length} สถานะ | ประมาณ {selectedStatusTeamCount} ทีม</span>
+            </label>
+          )}
           <label>
             หัวข้อ
             <input
               value={customEmail.subject}
               onChange={(event) => setCustomEmail((prev) => ({ ...prev, subject: event.target.value }))}
-              placeholder="หัวข้ออีเมล"
+              placeholder="หัวข้อที่จะแสดงใน Notification Center"
             />
           </label>
           <label>
@@ -506,12 +614,12 @@ export default function NotificationSettingsPage() {
               rows={5}
               value={customEmail.message}
               onChange={(event) => setCustomEmail((prev) => ({ ...prev, message: event.target.value }))}
-              placeholder="เนื้อความที่จะส่งถึงสมาชิกทีมที่เลือก"
+              placeholder="เนื้อความที่จะแสดงใน Notification Center ของสมาชิกทีมที่เลือก"
             />
           </label>
           <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={sending} onClick={sendCustomEmail}>
-            <Mail size={14} />
-            {sending ? 'กำลังส่ง...' : 'ส่งอีเมล'}
+            <Bell size={14} />
+            {sending ? 'กำลังส่ง...' : 'ส่งการแจ้งเตือนในเว็บ'}
           </button>
         </div>
       </article>
