@@ -1354,6 +1354,8 @@ export async function exportTeamsIdentityReviewSheetByTrack(
         { header: 'member_count', key: 'member_count', width: 12 },
         { header: 'members_with_documents', key: 'members_with_documents', width: 22 },
         { header: 'member_names', key: 'member_names', width: 42 },
+        { header: 'member_institutions', key: 'member_institutions', width: 42 },
+        { header: 'member_provinces', key: 'member_provinces', width: 28 },
         { header: 'created_at', key: 'created_at', width: 20 },
         { header: 'updated_at', key: 'updated_at', width: 20 },
     ];
@@ -1382,6 +1384,14 @@ export async function exportTeamsIdentityReviewSheetByTrack(
             member_count: teamMembers.length,
             members_with_documents: documentUsers.size,
             member_names: teamMembers.map(pickMemberDisplayName).filter(Boolean).join(', '),
+            member_institutions: teamMembers
+                .map((member) => member.institution_name_th || member.institution_name_en || '')
+                .filter(Boolean)
+                .join(', '),
+            member_provinces: teamMembers
+                .map((member) => member.home_province || '')
+                .filter(Boolean)
+                .join(', '),
             created_at: formatDateTime(team.created_at),
             updated_at: formatDateTime(team.updated_at),
         });
@@ -1393,6 +1403,8 @@ export async function exportTeamsIdentityReviewSheetByTrack(
         };
         reviewCell.font = hyperlinkStyle;
         row.getCell('member_names').alignment = { wrapText: true, vertical: 'top' };
+        row.getCell('member_institutions').alignment = { wrapText: true, vertical: 'top' };
+        row.getCell('member_provinces').alignment = { wrapText: true, vertical: 'top' };
         row.height = 54;
     }
 
