@@ -1503,6 +1503,88 @@ body:has(.admin-ui-page) {
   font-size: 0.78rem;
 }
 
+.admin-ui-mini-btn-danger {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.admin-ann-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+}
+
+.admin-ann-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1.5px solid var(--admin-ui-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: var(--admin-ui-surface, #fff);
+  transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.admin-ann-choice:hover {
+  border-color: #94a3b8;
+}
+
+.admin-ann-choice.is-selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: inset 0 0 0 1px #2563eb;
+}
+
+.admin-ann-choice input {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  accent-color: #2563eb;
+}
+
+.admin-ann-choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-ann-choice-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.admin-ann-choice.is-selected .admin-ann-choice-title {
+  color: #1e40af;
+}
+
+.admin-ann-choice-count {
+  font-size: 0.74rem;
+  color: var(--admin-ui-text-muted, #64748b);
+}
+
+.admin-ann-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--admin-ui-surface-soft);
+  border: 1px solid var(--admin-ui-border);
+}
+
+.admin-ann-chip {
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .admin-ui-count-badges {
   display: inline-flex;
   gap: 6px;

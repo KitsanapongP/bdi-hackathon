@@ -42,6 +42,9 @@ export default function SelectionPage() {
   const [changingResult, setChangingResult] = useState(false)
   const [resultConfirmOpen, setResultConfirmOpen] = useState(false)
   const [resultCandidate, setResultCandidate] = useState(null)
+  const [forfeiting, setForfeiting] = useState(false)
+  const [forfeitConfirmOpen, setForfeitConfirmOpen] = useState(false)
+  const [forfeitCandidate, setForfeitCandidate] = useState(null)
 
   const fetchRows = useCallback(async () => {
     try {
@@ -151,6 +154,40 @@ export default function SelectionPage() {
     setResultCandidate(null)
   }, [resultCandidate, setResult])
 
+  const forfeitTeam = useCallback(async (teamId) => {
+    try {
+      setForfeiting(true)
+      const res = await fetch(apiUrl(`/api/admin/selection/teams/${teamId}/forfeit`), {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'บันทึกการสละสิทธิ์ไม่สำเร็จ')
+      pushToast({ variant: 'success', title: 'บันทึกการสละสิทธิ์สำเร็จ (ถอนสิทธิ์ของทีมแล้ว)' })
+      fetchRows()
+    } catch (error) {
+      pushToast({ variant: 'danger', title: error?.message || 'บันทึกการสละสิทธิ์ไม่สำเร็จ' })
+    } finally {
+      setForfeiting(false)
+    }
+  }, [fetchRows, pushToast])
+
+  const requestForfeit = useCallback((row) => {
+    setForfeitCandidate({
+      teamId: row.team_id,
+      teamCode: row.team_code,
+      teamName: row.team_name_th || '-',
+    })
+    setForfeitConfirmOpen(true)
+  }, [])
+
+  const confirmForfeit = useCallback(async () => {
+    if (!forfeitCandidate?.teamId) return
+    await forfeitTeam(forfeitCandidate.teamId)
+    setForfeitConfirmOpen(false)
+    setForfeitCandidate(null)
+  }, [forfeitCandidate, forfeitTeam])
+
   const expireTimedOutSelectionTeams = async () => {
     try {
       setExpiringSelection(true)
@@ -230,6 +267,23 @@ export default function SelectionPage() {
         </div>
       </article>
 
+      <article className="admin-ui-panel" style={{ background: 'var(--admin-ui-surface-soft)' }}>
+        <h3>คำอธิบายสถานะและปุ่ม</h3>
+        <ul className="admin-ui-text-muted" style={{ margin: '4px 0 12px', paddingLeft: 18, lineHeight: 1.7 }}>
+          <li><strong>กำลังจัดทีม (forming)</strong> — ยังไม่ได้ส่งโครงร่าง</li>
+          <li><strong>ส่งโครงร่างแล้ว (submitted)</strong> — รอคณะกรรมการพิจารณา</li>
+          <li><strong>ผ่านคัดเลือก (passed)</strong> — ผ่านการพิจารณา รอทีมยืนยันเข้าร่วมภายในกำหนด</li>
+          <li><strong>ไม่ผ่านคัดเลือก (failed)</strong> — ไม่ผ่านการพิจารณา</li>
+          <li><strong>ยืนยันเข้าร่วมแล้ว (confirmed)</strong> — ทีมกดยืนยันเข้าร่วมและได้รับสิทธิ์ต่าง ๆ แล้ว</li>
+          <li><strong>ไม่เข้าร่วม (not_joined)</strong> — สละสิทธิ์ หรือไม่ยืนยันภายในกำหนด</li>
+          <li><strong>ยุบทีม (disbanded)</strong> — ทีมถูกยุบ</li>
+        </ul>
+        <ul className="admin-ui-text-muted" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+          <li><strong>ตั้งเป็นผ่าน / ตั้งเป็นไม่ผ่าน</strong> — ใช้ตอนประกาศผลหรือแก้กรณีกดผิด เปลี่ยนได้ตลอดเวลา <em>หมายเหตุ: หากทีมยืนยันแล้ว การกดปุ่มนี้จะรีเซ็ตการยืนยัน (ต้องยืนยันใหม่)</em></li>
+          <li><strong>สละสิทธิ์</strong> — ใช้เมื่อทีมที่ยืนยันแล้วขอถอนตัว จะเปลี่ยนเป็น “ไม่เข้าร่วม” และ<strong>ถอนสิทธิ์/ของรางวัล</strong>ที่ได้รับออก เพื่อเปิดที่ให้ทีมสำรอง</li>
+        </ul>
+      </article>
+
       <AdminDataTable
         rows={rows.map((row) => ({ ...row, id: row.team_id }))}
         loading={loading}
@@ -291,6 +345,15 @@ export default function SelectionPage() {
                 >
                   ตั้งเป็นไม่ผ่าน
                 </button>
+                <button
+                  type="button"
+                  className="admin-ui-mini-btn admin-ui-mini-btn-danger"
+                  onClick={() => requestForfeit(row)}
+                  disabled={forfeiting}
+                  title="ใช้เมื่อทีมขอสละสิทธิ์ — เปลี่ยนเป็นไม่เข้าร่วมและถอนสิทธิ์ออก"
+                >
+                  สละสิทธิ์
+                </button>
               </div>
             ),
           },
@@ -323,6 +386,22 @@ export default function SelectionPage() {
           }
         }}
         onConfirm={confirmResultChange}
+      />
+
+      <AdminConfirmModal
+        open={forfeitConfirmOpen}
+        danger
+        title="ยืนยันการสละสิทธิ์ของทีม?"
+        description={`ทีม ${forfeitCandidate?.teamCode || '-'} (${forfeitCandidate?.teamName || '-'}) จะถูกเปลี่ยนเป็น "ไม่เข้าร่วม" ล้างการยืนยัน และถอนสิทธิ์/ของรางวัลที่ได้รับออกทั้งหมด เพื่อเปิดที่ให้ทีมสำรอง`}
+        confirmLabel={forfeiting ? 'กำลังบันทึก...' : 'ยืนยันสละสิทธิ์'}
+        cancelLabel="ยกเลิก"
+        onCancel={() => {
+          if (!forfeiting) {
+            setForfeitConfirmOpen(false)
+            setForfeitCandidate(null)
+          }
+        }}
+        onConfirm={confirmForfeit}
       />
     </div>
   )

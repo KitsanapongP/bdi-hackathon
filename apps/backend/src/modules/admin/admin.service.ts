@@ -23,6 +23,7 @@ import ExcelJS from 'exceljs';
 import archiver from 'archiver';
 import { createTeamAuditLog } from '../teams/teams.repo.js';
 import * as contentService from '../content/content.service.js';
+import * as privilegesService from '../privileges/privileges.service.js';
 import { buildMemberDocumentBundleStorageKey, getOrCreateReviewShareId, getOrCreateTeamReviewShareId } from '../public-review/public-review.service.js';
 
 const GLOBAL_SELECTION_CONFIRM_OPEN_AT_KEY = 'GLOBAL_SELECTION_CONFIRM_OPEN_AT';
@@ -991,6 +992,116 @@ export async function exportTeamsSelectionSheet(
     };
 }
 
+export async function exportTeamsContactSheet(
+    db: DB,
+    inputStatuses: string[],
+): Promise<{ fileName: string; stream: PassThrough }> {
+    const statuses = normalizeStatuses(inputStatuses);
+    if (statuses.length === 0) {
+        throw new BadRequestError('กรุณาเลือกสถานะทีมอย่างน้อย 1 สถานะ');
+    }
+
+    const teams = await repo.getTeamsForSheetExport(db, statuses);
+    if (teams.length === 0) {
+        throw new NotFoundError('ไม่พบข้อมูลทีมตามสถานะที่เลือก');
+    }
+
+    const teamIds = teams.map((team) => team.team_id);
+    const members = await repo.getTeamMembersForExport(db, teamIds);
+
+    const membersByTeam = new Map<number, ExportTeamMemberRow[]>();
+    for (const row of members) {
+        const bucket = membersByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        membersByTeam.set(row.team_id, bucket);
+    }
+
+    const getSortedMembers = (teamId: number) =>
+        [...(membersByTeam.get(teamId) ?? [])].sort((a, b) => a.member_order - b.member_order);
+
+    const workbook = new ExcelJS.Workbook();
+
+    // Sheet 1: สรุปทีม
+    const teamSheet = workbook.addWorksheet('teams');
+    teamSheet.columns = [
+        { header: 'team_id', key: 'team_id', width: 10 },
+        { header: 'team_code', key: 'team_code', width: 14 },
+        { header: 'team_name_th', key: 'team_name_th', width: 28 },
+        { header: 'team_name_en', key: 'team_name_en', width: 28 },
+        { header: 'status', key: 'status', width: 14 },
+        { header: 'member_count', key: 'member_count', width: 12 },
+        { header: 'leader_name', key: 'leader_name', width: 24 },
+        { header: 'leader_email', key: 'leader_email', width: 30 },
+        { header: 'leader_phone', key: 'leader_phone', width: 18 },
+        { header: 'institution', key: 'institution', width: 30 },
+        { header: 'province', key: 'province', width: 18 },
+    ];
+
+    for (const team of teams) {
+        const teamMembers = getSortedMembers(team.team_id);
+        const leader = teamMembers.find((member) => member.role === 'leader') || teamMembers[0] || null;
+        teamSheet.addRow({
+            team_id: team.team_id,
+            team_code: team.team_code,
+            team_name_th: team.team_name_th || '',
+            team_name_en: team.team_name_en || '',
+            status: team.status,
+            member_count: teamMembers.length,
+            leader_name: leader ? pickMemberDisplayName(leader) : (team.leader_user_name || ''),
+            leader_email: leader?.email || '',
+            leader_phone: leader?.phone || '',
+            institution: leader?.institution_name_th || '',
+            province: leader?.home_province || '',
+        });
+    }
+    teamSheet.getRow(1).font = { bold: true };
+
+    // Sheet 2: สมาชิก (1 แถว/คน มีอีเมล) สำหรับส่งเมล manual
+    const memberSheet = workbook.addWorksheet('members');
+    memberSheet.columns = [
+        { header: 'team_code', key: 'team_code', width: 14 },
+        { header: 'team_name_th', key: 'team_name_th', width: 28 },
+        { header: 'team_status', key: 'team_status', width: 14 },
+        { header: 'role', key: 'role', width: 10 },
+        { header: 'name', key: 'name', width: 24 },
+        { header: 'email', key: 'email', width: 30 },
+        { header: 'phone', key: 'phone', width: 18 },
+        { header: 'institution', key: 'institution', width: 30 },
+        { header: 'education_level', key: 'education_level', width: 16 },
+        { header: 'province', key: 'province', width: 18 },
+    ];
+
+    for (const team of teams) {
+        for (const member of getSortedMembers(team.team_id)) {
+            memberSheet.addRow({
+                team_code: team.team_code,
+                team_name_th: team.team_name_th || '',
+                team_status: team.status,
+                role: member.role,
+                name: pickMemberDisplayName(member),
+                email: member.email || '',
+                phone: member.phone || '',
+                institution: member.institution_name_th || '',
+                education_level: member.education_level || '',
+                province: member.home_province || '',
+            });
+        }
+    }
+    memberSheet.getRow(1).font = { bold: true };
+
+    const output = new PassThrough();
+    void (async () => {
+        await workbook.xlsx.write(output);
+        output.end();
+    })();
+
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
+    return {
+        fileName: `teams_contact_export_${timestamp}.xlsx`,
+        stream: output,
+    };
+}
+
 export async function exportTeamsReviewSheet(
     db: DB,
     inputStatuses: string[],
@@ -1491,6 +1602,40 @@ export async function setSelectionResult(
 
     const updated = await repo.getSelectionTeamById(db, data.teamId);
     if (!updated) throw new NotFoundError('ไม่พบทีมหลังอัปเดตผลคัดเลือก');
+    return updated;
+}
+
+/**
+ * ทีมสละสิทธิ์หลังยืนยันแล้ว (admin): เปลี่ยนสถานะเป็น not_joined, ล้างการยืนยัน และถอน privileges ที่มอบตอน confirm
+ * ใช้เปิดที่ว่างให้ทีมสำรอง
+ */
+export async function forfeitTeam(
+    db: DB,
+    data: {
+        teamId: number;
+        adminUserId: number;
+    },
+): Promise<SelectionTeamRow> {
+    const team = await repo.getSelectionTeamById(db, data.teamId);
+    if (!team) throw new NotFoundError('ไม่พบทีม');
+
+    await repo.setTeamNotJoined(db, data.teamId);
+    const { revoked } = await privilegesService.revokeTeamPrivileges(db, data.teamId);
+
+    await createTeamAuditLog(db, {
+        teamId: data.teamId,
+        actorUserId: data.adminUserId,
+        actionCode: 'TEAM_SELECTION_FORFEITED',
+        actionDetail: {
+            previous_status: team.status,
+            next_status: 'not_joined',
+            was_confirmed_at: team.confirmed_at,
+            revoked_privileges: revoked,
+        },
+    });
+
+    const updated = await repo.getSelectionTeamById(db, data.teamId);
+    if (!updated) throw new NotFoundError('ไม่พบทีมหลังบันทึกการสละสิทธิ์');
     return updated;
 }
 

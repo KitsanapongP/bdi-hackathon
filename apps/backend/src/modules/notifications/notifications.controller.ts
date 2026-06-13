@@ -3,6 +3,7 @@ import { ok } from '../../shared/response.js';
 import { AppError } from '../../shared/errors.js';
 import * as service from './notifications.service.js';
 import {
+  adminSendAnnouncementSchema,
   adminSendBurstTestEmailSchema,
   adminSendCustomEmailSchema,
   adminSendInAppNotificationSchema,
@@ -153,6 +154,32 @@ export async function handleAdminSendCustomEmail(req: FastifyRequest, reply: Fas
         actorUserId: user.userId,
       });
     return reply.send(ok(result, 'ส่งการแจ้งเตือนในเว็บสำเร็จ'));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleAdminSendAnnouncement(req: FastifyRequest, reply: FastifyReply) {
+  const parsed = adminSendAnnouncementSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
+  }
+
+  try {
+    const user = req.user as JwtPayload;
+    const result = await service.sendAdminAnnouncement(req.server.ctx.db, {
+      target: parsed.data.target,
+      teamStatuses: parsed.data.teamStatuses,
+      teamId: parsed.data.teamId,
+      userTarget: parsed.data.userTarget,
+      userIds: parsed.data.userIds,
+      channels: parsed.data.channels,
+      subject: parsed.data.subject,
+      message: parsed.data.message,
+      actorUserId: user.userId,
+    });
+    return reply.send(ok(result, 'ส่งประกาศสำเร็จ'));
   } catch (err) {
     if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
     throw err;

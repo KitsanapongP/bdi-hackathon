@@ -128,6 +128,15 @@ export async function assignPublishedPrivilegesToTeam(db: DB, teamId: number): P
   return { assigned };
 }
 
+/**
+ * ถอนสิทธิประโยชน์ทั้งหมดของทีม (ใช้ตอนทีมสละสิทธิ์หลังยืนยัน)
+ * ลบ claim ทิ้ง เพราะ ClaimStatus ไม่มีสถานะ revoked; ถ้าทีมกลับมายืนยันใหม่ assignPublishedPrivilegesToTeam จะสร้างใหม่ให้เอง
+ */
+export async function revokeTeamPrivileges(db: DB, teamId: number): Promise<{ revoked: number }> {
+  const revoked = await repo.deleteClaimsByTeam(db, teamId);
+  return { revoked };
+}
+
 async function ensureTeamClaimsForPublishedTemplates(db: DB, teamId: number): Promise<void> {
   const templates = await repo.listPublishedActiveTemplates(db);
   for (const template of templates) {

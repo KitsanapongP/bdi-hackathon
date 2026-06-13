@@ -1195,6 +1195,30 @@ export async function handleExportTeamsIdentityReviewTrackSheet(req: FastifyRequ
     }
 }
 
+export async function handleExportTeamsContactSheet(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = exportTeamsSheetQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'รูปแบบข้อมูลไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const statuses = String(parsed.data.statuses || '')
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean);
+        const result = await service.exportTeamsContactSheet(req.server.ctx.db, statuses);
+        reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        reply.header('Content-Disposition', buildAttachmentHeader(result.fileName));
+        return reply.send(result.stream);
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
 export async function handleGetSubmissionTasksAdmin(req: FastifyRequest, reply: FastifyReply) {
     try {
         const rows = await service.listSubmissionTasksAdmin(req.server.ctx.db);
@@ -1391,6 +1415,30 @@ export async function handleSetSelectionResult(
             status: parsed.data.status,
         });
         return reply.send(ok(row, 'บันทึกผลคัดเลือกสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleForfeitSelectionTeam(
+    req: FastifyRequest<{ Params: { teamId: string } }>,
+    reply: FastifyReply,
+) {
+    const teamId = Number(req.params.teamId);
+    if (!Number.isFinite(teamId)) {
+        return reply.status(400).send({ ok: false, message: 'teamId ไม่ถูกต้อง' });
+    }
+
+    try {
+        const user = req.user as JwtPayload;
+        const row = await service.forfeitTeam(req.server.ctx.db, {
+            teamId,
+            adminUserId: user.userId,
+        });
+        return reply.send(ok(row, 'บันทึกการสละสิทธิ์สำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });

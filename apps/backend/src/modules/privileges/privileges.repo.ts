@@ -585,6 +585,14 @@ export async function listClaimIdsByTeamPrivilege(db: DB, teamId: number, privil
   return rows.map((row) => Number((row as { privilege_claim_id: number }).privilege_claim_id));
 }
 
+export async function deleteClaimsByTeam(db: DB, teamId: number): Promise<number> {
+  const [result] = await db.query<ResultSetHeader>(`
+    DELETE FROM user_privilege_claims
+    WHERE team_id = :teamId
+  `, { teamId });
+  return result.affectedRows;
+}
+
 export async function bulkUpdateTeamPrivilegeStatus(
   db: DB,
   data: {

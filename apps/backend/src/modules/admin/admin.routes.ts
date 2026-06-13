@@ -58,6 +58,7 @@ import {
     handleExportTeamsReviewSheet,
     handleExportTeamsReviewTrackSheet,
     handleExportTeamsIdentityReviewTrackSheet,
+    handleExportTeamsContactSheet,
     handleGetSubmissionTasksAdmin,
     handleGetSubmissionTaskAssignedTeamsAdmin,
     handleCreateSubmissionTaskAdmin,
@@ -67,6 +68,7 @@ import {
     handleDeleteSubmissionTaskAdmin,
     handleGetSelectionTeams,
     handleSetSelectionResult,
+    handleForfeitSelectionTeam,
     handleGetGlobalSelectionDeadline,
     handleSetGlobalSelectionDeadline,
     handleExpireSelectionNotJoined,
@@ -140,6 +142,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get('/exports/teams-review-sheet', handleExportTeamsReviewSheet);
     fastify.get('/exports/teams-review-track-sheet', handleExportTeamsReviewTrackSheet);
     fastify.get('/exports/teams-identity-review-track-sheet', handleExportTeamsIdentityReviewTrackSheet);
+    fastify.get('/exports/teams-contact-sheet', handleExportTeamsContactSheet);
     fastify.get('/submission-tasks', handleGetSubmissionTasksAdmin);
     fastify.get('/submission-tasks/:id/teams', handleGetSubmissionTaskAssignedTeamsAdmin);
     fastify.post('/submission-tasks', handleCreateSubmissionTaskAdmin);
@@ -149,6 +152,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.delete('/submission-tasks/:id', handleDeleteSubmissionTaskAdmin);
     fastify.get('/selection/teams', handleGetSelectionTeams);
     fastify.post('/selection/teams/:teamId/result', handleSetSelectionResult);
+    fastify.post('/selection/teams/:teamId/forfeit', handleForfeitSelectionTeam);
     fastify.get('/selection/global-deadline', handleGetGlobalSelectionDeadline);
     fastify.put('/selection/global-deadline', handleSetGlobalSelectionDeadline);
     fastify.post('/selection/expire-not-joined', handleExpireSelectionNotJoined);

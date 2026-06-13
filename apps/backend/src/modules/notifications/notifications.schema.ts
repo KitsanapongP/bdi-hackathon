@@ -35,6 +35,32 @@ export const adminSendCustomEmailSchema = z.object({
   { message: 'กรุณาเลือกสถานะทีมอย่างน้อยหนึ่งสถานะ', path: ['teamStatuses'] },
 );
 
+export const adminSendAnnouncementSchema = z.object({
+  target: z.enum(['status', 'team', 'users']),
+  teamStatuses: z.array(z.enum(['forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined', 'disbanded'])).optional().default([]),
+  teamId: z.number().int().positive().optional(),
+  userTarget: z.enum(['all', 'selected']).optional().default('selected'),
+  userIds: z.array(z.number().int().positive()).optional().default([]),
+  channels: z.object({
+    email: z.boolean().optional().default(false),
+    inApp: z.boolean().optional().default(false),
+  }),
+  subject: z.string().trim().min(1).max(255),
+  message: z.string().trim().min(1),
+}).refine(
+  (value) => value.channels.email || value.channels.inApp,
+  { message: 'กรุณาเลือกช่องทางส่งอย่างน้อยหนึ่งช่องทาง', path: ['channels'] },
+).refine(
+  (value) => value.target !== 'status' || value.teamStatuses.length > 0,
+  { message: 'กรุณาเลือกสถานะทีมอย่างน้อยหนึ่งสถานะ', path: ['teamStatuses'] },
+).refine(
+  (value) => value.target !== 'team' || value.teamId !== undefined,
+  { message: 'กรุณาเลือกทีม', path: ['teamId'] },
+).refine(
+  (value) => value.target !== 'users' || value.userTarget === 'all' || value.userIds.length > 0,
+  { message: 'กรุณาเลือกผู้รับอย่างน้อยหนึ่งคน', path: ['userIds'] },
+);
+
 export const adminSendInAppNotificationSchema = z.object({
   target: z.enum(['all', 'selected']),
   userIds: z.array(z.number().int().positive()).optional().default([]),

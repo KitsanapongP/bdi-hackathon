@@ -717,6 +717,17 @@ export async function updateSelectionResult(
     `, data);
 }
 
+export async function setTeamNotJoined(db: DB, teamId: number): Promise<void> {
+    await db.query(`
+        UPDATE team_teams
+        SET status = 'not_joined',
+            confirmed_at = NULL,
+            confirmed_by_user_id = NULL,
+            updated_at = NOW()
+        WHERE team_id = :teamId
+    `, { teamId });
+}
+
 export async function getSysConfigValue(db: DB, key: string): Promise<string | null> {
     const [rows] = await db.query<RowDataPacket[]>(`
         SELECT config_value

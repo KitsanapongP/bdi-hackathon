@@ -4,6 +4,7 @@ import { AdminGuard, AdminLayout } from './legacy/AdminAppLegacy'
 import { AdminToastProvider } from './shared/AdminToastProvider'
 import managementNavGroups from './config/managementNavGroups'
 import AdminExportsPage from './pages/AdminExportsPage'
+import AnnouncementsPage from './pages/AnnouncementsPage'
 import DashboardPage from './pages/DashboardPage'
 import NotificationSettingsPage from './pages/NotificationSettingsPage'
 import PrivilegesAdminPage from './pages/PrivilegesAdminPage'
@@ -35,6 +36,7 @@ function AdminAppRoutes() {
 
         <Route path="review" element={<Navigate to="/admin/selection" replace />} />
         <Route path="selection" element={<SelectionPage />} />
+        <Route path="announcements" element={<AnnouncementsPage />} />
         <Route path="submission-tasks" element={<SubmissionTasksPage />} />
 
         <Route path="notifications" element={<NotificationSettingsPage />} />

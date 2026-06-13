@@ -333,7 +333,7 @@ async function sendEmailWithLog(
   db: DB,
   input: {
     eventCode: string;
-    teamId: number;
+    teamId: number | null;
     actorUserId: number | null;
     templateCode: string | null;
     subject: string;
@@ -463,7 +463,7 @@ async function createInAppNotificationLogs(
   db: DB,
   input: {
     eventCode: string;
-    teamId: number;
+    teamId: number | null;
     actorUserId: number | null;
     templateCode: string | null;
     subject: string;
@@ -1006,6 +1006,174 @@ export async function sendCustomEmailToTeamsByStatus(
     totals.failed += result.failed;
     totals.skipped += result.skipped;
     totals.queued += result.queued;
+  }
+
+  return totals;
+}
+
+type AnnouncementTeamStatus = 'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined' | 'disbanded';
+
+/**
+ * ส่งประกาศจากแอดมิน (หน้า Announcement Center)
+ * - target: 'status' = ทีมตามสถานะ, 'team' = ทีมเดียว, 'users' = รายบุคคล
+ * - channels: เลือก email (SMTP จริง) และ/หรือ in-app (กระดิ่ง + กล่องข้อความทีม)
+ * - in-app ของ target ทีม ใช้ event_code ADMIN_TEAM_MESSAGE + team_id จึงเด้งทั้งกระดิ่งและกล่องข้อความทีมอัตโนมัติ
+ */
+export async function sendAdminAnnouncement(
+  db: DB,
+  data: {
+    target: 'status' | 'team' | 'users';
+    teamStatuses?: AnnouncementTeamStatus[];
+    teamId?: number | undefined;
+    userTarget?: 'all' | 'selected';
+    userIds?: number[];
+    channels: { email: boolean; inApp: boolean };
+    subject: string;
+    message: string;
+    actorUserId: number;
+  },
+) {
+  const subject = data.subject.trim();
+  const message = data.message.trim();
+  if (!subject || !message) {
+    throw new BadRequestError('กรุณากรอกหัวข้อและข้อความให้ครบ');
+  }
+  if (!data.channels.email && !data.channels.inApp) {
+    throw new BadRequestError('กรุณาเลือกช่องทางส่งอย่างน้อยหนึ่งช่องทาง');
+  }
+
+  const totals = {
+    target: data.target,
+    teamCount: 0,
+    totalRecipients: 0,
+    inAppSent: 0,
+    sent: 0,
+    failed: 0,
+    skipped: 0,
+    queued: 0,
+  };
+
+  const accumulateEmail = (result: { sent: number; failed: number; skipped: number; queued: number }) => {
+    totals.sent += result.sent;
+    totals.failed += result.failed;
+    totals.skipped += result.skipped;
+    totals.queued += result.queued;
+  };
+
+  // ----- target รายบุคคล (ไม่มีบริบททีม) -----
+  if (data.target === 'users') {
+    const userTarget = data.userTarget === 'all' ? 'all' : 'selected';
+    const recipientRows = userTarget === 'all'
+      ? await repo.getActiveNotificationUsers(db)
+      : await repo.getActiveNotificationUsersByIds(db, Array.from(new Set(data.userIds ?? [])));
+    if (recipientRows.length === 0) {
+      throw new NotFoundError('ไม่พบผู้รับตามที่เลือก');
+    }
+    const recipients = recipientRows.map((row) => ({ user_id: row.user_id, email: row.email }));
+
+    if (data.channels.inApp) {
+      await createInAppNotificationLogs(db, {
+        eventCode: 'ADMIN_IN_APP_MESSAGE',
+        teamId: null,
+        actorUserId: data.actorUserId,
+        templateCode: null,
+        subject,
+        logMessage: message,
+        recipients,
+      });
+      totals.inAppSent += recipients.length;
+    }
+
+    if (data.channels.email) {
+      const htmlMessage = buildStandardEmailHtml({
+        eventTitle: 'ประกาศจากผู้จัดงาน',
+        headline: subject,
+        message,
+      });
+      accumulateEmail(await sendEmailWithLog(db, {
+        eventCode: 'ADMIN_ANNOUNCEMENT_EMAIL',
+        teamId: null,
+        actorUserId: data.actorUserId,
+        templateCode: null,
+        subject,
+        htmlMessage,
+        logMessage: message,
+        recipients,
+      }));
+    }
+
+    totals.totalRecipients += recipients.length;
+    return totals;
+  }
+
+  // ----- target ตามสถานะ / ทีมเดียว -----
+  const teams = data.target === 'team'
+    ? (data.teamId ? [await repo.getTeamContext(db, data.teamId)].filter((team): team is NonNullable<typeof team> => Boolean(team)) : [])
+    : await repo.getTeamContextsByStatuses(db, Array.from(new Set(data.teamStatuses ?? [])));
+
+  if (!teams || teams.length === 0) {
+    throw new NotFoundError('ไม่พบทีมตามเงื่อนไขที่เลือก');
+  }
+
+  for (const team of teams) {
+    const recipients = await repo.getTeamRecipients(db, team.team_id);
+    if (recipients.length === 0) continue;
+    totals.teamCount += 1;
+
+    const memberNames = await repo.getTeamMemberDisplayNames(db, team.team_id);
+    const variables: Record<string, string> = {
+      team_id: String(team.team_id),
+      team_code: team.team_code || '',
+      team_name: team.team_name_th || '',
+      team_name_th: team.team_name_th || '',
+      team_name_en: team.team_name_en || team.team_name_th || '',
+      member_names: memberNames.join(', '),
+      member_count: String(memberNames.length),
+    };
+
+    const teamLabel = `${team.team_name_th || '-'} [${team.team_code}]`;
+    const renderedSubjectBase = renderTemplate(subject, variables).trim() || subject;
+    const renderedSubject = renderedSubjectBase.startsWith(`${teamLabel} |`)
+      ? renderedSubjectBase
+      : `${teamLabel} | ${renderedSubjectBase}`;
+    const renderedMessage = renderTemplate(message, variables);
+
+    if (data.channels.inApp) {
+      await createInAppNotificationLogs(db, {
+        eventCode: 'ADMIN_TEAM_MESSAGE',
+        teamId: team.team_id,
+        actorUserId: data.actorUserId,
+        templateCode: null,
+        subject: renderedSubject,
+        logMessage: renderedMessage,
+        recipients,
+      });
+      totals.inAppSent += recipients.length;
+    }
+
+    if (data.channels.email) {
+      const htmlMessage = buildStandardEmailHtml({
+        eventTitle: 'ประกาศจากผู้จัดงาน',
+        headline: renderedSubject,
+        message: renderedMessage,
+        detailLines: [
+          formatDetailLine('ชื่อทีม', team.team_name_th || '-'),
+          formatDetailLine('รหัสทีม', team.team_code || '-'),
+        ],
+      });
+      accumulateEmail(await sendEmailWithLog(db, {
+        eventCode: 'ADMIN_ANNOUNCEMENT_EMAIL',
+        teamId: team.team_id,
+        actorUserId: data.actorUserId,
+        templateCode: null,
+        subject: renderedSubject,
+        htmlMessage,
+        logMessage: renderedMessage,
+        recipients,
+      }));
+    }
+
+    totals.totalRecipients += recipients.length;
   }
 
   return totals;

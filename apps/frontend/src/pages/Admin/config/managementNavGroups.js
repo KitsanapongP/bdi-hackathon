@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Mail,
   MapPin,
+  Megaphone,
   QrCode,
 } from 'lucide-react'
 
@@ -75,6 +76,11 @@ const managementNavGroups = [
         to: '/admin/selection',
         label: 'Selection Result',
         icon: ClipboardCheck,
+      },
+      {
+        to: '/admin/announcements',
+        label: 'ประกาศผล',
+        icon: Megaphone,
       },
       {
         to: '/admin/submission-tasks',
