@@ -58,6 +58,17 @@ import './Team.css';
 import './Register.css';
 import './Profile.css';
 
+// รองรับ markdown แบบง่าย: **ข้อความ** -> ตัวหนา (ขึ้นบรรทัดใหม่จัดการด้วย CSS white-space: pre-line)
+function renderInboxMessage(message) {
+    const text = String(message || '');
+    if (!text) return '-';
+    return text.split(/(\*\*[^*\n]+\*\*)/g).map((part, index) => (
+        /^\*\*[^*\n]+\*\*$/.test(part)
+            ? <strong key={index}>{part.slice(2, -2)}</strong>
+            : part
+    ));
+}
+
 const TEAM_MEMBER_MAX_DEFAULT = 5;
 const TEAM_MEMBER_MIN_DEFAULT = 3;
 const TEAM_ADVISOR_MAX = 5;
@@ -2279,7 +2290,7 @@ export default function TeamContent({ user }) {
                             </button>
                             <div className="gl-team-inbox-detail" aria-hidden={!isExpanded}>
                                 <div className="gl-team-inbox-detail-inner">
-                                    <div className="gl-team-inbox-message-body">{item.message || '-'}</div>
+                                    <div className="gl-team-inbox-message-body">{renderInboxMessage(item.message)}</div>
                                     <div className="gl-team-inbox-delivery">
                                         <Mail size={15} />
                                         <span>{emailStatusText}{item.recipientEmail ? ` ไปที่ ${item.recipientEmail}` : ''}</span>
