@@ -1,12 +1,16 @@
 .stp-page {
-  --stp-bg: #f6f7f9;
-  --stp-surface: #ffffff;
-  --stp-border: #d9dde5;
-  --stp-text: #172033;
-  --stp-muted: #5a6475;
+  --stp-bg: var(--gt-bg, #f6f7f9);
+  --stp-surface: var(--gt-surface, #ffffff);
+  --stp-border: var(--gt-border, #d9dde5);
+  --stp-text: var(--gt-text, #172033);
+  --stp-muted: var(--gt-text-muted, #5a6475);
   --stp-primary: #1f4f8f;
   --stp-primary-soft: #e8f0fc;
   color: var(--stp-text);
+}
+
+.dark .stp-page {
+  --stp-primary-soft: rgba(96, 165, 250, 0.18);
 }
 
 .stp-head p {
@@ -59,7 +63,7 @@
 .stp-search {
   border: 1px solid var(--stp-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--stp-surface);
   color: var(--stp-text);
   height: 36px;
   display: inline-flex;
@@ -85,7 +89,7 @@
 .stp-form-grid textarea {
   border: 1px solid var(--stp-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--stp-surface);
   color: var(--stp-text);
   margin-top: 0;
   box-sizing: border-box;
@@ -105,8 +109,8 @@
 
 .stp-list-tools select option,
 .stp-form-grid select option {
-  color: #172033;
-  background: #ffffff;
+  color: var(--stp-text);
+  background: var(--stp-surface);
 }
 
 .stp-list {
@@ -143,7 +147,7 @@
   border: 1px dashed var(--stp-border);
   border-radius: 8px;
   color: var(--stp-muted);
-  background: #fff;
+  background: var(--stp-surface);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -171,7 +175,7 @@
 .stp-meta span {
   border: 1px solid var(--stp-border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--stp-surface);
   color: var(--stp-muted);
   font-size: 0.72rem;
   padding: 2px 8px;
@@ -233,7 +237,7 @@
   align-items: center;
   gap: 8px;
   border: 1px solid var(--stp-border);
-  background: #fff;
+  background: var(--stp-surface);
   border-radius: 10px;
   padding: 8px 10px;
   font-weight: 500;
@@ -285,7 +289,7 @@
 .stp-chip {
   border: 1px solid var(--stp-border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--stp-surface);
   color: var(--stp-text);
   padding: 5px 10px;
   font-size: 0.74rem;
@@ -332,7 +336,7 @@
 }
 
 .stp-team-list-assigned {
-  background: #f9fafb;
+  background: var(--stp-bg);
   border: 1px solid var(--stp-border);
   border-radius: 10px;
   padding: 8px;
@@ -341,7 +345,7 @@
 .stp-team-item {
   border: 1px solid var(--stp-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--stp-surface);
   padding: 10px 12px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -414,7 +418,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--stp-surface);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
   transition: transform 0.2s ease;
 }
@@ -438,7 +442,7 @@
 .stp-selected-row button {
   border: 1px solid var(--stp-border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--stp-surface);
   color: var(--stp-text);
   height: 28px;
   padding: 0 10px;

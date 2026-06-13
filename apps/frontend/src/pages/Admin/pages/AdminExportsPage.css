@@ -1,8 +1,9 @@
 .admin-export-page {
-  --export-panel: #ffffff;
-  --export-border: #d7e2f0;
-  --export-text: #132038;
-  --export-muted: #5f7796;
+  --export-panel: var(--gt-surface, #ffffff);
+  --export-soft: var(--gt-surface-alt, #fbfdff);
+  --export-border: var(--gt-border, #d7e2f0);
+  --export-text: var(--gt-text, #132038);
+  --export-muted: var(--gt-text-muted, #5f7796);
   --export-shadow: 0 16px 28px -24px rgba(17, 34, 60, 0.5);
   --export-font: 'Sarabun', 'Noto Sans Thai', sans-serif;
   display: flex;
@@ -46,10 +47,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #e2ebf8;
+  border: 1px solid var(--export-border);
   border-radius: 10px;
   padding: 8px;
-  background: #fbfdff;
+  background: var(--export-soft);
   font-weight: 700;
   font-size: 0.84rem;
 }
@@ -70,8 +71,8 @@
   height: 36px;
   border-radius: 10px;
   border: 1px solid var(--export-border);
-  background: #f5f9ff;
-  color: #153255;
+  background: var(--export-soft);
+  color: var(--export-text);
   display: inline-flex;
   align-items: center;
   gap: 8px;

@@ -1,8 +1,9 @@
 .admin-dash-v3 {
-  --dash-panel: #ffffff;
-  --dash-border: #d7e2f0;
-  --dash-text: #132038;
-  --dash-muted: #5f7796;
+  --dash-panel: var(--gt-surface, #ffffff);
+  --dash-soft: var(--gt-surface-alt, #fbfdff);
+  --dash-border: var(--gt-border, #d7e2f0);
+  --dash-text: var(--gt-text, #132038);
+  --dash-muted: var(--gt-text-muted, #5f7796);
   --dash-shadow: 0 16px 28px -24px rgba(17, 34, 60, 0.5);
   --dash-font: 'Sarabun', 'Noto Sans Thai', sans-serif;
   display: flex;
@@ -23,8 +24,8 @@
   height: 36px;
   border-radius: 10px;
   border: 1px solid var(--dash-border);
-  background: #f5f9ff;
-  color: #153255;
+  background: var(--dash-soft);
+  color: var(--dash-text);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -64,8 +65,8 @@
   position: relative;
   width: min(560px, calc(100vw - 28px));
   border-radius: 14px;
-  border: 1px solid #d7e2f0;
-  background: #fff;
+  border: 1px solid var(--dash-border);
+  background: var(--dash-panel);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   padding: 14px;
 }
@@ -86,10 +87,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #e2ebf8;
+  border: 1px solid var(--dash-border);
   border-radius: 10px;
   padding: 8px;
-  background: #fbfdff;
+  background: var(--dash-soft);
 }
 
 .admin-dash-v3-modal-actions {
@@ -133,15 +134,15 @@
 }
 
 .admin-dash-v3-lifecycle > div {
-  border: 1px solid #e2ebf8;
+  border: 1px solid var(--dash-border);
   border-radius: 10px;
   padding: 9px;
   text-align: center;
-  background: #fbfdff;
+  background: var(--dash-soft);
 }
 
 .admin-dash-v3-lifecycle > div.is-total {
-  background: linear-gradient(180deg, #f4f8ff, #edf4ff);
+  background: var(--dash-soft);
 }
 
 .admin-dash-v3-lifecycle span {
@@ -201,7 +202,7 @@
 }
 
 .admin-dash-v3-bars > div > div {
-  background: #edf3fb;
+  background: var(--dash-soft);
   border-radius: 999px;
   height: 9px;
 }
@@ -225,7 +226,7 @@
 
 .admin-dash-v3-mode-switch {
   display: inline-flex;
-  border: 1px solid #d9e5f5;
+  border: 1px solid var(--dash-border);
   border-radius: 999px;
   padding: 3px;
   margin-bottom: 8px;
@@ -234,7 +235,7 @@
 .admin-dash-v3-mode-switch button {
   border: 0;
   background: transparent;
-  color: #446080;
+  color: var(--dash-muted);
   border-radius: 999px;
   height: 30px;
   padding: 0 11px;
@@ -244,8 +245,8 @@
 }
 
 .admin-dash-v3-mode-switch button.active {
-  background: #ebf3ff;
-  color: #1f3b64;
+  background: rgba(69, 117, 242, 0.14);
+  color: var(--dash-text);
 }
 
 .admin-dash-v3-trend-users {
@@ -255,9 +256,9 @@
 }
 
 .admin-dash-v3-trend-users > div {
-  border: 1px solid #e2ebf8;
+  border: 1px solid var(--dash-border);
   border-radius: 10px;
-  background: linear-gradient(180deg, #fbfdff, #f3f8ff);
+  background: var(--dash-soft);
   padding: 6px;
   text-align: center;
 }
@@ -301,9 +302,9 @@
 }
 
 .admin-dash-v3-list > div {
-  border: 1px solid #e4ecf8;
+  border: 1px solid var(--dash-border);
   border-radius: 10px;
-  background: #fbfdff;
+  background: var(--dash-soft);
   padding: 8px 10px;
 }
 
@@ -329,7 +330,7 @@
 .admin-dash-v3-list small {
   display: block;
   margin-top: 7px;
-  color: #4d6889;
+  color: var(--dash-muted);
   line-height: 1.45;
 }
 

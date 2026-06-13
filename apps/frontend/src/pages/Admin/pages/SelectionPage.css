@@ -1,6 +1,7 @@
 .admin-selection-v2 {
-  --selection-border: #d8e3f2;
-  --selection-muted: #607a9a;
+  --selection-border: var(--gt-border, #d8e3f2);
+  --selection-muted: var(--gt-text-muted, #607a9a);
+  --selection-surface: var(--gt-surface, #ffffff);
 }
 
 .admin-selection-v2-actions {
@@ -10,7 +11,7 @@
 .admin-selection-v2-window-panel {
   border-radius: 14px;
   border: 1px solid var(--selection-border);
-  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  background: var(--selection-surface);
 }
 
 .admin-selection-v2-window-head {
@@ -52,7 +53,7 @@
   border: 1px solid var(--selection-border);
   border-radius: 10px;
   padding: 0 10px;
-  background: #ffffff;
+  background: var(--selection-surface);
   color: inherit;
 }
 
@@ -69,7 +70,7 @@
   height: 34px;
   border: 1px solid var(--selection-border);
   border-radius: 9px;
-  background: #ffffff;
+  background: var(--selection-surface);
   padding: 0 10px;
   min-width: 180px;
 }

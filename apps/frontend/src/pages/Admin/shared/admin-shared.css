@@ -1533,7 +1533,7 @@ body:has(.admin-ui-page) {
 
 .admin-ann-choice.is-selected {
   border-color: #2563eb;
-  background: #eff6ff;
+  background: rgba(37, 99, 235, 0.14);
   box-shadow: inset 0 0 0 1px #2563eb;
 }
 
@@ -1557,7 +1557,7 @@ body:has(.admin-ui-page) {
 }
 
 .admin-ann-choice.is-selected .admin-ann-choice-title {
-  color: #1e40af;
+  color: var(--admin-ui-text);
 }
 
 .admin-ann-choice-count {
