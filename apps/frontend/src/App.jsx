@@ -12,6 +12,7 @@ import VenuesPage from './pages/Home/VenuesPage'
 import NotificationsPage from './pages/Home/NotificationsPage'
 import AdminApp from './pages/Admin/AdminApp'
 import TeamReviewPage from './pages/Review/TeamReviewPage'
+import IdentityReviewPage from './pages/Review/IdentityReviewPage'
 
 function App() {
   const location = useLocation()
@@ -44,6 +45,7 @@ function App() {
         <Route path="/reset-password" element={<RegisterPage />} />
         <Route path="/home/team" element={<TeamPage />} />
         <Route path="/review/team/:shareId" element={<TeamReviewPage />} />
+        <Route path="/review/identity/:shareId" element={<IdentityReviewPage />} />
         <Route path="/admin/*" element={<AdminApp />} />
       </Routes>
     </div>

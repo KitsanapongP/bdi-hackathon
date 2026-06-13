@@ -87,6 +87,11 @@ function buildPublicTeamReviewPageUrl(baseUrl: string, shareId: string): string 
     return `${safeBase}/review/team/${shareId}`;
 }
 
+function buildPublicTeamIdentityReviewPageUrl(baseUrl: string, shareId: string): string {
+    const safeBase = String(baseUrl || '').replace(/\/$/, '');
+    return `${safeBase}/review/identity/${shareId}`;
+}
+
 function pickMemberDisplayName(member: ExportTeamMemberRow): string {
     const th = `${member.first_name_th || ''} ${member.last_name_th || ''}`.trim();
     const en = `${member.first_name_en || ''} ${member.last_name_en || ''}`.trim();
@@ -1280,6 +1285,128 @@ export async function exportTeamsReviewSheetByTrack(
     const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
     return {
         fileName: `teams_review_links_${track.toLowerCase()}_${timestamp}.xlsx`,
+        stream: output,
+    };
+}
+
+export async function exportTeamsIdentityReviewSheetByTrack(
+    db: DB,
+    inputStatuses: string[],
+    track: SubmissionReviewTrack,
+    publicBaseUrl: string,
+): Promise<{ fileName: string; stream: PassThrough }> {
+    const statuses = normalizeStatuses(inputStatuses);
+    if (statuses.length === 0) {
+        throw new BadRequestError('กรุณาเลือกสถานะทีมอย่างน้อย 1 สถานะ');
+    }
+
+    const teams = await repo.getTeamsForSheetExport(db, statuses);
+    if (teams.length === 0) {
+        throw new NotFoundError('ไม่พบทีมสำหรับ export identity review links');
+    }
+
+    const teamIds = teams.map((team) => team.team_id);
+    const [members, memberDocuments, submissionFiles] = await Promise.all([
+        repo.getTeamMembersForExport(db, teamIds),
+        repo.getMemberDocumentsForExport(db, teamIds),
+        repo.getSubmissionFilesForExport(db, teamIds),
+    ]);
+
+    const membersByTeam = new Map<number, ExportTeamMemberRow[]>();
+    const trackReviewWorksByTeam = new Map<number, ExportSubmissionFileRow[]>();
+    const documentUsersByTeam = new Map<number, Set<number>>();
+
+    for (const row of members) {
+        const bucket = membersByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        membersByTeam.set(row.team_id, bucket);
+    }
+    for (const row of submissionFiles) {
+        if (!getReviewWorkSlot(row.task_name)) continue;
+        if (row.submission_track === track) {
+            const trackBucket = trackReviewWorksByTeam.get(row.team_id) ?? [];
+            trackBucket.push(row);
+            trackReviewWorksByTeam.set(row.team_id, trackBucket);
+        }
+    }
+    for (const row of memberDocuments) {
+        const bucket = documentUsersByTeam.get(row.team_id) ?? new Set<number>();
+        bucket.add(row.user_id);
+        documentUsersByTeam.set(row.team_id, bucket);
+    }
+
+    const teamsWithTrack = teams.filter((team) => (trackReviewWorksByTeam.get(team.team_id) ?? []).length > 0);
+    if (teamsWithTrack.length === 0) {
+        throw new NotFoundError(`ไม่พบทีมที่ส่งผลงานประเภท ${track}`);
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet(`${track}_identity_review`);
+    sheet.columns = [
+        { header: 'team_id', key: 'team_id', width: 12 },
+        { header: 'team_code', key: 'team_code', width: 14 },
+        { header: 'team_name_th', key: 'team_name_th', width: 28 },
+        { header: 'team_name_en', key: 'team_name_en', width: 28 },
+        { header: 'team_status', key: 'team_status', width: 14 },
+        { header: 'export_track', key: 'export_track', width: 14 },
+        { header: 'identity_review_link', key: 'identity_review_link', width: 42 },
+        { header: 'leader_user_name', key: 'leader_user_name', width: 24 },
+        { header: 'member_count', key: 'member_count', width: 12 },
+        { header: 'members_with_documents', key: 'members_with_documents', width: 22 },
+        { header: 'member_names', key: 'member_names', width: 42 },
+        { header: 'created_at', key: 'created_at', width: 20 },
+        { header: 'updated_at', key: 'updated_at', width: 20 },
+    ];
+
+    const hyperlinkStyle: Partial<ExcelJS.Font> = {
+        color: { argb: 'FF0563C1' },
+        underline: true,
+    };
+
+    for (const team of teamsWithTrack) {
+        const teamMembers = [...(membersByTeam.get(team.team_id) ?? [])].sort((a, b) => a.member_order - b.member_order);
+        const leader = teamMembers.find((member) => member.role === 'leader') || teamMembers[0] || null;
+        const leaderDisplayName = leader ? pickMemberDisplayName(leader) : (team.leader_user_name || '');
+        const teamShareId = await getOrCreateTeamReviewShareId(db, team.team_id, track);
+        const reviewUrl = buildPublicTeamIdentityReviewPageUrl(publicBaseUrl, teamShareId);
+        const documentUsers = documentUsersByTeam.get(team.team_id) ?? new Set<number>();
+
+        const row = sheet.addRow({
+            team_id: team.team_id,
+            team_code: team.team_code,
+            team_name_th: team.team_name_th || '',
+            team_name_en: team.team_name_en || '',
+            team_status: team.status,
+            export_track: track,
+            leader_user_name: leaderDisplayName,
+            member_count: teamMembers.length,
+            members_with_documents: documentUsers.size,
+            member_names: teamMembers.map(pickMemberDisplayName).filter(Boolean).join(', '),
+            created_at: formatDateTime(team.created_at),
+            updated_at: formatDateTime(team.updated_at),
+        });
+
+        const reviewCell = row.getCell('identity_review_link');
+        reviewCell.value = {
+            text: 'Open Identity Review',
+            hyperlink: reviewUrl,
+        };
+        reviewCell.font = hyperlinkStyle;
+        row.getCell('member_names').alignment = { wrapText: true, vertical: 'top' };
+        row.height = 54;
+    }
+
+    sheet.getRow(1).font = { bold: true };
+
+    const output = new PassThrough();
+    void (async () => {
+        await workbook.xlsx.write(output);
+        output.end();
+    })();
+
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
+    return {
+        fileName: `teams_identity_review_${track.toLowerCase()}_${timestamp}.xlsx`,
         stream: output,
     };
 }

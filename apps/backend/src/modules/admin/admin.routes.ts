@@ -57,6 +57,7 @@ import {
     handleExportTeamsSheet,
     handleExportTeamsReviewSheet,
     handleExportTeamsReviewTrackSheet,
+    handleExportTeamsIdentityReviewTrackSheet,
     handleGetSubmissionTasksAdmin,
     handleGetSubmissionTaskAssignedTeamsAdmin,
     handleCreateSubmissionTaskAdmin,
@@ -138,6 +139,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get('/exports/teams-selection-sheet', handleExportTeamsSheet);
     fastify.get('/exports/teams-review-sheet', handleExportTeamsReviewSheet);
     fastify.get('/exports/teams-review-track-sheet', handleExportTeamsReviewTrackSheet);
+    fastify.get('/exports/teams-identity-review-track-sheet', handleExportTeamsIdentityReviewTrackSheet);
     fastify.get('/submission-tasks', handleGetSubmissionTasksAdmin);
     fastify.get('/submission-tasks/:id/teams', handleGetSubmissionTaskAssignedTeamsAdmin);
     fastify.post('/submission-tasks', handleCreateSubmissionTaskAdmin);

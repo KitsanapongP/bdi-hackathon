@@ -42,6 +42,7 @@ export default function AdminExportsPage() {
   const [exportingSheet, setExportingSheet] = useState(false)
   const [exportingReviewSheet, setExportingReviewSheet] = useState(false)
   const [exportingReviewTrack, setExportingReviewTrack] = useState('')
+  const [exportingIdentityTrack, setExportingIdentityTrack] = useState('')
   const [sheetStatuses, setSheetStatuses] = useState(['submitted', 'passed'])
 
   const toggleSheetStatus = useCallback((status) => {
@@ -185,6 +186,35 @@ export default function AdminExportsPage() {
     }
   }, [pushToast])
 
+  const handleExportIdentityReviewTrackSheet = useCallback(async (track) => {
+    try {
+      setExportingIdentityTrack(track)
+      const query = new URLSearchParams({ statuses: reviewTrackExportStatuses.join(','), track })
+      const response = await fetch(apiUrl(`/api/admin/exports/teams-identity-review-track-sheet?${query.toString()}`), {
+        credentials: 'include',
+      })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload?.message || `Cannot export ${track} identity review links sheet`)
+      }
+
+      const fileName = await downloadResponseFile(response, `teams_identity_review_${track.toLowerCase()}_${Date.now()}.xlsx`)
+      pushToast({
+        variant: 'success',
+        title: `Export ${track} identity review สำเร็จ`,
+        description: `ดาวน์โหลดไฟล์แล้ว: ${fileName}`,
+      })
+    } catch (error) {
+      pushToast({
+        variant: 'danger',
+        title: `Export ${track} identity review ไม่สำเร็จ`,
+        description: error?.message || `Cannot export ${track} identity review links sheet`,
+      })
+    } finally {
+      setExportingIdentityTrack('')
+    }
+  }, [pushToast])
+
   return (
     <div className="admin-export-page">
       <section className="admin-export-panel">
@@ -258,6 +288,30 @@ export default function AdminExportsPage() {
             >
               <Download size={15} />
               {exportingReviewTrack === track ? `Exporting ${track}...` : `Export ${track} Review Links`}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="admin-export-panel">
+        <header>
+          <div>
+            <h3>Identity Review Links By Track</h3>
+            <p>แยก Excel สำหรับตรวจสอบตัวตนผู้สมัครตามประเภทผลงาน โดยแต่ละลิงก์จะเปิดหน้ารีวิวที่แนบเอกสารยืนยันตัวตนของสมาชิกในทีม</p>
+          </div>
+        </header>
+
+        <div className="admin-export-track-actions">
+          {reviewTrackOptions.map((track) => (
+            <button
+              key={track}
+              type="button"
+              className="admin-export-btn"
+              onClick={() => handleExportIdentityReviewTrackSheet(track)}
+              disabled={Boolean(exportingIdentityTrack)}
+            >
+              <Download size={15} />
+              {exportingIdentityTrack === track ? `Exporting ${track}...` : `Export ${track} Identity Review`}
             </button>
           ))}
         </div>

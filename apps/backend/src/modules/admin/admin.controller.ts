@@ -1165,6 +1165,36 @@ export async function handleExportTeamsReviewTrackSheet(req: FastifyRequest, rep
     }
 }
 
+export async function handleExportTeamsIdentityReviewTrackSheet(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = exportTeamsReviewTrackSheetQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message ?? 'Invalid identity review track export query';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const statuses = String(parsed.data.statuses || '')
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean);
+        const publicBaseUrl = pickFrontendBaseUrl(req);
+        const result = await service.exportTeamsIdentityReviewSheetByTrack(
+            req.server.ctx.db,
+            statuses,
+            parsed.data.track,
+            publicBaseUrl,
+        );
+        reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        reply.header('Content-Disposition', buildAttachmentHeader(result.fileName));
+        return reply.send(result.stream);
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
 export async function handleGetSubmissionTasksAdmin(req: FastifyRequest, reply: FastifyReply) {
     try {
         const rows = await service.listSubmissionTasksAdmin(req.server.ctx.db);
