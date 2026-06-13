@@ -64,6 +64,7 @@ import {
     handleCreateSubmissionTaskAdmin,
     handleUpdateSubmissionTaskAdmin,
     handleAssignSubmissionTaskTeamsAdmin,
+    handleUnassignSubmissionTaskTeamAdmin,
     handleReorderSubmissionTasksAdmin,
     handleDeleteSubmissionTaskAdmin,
     handleGetSelectionTeams,
@@ -150,6 +151,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.put('/submission-tasks/reorder', handleReorderSubmissionTasksAdmin);
     fastify.patch('/submission-tasks/:id', handleUpdateSubmissionTaskAdmin);
     fastify.post('/submission-tasks/:id/assign', handleAssignSubmissionTaskTeamsAdmin);
+    fastify.delete('/submission-tasks/:id/teams/:teamId', handleUnassignSubmissionTaskTeamAdmin);
     fastify.delete('/submission-tasks/:id', handleDeleteSubmissionTaskAdmin);
     fastify.get('/selection/teams', handleGetSelectionTeams);
     fastify.post('/selection/teams/:teamId/result', handleSetSelectionResult);

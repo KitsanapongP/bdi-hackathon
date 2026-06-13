@@ -1102,3 +1102,20 @@ export async function bulkAssignSubmissionTaskToTeamsAdmin(
 
     return data.teamIds.length;
 }
+
+export async function unassignSubmissionTaskTeamAdmin(
+    db: DB,
+    submissionTaskId: number,
+    teamId: number,
+): Promise<number> {
+    const [result] = await db.query<ResultSetHeader>(
+        `UPDATE team_submission_tasks
+            SET deleted_at = NOW(),
+                updated_at = NOW()
+          WHERE submission_task_id = :submissionTaskId
+            AND team_id = :teamId
+            AND deleted_at IS NULL`,
+        { submissionTaskId, teamId }
+    );
+    return Number(result.affectedRows || 0);
+}

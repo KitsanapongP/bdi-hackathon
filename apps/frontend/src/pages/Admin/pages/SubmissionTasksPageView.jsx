@@ -72,6 +72,8 @@ export default function SubmissionTasksPage() {
   const [reordering, setReordering] = useState(false)
   const [deletingTaskId, setDeletingTaskId] = useState(null)
   const [deleteCandidate, setDeleteCandidate] = useState(null)
+  const [unassignCandidate, setUnassignCandidate] = useState(null)
+  const [unassigningTeamId, setUnassigningTeamId] = useState(null)
   const [assignedTeams, setAssignedTeams] = useState([])
   const [loadingAssignedTeams, setLoadingAssignedTeams] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState(null)
@@ -397,6 +399,28 @@ export default function SubmissionTasksPage() {
     } finally {
       setDeletingTaskId(null)
       setDeleteCandidate(null)
+    }
+  }
+
+  const confirmUnassignTeam = async () => {
+    if (!unassignCandidate?.teamId || !editingTaskId || unassigningTeamId) return
+    const team = unassignCandidate
+    try {
+      setUnassigningTeamId(team.teamId)
+      const res = await fetch(apiUrl(`/api/admin/submission-tasks/${editingTaskId}/teams/${team.teamId}`), {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ถอดทีมออกจากงานไม่สำเร็จ')
+      await loadAssignedTeams(editingTaskId)
+      await load()
+      pushToast({ type: 'warning', title: `ถอดทีม ${team.teamName || team.teamCode || ''} ออกจากงานแล้ว` })
+    } catch (err) {
+      pushToast({ type: 'error', title: err?.message || 'ถอดทีมออกจากงานไม่สำเร็จ' })
+    } finally {
+      setUnassigningTeamId(null)
+      setUnassignCandidate(null)
     }
   }
 
@@ -753,7 +777,19 @@ export default function SubmissionTasksPage() {
                             <strong>{team.teamName}</strong>
                             <span>{team.teamCode}</span>
                           </div>
-                          <small>{getTeamStatusLabel(team.status)}</small>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+                            <small>{getTeamStatusLabel(team.status)}</small>
+                            <button
+                              type="button"
+                              className="admin-ui-mini-btn admin-ui-mini-btn-danger"
+                              disabled={unassigningTeamId === team.teamId}
+                              onClick={() => setUnassignCandidate(team)}
+                              title="ถอดทีมนี้ออกจากงาน (เผื่อมอบหมายผิดทีม)"
+                            >
+                              <X size={12} />
+                              {unassigningTeamId === team.teamId ? 'กำลังถอด...' : 'ถอด'}
+                            </button>
+                          </div>
                         </div>
                       ))
                     ) : (
@@ -852,6 +888,21 @@ export default function SubmissionTasksPage() {
           if (!deletingTaskId) setDeleteCandidate(null)
         }}
         onConfirm={confirmDeleteTask}
+      />
+
+      <AdminConfirmModal
+        open={Boolean(unassignCandidate)}
+        danger
+        title="ยืนยันถอดทีมออกจากงาน?"
+        description={unassignCandidate
+          ? `จะถอดทีม ${unassignCandidate.teamName || ''} [${unassignCandidate.teamCode || ''}] ออกจากงานนี้ (มอบหมายใหม่ได้ภายหลัง)`
+          : 'จะถอดทีมออกจากงานนี้'}
+        confirmLabel={unassigningTeamId ? 'กำลังถอด...' : 'ถอดทีมออก'}
+        cancelLabel="ยกเลิก"
+        onCancel={() => {
+          if (!unassigningTeamId) setUnassignCandidate(null)
+        }}
+        onConfirm={confirmUnassignTeam}
       />
     </div>
   )

@@ -2005,6 +2005,32 @@ export async function assignSubmissionTaskTeamsAdmin(
     };
 }
 
+export async function unassignSubmissionTaskTeamAdmin(
+    db: DB,
+    submissionTaskId: number,
+    teamId: number,
+) {
+    const existingTask = await repo.getSubmissionTaskByIdAdmin(db, submissionTaskId);
+    if (!existingTask) {
+        throw new NotFoundError('ไม่พบงานส่งผลงาน');
+    }
+
+    const removed = await repo.unassignSubmissionTaskTeamAdmin(db, submissionTaskId, teamId);
+    if (removed === 0) {
+        throw new NotFoundError('ไม่พบการมอบหมายงานของทีมนี้');
+    }
+
+    const updated = await repo.getSubmissionTaskByIdAdmin(db, submissionTaskId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบงานส่งผลงานหลังถอดทีม');
+    }
+
+    return {
+        task: toSubmissionTaskResponse(updated),
+        teamId,
+    };
+}
+
 export async function reorderSubmissionTasksAdmin(
     db: DB,
     updates: Array<{ submissionTaskId: number; sortOrder: number }>,

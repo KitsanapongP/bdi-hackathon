@@ -1375,6 +1375,30 @@ export async function handleDeleteSubmissionTaskAdmin(
     }
 }
 
+export async function handleUnassignSubmissionTaskTeamAdmin(
+    req: FastifyRequest<{ Params: { id: string; teamId: string } }>,
+    reply: FastifyReply,
+) {
+    const submissionTaskId = Number(req.params.id);
+    const teamId = Number(req.params.teamId);
+    if (!Number.isFinite(submissionTaskId) || submissionTaskId <= 0) {
+        return reply.status(400).send({ ok: false, message: 'ID งานไม่ถูกต้อง' });
+    }
+    if (!Number.isFinite(teamId) || teamId <= 0) {
+        return reply.status(400).send({ ok: false, message: 'teamId ไม่ถูกต้อง' });
+    }
+
+    try {
+        const result = await service.unassignSubmissionTaskTeamAdmin(req.server.ctx.db, submissionTaskId, teamId);
+        return reply.send(ok(result, 'ถอดทีมออกจากงานสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
 export async function handleGetSelectionTeams(req: FastifyRequest, reply: FastifyReply) {
     const parsed = selectionTeamsQuerySchema.safeParse(req.query);
     if (!parsed.success) {
