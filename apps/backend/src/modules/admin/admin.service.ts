@@ -1352,6 +1352,11 @@ export async function exportTeamsIdentityReviewSheetByTrack(
         { header: 'identity_review_link', key: 'identity_review_link', width: 42 },
         { header: 'leader_user_name', key: 'leader_user_name', width: 24 },
         { header: 'member_count', key: 'member_count', width: 12 },
+        { header: 'ม.ต้น', key: 'edu_secondary', width: 8 },
+        { header: 'ม.ปลาย', key: 'edu_high_school', width: 8 },
+        { header: 'ป.ตรี', key: 'edu_bachelor', width: 8 },
+        { header: 'ป.โท', key: 'edu_master', width: 8 },
+        { header: 'ป.เอก', key: 'edu_doctorate', width: 8 },
         { header: 'members_with_documents', key: 'members_with_documents', width: 22 },
         { header: 'member_names', key: 'member_names', width: 42 },
         { header: 'member_institutions', key: 'member_institutions', width: 42 },
@@ -1373,6 +1378,18 @@ export async function exportTeamsIdentityReviewSheetByTrack(
         const reviewUrl = buildPublicTeamIdentityReviewPageUrl(publicBaseUrl, teamShareId);
         const documentUsers = documentUsersByTeam.get(team.team_id) ?? new Set<number>();
 
+        const educationCounts: Record<string, number> = {
+            secondary: 0,
+            high_school: 0,
+            bachelor: 0,
+            master: 0,
+            doctorate: 0,
+        };
+        for (const member of teamMembers) {
+            const level = String(member.education_level || '');
+            if (level in educationCounts) educationCounts[level] = (educationCounts[level] ?? 0) + 1;
+        }
+
         const row = sheet.addRow({
             team_id: team.team_id,
             team_code: team.team_code,
@@ -1382,6 +1399,11 @@ export async function exportTeamsIdentityReviewSheetByTrack(
             export_track: track,
             leader_user_name: leaderDisplayName,
             member_count: teamMembers.length,
+            edu_secondary: educationCounts.secondary,
+            edu_high_school: educationCounts.high_school,
+            edu_bachelor: educationCounts.bachelor,
+            edu_master: educationCounts.master,
+            edu_doctorate: educationCounts.doctorate,
             members_with_documents: documentUsers.size,
             member_names: teamMembers.map(pickMemberDisplayName).filter(Boolean).join(', '),
             member_institutions: teamMembers
