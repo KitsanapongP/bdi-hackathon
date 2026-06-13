@@ -541,6 +541,8 @@ export async function declineTeamParticipation(
     await db.query(`
         UPDATE team_teams
         SET status = 'not_joined',
+            not_joined_at = NOW(),
+            not_joined_reason = 'declined',
             updated_at = NOW()
         WHERE team_id = :teamId
           AND status = 'passed'
@@ -552,6 +554,8 @@ export async function failTeamIfConfirmationExpired(db: DB, teamId: number): Pro
     const [result] = await db.query<ResultSetHeader>(`
         UPDATE team_teams
         SET status = 'not_joined',
+            not_joined_at = NOW(),
+            not_joined_reason = 'expired',
             updated_at = NOW()
         WHERE team_id = :teamId
           AND status = 'passed'

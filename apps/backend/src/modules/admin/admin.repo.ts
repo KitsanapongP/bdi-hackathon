@@ -651,6 +651,8 @@ export async function listSelectionTeams(
           t.confirmation_deadline_at,
           t.confirmed_at,
           t.confirmed_by_user_id,
+          t.not_joined_at,
+          t.not_joined_reason,
           t.updated_at
         FROM team_teams t
         LEFT JOIN user_users u ON u.user_id = t.current_leader_user_id
@@ -661,7 +663,7 @@ export async function listSelectionTeams(
         GROUP BY
           t.team_id, t.team_code, t.team_name_th, t.team_name_en, t.status,
           t.current_leader_user_id, u.user_name, t.confirmation_deadline_at,
-          t.confirmed_at, t.confirmed_by_user_id, t.updated_at
+          t.confirmed_at, t.confirmed_by_user_id, t.not_joined_at, t.not_joined_reason, t.updated_at
         ORDER BY t.updated_at DESC, t.team_id DESC
     `, params);
 
@@ -687,6 +689,8 @@ export async function getSelectionTeamById(db: DB, teamId: number): Promise<Sele
           t.confirmation_deadline_at,
           t.confirmed_at,
           t.confirmed_by_user_id,
+          t.not_joined_at,
+          t.not_joined_reason,
           t.updated_at
         FROM team_teams t
         LEFT JOIN user_users u ON u.user_id = t.current_leader_user_id
@@ -712,6 +716,8 @@ export async function updateSelectionResult(
             confirmation_deadline_at = :confirmationDeadlineAt,
             confirmed_at = NULL,
             confirmed_by_user_id = NULL,
+            not_joined_at = NULL,
+            not_joined_reason = NULL,
             updated_at = NOW()
         WHERE team_id = :teamId
     `, data);
@@ -723,6 +729,8 @@ export async function setTeamNotJoined(db: DB, teamId: number): Promise<void> {
         SET status = 'not_joined',
             confirmed_at = NULL,
             confirmed_by_user_id = NULL,
+            not_joined_at = NOW(),
+            not_joined_reason = 'forfeited',
             updated_at = NOW()
         WHERE team_id = :teamId
     `, { teamId });
@@ -763,6 +771,8 @@ export async function expirePassedTeamsToNotJoined(db: DB): Promise<number> {
     const [result] = await db.query<ResultSetHeader>(`
         UPDATE team_teams
         SET status = 'not_joined',
+            not_joined_at = NOW(),
+            not_joined_reason = 'expired',
             updated_at = NOW()
         WHERE status = 'passed'
           AND confirmed_at IS NULL

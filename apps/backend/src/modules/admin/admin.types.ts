@@ -148,6 +148,8 @@ export interface SelectionTeamRow {
     confirmation_deadline_at: Date | null;
     confirmed_at: Date | null;
     confirmed_by_user_id: number | null;
+    not_joined_at: Date | null;
+    not_joined_reason: 'declined' | 'forfeited' | 'expired' | null;
     updated_at: Date;
 }
 

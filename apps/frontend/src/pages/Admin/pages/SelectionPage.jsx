@@ -29,6 +29,12 @@ const selectionStatusLabelMap = {
   disbanded: 'ยุบทีม',
 }
 
+const notJoinedReasonLabelMap = {
+  declined: 'หัวหน้าปฏิเสธ',
+  forfeited: 'Admin สละสิทธิ์',
+  expired: 'หมดเวลายืนยัน',
+}
+
 export default function SelectionPage() {
   const { pushToast } = useAdminToast()
   const [loading, setLoading] = useState(true)
@@ -275,7 +281,14 @@ export default function SelectionPage() {
           <li><strong>ผ่านคัดเลือก (passed)</strong> — ผ่านการพิจารณา รอทีมยืนยันเข้าร่วมภายในกำหนด</li>
           <li><strong>ไม่ผ่านคัดเลือก (failed)</strong> — ไม่ผ่านการพิจารณา</li>
           <li><strong>ยืนยันเข้าร่วมแล้ว (confirmed)</strong> — ทีมกดยืนยันเข้าร่วมและได้รับสิทธิ์ต่าง ๆ แล้ว</li>
-          <li><strong>ไม่เข้าร่วม (not_joined)</strong> — สละสิทธิ์ หรือไม่ยืนยันภายในกำหนด</li>
+          <li>
+            <strong>ไม่เข้าร่วม (not_joined)</strong> — ออกจากการคัดเลือก ดูเวลาและสาเหตุได้ที่คอลัมน์ “ออกจากการคัดเลือก” โดยมี 3 สาเหตุ:
+            <ul style={{ marginTop: 4, paddingLeft: 18 }}>
+              <li><strong>หัวหน้าปฏิเสธ (declined)</strong> — หัวหน้าทีมกดปฏิเสธเข้าร่วมเองในหน้าทีม</li>
+              <li><strong>Admin สละสิทธิ์ (forfeited)</strong> — แอดมินกดปุ่ม “สละสิทธิ์” ให้ทีม (พร้อมถอนสิทธิ์ที่ได้รับ)</li>
+              <li><strong>หมดเวลายืนยัน (expired)</strong> — ทีมผ่านคัดเลือกแต่ไม่ยืนยันภายในกำหนด ระบบเปลี่ยนให้อัตโนมัติ</li>
+            </ul>
+          </li>
           <li><strong>ยุบทีม (disbanded)</strong> — ทีมถูกยุบ</li>
         </ul>
         <ul className="admin-ui-text-muted" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
@@ -323,6 +336,20 @@ export default function SelectionPage() {
             key: 'confirmed_at',
             label: 'เวลาที่ยืนยัน',
             render: (row) => formatDateTime(row.confirmed_at),
+          },
+          {
+            key: 'not_joined_at',
+            label: 'ออกจากการคัดเลือก',
+            render: (row) => {
+              if (row.status !== 'not_joined' && !row.not_joined_at) return '-'
+              const reason = notJoinedReasonLabelMap[row.not_joined_reason] || (row.not_joined_reason || '-')
+              return (
+                <div>
+                  <div>{row.not_joined_reason ? reason : '-'}</div>
+                  <div className="admin-ui-text-muted">{formatDateTime(row.not_joined_at)}</div>
+                </div>
+              )
+            },
           },
           {
             key: 'actions',
