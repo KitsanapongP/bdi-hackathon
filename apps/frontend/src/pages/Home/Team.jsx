@@ -2632,7 +2632,7 @@ export default function TeamContent({ user }) {
 
                                 {task.taskType === 'link' ? (
                                     <>
-                                        <p className="vf-hint" style={{ marginBottom: 8 }}>กรอกลิงก์วิดีโอนำเสนอ</p>
+                                        <p className="vf-hint" style={{ marginBottom: 8 }}>กรอกลิงก์ผลงานหรือเอกสารที่เกี่ยวข้อง</p>
                                         <div className="sub-video-input-row">
                                             <input
                                                 className="pf-input"
