@@ -12,6 +12,7 @@ import {
   Megaphone,
   QrCode,
   ScrollText,
+  Inbox,
 } from 'lucide-react'
 
 const managementNavGroups = [
@@ -87,6 +88,11 @@ const managementNavGroups = [
         to: '/admin/submission-tasks',
         label: 'Submission Tasks',
         icon: FileText,
+      },
+      {
+        to: '/admin/submissions',
+        label: 'งานที่ทีมส่ง',
+        icon: Inbox,
       },
     ],
   },

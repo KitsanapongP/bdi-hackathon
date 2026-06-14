@@ -2090,3 +2090,66 @@ export async function deleteSubmissionTaskAdmin(db: DB, submissionTaskId: number
     await repo.softDeleteSubmissionTaskAdmin(db, submissionTaskId);
     await repo.softDeleteTeamSubmissionTasksByTaskIdAdmin(db, submissionTaskId);
 }
+
+// ===== Admin team submissions viewer =====
+
+export async function getAdminTeamSubmissions(
+    db: DB,
+    query: {
+        teamStatus?: string | undefined;
+        submissionTaskId?: number | undefined;
+        teamId?: number | undefined;
+        track?: 'Phenome' | 'Health' | 'City' | undefined;
+        itemType?: 'file' | 'link' | undefined;
+        search?: string | undefined;
+        page?: number | undefined;
+        pageSize?: number | undefined;
+    },
+) {
+    const pageSize = Math.max(1, Math.min(Number(query.pageSize) || 50, 200));
+    const page = Math.max(1, Number(query.page) || 1);
+    const offset = (page - 1) * pageSize;
+
+    const filters = {
+        teamStatus: query.teamStatus,
+        submissionTaskId: query.submissionTaskId,
+        teamId: query.teamId,
+        track: query.track,
+        itemType: query.itemType,
+        search: query.search?.trim() || undefined,
+    };
+
+    const { rows, total } = await repo.listTeamSubmissionsAdmin(db, filters, pageSize, offset);
+
+    const items = rows.map((row: any) => ({
+        itemType: row.item_type as 'file' | 'link',
+        itemId: Number(row.item_id),
+        teamId: row.team_id,
+        teamCode: row.team_code,
+        teamNameTh: row.team_name_th,
+        teamStatus: row.team_status,
+        submissionTaskId: row.submission_task_id,
+        taskName: row.task_name,
+        taskType: row.task_type,
+        stage: row.stage,
+        track: row.submission_track,
+        title: row.title,
+        linkUrl: row.link_url,
+        submittedAt: row.submitted_at,
+    }));
+
+    return { items, total, page, pageSize };
+}
+
+export async function openAdminSubmissionFile(db: DB, fileId: number): Promise<string> {
+    const file = await repo.getSubmissionFileForOpenAdmin(db, fileId);
+    if (!file) {
+        throw new NotFoundError('ไม่พบไฟล์ที่ต้องการเปิด');
+    }
+    const shareId = await getOrCreateReviewShareId(db, {
+        storageKey: file.file_storage_key,
+        fileKind: 'submission_file',
+        fileOriginalName: file.file_original_name,
+    });
+    return shareId;
+}

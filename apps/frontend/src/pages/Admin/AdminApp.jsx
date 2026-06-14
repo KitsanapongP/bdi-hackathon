@@ -18,6 +18,7 @@ import StaticSchedulePage from './pages/StaticSchedulePage'
 import StaticSponsorsPage from './pages/StaticSponsorsPage'
 import StaticVenuesPage from './pages/StaticVenuesPage'
 import SubmissionTasksPage from './pages/SubmissionTasksPage'
+import TeamSubmissionsPage from './pages/TeamSubmissionsPage'
 
 function AdminAppRoutes() {
   return (
@@ -39,6 +40,7 @@ function AdminAppRoutes() {
         <Route path="selection" element={<SelectionPage />} />
         <Route path="announcements" element={<AnnouncementsPage />} />
         <Route path="submission-tasks" element={<SubmissionTasksPage />} />
+        <Route path="submissions" element={<TeamSubmissionsPage />} />
 
         <Route path="notifications" element={<NotificationSettingsPage />} />
         <Route path="notification-logs" element={<NotificationLogsPage />} />

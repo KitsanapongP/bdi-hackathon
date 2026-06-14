@@ -205,6 +205,19 @@ export const exportTeamsSheetQuerySchema = z.object({
     statuses: z.string().trim().min(1, 'กรุณาเลือกสถานะทีมอย่างน้อย 1 สถานะ'),
 });
 
+const teamSubmissionsEmptyToUndefined = (value: unknown) => (typeof value === 'string' && value.trim() === '' ? undefined : value);
+
+export const adminTeamSubmissionsQuerySchema = z.object({
+    teamStatus: z.preprocess(teamSubmissionsEmptyToUndefined, z.enum(['forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined', 'disbanded']).optional()),
+    submissionTaskId: z.coerce.number().int().positive().optional(),
+    teamId: z.coerce.number().int().positive().optional(),
+    track: z.preprocess(teamSubmissionsEmptyToUndefined, z.enum(['Phenome', 'Health', 'City']).optional()),
+    itemType: z.preprocess(teamSubmissionsEmptyToUndefined, z.enum(['file', 'link']).optional()),
+    search: z.preprocess(teamSubmissionsEmptyToUndefined, z.string().trim().max(200).optional()),
+    page: z.coerce.number().int().positive().optional(),
+    pageSize: z.coerce.number().int().positive().max(200).optional(),
+});
+
 export const exportTeamsReviewTrackSheetQuerySchema = exportTeamsSheetQuerySchema.extend({
     track: z.enum(['Phenome', 'Health', 'City']),
 });

@@ -1120,3 +1120,123 @@ export async function unassignSubmissionTaskTeamAdmin(
     );
     return Number(result.affectedRows || 0);
 }
+
+// ===== Admin team submissions viewer =====
+
+export interface AdminTeamSubmissionFilters {
+    teamStatus?: string | undefined;
+    submissionTaskId?: number | undefined;
+    teamId?: number | undefined;
+    track?: 'Phenome' | 'Health' | 'City' | undefined;
+    itemType?: 'file' | 'link' | undefined;
+    search?: string | undefined;
+}
+
+function buildTeamSubmissionFilterClause(filters: AdminTeamSubmissionFilters): { extra: string; params: Record<string, unknown> } {
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = {};
+    if (filters.teamStatus) {
+        conditions.push('t.status = :teamStatus');
+        params.teamStatus = filters.teamStatus;
+    }
+    if (filters.submissionTaskId) {
+        conditions.push('st.submission_task_id = :submissionTaskId');
+        params.submissionTaskId = filters.submissionTaskId;
+    }
+    if (filters.teamId) {
+        conditions.push('t.team_id = :teamId');
+        params.teamId = filters.teamId;
+    }
+    if (filters.track) {
+        conditions.push('tst.submission_track = :track');
+        params.track = filters.track;
+    }
+    if (filters.search) {
+        conditions.push('(t.team_code LIKE :search OR t.team_name_th LIKE :search)');
+        params.search = `%${filters.search}%`;
+    }
+    return { extra: conditions.length ? ` AND ${conditions.join(' AND ')}` : '', params };
+}
+
+function buildTeamSubmissionUnion(filters: AdminTeamSubmissionFilters): { union: string; params: Record<string, unknown> } {
+    const { extra, params } = buildTeamSubmissionFilterClause(filters);
+
+    const fileSub = `
+        SELECT
+            'file' AS item_type,
+            f.file_id AS item_id,
+            t.team_id, t.team_code, t.team_name_th, t.status AS team_status,
+            st.submission_task_id, st.task_name, st.task_type, st.stage, st.sort_order AS task_sort_order,
+            tst.submission_track,
+            f.file_original_name AS title,
+            NULL AS link_url,
+            f.uploaded_at AS submitted_at
+        FROM team_submission_files f
+        JOIN team_submission_tasks tst ON tst.team_submission_task_id = f.team_submission_task_id AND tst.deleted_at IS NULL
+        JOIN submission_tasks st ON st.submission_task_id = tst.submission_task_id AND st.deleted_at IS NULL
+        JOIN team_teams t ON t.team_id = f.team_id AND t.deleted_at IS NULL
+        WHERE f.deleted_at IS NULL${extra}
+    `;
+
+    const linkSub = `
+        SELECT
+            'link' AS item_type,
+            tst.team_submission_task_id AS item_id,
+            t.team_id, t.team_code, t.team_name_th, t.status AS team_status,
+            st.submission_task_id, st.task_name, st.task_type, st.stage, st.sort_order AS task_sort_order,
+            tst.submission_track,
+            tst.link_url AS title,
+            tst.link_url AS link_url,
+            tst.updated_at AS submitted_at
+        FROM team_submission_tasks tst
+        JOIN submission_tasks st ON st.submission_task_id = tst.submission_task_id AND st.deleted_at IS NULL
+        JOIN team_teams t ON t.team_id = tst.team_id AND t.deleted_at IS NULL
+        WHERE tst.deleted_at IS NULL
+          AND st.task_type = 'link'
+          AND tst.link_url IS NOT NULL
+          AND TRIM(tst.link_url) <> ''${extra}
+    `;
+
+    let union: string;
+    if (filters.itemType === 'file') union = fileSub;
+    else if (filters.itemType === 'link') union = linkSub;
+    else union = `${fileSub} UNION ALL ${linkSub}`;
+
+    return { union, params };
+}
+
+export async function listTeamSubmissionsAdmin(
+    db: DB,
+    filters: AdminTeamSubmissionFilters,
+    limit: number,
+    offset: number,
+): Promise<{ rows: RowDataPacket[]; total: number }> {
+    const { union, params } = buildTeamSubmissionUnion(filters);
+
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT * FROM (${union}) sub
+        ORDER BY sub.submitted_at DESC, sub.team_id ASC, sub.task_sort_order ASC
+        LIMIT :limit OFFSET :offset
+    `, { ...params, limit, offset });
+
+    const [countRows] = await db.query<RowDataPacket[]>(`
+        SELECT COUNT(*) AS total FROM (${union}) sub
+    `, params);
+
+    const total = Number((countRows[0] as { total?: number | string } | undefined)?.total ?? 0);
+    return { rows, total };
+}
+
+export async function getSubmissionFileForOpenAdmin(
+    db: DB,
+    fileId: number,
+): Promise<{ file_storage_key: string; file_original_name: string } | null> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT file_storage_key, file_original_name
+        FROM team_submission_files
+        WHERE file_id = :fileId
+          AND deleted_at IS NULL
+        LIMIT 1
+    `, { fileId });
+    return (rows[0] as { file_storage_key: string; file_original_name: string } | undefined) ?? null;
+}

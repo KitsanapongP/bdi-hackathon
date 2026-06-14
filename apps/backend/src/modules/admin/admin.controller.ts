@@ -35,6 +35,7 @@ import {
     selectionResultBulkSchema,
     updateGlobalSelectionDeadlineSchema,
     exportTeamsSheetQuerySchema,
+    adminTeamSubmissionsQuerySchema,
     exportTeamsReviewTrackSheetQuerySchema,
 } from './admin.schema.js';
 import * as service from './admin.service.js';
@@ -1212,6 +1213,43 @@ export async function handleExportTeamsContactSheet(req: FastifyRequest, reply: 
         reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         reply.header('Content-Disposition', buildAttachmentHeader(result.fileName));
         return reply.send(result.stream);
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleGetAdminTeamSubmissions(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = adminTeamSubmissionsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'พารามิเตอร์ไม่ถูกต้อง' });
+    }
+
+    try {
+        const data = await service.getAdminTeamSubmissions(req.server.ctx.db, parsed.data);
+        return reply.send(ok(data));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleOpenAdminSubmissionFile(
+    req: FastifyRequest<{ Params: { fileId: string } }>,
+    reply: FastifyReply,
+) {
+    const fileId = Number(req.params.fileId);
+    if (!Number.isFinite(fileId) || fileId <= 0) {
+        return reply.status(400).send({ ok: false, message: 'fileId ไม่ถูกต้อง' });
+    }
+
+    try {
+        const shareId = await service.openAdminSubmissionFile(req.server.ctx.db, fileId);
+        return reply.redirect(`/api/public-review/files/${shareId}`);
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });
