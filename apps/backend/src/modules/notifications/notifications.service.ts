@@ -1371,3 +1371,147 @@ export async function markInboxAsRead(db: DB, notificationLogId: number, userId:
 export async function markAllInboxAsRead(db: DB, userId: number): Promise<void> {
   await repo.markAllUserNotificationsAsRead(db, userId);
 }
+
+// ===== Admin notification logs viewer =====
+
+function buildLogPersonName(parts: {
+  user_name?: string | null;
+  first_name_th?: string | null;
+  last_name_th?: string | null;
+  first_name_en?: string | null;
+  last_name_en?: string | null;
+}): string {
+  const th = `${parts.first_name_th ?? ''} ${parts.last_name_th ?? ''}`.trim();
+  if (th) return th;
+  const en = `${parts.first_name_en ?? ''} ${parts.last_name_en ?? ''}`.trim();
+  return en || parts.user_name || '';
+}
+
+function toDateRangeBound(value: string | undefined, end: boolean): string | undefined {
+  const raw = String(value || '').trim();
+  if (!raw) return undefined;
+  // รับได้ทั้ง 'YYYY-MM-DD' และ 'YYYY-MM-DDTHH:mm'
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return `${raw} ${end ? '23:59:59' : '00:00:00'}`;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) return `${raw.replace('T', ' ')}:${end ? '59' : '00'}`;
+  return raw;
+}
+
+export async function getAdminNotificationLogs(
+  db: DB,
+  query: {
+    channel?: 'in_app' | 'email' | undefined;
+    status?: 'queued' | 'sent' | 'failed' | 'skipped' | 'read' | undefined;
+    eventCode?: string | undefined;
+    search?: string | undefined;
+    fromDate?: string | undefined;
+    toDate?: string | undefined;
+    page?: number | undefined;
+    pageSize?: number | undefined;
+  },
+) {
+  const pageSize = Math.max(1, Math.min(Number(query.pageSize) || 50, 200));
+  const page = Math.max(1, Number(query.page) || 1);
+  const offset = (page - 1) * pageSize;
+
+  const filters = {
+    channel: query.channel,
+    status: query.status,
+    eventCode: query.eventCode?.trim() || undefined,
+    search: query.search?.trim() || undefined,
+    fromDate: toDateRangeBound(query.fromDate, false),
+    toDate: toDateRangeBound(query.toDate, true),
+  };
+
+  const [{ rows, total }, summaryRows] = await Promise.all([
+    repo.searchNotificationLogsAdmin(db, filters, pageSize, offset),
+    repo.getNotificationLogStatusSummaryAdmin(db, filters),
+  ]);
+
+  const summary = summaryRows.reduce(
+    (acc, row) => {
+      acc.total += row.count;
+      acc.byStatus[row.status] = (acc.byStatus[row.status] || 0) + row.count;
+      return acc;
+    },
+    { total: 0, byStatus: {} as Record<string, number> },
+  );
+
+  const items = rows.map((row: any) => ({
+    notificationLogId: row.notification_log_id,
+    eventCode: row.event_code,
+    channel: row.channel,
+    status: row.status,
+    teamId: row.team_id,
+    teamCode: row.team_code,
+    teamNameTh: row.team_name_th,
+    recipientUserId: row.recipient_user_id,
+    recipientName: buildLogPersonName({
+      user_name: row.recipient_user_name,
+      first_name_th: row.recipient_first_name_th,
+      last_name_th: row.recipient_last_name_th,
+      first_name_en: row.recipient_first_name_en,
+      last_name_en: row.recipient_last_name_en,
+    }),
+    recipientUserCode: row.recipient_user_code,
+    recipientAccountEmail: row.recipient_account_email,
+    recipientEmail: row.recipient_email,
+    actorUserId: row.actor_user_id,
+    actorName: row.actor_user_id
+      ? (buildLogPersonName({ user_name: row.actor_user_name, first_name_th: row.actor_first_name_th, last_name_th: row.actor_last_name_th }) || 'system')
+      : 'system',
+    subject: row.subject_text,
+    retryCount: row.retry_count,
+    errorMessage: row.error_message,
+    providerMessageId: row.provider_message_id,
+    hasEmailHtml: Boolean(Number(row.has_email_html)),
+    sentAt: row.sent_at,
+    readAt: row.read_at,
+    createdAt: row.created_at,
+  }));
+
+  return { items, total, page, pageSize, summary };
+}
+
+export async function getAdminNotificationLogEventCodes(db: DB) {
+  return repo.getNotificationLogEventCodesAdmin(db);
+}
+
+export async function getAdminNotificationLogDetail(db: DB, notificationLogId: number) {
+  const row: any = await repo.getNotificationLogByIdAdmin(db, notificationLogId);
+  if (!row) {
+    throw new NotFoundError('ไม่พบ log การแจ้งเตือนที่ต้องการ');
+  }
+  return {
+    notificationLogId: row.notification_log_id,
+    eventCode: row.event_code,
+    channel: row.channel,
+    status: row.status,
+    teamId: row.team_id,
+    teamCode: row.team_code,
+    teamNameTh: row.team_name_th,
+    recipientUserId: row.recipient_user_id,
+    recipientName: buildLogPersonName({
+      user_name: row.recipient_user_name,
+      first_name_th: row.recipient_first_name_th,
+      last_name_th: row.recipient_last_name_th,
+    }),
+    recipientUserCode: row.recipient_user_code,
+    recipientAccountEmail: row.recipient_account_email,
+    recipientEmail: row.recipient_email,
+    actorUserId: row.actor_user_id,
+    actorName: row.actor_user_id
+      ? (buildLogPersonName({ user_name: row.actor_user_name, first_name_th: row.actor_first_name_th, last_name_th: row.actor_last_name_th }) || 'system')
+      : 'system',
+    templateCode: row.template_code,
+    subject: row.subject_text,
+    message: row.message_text,
+    emailHtml: row.email_html,
+    retryCount: row.retry_count,
+    retryAfterAt: row.retry_after_at,
+    providerMessageId: row.provider_message_id,
+    errorMessage: row.error_message,
+    sentAt: row.sent_at,
+    readAt: row.read_at,
+    createdAt: row.created_at,
+  };
+}

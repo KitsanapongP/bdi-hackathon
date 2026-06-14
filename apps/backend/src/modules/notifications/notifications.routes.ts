@@ -18,6 +18,9 @@ import {
   handleGetAdminNotificationUsers,
   handleGetAdminNotificationRecipients,
   handleUpdateAdminNotificationRecipient,
+  handleGetAdminNotificationLogs,
+  handleGetAdminNotificationLogEventCodes,
+  handleGetAdminNotificationLogDetail,
 } from './notifications.controller.js';
 
 export async function notificationsRoutes(app: FastifyInstance) {
@@ -43,5 +46,9 @@ export async function notificationsRoutes(app: FastifyInstance) {
     adminApp.post('/admin/test-burst-email', handleAdminSendBurstTestEmail);
     adminApp.get('/admin/recipients', handleGetAdminNotificationRecipients);
     adminApp.put('/admin/recipients/:userId', handleUpdateAdminNotificationRecipient);
+
+    adminApp.get('/admin/logs', handleGetAdminNotificationLogs);
+    adminApp.get('/admin/logs/event-codes', handleGetAdminNotificationLogEventCodes);
+    adminApp.get('/admin/logs/:notificationLogId', handleGetAdminNotificationLogDetail);
   });
 }

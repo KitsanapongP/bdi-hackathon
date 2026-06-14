@@ -86,6 +86,19 @@ export const adminSendBurstTestEmailSchema = z.object({
   recipientEmail: z.string().trim().email('รูปแบบอีเมลไม่ถูกต้อง'),
 });
 
+const emptyToUndefined = (value: unknown) => (typeof value === 'string' && value.trim() === '' ? undefined : value);
+
+export const adminNotificationLogsQuerySchema = z.object({
+  channel: z.preprocess(emptyToUndefined, z.enum(['in_app', 'email']).optional()),
+  status: z.preprocess(emptyToUndefined, z.enum(['queued', 'sent', 'failed', 'skipped', 'read']).optional()),
+  eventCode: z.preprocess(emptyToUndefined, z.string().trim().max(100).optional()),
+  search: z.preprocess(emptyToUndefined, z.string().trim().max(200).optional()),
+  fromDate: z.preprocess(emptyToUndefined, z.string().trim().max(40).optional()),
+  toDate: z.preprocess(emptyToUndefined, z.string().trim().max(40).optional()),
+  page: z.coerce.number().int().positive().optional(),
+  pageSize: z.coerce.number().int().positive().max(200).optional(),
+});
+
 export const notificationRecipientParamSchema = z.object({
   userId: z.coerce.number().int().positive('userId ไม่ถูกต้อง'),
 });

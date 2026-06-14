@@ -483,3 +483,169 @@ export async function getUserDisplayName(db: DB, userId: number): Promise<string
   const fullName = `${row.first_name_th ?? ''} ${row.last_name_th ?? ''}`.trim();
   return fullName || row.user_name || `user-${userId}`;
 }
+
+// ===== Admin notification logs viewer =====
+
+export interface AdminNotificationLogFilters {
+  channel?: 'in_app' | 'email' | undefined;
+  status?: 'queued' | 'sent' | 'failed' | 'skipped' | 'read' | undefined;
+  eventCode?: string | undefined;
+  search?: string | undefined;
+  fromDate?: string | undefined; // 'YYYY-MM-DD HH:mm:ss'
+  toDate?: string | undefined;
+}
+
+function buildNotificationLogWhere(
+  filters: AdminNotificationLogFilters,
+  options: { includeStatus: boolean },
+): { clause: string; params: Record<string, unknown> } {
+  const conditions: string[] = [];
+  const params: Record<string, unknown> = {};
+
+  if (filters.channel) {
+    conditions.push('nl.channel = :channel');
+    params.channel = filters.channel;
+  }
+  if (options.includeStatus && filters.status) {
+    conditions.push('nl.status = :status');
+    params.status = filters.status;
+  }
+  if (filters.eventCode) {
+    conditions.push('nl.event_code = :eventCode');
+    params.eventCode = filters.eventCode;
+  }
+  if (filters.fromDate) {
+    conditions.push('nl.created_at >= :fromDate');
+    params.fromDate = filters.fromDate;
+  }
+  if (filters.toDate) {
+    conditions.push('nl.created_at <= :toDate');
+    params.toDate = filters.toDate;
+  }
+  if (filters.search) {
+    conditions.push(`(
+      ru.email LIKE :search
+      OR nl.recipient_email LIKE :search
+      OR ru.user_code LIKE :search
+      OR ru.user_name LIKE :search
+      OR CONCAT(COALESCE(ru.first_name_th, ''), ' ', COALESCE(ru.last_name_th, '')) LIKE :search
+      OR CONCAT(COALESCE(ru.first_name_en, ''), ' ', COALESCE(ru.last_name_en, '')) LIKE :search
+      OR t.team_code LIKE :search
+      OR t.team_name_th LIKE :search
+      OR nl.subject_text LIKE :search
+    )`);
+    params.search = `%${filters.search}%`;
+  }
+
+  const clause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  return { clause, params };
+}
+
+const NOTIFICATION_LOG_JOINS = `
+  FROM notification_logs nl
+  LEFT JOIN user_users ru ON ru.user_id = nl.recipient_user_id
+  LEFT JOIN team_teams t ON t.team_id = nl.team_id
+  LEFT JOIN user_users au ON au.user_id = nl.actor_user_id
+`;
+
+export async function searchNotificationLogsAdmin(
+  db: DB,
+  filters: AdminNotificationLogFilters,
+  limit: number,
+  offset: number,
+): Promise<{ rows: RowDataPacket[]; total: number }> {
+  const { clause, params } = buildNotificationLogWhere(filters, { includeStatus: true });
+
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT
+      nl.notification_log_id,
+      nl.event_code,
+      nl.channel,
+      nl.status,
+      nl.team_id,
+      t.team_code,
+      t.team_name_th,
+      nl.recipient_user_id,
+      ru.user_name AS recipient_user_name,
+      ru.user_code AS recipient_user_code,
+      ru.email AS recipient_account_email,
+      ru.first_name_th AS recipient_first_name_th,
+      ru.last_name_th AS recipient_last_name_th,
+      ru.first_name_en AS recipient_first_name_en,
+      ru.last_name_en AS recipient_last_name_en,
+      nl.recipient_email,
+      nl.actor_user_id,
+      au.user_name AS actor_user_name,
+      au.first_name_th AS actor_first_name_th,
+      au.last_name_th AS actor_last_name_th,
+      nl.subject_text,
+      nl.retry_count,
+      nl.error_message,
+      nl.provider_message_id,
+      (nl.email_html IS NOT NULL) AS has_email_html,
+      nl.sent_at,
+      nl.read_at,
+      nl.created_at
+    ${NOTIFICATION_LOG_JOINS}
+    ${clause}
+    ORDER BY nl.created_at DESC, nl.notification_log_id DESC
+    LIMIT :limit OFFSET :offset
+  `, { ...params, limit, offset });
+
+  const [countRows] = await db.query<RowDataPacket[]>(`
+    SELECT COUNT(*) AS total
+    ${NOTIFICATION_LOG_JOINS}
+    ${clause}
+  `, params);
+
+  const total = Number((countRows[0] as { total?: number | string } | undefined)?.total ?? 0);
+  return { rows, total };
+}
+
+export async function getNotificationLogStatusSummaryAdmin(
+  db: DB,
+  filters: AdminNotificationLogFilters,
+): Promise<Array<{ status: string; count: number }>> {
+  // สรุปตามสถานะ โดยใช้ตัวกรองทั้งหมดยกเว้น status เพื่อให้เห็นภาพรวม
+  const { clause, params } = buildNotificationLogWhere(filters, { includeStatus: false });
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT nl.status, COUNT(*) AS count
+    ${NOTIFICATION_LOG_JOINS}
+    ${clause}
+    GROUP BY nl.status
+  `, params);
+  return rows.map((row) => ({
+    status: String((row as { status: string }).status),
+    count: Number((row as { count: number | string }).count),
+  }));
+}
+
+export async function getNotificationLogEventCodesAdmin(db: DB): Promise<string[]> {
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT DISTINCT event_code
+    FROM notification_logs
+    ORDER BY event_code ASC
+  `);
+  return rows.map((row) => String((row as { event_code: string }).event_code)).filter(Boolean);
+}
+
+export async function getNotificationLogByIdAdmin(db: DB, notificationLogId: number): Promise<RowDataPacket | null> {
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT
+      nl.*,
+      t.team_code,
+      t.team_name_th,
+      ru.user_name AS recipient_user_name,
+      ru.user_code AS recipient_user_code,
+      ru.email AS recipient_account_email,
+      ru.first_name_th AS recipient_first_name_th,
+      ru.last_name_th AS recipient_last_name_th,
+      au.user_name AS actor_user_name,
+      au.first_name_th AS actor_first_name_th,
+      au.last_name_th AS actor_last_name_th
+    ${NOTIFICATION_LOG_JOINS}
+    WHERE nl.notification_log_id = :notificationLogId
+    LIMIT 1
+  `, { notificationLogId });
+  return (rows[0] as RowDataPacket | undefined) ?? null;
+}

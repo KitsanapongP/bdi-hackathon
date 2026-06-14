@@ -3,6 +3,7 @@ import { ok } from '../../shared/response.js';
 import { AppError } from '../../shared/errors.js';
 import * as service from './notifications.service.js';
 import {
+  adminNotificationLogsQuerySchema,
   adminSendAnnouncementSchema,
   adminSendBurstTestEmailSchema,
   adminSendCustomEmailSchema,
@@ -180,6 +181,49 @@ export async function handleAdminSendAnnouncement(req: FastifyRequest, reply: Fa
       actorUserId: user.userId,
     });
     return reply.send(ok(result, 'ส่งประกาศสำเร็จ'));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleGetAdminNotificationLogs(req: FastifyRequest, reply: FastifyReply) {
+  const parsed = adminNotificationLogsQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'พารามิเตอร์ไม่ถูกต้อง' });
+  }
+
+  try {
+    const data = await service.getAdminNotificationLogs(req.server.ctx.db, parsed.data);
+    return reply.send(ok(data));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleGetAdminNotificationLogEventCodes(req: FastifyRequest, reply: FastifyReply) {
+  try {
+    const data = await service.getAdminNotificationLogEventCodes(req.server.ctx.db);
+    return reply.send(ok(data));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleGetAdminNotificationLogDetail(
+  req: FastifyRequest<{ Params: { notificationLogId: string } }>,
+  reply: FastifyReply,
+) {
+  const notificationLogId = Number(req.params.notificationLogId);
+  if (!Number.isFinite(notificationLogId) || notificationLogId <= 0) {
+    return reply.status(400).send({ ok: false, message: 'notificationLogId ไม่ถูกต้อง' });
+  }
+
+  try {
+    const data = await service.getAdminNotificationLogDetail(req.server.ctx.db, notificationLogId);
+    return reply.send(ok(data));
   } catch (err) {
     if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
     throw err;

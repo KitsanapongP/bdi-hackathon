@@ -11,6 +11,7 @@ import {
   MapPin,
   Megaphone,
   QrCode,
+  ScrollText,
 } from 'lucide-react'
 
 const managementNavGroups = [
@@ -96,6 +97,11 @@ const managementNavGroups = [
         to: '/admin/notifications',
         label: 'Notifications',
         icon: Mail,
+      },
+      {
+        to: '/admin/notification-logs',
+        label: 'Notification Logs',
+        icon: ScrollText,
       },
       {
         to: '/admin/privileges',
