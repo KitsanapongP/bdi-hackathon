@@ -435,6 +435,7 @@ export async function getTeamMembersForExport(db: DB, teamIds: number[]): Promis
             ) AS member_order,
             m.user_id,
             u.user_name,
+            u.user_code,
             m.role,
             m.member_status,
             m.joined_at,

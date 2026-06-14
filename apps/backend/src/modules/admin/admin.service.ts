@@ -1007,7 +1007,11 @@ export async function exportTeamsContactSheet(
     }
 
     const teamIds = teams.map((team) => team.team_id);
-    const members = await repo.getTeamMembersForExport(db, teamIds);
+    const [members, advisors, submissionFiles] = await Promise.all([
+        repo.getTeamMembersForExport(db, teamIds),
+        repo.getTeamAdvisorsForExport(db, teamIds),
+        repo.getSubmissionFilesForExport(db, teamIds),
+    ]);
 
     const membersByTeam = new Map<number, ExportTeamMemberRow[]>();
     for (const row of members) {
@@ -1016,12 +1020,29 @@ export async function exportTeamsContactSheet(
         membersByTeam.set(row.team_id, bucket);
     }
 
+    const advisorsByTeam = new Map<number, ExportTeamAdvisorRow[]>();
+    for (const row of advisors) {
+        const bucket = advisorsByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        advisorsByTeam.set(row.team_id, bucket);
+    }
+
+    // หา track ของผลงานลำดับที่ 1 และ 2 ต่อทีม (จากไฟล์ที่ส่งงาน work_1 / work_2)
+    const worksByTeam = new Map<number, Map<ReviewWorkSlot, ExportSubmissionFileRow>>();
+    for (const row of submissionFiles) {
+        const slot = getReviewWorkSlot(row.task_name);
+        if (!slot) continue;
+        const bucket = worksByTeam.get(row.team_id) ?? new Map<ReviewWorkSlot, ExportSubmissionFileRow>();
+        if (!bucket.has(slot)) bucket.set(slot, row); // เก็บไฟล์แรกของแต่ละ slot
+        worksByTeam.set(row.team_id, bucket);
+    }
+
     const getSortedMembers = (teamId: number) =>
         [...(membersByTeam.get(teamId) ?? [])].sort((a, b) => a.member_order - b.member_order);
 
     const workbook = new ExcelJS.Workbook();
 
-    // Sheet 1: สรุปทีม
+    // Sheet 1: สรุปทีม + track + ผู้ติดต่อสำหรับติดตาม
     const teamSheet = workbook.addWorksheet('teams');
     teamSheet.columns = [
         { header: 'team_id', key: 'team_id', width: 10 },
@@ -1029,41 +1050,55 @@ export async function exportTeamsContactSheet(
         { header: 'team_name_th', key: 'team_name_th', width: 28 },
         { header: 'team_name_en', key: 'team_name_en', width: 28 },
         { header: 'status', key: 'status', width: 14 },
+        { header: 'track_1', key: 'track_1', width: 12 },
+        { header: 'track_2', key: 'track_2', width: 12 },
         { header: 'member_count', key: 'member_count', width: 12 },
         { header: 'leader_name', key: 'leader_name', width: 24 },
         { header: 'leader_email', key: 'leader_email', width: 30 },
         { header: 'leader_phone', key: 'leader_phone', width: 18 },
         { header: 'institution', key: 'institution', width: 30 },
         { header: 'province', key: 'province', width: 18 },
+        { header: 'advisor_name', key: 'advisor_name', width: 26 },
+        { header: 'advisor_email', key: 'advisor_email', width: 30 },
+        { header: 'advisor_phone', key: 'advisor_phone', width: 18 },
     ];
 
     for (const team of teams) {
         const teamMembers = getSortedMembers(team.team_id);
         const leader = teamMembers.find((member) => member.role === 'leader') || teamMembers[0] || null;
+        const works = worksByTeam.get(team.team_id);
+        const advisor = (advisorsByTeam.get(team.team_id) ?? [])[0] || null;
         teamSheet.addRow({
             team_id: team.team_id,
             team_code: team.team_code,
             team_name_th: team.team_name_th || '',
             team_name_en: team.team_name_en || '',
             status: team.status,
+            track_1: works?.get('work_1')?.submission_track || '',
+            track_2: works?.get('work_2')?.submission_track || '',
             member_count: teamMembers.length,
             leader_name: leader ? pickMemberDisplayName(leader) : (team.leader_user_name || ''),
             leader_email: leader?.email || '',
             leader_phone: leader?.phone || '',
             institution: leader?.institution_name_th || '',
             province: leader?.home_province || '',
+            advisor_name: advisor ? (buildAdvisorDisplayNameTh(advisor) || buildAdvisorDisplayNameEn(advisor)) : '',
+            advisor_email: advisor?.email || '',
+            advisor_phone: advisor?.phone || '',
         });
     }
     teamSheet.getRow(1).font = { bold: true };
 
-    // Sheet 2: สมาชิก (1 แถว/คน มีอีเมล) สำหรับส่งเมล manual
+    // Sheet 2: สมาชิก (1 แถว/คน มีอีเมล + รหัสผู้ใช้สำหรับระบุตัวบุคคล) สำหรับส่งเมล manual / ติดตาม
     const memberSheet = workbook.addWorksheet('members');
     memberSheet.columns = [
         { header: 'team_code', key: 'team_code', width: 14 },
         { header: 'team_name_th', key: 'team_name_th', width: 28 },
         { header: 'team_status', key: 'team_status', width: 14 },
         { header: 'role', key: 'role', width: 10 },
-        { header: 'name', key: 'name', width: 24 },
+        { header: 'user_code', key: 'user_code', width: 14 },
+        { header: 'name_th', key: 'name_th', width: 24 },
+        { header: 'name_en', key: 'name_en', width: 24 },
         { header: 'email', key: 'email', width: 30 },
         { header: 'phone', key: 'phone', width: 18 },
         { header: 'institution', key: 'institution', width: 30 },
@@ -1073,12 +1108,16 @@ export async function exportTeamsContactSheet(
 
     for (const team of teams) {
         for (const member of getSortedMembers(team.team_id)) {
+            const nameTh = `${member.first_name_th || ''} ${member.last_name_th || ''}`.trim();
+            const nameEn = `${member.first_name_en || ''} ${member.last_name_en || ''}`.trim();
             memberSheet.addRow({
                 team_code: team.team_code,
                 team_name_th: team.team_name_th || '',
                 team_status: team.status,
                 role: member.role,
-                name: pickMemberDisplayName(member),
+                user_code: member.user_code || '',
+                name_th: nameTh || pickMemberDisplayName(member),
+                name_en: nameEn,
                 email: member.email || '',
                 phone: member.phone || '',
                 institution: member.institution_name_th || '',

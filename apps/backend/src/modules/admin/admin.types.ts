@@ -110,6 +110,7 @@ export interface ExportTeamMemberRow {
     member_order: number;
     user_id: number;
     user_name: string;
+    user_code: string | null;
     role: 'leader' | 'member';
     member_status: 'active' | 'left' | 'removed';
     joined_at: Date;
