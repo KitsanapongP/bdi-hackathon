@@ -2538,7 +2538,7 @@ export default function TeamContent({ user }) {
                             : files.length > 0;
                         const isTaskSubmissionComplete = hasSubmittedTaskContent && hasSelectedSubmissionTrack;
                         const missingSubmissionReasons = [
-                            !hasSubmittedTaskContent ? (task.taskType === 'link' ? 'ยังไม่ได้ส่งวิดีโอนำเสนอ' : 'ยังไม่ได้แนบไฟล์') : null,
+                            !hasSubmittedTaskContent ? (task.taskType === 'link' ? 'ยังไม่ได้ส่งงาน' : 'ยังไม่ได้แนบไฟล์') : null,
                             !hasSelectedSubmissionTrack ? 'ยังไม่ได้เลือก Track ที่จะส่ง' : null,
                         ].filter(Boolean);
 
