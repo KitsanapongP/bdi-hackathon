@@ -4133,6 +4133,19 @@
     font-size: 0.86rem;
     line-height: 1.5;
     white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.sub-task-description a,
+.gl-team-inbox-message-body a {
+    color: #7cc4ff;
+    text-decoration: underline;
+    word-break: break-all;
+}
+
+.sub-task-description a:hover,
+.gl-team-inbox-message-body a:hover {
+    color: #a9d8ff;
 }
 
 .sub-proposal-example-card {

@@ -58,15 +58,30 @@ import './Team.css';
 import './Register.css';
 import './Profile.css';
 
-// รองรับ markdown แบบง่าย: **ข้อความ** -> ตัวหนา (ขึ้นบรรทัดใหม่จัดการด้วย CSS white-space: pre-line)
-function renderInboxMessage(message) {
-    const text = String(message || '');
-    if (!text) return '-';
-    return text.split(/(\*\*[^*\n]+\*\*)/g).map((part, index) => (
-        /^\*\*[^*\n]+\*\*$/.test(part)
-            ? <strong key={index}>{part.slice(2, -2)}</strong>
-            : part
-    ));
+// รองรับ markdown แบบง่าย: **ข้อความ** -> ตัวหนา และลิงก์ http(s) -> กดได้
+// (ขึ้นบรรทัดใหม่จัดการด้วย CSS white-space: pre-line/pre-wrap)
+function renderRichText(text) {
+    const str = String(text || '');
+    if (!str) return null;
+    return str.split(/(\*\*[^*\n]+\*\*|https?:\/\/[^\s]+)/g).map((part, index) => {
+        if (/^\*\*[^*\n]+\*\*$/.test(part)) {
+            return <strong key={index}>{part.slice(2, -2)}</strong>;
+        }
+        if (/^https?:\/\/[^\s]+$/.test(part)) {
+            return (
+                <a
+                    key={index}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(event) => event.stopPropagation()}
+                >
+                    {part}
+                </a>
+            );
+        }
+        return part;
+    });
 }
 
 const TEAM_MEMBER_MAX_DEFAULT = 5;
@@ -2290,7 +2305,7 @@ export default function TeamContent({ user }) {
                             </button>
                             <div className="gl-team-inbox-detail" aria-hidden={!isExpanded}>
                                 <div className="gl-team-inbox-detail-inner">
-                                    <div className="gl-team-inbox-message-body">{renderInboxMessage(item.message)}</div>
+                                    <div className="gl-team-inbox-message-body">{renderRichText(item.message) || '-'}</div>
                                     <div className="gl-team-inbox-delivery">
                                         <Mail size={15} />
                                         <span>{emailStatusText}{item.recipientEmail ? ` ไปที่ ${item.recipientEmail}` : ''}</span>
@@ -2565,7 +2580,7 @@ export default function TeamContent({ user }) {
                                 </div>
 
                                 {descriptionText && (
-                                    <p className="sub-task-description">{descriptionText}</p>
+                                    <p className="sub-task-description">{renderRichText(descriptionText)}</p>
                                 )}
 
                                 {showTrackSelect && (
