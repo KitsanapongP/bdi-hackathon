@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, ExternalLink, FileDown, RefreshCw, Search, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, ExternalLink, FileDown, RefreshCw, Search, X } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import PageHeader from '../shared/PageHeader'
 import LoadingState from '../shared/LoadingState'
@@ -23,6 +23,25 @@ const STAGE_LABELS = { pre_selection: 'ก่อนคัดเลือก', tr
 
 const EMPTY_FILTERS = { teamStatus: '', submissionTaskId: '', teamId: '', track: '', itemType: '' }
 
+function getAttachmentFileName(disposition, fallback) {
+  const encodedName = String(disposition || '').match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+  return encodedName ? decodeURIComponent(encodedName) : fallback
+}
+
+async function downloadResponseFile(response, fallbackFileName) {
+  const blob = await response.blob()
+  const fileName = getAttachmentFileName(response.headers.get('content-disposition'), fallbackFileName)
+  const downloadUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = downloadUrl
+  anchor.download = fileName
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(downloadUrl)
+  return fileName
+}
+
 export default function TeamSubmissionsPage() {
   const { pushToast } = useAdminToast()
   const [filters, setFilters] = useState(EMPTY_FILTERS)
@@ -34,6 +53,7 @@ export default function TeamSubmissionsPage() {
   const [taskOptions, setTaskOptions] = useState([])
   const [teamOptions, setTeamOptions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -77,7 +97,7 @@ export default function TeamSubmissionsPage() {
           const dedup = new Map()
           ;(teamsPayload.data || []).forEach((row) => {
             if (!row?.team_id || dedup.has(row.team_id)) return
-            dedup.set(row.team_id, { teamId: row.team_id, label: `${row.team_name_th || '-'} [${row.team_code}]` })
+            dedup.set(row.team_id, { teamId: row.team_id, status: row.status || '', label: `${row.team_name_th || '-'} [${row.team_code}]` })
           })
           setTeamOptions(Array.from(dedup.values()).sort((a, b) => a.label.localeCompare(b.label, 'th')))
         }
@@ -87,8 +107,50 @@ export default function TeamSubmissionsPage() {
   }, [])
 
   const updateFilter = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }))
+    setFilters((prev) => {
+      const next = { ...prev, [key]: value }
+      // เปลี่ยนสถานะทีม -> รีเซ็ตทีมที่เลือก (ให้ dropdown ทีมเหลือเฉพาะตามสถานะ)
+      if (key === 'teamStatus') next.teamId = ''
+      return next
+    })
     setPage(1)
+  }
+
+  const visibleTeamOptions = useMemo(
+    () => (filters.teamStatus ? teamOptions.filter((t) => t.status === filters.teamStatus) : teamOptions),
+    [teamOptions, filters.teamStatus],
+  )
+
+  const buildFilterParams = useCallback(() => {
+    const params = new URLSearchParams()
+    if (filters.teamStatus) params.set('teamStatus', filters.teamStatus)
+    if (filters.submissionTaskId) params.set('submissionTaskId', filters.submissionTaskId)
+    if (filters.teamId) params.set('teamId', filters.teamId)
+    if (filters.track) params.set('track', filters.track)
+    if (filters.itemType) params.set('itemType', filters.itemType)
+    if (appliedSearch) params.set('search', appliedSearch)
+    return params
+  }, [filters, appliedSearch])
+
+  const exportSubmissions = async () => {
+    if (data.total === 0) {
+      pushToast({ variant: 'warning', title: 'ไม่มีรายการให้ export ตามตัวกรองนี้' })
+      return
+    }
+    try {
+      setExporting(true)
+      const res = await fetch(apiUrl(`/api/admin/submissions/export?${buildFilterParams().toString()}`), { credentials: 'include' })
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}))
+        throw new Error(payload?.message || 'Export ไม่สำเร็จ')
+      }
+      const fileName = await downloadResponseFile(res, `team_submissions_${Date.now()}.xlsx`)
+      pushToast({ variant: 'success', title: 'Export สำเร็จ', description: `ดาวน์โหลดไฟล์แล้ว: ${fileName}` })
+    } catch (error) {
+      pushToast({ variant: 'danger', title: error?.message || 'Export ไม่สำเร็จ' })
+    } finally {
+      setExporting(false)
+    }
   }
 
   const applySearch = () => { setAppliedSearch(searchInput.trim()); setPage(1) }
@@ -119,10 +181,16 @@ export default function TeamSubmissionsPage() {
       <PageHeader
         title="งานที่ทีมส่ง"
         actions={
-          <button type="button" className="admin-ui-btn" onClick={load}>
-            <RefreshCw size={14} />
-            รีเฟรช
-          </button>
+          <div className="admin-ui-header-actions">
+            <button type="button" className="admin-ui-btn" onClick={load}>
+              <RefreshCw size={14} />
+              รีเฟรช
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={exporting || data.total === 0} onClick={exportSubmissions}>
+              <Download size={14} />
+              {exporting ? 'กำลัง Export...' : 'Export Excel'}
+            </button>
+          </div>
         }
       />
 
@@ -170,8 +238,8 @@ export default function TeamSubmissionsPage() {
             <label>
               ทีม
               <select value={filters.teamId} onChange={(event) => updateFilter('teamId', event.target.value)}>
-                <option value="">ทุกทีม</option>
-                {teamOptions.map((t) => <option key={t.teamId} value={t.teamId}>{t.label}</option>)}
+                <option value="">{filters.teamStatus ? `ทุกทีม (${visibleTeamOptions.length})` : 'ทุกทีม'}</option>
+                {visibleTeamOptions.map((t) => <option key={t.teamId} value={t.teamId}>{t.label}</option>)}
               </select>
             </label>
             <label>

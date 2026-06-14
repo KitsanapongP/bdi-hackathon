@@ -1238,6 +1238,28 @@ export async function handleGetAdminTeamSubmissions(req: FastifyRequest, reply: 
     }
 }
 
+export async function handleExportAdminTeamSubmissions(req: FastifyRequest, reply: FastifyReply) {
+    const parsed = adminTeamSubmissionsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'พารามิเตอร์ไม่ถูกต้อง' });
+    }
+
+    try {
+        const host = String(req.headers.host || '').trim();
+        const protocol = req.protocol || 'https';
+        const publicBaseUrl = host ? `${protocol}://${host}` : '';
+        const result = await service.exportTeamSubmissions(req.server.ctx.db, parsed.data, publicBaseUrl);
+        reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        reply.header('Content-Disposition', buildAttachmentHeader(result.fileName));
+        return reply.send(result.stream);
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
 export async function handleOpenAdminSubmissionFile(
     req: FastifyRequest<{ Params: { fileId: string } }>,
     reply: FastifyReply,

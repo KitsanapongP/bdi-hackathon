@@ -2153,3 +2153,83 @@ export async function openAdminSubmissionFile(db: DB, fileId: number): Promise<s
     });
     return shareId;
 }
+
+export async function exportTeamSubmissions(
+    db: DB,
+    filters: {
+        teamStatus?: string | undefined;
+        submissionTaskId?: number | undefined;
+        teamId?: number | undefined;
+        track?: 'Phenome' | 'Health' | 'City' | undefined;
+        itemType?: 'file' | 'link' | undefined;
+        search?: string | undefined;
+    },
+    publicBaseUrl: string,
+): Promise<{ fileName: string; stream: PassThrough }> {
+    const { rows } = await repo.listTeamSubmissionsAdmin(db, {
+        teamStatus: filters.teamStatus,
+        submissionTaskId: filters.submissionTaskId,
+        teamId: filters.teamId,
+        track: filters.track,
+        itemType: filters.itemType,
+        search: filters.search?.trim() || undefined,
+    }, 100000, 0);
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('submissions');
+    sheet.columns = [
+        { header: 'team_code', key: 'team_code', width: 14 },
+        { header: 'team_name_th', key: 'team_name_th', width: 28 },
+        { header: 'team_status', key: 'team_status', width: 14 },
+        { header: 'task_name', key: 'task_name', width: 28 },
+        { header: 'stage', key: 'stage', width: 14 },
+        { header: 'type', key: 'type', width: 8 },
+        { header: 'track', key: 'track', width: 12 },
+        { header: 'title', key: 'title', width: 42 },
+        { header: 'submitted_at', key: 'submitted_at', width: 20 },
+        { header: 'open_link', key: 'open_link', width: 52 },
+    ];
+    const hyperlinkStyle: Partial<ExcelJS.Font> = { color: { argb: 'FF0563C1' }, underline: true };
+
+    for (const row of rows as any[]) {
+        let openUrl = '';
+        if (row.item_type === 'link') {
+            openUrl = String(row.link_url || '');
+        } else {
+            const file = await repo.getSubmissionFileForOpenAdmin(db, Number(row.item_id));
+            if (file) {
+                const shareId = await getOrCreateReviewShareId(db, {
+                    storageKey: file.file_storage_key,
+                    fileKind: 'submission_file',
+                    fileOriginalName: file.file_original_name,
+                });
+                openUrl = buildPublicReviewUrl(publicBaseUrl, shareId);
+            }
+        }
+
+        const added = sheet.addRow({
+            team_code: row.team_code,
+            team_name_th: row.team_name_th || '',
+            team_status: row.team_status,
+            task_name: row.task_name,
+            stage: row.stage,
+            type: row.item_type,
+            track: row.submission_track || '',
+            title: row.title || '',
+            submitted_at: formatDateTime(row.submitted_at),
+            open_link: openUrl ? { text: row.item_type === 'link' ? 'เปิดลิงก์' : 'เปิดไฟล์', hyperlink: openUrl } : '',
+        });
+        if (openUrl) added.getCell('open_link').font = hyperlinkStyle;
+    }
+
+    sheet.getRow(1).font = { bold: true };
+
+    const output = new PassThrough();
+    void (async () => {
+        await workbook.xlsx.write(output);
+        output.end();
+    })();
+
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
+    return { fileName: `team_submissions_${timestamp}.xlsx`, stream: output };
+}
