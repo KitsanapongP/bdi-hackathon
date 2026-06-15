@@ -2123,6 +2123,79 @@ export async function getAdminTeamSubmissions(
     return { items, total, page, pageSize };
 }
 
+export async function getTeamDossier(db: DB, teamId: number) {
+    const header = await repo.getTeamDossierHeader(db, teamId);
+    if (!header) {
+        throw new NotFoundError('ไม่พบทีมที่ต้องการ');
+    }
+
+    const [memberRows, advisorRows, submissionResult] = await Promise.all([
+        repo.getTeamMembersForExport(db, [teamId]),
+        repo.getTeamAdvisorsForExport(db, [teamId]),
+        repo.listTeamSubmissionsAdmin(db, { teamId }, 100000, 0),
+    ]);
+
+    const team = {
+        teamId: Number((header as any).team_id),
+        teamCode: (header as any).team_code as string,
+        teamNameTh: (header as any).team_name_th as string | null,
+        teamNameEn: (header as any).team_name_en as string | null,
+        description: (header as any).team_description as string | null,
+        status: (header as any).status as string,
+        leaderUserId: (header as any).current_leader_user_id as number | null,
+        leaderName: (header as any).leader_name as string | null,
+    };
+
+    const members = memberRows.map((m) => ({
+        userId: m.user_id,
+        userName: m.user_name,
+        userCode: m.user_code,
+        role: m.role,
+        firstNameTh: m.first_name_th,
+        lastNameTh: m.last_name_th,
+        firstNameEn: m.first_name_en,
+        lastNameEn: m.last_name_en,
+        email: m.email,
+        phone: m.phone,
+        institutionNameTh: m.institution_name_th,
+        institutionNameEn: m.institution_name_en,
+        gender: m.gender,
+        birthDate: m.birth_date,
+        educationLevel: m.education_level,
+        homeProvince: m.home_province,
+        cv: m.cv,
+    }));
+
+    const advisorRow = advisorRows[0];
+    const advisor = advisorRow
+        ? {
+              prefix: advisorRow.prefix,
+              firstNameTh: advisorRow.first_name_th,
+              lastNameTh: advisorRow.last_name_th,
+              firstNameEn: advisorRow.first_name_en,
+              lastNameEn: advisorRow.last_name_en,
+              email: advisorRow.email,
+              phone: advisorRow.phone,
+              institutionNameTh: advisorRow.institution_name_th,
+          }
+        : null;
+
+    const submissions = submissionResult.rows.map((row: any) => ({
+        itemType: row.item_type as 'file' | 'link',
+        itemId: Number(row.item_id),
+        submissionTaskId: row.submission_task_id,
+        taskName: row.task_name,
+        taskType: row.task_type,
+        stage: row.stage,
+        track: row.submission_track,
+        title: row.title,
+        linkUrl: row.link_url,
+        submittedAt: row.submitted_at,
+    }));
+
+    return { team, members, advisor, submissions };
+}
+
 export async function openAdminSubmissionFile(db: DB, fileId: number): Promise<string> {
     const file = await repo.getSubmissionFileForOpenAdmin(db, fileId);
     if (!file) {

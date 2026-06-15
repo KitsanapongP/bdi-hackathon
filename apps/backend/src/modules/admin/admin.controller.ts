@@ -1330,6 +1330,26 @@ export async function handleExportAdminTeamSubmissions(req: FastifyRequest, repl
     }
 }
 
+export async function handleGetTeamDossier(
+    req: FastifyRequest<{ Params: { teamId: string } }>,
+    reply: FastifyReply,
+) {
+    const teamId = Number(req.params.teamId);
+    if (!Number.isFinite(teamId) || teamId <= 0) {
+        return reply.status(400).send({ ok: false, message: 'teamId ไม่ถูกต้อง' });
+    }
+
+    try {
+        const data = await service.getTeamDossier(req.server.ctx.db, teamId);
+        return reply.send(ok(data));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
 export async function handleOpenAdminSubmissionFile(
     req: FastifyRequest<{ Params: { fileId: string } }>,
     reply: FastifyReply,

@@ -703,6 +703,29 @@ export async function getSelectionTeamById(db: DB, teamId: number): Promise<Sele
     return (rows[0] as SelectionTeamRow | undefined) ?? null;
 }
 
+export async function getTeamDossierHeader(db: DB, teamId: number): Promise<RowDataPacket | null> {
+    const [rows] = await db.query<RowDataPacket[]>(`
+        SELECT
+          t.team_id,
+          t.team_code,
+          t.team_name_th,
+          t.team_name_en,
+          t.team_description,
+          t.status,
+          t.current_leader_user_id,
+          u.user_name AS leader_name,
+          t.created_at,
+          t.updated_at
+        FROM team_teams t
+        LEFT JOIN user_users u ON u.user_id = t.current_leader_user_id
+        WHERE t.team_id = :teamId
+          AND t.deleted_at IS NULL
+        LIMIT 1
+    `, { teamId });
+
+    return (rows[0] as RowDataPacket | undefined) ?? null;
+}
+
 export async function updateSelectionResult(
     db: DB,
     data: {

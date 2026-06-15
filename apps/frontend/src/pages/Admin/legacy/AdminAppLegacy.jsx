@@ -63,7 +63,6 @@ import {
   X,
 } from 'lucide-react'
 import ThemeToggle from '../../../components/ThemeToggle'
-import GameShapes from '../../../components/GameShapes'
 import { apiUrl } from '../../../lib/api'
 import {
   AdminSessionContext,
@@ -813,15 +812,6 @@ function AdminLayout({ navGroups = adminNavGroups }) {
 
   return (
     <div className="admin-ui-page">
-        <GameShapes
-          shapeCount={22}
-          sizeRange={[20, 42]}
-          depthLayers={2}
-          interactionRadius={95}
-          minDistance={120}
-          seed={15}
-        />
-
         <div className={`admin-ui-shell ${mobileOpen ? 'mobile-open' : ''}`}>
           <aside className="admin-ui-sidebar">
             <div className="admin-ui-brand">
