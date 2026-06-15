@@ -35,6 +35,18 @@ function normalizeOptionalText(value: string | null | undefined): string | null 
     return normalized || null;
 }
 
+// แปลงค่า DATE จาก DB เป็น 'YYYY-MM-DD' โดยใช้ส่วนประกอบเวลาท้องถิ่น (เลี่ยงการเลื่อนวันจาก toISOString/UTC)
+function toDateString(value: string | Date | null | undefined): string {
+    if (!value) return '';
+    if (value instanceof Date) {
+        const y = value.getFullYear();
+        const m = String(value.getMonth() + 1).padStart(2, '0');
+        const d = String(value.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+    return String(value).slice(0, 10);
+}
+
 function toAdminScheduleItemResponse(row: {
     item_id: number;
     schedule_id: number;
@@ -137,7 +149,7 @@ export async function getScheduleAdminBundle(db: DB) {
         days: days.map((item) => ({
             id: item.day_id,
             scheduleId: item.schedule_id,
-            dayDate: item.day_date,
+            dayDate: toDateString(item.day_date),
             dayNameTh: item.day_name_th,
             dayNameEn: item.day_name_en,
             sortOrder: item.sort_order,
@@ -354,4 +366,100 @@ export async function updateScheduleViewTypeAdmin(
         isPublished: updated.is_published === 1,
         tableType: updated.table_type || 'onsite_timetable',
     };
+}
+
+function normalizeDayDate(value: string): string {
+    const raw = (value || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        throw new BadRequestError('รูปแบบวันที่ไม่ถูกต้อง (คาดหวัง YYYY-MM-DD)');
+    }
+    return raw;
+}
+
+function toAdminScheduleDayResponse(row: {
+    day_id: number;
+    schedule_id: number;
+    day_date: string | Date;
+    day_name_th: string | null;
+    day_name_en: string | null;
+    sort_order: number;
+    is_enabled: number;
+}) {
+    return {
+        id: row.day_id,
+        scheduleId: row.schedule_id,
+        dayDate: toDateString(row.day_date),
+        dayNameTh: row.day_name_th,
+        dayNameEn: row.day_name_en,
+        sortOrder: row.sort_order,
+        isEnabled: row.is_enabled === 1,
+    };
+}
+
+export async function createScheduleDayAdmin(
+    db: DB,
+    scheduleId: number,
+    input: { dayDate: string; dayNameTh?: string | null | undefined; dayNameEn?: string | null | undefined; sortOrder?: number | undefined }
+) {
+    const schedule = await repo.getScheduleByIdAdmin(db, scheduleId);
+    if (!schedule) {
+        throw new NotFoundError('ไม่พบชุดกำหนดการที่เลือก');
+    }
+    let dayId: number;
+    try {
+        dayId = await repo.createScheduleDayAdmin(db, {
+            scheduleId,
+            dayDate: normalizeDayDate(input.dayDate),
+            dayNameTh: normalizeOptionalText(input.dayNameTh) ?? null,
+            dayNameEn: normalizeOptionalText(input.dayNameEn) ?? null,
+            sortOrder: Number.isFinite(Number(input.sortOrder)) ? Math.trunc(Number(input.sortOrder)) : 0,
+        });
+    } catch (error: any) {
+        if (error?.code === 'ER_DUP_ENTRY') {
+            throw new BadRequestError('มีวันที่นี้อยู่แล้วในกำหนดการ');
+        }
+        throw error;
+    }
+    const created = await repo.getScheduleDayByIdAdmin(db, dayId);
+    if (!created) throw new NotFoundError('ไม่พบวันกำหนดการที่เพิ่งสร้าง');
+    return toAdminScheduleDayResponse(created);
+}
+
+export async function updateScheduleDayAdmin(
+    db: DB,
+    dayId: number,
+    input: {
+        dayDate?: string | undefined;
+        dayNameTh?: string | null | undefined;
+        dayNameEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+    }
+) {
+    const existing = await repo.getScheduleDayByIdAdmin(db, dayId);
+    if (!existing) throw new NotFoundError('ไม่พบวันกำหนดการนี้');
+    try {
+        await repo.updateScheduleDayAdmin(db, dayId, {
+            dayDate: input.dayDate !== undefined ? normalizeDayDate(input.dayDate) : undefined,
+            dayNameTh: input.dayNameTh !== undefined ? normalizeOptionalText(input.dayNameTh) : undefined,
+            dayNameEn: input.dayNameEn !== undefined ? normalizeOptionalText(input.dayNameEn) : undefined,
+            sortOrder: input.sortOrder !== undefined ? Math.trunc(Number(input.sortOrder)) : undefined,
+            isEnabled: input.isEnabled,
+        });
+    } catch (error: any) {
+        if (error?.code === 'ER_DUP_ENTRY') {
+            throw new BadRequestError('มีวันที่นี้อยู่แล้วในกำหนดการ');
+        }
+        throw error;
+    }
+    const updated = await repo.getScheduleDayByIdAdmin(db, dayId);
+    if (!updated) throw new NotFoundError('ไม่พบวันกำหนดการหลังการอัปเดต');
+    return toAdminScheduleDayResponse(updated);
+}
+
+export async function deleteScheduleDayAdmin(db: DB, dayId: number): Promise<void> {
+    const existing = await repo.getScheduleDayByIdAdmin(db, dayId);
+    if (!existing) throw new NotFoundError('ไม่พบวันกำหนดการนี้');
+    await repo.deleteScheduleItemsByDayAdmin(db, dayId);
+    await repo.deleteScheduleDayAdmin(db, dayId);
 }

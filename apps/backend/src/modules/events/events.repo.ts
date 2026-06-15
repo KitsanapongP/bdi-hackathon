@@ -248,3 +248,49 @@ export async function updateScheduleViewTypeAdmin(
         [tableType, scheduleId]
     );
 }
+
+export async function createScheduleDayAdmin(
+    db: DB,
+    data: { scheduleId: number; dayDate: string; dayNameTh: string | null; dayNameEn: string | null; sortOrder: number }
+): Promise<number> {
+    const [result] = await db.query<ResultSetHeader>(
+        `INSERT INTO event_schedule_days (schedule_id, day_date, day_name_th, day_name_en, sort_order, is_enabled)
+         VALUES (?, ?, ?, ?, ?, 1)`,
+        [data.scheduleId, data.dayDate, data.dayNameTh, data.dayNameEn, data.sortOrder]
+    );
+    return result.insertId;
+}
+
+export async function updateScheduleDayAdmin(
+    db: DB,
+    dayId: number,
+    data: {
+        dayDate?: string | undefined;
+        dayNameTh?: string | null | undefined;
+        dayNameEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+    }
+): Promise<void> {
+    const fields: string[] = [];
+    const values: Array<string | number | null> = [];
+    if (data.dayDate !== undefined) { fields.push('day_date = ?'); values.push(data.dayDate); }
+    if (data.dayNameTh !== undefined) { fields.push('day_name_th = ?'); values.push(data.dayNameTh); }
+    if (data.dayNameEn !== undefined) { fields.push('day_name_en = ?'); values.push(data.dayNameEn); }
+    if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
+    if (data.isEnabled !== undefined) { fields.push('is_enabled = ?'); values.push(data.isEnabled ? 1 : 0); }
+    if (!fields.length) return;
+    values.push(dayId);
+    await db.query(
+        `UPDATE event_schedule_days SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE day_id = ?`,
+        values
+    );
+}
+
+export async function deleteScheduleItemsByDayAdmin(db: DB, dayId: number): Promise<void> {
+    await db.query(`DELETE FROM event_schedule_items WHERE day_id = ?`, [dayId]);
+}
+
+export async function deleteScheduleDayAdmin(db: DB, dayId: number): Promise<void> {
+    await db.query(`DELETE FROM event_schedule_days WHERE day_id = ?`, [dayId]);
+}

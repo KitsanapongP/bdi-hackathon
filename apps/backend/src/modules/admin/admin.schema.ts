@@ -197,6 +197,23 @@ export const updateScheduleViewTypeSchema = z.object({
     tableType: scheduleTableTypeEnum,
 });
 
+const scheduleDayDateField = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, 'รูปแบบวันที่ไม่ถูกต้อง (YYYY-MM-DD)');
+
+export const createScheduleDaySchema = z.object({
+    dayDate: scheduleDayDateField,
+    dayNameTh: nullableText,
+    dayNameEn: nullableText,
+    sortOrder: z.number().int().min(0).optional(),
+});
+
+export const updateScheduleDaySchema = z.object({
+    dayDate: scheduleDayDateField.optional(),
+    dayNameTh: nullableText,
+    dayNameEn: nullableText,
+    sortOrder: z.number().int().min(0).optional(),
+    isEnabled: z.boolean().optional(),
+});
+
 export const selectionTeamsQuerySchema = z.object({
     status: z.enum(['forming', 'submitted', 'passed', 'failed', 'confirmed', 'not_joined']).optional(),
 });

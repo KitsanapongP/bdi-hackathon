@@ -26,6 +26,8 @@ import {
     createScheduleItemSchema,
     updateScheduleItemSchema,
     updateScheduleViewTypeSchema,
+    createScheduleDaySchema,
+    updateScheduleDaySchema,
     createSubmissionTaskSchema,
     updateSubmissionTaskSchema,
     assignSubmissionTaskSchema,
@@ -1032,6 +1034,74 @@ export async function handleDeleteScheduleItemAdmin(req: FastifyRequest<{ Params
     try {
         await eventService.deleteScheduleItemAdmin(req.server.ctx.db, parsedParams.data.id);
         return reply.send(ok({ success: true }, 'ลบรายการกำหนดการสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleCreateScheduleDayAdmin(
+    req: FastifyRequest<{ Params: { scheduleId: string } }>,
+    reply: FastifyReply
+) {
+    const scheduleId = Number(req.params.scheduleId);
+    if (!Number.isFinite(scheduleId) || scheduleId <= 0) {
+        return reply.status(400).send({ ok: false, message: 'scheduleId ไม่ถูกต้อง' });
+    }
+    const parsed = createScheduleDaySchema.safeParse(req.body);
+    if (!parsed.success) {
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+    }
+
+    try {
+        const result = await eventService.createScheduleDayAdmin(req.server.ctx.db, scheduleId, parsed.data);
+        return reply.status(201).send(ok(result, 'เพิ่มวันกำหนดการสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateScheduleDayAdmin(
+    req: FastifyRequest<{ Params: { dayId: string } }>,
+    reply: FastifyReply
+) {
+    const dayId = Number(req.params.dayId);
+    if (!Number.isFinite(dayId) || dayId <= 0) {
+        return reply.status(400).send({ ok: false, message: 'dayId ไม่ถูกต้อง' });
+    }
+    const parsed = updateScheduleDaySchema.safeParse(req.body);
+    if (!parsed.success) {
+        return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'ข้อมูลไม่ถูกต้อง' });
+    }
+
+    try {
+        const result = await eventService.updateScheduleDayAdmin(req.server.ctx.db, dayId, parsed.data);
+        return reply.send(ok(result, 'อัปเดตวันกำหนดการสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleDeleteScheduleDayAdmin(
+    req: FastifyRequest<{ Params: { dayId: string } }>,
+    reply: FastifyReply
+) {
+    const dayId = Number(req.params.dayId);
+    if (!Number.isFinite(dayId) || dayId <= 0) {
+        return reply.status(400).send({ ok: false, message: 'dayId ไม่ถูกต้อง' });
+    }
+
+    try {
+        await eventService.deleteScheduleDayAdmin(req.server.ctx.db, dayId);
+        return reply.send(ok({ success: true }, 'ลบวันกำหนดการสำเร็จ'));
     } catch (err) {
         if (err instanceof AppError) {
             return reply.status(err.statusCode).send({ ok: false, message: err.message });

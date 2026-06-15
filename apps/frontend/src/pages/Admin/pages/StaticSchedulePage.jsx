@@ -1,752 +1,394 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Pencil, Plus, RefreshCw, Save, Trash2 } from 'lucide-react'
+import { CalendarPlus, Clock, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
-import AdminDataTable from '../shared/AdminDataTable'
-import DetailDrawer from '../shared/DetailDrawer'
 import PageHeader from '../shared/PageHeader'
-import StatusBadge from '../shared/StatusBadge'
+import LoadingState from '../shared/LoadingState'
 import { useAdminToast } from '../shared/adminContexts'
-import { normalizeTimeInput, toTimePayload } from '../utils/adminFormatters'
 
-const scheduleAudienceLabel = {
-  public: 'Public',
-  all_users: 'All Users',
-  approved_teams: 'Approved Teams',
-  specific_teams: 'Specific Teams',
+const VIEW_TYPES = [
+  { value: 'milestone', label: 'ไทม์ไลน์ (Milestone)', hint: 'วันที่/ช่วงเวลา | กิจกรรม' },
+  { value: 'onsite_timetable', label: 'ตารางรายวัน (Onsite)', hint: 'แยกวัน • เวลา | กิจกรรม' },
+]
+
+function formatThaiDate(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(`${String(dateStr).slice(0, 10)}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return String(dateStr)
+  return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
 }
+
+function hhmm(t) {
+  return String(t || '').slice(0, 5)
+}
+
+function formatTimeRange(start, end) {
+  const s = hhmm(start)
+  const e = hhmm(end)
+  if (!s && !e) return '-'
+  return e ? `${s} - ${e}` : s
+}
+
+const EMPTY_ITEM_FORM = { titleTh: '', startTime: '09:00', endTime: '10:00', displayDateLabelTh: '', displayTimeLabelTh: '' }
+const EMPTY_DAY_FORM = { dayDate: '', dayNameTh: '' }
 
 export default function StaticSchedulePage() {
   const { pushToast } = useAdminToast()
+  const [bundle, setBundle] = useState({ schedules: [], days: [], items: [] })
+  const [selectedScheduleId, setSelectedScheduleId] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [bundle, setBundle] = useState({
-    schedules: [],
-    days: [],
-    tracks: [],
-    items: [],
-  })
-  const [activeDayFilter, setActiveDayFilter] = useState('all')
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editingId, setEditingId] = useState(null)
-  const [savingScheduleId, setSavingScheduleId] = useState(null)
-  const [errors, setErrors] = useState({})
-  const [form, setForm] = useState({
-    dayId: '',
-    trackId: '',
-    startTime: '09:00',
-    endTime: '10:00',
-    titleTh: '',
-    titleEn: '',
-    descriptionTh: '',
-    descriptionEn: '',
-    locationTh: '',
-    locationEn: '',
-    speakerTh: '',
-    speakerEn: '',
-    audience: 'public',
-    sortOrder: 0,
-    isHighlight: false,
-    isEnabled: true,
-    displayDateLabelTh: '',
-    displayDateLabelEn: '',
-    displayTimeLabelTh: '',
-    displayTimeLabelEn: '',
-  })
+  const [busy, setBusy] = useState(false)
 
-  const schedules = useMemo(() => bundle.schedules || [], [bundle.schedules])
-  const days = useMemo(
-    () =>
-      [...(bundle.days || [])].sort((a, b) => {
-        const dayCompare = String(a.dayDate || '').localeCompare(String(b.dayDate || ''))
-        if (dayCompare !== 0) return dayCompare
-        return Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
-      }),
-    [bundle.days],
-  )
-  const tracks = useMemo(() => bundle.tracks || [], [bundle.tracks])
-  const items = useMemo(() => bundle.items || [], [bundle.items])
+  // modals
+  const [dayModal, setDayModal] = useState(null) // { mode:'create'|'edit', dayId?, form }
+  const [itemModal, setItemModal] = useState(null) // { mode, dayId, itemId?, form }
+  const [confirm, setConfirm] = useState(null) // { kind:'day'|'item', id, label }
 
-  const dayMap = useMemo(() => new Map(days.map((day) => [day.id, day])), [days])
-  const trackMap = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks])
-  const scheduleMap = useMemo(() => new Map(schedules.map((schedule) => [schedule.id, schedule])), [schedules])
-
-  const fetchScheduleBundle = useCallback(async () => {
+  const load = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch(apiUrl('/api/admin/schedules'), { credentials: 'include' })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.message || 'โหลดข้อมูล schedule ไม่สำเร็จ')
-      }
-      setBundle({
-        schedules: payload?.data?.schedules || [],
-        days: payload?.data?.days || [],
-        tracks: payload?.data?.tracks || [],
-        items: payload?.data?.items || [],
+      const res = await fetch(apiUrl('/api/admin/schedules'), { credentials: 'include' })
+      const payload = await res.json()
+      if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'โหลดกำหนดการไม่สำเร็จ')
+      const data = payload.data || { schedules: [], days: [], items: [] }
+      setBundle(data)
+      setSelectedScheduleId((prev) => {
+        if (prev && data.schedules.some((s) => s.id === prev)) return prev
+        return data.schedules[0]?.id ?? null
       })
     } catch (error) {
-      console.error('Failed to fetch schedule bundle:', error)
-      pushToast({ type: 'error', title: error?.message || 'โหลดข้อมูล schedule ไม่สำเร็จ' })
+      pushToast({ variant: 'danger', title: error?.message || 'โหลดกำหนดการไม่สำเร็จ' })
     } finally {
       setLoading(false)
     }
   }, [pushToast])
 
-  useEffect(() => {
-    fetchScheduleBundle()
-  }, [fetchScheduleBundle])
+  useEffect(() => { load() }, [load])
 
-  const buildFormFromItem = useCallback(
-    (item) => ({
-      dayId: String(item.dayId || ''),
-      trackId: item.trackId ? String(item.trackId) : '',
-      startTime: normalizeTimeInput(item.startTime),
-      endTime: normalizeTimeInput(item.endTime),
-      titleTh: item.titleTh || '',
-      titleEn: item.titleEn || '',
-      descriptionTh: item.descriptionTh || '',
-      descriptionEn: item.descriptionEn || '',
-      locationTh: item.locationTh || '',
-      locationEn: item.locationEn || '',
-      speakerTh: item.speakerTh || '',
-      speakerEn: item.speakerEn || '',
-      audience: item.audience || 'public',
-      sortOrder: Number(item.sortOrder || 0),
-      isHighlight: Boolean(item.isHighlight),
-      isEnabled: Boolean(item.isEnabled),
-      displayDateLabelTh: item.displayDateLabelTh || '',
-      displayDateLabelEn: item.displayDateLabelEn || '',
-      displayTimeLabelTh: item.displayTimeLabelTh || '',
-      displayTimeLabelEn: item.displayTimeLabelEn || '',
-    }),
-    [],
+  const selectedSchedule = useMemo(
+    () => bundle.schedules.find((s) => s.id === selectedScheduleId) || null,
+    [bundle.schedules, selectedScheduleId],
   )
+  const isMilestone = selectedSchedule?.tableType === 'milestone'
 
-  const openCreate = useCallback(() => {
-    const preferredDay = days.find((item) => item.isEnabled) || days[0]
-    setEditingId(null)
-    setErrors({})
-    setForm({
-      dayId: preferredDay ? String(preferredDay.id) : '',
-      trackId: '',
-      startTime: '09:00',
-      endTime: '10:00',
-      titleTh: '',
-      titleEn: '',
-      descriptionTh: '',
-      descriptionEn: '',
-      locationTh: '',
-      locationEn: '',
-      speakerTh: '',
-      speakerEn: '',
-      audience: 'public',
-      sortOrder: 0,
-      isHighlight: false,
-      isEnabled: true,
-      displayDateLabelTh: '',
-      displayDateLabelEn: '',
-      displayTimeLabelTh: '',
-      displayTimeLabelEn: '',
+  const daysWithItems = useMemo(() => {
+    if (!selectedSchedule) return []
+    const days = bundle.days
+      .filter((d) => d.scheduleId === selectedSchedule.id)
+      .slice()
+      .sort((a, b) => String(a.dayDate).localeCompare(String(b.dayDate)) || a.sortOrder - b.sortOrder)
+    return days.map((day) => ({
+      ...day,
+      items: bundle.items
+        .filter((it) => it.dayId === day.id)
+        .slice()
+        .sort((a, b) => String(a.startTime).localeCompare(String(b.startTime)) || a.sortOrder - b.sortOrder),
+    }))
+  }, [bundle, selectedSchedule])
+
+  const apiCall = async (method, path, body) => {
+    const res = await fetch(apiUrl(path), {
+      method,
+      credentials: 'include',
+      ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
     })
-    setDrawerOpen(true)
-  }, [days])
+    const payload = await res.json().catch(() => ({}))
+    if (!res.ok || !payload?.ok) throw new Error(payload?.message || 'ดำเนินการไม่สำเร็จ')
+    return payload
+  }
 
-  const openEdit = useCallback(
-    (item) => {
-      setEditingId(item.id)
-      setErrors({})
-      setForm(buildFormFromItem(item))
-      setDrawerOpen(true)
-    },
-    [buildFormFromItem],
-  )
-
-  const selectedDay = dayMap.get(Number(form.dayId)) || null
-  const trackOptions = useMemo(() => {
-    if (!selectedDay) return []
-    return tracks.filter((track) => track.scheduleId === selectedDay.scheduleId)
-  }, [selectedDay, tracks])
-
-  useEffect(() => {
-    if (!form.trackId) return
-    const trackExists = trackOptions.some((track) => String(track.id) === String(form.trackId))
-    if (trackExists) return
-    setForm((prev) => ({ ...prev, trackId: '' }))
-  }, [trackOptions, form.trackId])
-
-  const validate = useCallback(() => {
-    const next = {}
-    if (!form.dayId) next.dayId = 'กรุณาเลือกวันกำหนดการ'
-    if (!form.startTime) next.startTime = 'กรุณากรอกเวลาเริ่ม'
-    if (!form.endTime) next.endTime = 'กรุณากรอกเวลาสิ้นสุด'
-    if (!form.titleTh.trim()) next.titleTh = 'กรุณากรอกหัวข้อภาษาไทย'
-    if (!form.titleEn.trim()) next.titleEn = 'กรุณากรอกหัวข้อภาษาอังกฤษ'
-
-    if (form.startTime && form.endTime && form.startTime >= form.endTime) {
-      next.endTime = 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น'
+  const changeViewType = async (tableType) => {
+    if (!selectedSchedule || tableType === selectedSchedule.tableType) return
+    try {
+      setBusy(true)
+      await apiCall('PATCH', `/api/admin/schedules/${selectedSchedule.id}/view-type`, { tableType })
+      pushToast({ variant: 'success', title: 'เปลี่ยนรูปแบบตารางแล้ว' })
+      await load()
+    } catch (error) {
+      pushToast({ variant: 'danger', title: error?.message || 'เปลี่ยนรูปแบบไม่สำเร็จ' })
+    } finally {
+      setBusy(false)
     }
+  }
 
-    setErrors(next)
-    return Object.keys(next).length === 0
-  }, [form])
+  const saveDay = async () => {
+    const form = dayModal.form
+    if (!form.dayDate) { pushToast({ variant: 'danger', title: 'กรุณาเลือกวันที่' }); return }
+    try {
+      setBusy(true)
+      if (dayModal.mode === 'create') {
+        await apiCall('POST', `/api/admin/schedules/${selectedSchedule.id}/days`, {
+          dayDate: form.dayDate,
+          dayNameTh: form.dayNameTh.trim() || null,
+        })
+      } else {
+        await apiCall('PATCH', `/api/admin/schedules/days/${dayModal.dayId}`, {
+          dayDate: form.dayDate,
+          dayNameTh: form.dayNameTh.trim() || null,
+        })
+      }
+      setDayModal(null)
+      pushToast({ variant: 'success', title: 'บันทึกวันสำเร็จ' })
+      await load()
+    } catch (error) {
+      pushToast({ variant: 'danger', title: error?.message || 'บันทึกวันไม่สำเร็จ' })
+    } finally {
+      setBusy(false)
+    }
+  }
 
-  const save = useCallback(async () => {
-    if (!validate()) return
+  const saveItem = async () => {
+    const form = itemModal.form
+    if (!form.titleTh.trim()) { pushToast({ variant: 'danger', title: 'กรุณากรอกชื่อกิจกรรม' }); return }
 
-    const payload = {
-      dayId: Number(form.dayId),
-      trackId: form.trackId ? Number(form.trackId) : null,
-      startTime: toTimePayload(form.startTime),
-      endTime: toTimePayload(form.endTime),
+    const body = {
       titleTh: form.titleTh.trim(),
-      titleEn: form.titleEn.trim(),
-      descriptionTh: form.descriptionTh.trim() || null,
-      descriptionEn: form.descriptionEn.trim() || null,
-      locationTh: form.locationTh.trim() || null,
-      locationEn: form.locationEn.trim() || null,
-      speakerTh: form.speakerTh.trim() || null,
-      speakerEn: form.speakerEn.trim() || null,
-      audience: form.audience,
-      sortOrder: Number(form.sortOrder || 0),
-      isHighlight: form.isHighlight,
-      isEnabled: form.isEnabled,
-      displayDateLabelTh: form.displayDateLabelTh.trim() || null,
-      displayDateLabelEn: form.displayDateLabelEn.trim() || null,
-      displayTimeLabelTh: form.displayTimeLabelTh.trim() || null,
-      displayTimeLabelEn: form.displayTimeLabelEn.trim() || null,
+      titleEn: form.titleTh.trim(),
     }
-
-    const isEdit = Boolean(editingId)
+    if (isMilestone) {
+      body.startTime = '00:00'
+      body.endTime = '00:01'
+      body.displayDateLabelTh = form.displayDateLabelTh.trim() || null
+      body.displayDateLabelEn = form.displayDateLabelTh.trim() || null
+    } else {
+      if (!form.startTime || !form.endTime) { pushToast({ variant: 'danger', title: 'กรุณากรอกเวลาเริ่มและสิ้นสุด' }); return }
+      body.startTime = form.startTime
+      body.endTime = form.endTime
+    }
 
     try {
-      const response = await fetch(apiUrl(isEdit ? `/api/admin/schedules/items/${editingId}` : '/api/admin/schedules/items'), {
-        method: isEdit ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      })
-      const result = await response.json().catch(() => ({}))
-
-      if (!response.ok || !result?.ok) {
-        throw new Error(result?.message || 'บันทึกรายการกำหนดการไม่สำเร็จ')
+      setBusy(true)
+      if (itemModal.mode === 'create') {
+        await apiCall('POST', '/api/admin/schedules/items', { dayId: itemModal.dayId, ...body })
+      } else {
+        await apiCall('PATCH', `/api/admin/schedules/items/${itemModal.itemId}`, body)
       }
-
-      pushToast({
-        title: isEdit ? 'อัปเดตกำหนดการแล้ว' : 'เพิ่มกำหนดการแล้ว',
-        description: payload.titleEn,
-      })
-      setDrawerOpen(false)
-      await fetchScheduleBundle()
+      setItemModal(null)
+      pushToast({ variant: 'success', title: 'บันทึกกิจกรรมสำเร็จ' })
+      await load()
     } catch (error) {
-      console.error('Failed to save schedule item:', error)
-      pushToast({ type: 'error', title: error?.message || 'บันทึกไม่สำเร็จ' })
+      pushToast({ variant: 'danger', title: error?.message || 'บันทึกกิจกรรมไม่สำเร็จ' })
+    } finally {
+      setBusy(false)
     }
-  }, [editingId, fetchScheduleBundle, form, pushToast, validate])
+  }
 
-  const remove = useCallback(
-    async (id) => {
-      const target = items.find((item) => item.id === id)
-      try {
-        const response = await fetch(apiUrl(`/api/admin/schedules/items/${id}`), {
-          method: 'DELETE',
-          credentials: 'include',
-        })
-        const result = await response.json().catch(() => ({}))
-        if (!response.ok || !result?.ok) {
-          throw new Error(result?.message || 'ลบรายการไม่สำเร็จ')
-        }
-        pushToast({
-          type: 'warning',
-          title: 'ลบกำหนดการแล้ว',
-          description: target?.titleEn || '',
-        })
-        await fetchScheduleBundle()
-      } catch (error) {
-        console.error('Failed to delete schedule item:', error)
-        pushToast({ type: 'error', title: error?.message || 'ลบรายการไม่สำเร็จ' })
+  const doDelete = async () => {
+    try {
+      setBusy(true)
+      if (confirm.kind === 'day') {
+        await apiCall('DELETE', `/api/admin/schedules/days/${confirm.id}`)
+      } else {
+        await apiCall('DELETE', `/api/admin/schedules/items/${confirm.id}`)
       }
-    },
-    [fetchScheduleBundle, items, pushToast],
-  )
-
-  const updateScheduleViewType = useCallback(
-    async (scheduleId, tableType) => {
-      try {
-        setSavingScheduleId(scheduleId)
-        const response = await fetch(apiUrl(`/api/admin/schedules/${scheduleId}/view-type`), {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ tableType }),
-        })
-        const result = await response.json().catch(() => ({}))
-        if (!response.ok || !result?.ok) {
-          throw new Error(result?.message || 'อัปเดตรูปแบบตารางไม่สำเร็จ')
-        }
-
-        setBundle((prev) => ({
-          ...prev,
-          schedules: (prev.schedules || []).map((schedule) =>
-            schedule.id === scheduleId ? { ...schedule, tableType } : schedule,
-          ),
-        }))
-        pushToast({ title: 'อัปเดตรูปแบบตารางแล้ว' })
-      } catch (error) {
-        console.error('Failed to update schedule view type:', error)
-        pushToast({ type: 'error', title: error?.message || 'อัปเดตรูปแบบตารางไม่สำเร็จ' })
-      } finally {
-        setSavingScheduleId(null)
-      }
-    },
-    [pushToast],
-  )
-
-  const rows = useMemo(
-    () =>
-      items.map((item) => {
-        const day = dayMap.get(item.dayId)
-        const track = item.trackId ? trackMap.get(item.trackId) : null
-        const schedule = day ? scheduleMap.get(day.scheduleId) : null
-        const dayLabel = [day?.dayNameEn || day?.dayNameTh, day?.dayDate].filter(Boolean).join(' • ')
-
-        return {
-          ...item,
-          dayLabel,
-          scheduleLabel: schedule?.nameEn || schedule?.nameTh || '-',
-          tableType: schedule?.tableType || 'onsite_timetable',
-          trackLabel: track ? track.trackNameEn || track.trackNameTh : 'แทร็กเริ่มต้น',
-          timeLabel: `${normalizeTimeInput(item.startTime)} - ${normalizeTimeInput(item.endTime)}`,
-        }
-      }),
-    [items, dayMap, trackMap, scheduleMap],
-  )
-
-  const dayFilters = useMemo(
-    () => [
-      { label: 'ทุกวัน', value: 'all' },
-      ...days.map((day) => ({
-        label: day.dayNameEn || day.dayNameTh || day.dayDate,
-        value: String(day.id),
-      })),
-    ],
-    [days],
-  )
-
-  const filteredRows = useMemo(() => {
-    if (activeDayFilter === 'all') return rows
-    return rows.filter((row) => String(row.dayId) === activeDayFilter)
-  }, [rows, activeDayFilter])
-
-  const stats = useMemo(() => {
-    const activeItems = items.filter((item) => item.isEnabled).length
-    const highlighted = items.filter((item) => item.isHighlight).length
-    const usedDays = new Set(items.map((item) => item.dayId)).size
-    return {
-      total: items.length,
-      activeItems,
-      highlighted,
-      usedDays,
+      setConfirm(null)
+      pushToast({ variant: 'warning', title: 'ลบแล้ว' })
+      await load()
+    } catch (error) {
+      pushToast({ variant: 'danger', title: error?.message || 'ลบไม่สำเร็จ' })
+    } finally {
+      setBusy(false)
     }
-  }, [items])
+  }
+
+  const openCreateDay = () => setDayModal({ mode: 'create', form: { ...EMPTY_DAY_FORM } })
+  const openEditDay = (day) => setDayModal({ mode: 'edit', dayId: day.id, form: { dayDate: String(day.dayDate).slice(0, 10), dayNameTh: day.dayNameTh || '' } })
+  const openCreateItem = (dayId) => setItemModal({ mode: 'create', dayId, form: { ...EMPTY_ITEM_FORM } })
+  const openEditItem = (item) => setItemModal({
+    mode: 'edit', itemId: item.id, dayId: item.dayId,
+    form: { titleTh: item.titleTh || '', startTime: hhmm(item.startTime) || '09:00', endTime: hhmm(item.endTime) || '10:00', displayDateLabelTh: item.displayDateLabelTh || '', displayTimeLabelTh: item.displayTimeLabelTh || '' },
+  })
 
   return (
     <div className="admin-ui-stack">
       <PageHeader
-        title="กำหนดการ"
-        actions={
-          <div className="admin-ui-header-actions">
-            <button type="button" className="admin-ui-btn" onClick={fetchScheduleBundle}>
-              <RefreshCw size={15} />
-              รีเฟรช
-            </button>
-            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
-              <Plus size={15} />
-              เพิ่มเซสชัน
-            </button>
-          </div>
-        }
+        title="จัดการกำหนดการ"
+        actions={<button type="button" className="admin-ui-btn" onClick={load}><RefreshCw size={14} /> รีเฟรช</button>}
       />
 
-      <section className="admin-ui-stat-grid">
-        <article className="admin-ui-stat-card">
-          <span>รายการ</span>
-          <strong>{stats.total}</strong>
-          <small>จำนวนเซสชันทั้งหมด</small>
-        </article>
-        <article className="admin-ui-stat-card success">
-          <span>เปิดใช้งาน</span>
-          <strong>{stats.activeItems}</strong>
-          <small>แสดงบนเว็บไซต์</small>
-        </article>
-        <article className="admin-ui-stat-card info">
-          <span>รายการเด่น</span>
-          <strong>{stats.highlighted}</strong>
-          <small>เซสชันที่ไฮไลต์</small>
-        </article>
-        <article className="admin-ui-stat-card warn">
-          <span>จำนวนวัน</span>
-          <strong>{stats.usedDays}</strong>
-          <small>วันที่มีเซสชัน</small>
-        </article>
-      </section>
+      <article className="admin-ui-panel" style={{ background: 'var(--admin-ui-surface-soft)' }}>
+        <p className="admin-ui-text-muted" style={{ margin: 0 }}>
+          จัดการกำหนดการแบบเดียวกับที่แสดงในหน้า home — เพิ่ม/แก้ไข/ลบ "วัน" และ "กิจกรรม" ได้ในที่เดียว
+          สลับรูปแบบการแสดงผลได้ระหว่าง ไทม์ไลน์ (milestone) และ ตารางรายวัน (onsite)
+        </p>
+      </article>
 
-      <div className="admin-ui-chip-row">
-        {dayFilters.map((filter) => (
-          <button
-            key={filter.value}
-            type="button"
-            className={`admin-ui-chip-btn ${activeDayFilter === filter.value ? 'active' : ''}`}
-            onClick={() => setActiveDayFilter(filter.value)}
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
-
-      <section className="admin-ui-panel">
-        <h4>รูปแบบตารางกำหนดการ</h4>
-        <div className="admin-ui-two-col">
-          {schedules.map((schedule) => (
-            <label key={schedule.id}>
-              {schedule.nameTh || schedule.nameEn || `กำหนดการ #${schedule.id}`}
-              <select
-                value={schedule.tableType || 'onsite_timetable'}
-                disabled={savingScheduleId === schedule.id}
-                onChange={(event) => updateScheduleViewType(schedule.id, event.target.value)}
-              >
-                <option value="onsite_timetable">ตารางเวลาแบบหน้างาน (เวลา + หัวข้อ)</option>
-                <option value="milestone">แบบหมุดหมาย (วันที่ + กิจกรรม)</option>
-              </select>
-            </label>
-          ))}
-        </div>
-      </section>
-
-      <AdminDataTable
-        loading={loading}
-        rows={filteredRows}
-        searchKeys={[
-          'titleTh',
-          'titleEn',
-          'locationTh',
-          'locationEn',
-          'speakerTh',
-          'speakerEn',
-          'dayLabel',
-          'trackLabel',
-          'displayDateLabelTh',
-          'displayTimeLabelTh',
-        ]}
-        searchPlaceholder="ค้นหาหัวข้อ, วิทยากร, สถานที่"
-        filters={[
-          { label: 'ทั้งหมด', value: 'all', predicate: () => true },
-          { label: 'เปิดใช้งาน', value: 'enabled', predicate: (row) => row.isEnabled },
-          { label: 'ปิดใช้งาน', value: 'disabled', predicate: (row) => !row.isEnabled },
-          { label: 'ไฮไลต์', value: 'highlight', predicate: (row) => row.isHighlight },
-        ]}
-        columns={[
-          {
-            key: 'timeLabel',
-            label: 'เวลา',
-            render: (row) => (
-              <div className="admin-ui-col-stack">
-                <strong>{row.timeLabel}</strong>
-                <span>ลำดับ #{row.sortOrder}</span>
-              </div>
-            ),
-          },
-          {
-            key: 'dayLabel',
-            label: 'วัน / แทร็ก',
-            render: (row) => (
-              <div className="admin-ui-col-stack">
-                <strong>{row.dayLabel || '-'}</strong>
-                <span>{row.trackLabel}</span>
-              </div>
-            ),
-          },
-          {
-            key: 'titleEn',
-            label: 'เซสชัน',
-            render: (row) => (
-              <div className="admin-ui-col-stack">
-                <strong>{row.titleEn}</strong>
-                <span>{row.titleTh}</span>
-                <span>{row.locationEn || row.locationTh || '-'}</span>
-              </div>
-            ),
-          },
-          {
-            key: 'audience',
-            label: 'ผู้ชม / สถานะ',
-            render: (row) => (
-              <div className="admin-ui-col-stack">
-                <span>{scheduleAudienceLabel[row.audience] || row.audience}</span>
-                <StatusBadge status={row.isEnabled ? 'ENABLED' : 'DISABLED'} label={row.isEnabled ? 'เปิดใช้งาน' : 'ปิดใช้งาน'} />
-                {row.isHighlight ? <StatusBadge status="RESUBMITTED" label="ไฮไลต์" /> : null}
-              </div>
-            ),
-          },
-          {
-            key: 'actions',
-            label: 'การจัดการ',
-            render: (row) => (
-              <div className="admin-ui-row-actions">
-                <button type="button" onClick={() => openEdit(row)} aria-label="edit">
-                  <Pencil size={14} />
+      {loading ? (
+        <article className="admin-ui-panel"><LoadingState compact label="กำลังโหลดกำหนดการ..." /></article>
+      ) : !selectedSchedule ? (
+        <article className="admin-ui-panel"><p className="admin-ui-text-muted">ยังไม่มีชุดกำหนดการ</p></article>
+      ) : (
+        <>
+          {/* schedule tabs */}
+          {bundle.schedules.length > 1 && (
+            <div className="admin-sched-tabs">
+              {bundle.schedules.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={`admin-sched-tab ${s.id === selectedScheduleId ? 'is-active' : ''}`}
+                  onClick={() => setSelectedScheduleId(s.id)}
+                >
+                  {s.nameTh || s.code}
+                  <span className={`admin-log-badge ${s.tableType === 'milestone' ? 'admin-log-badge-info' : 'admin-log-badge-warn'}`}>
+                    {s.tableType === 'milestone' ? 'Milestone' : 'Onsite'}
+                  </span>
                 </button>
-                <button type="button" onClick={() => remove(row.id)} aria-label="delete">
-                  <Trash2 size={14} />
-                </button>
+              ))}
+            </div>
+          )}
+
+          {/* schedule toolbar */}
+          <article className="admin-ui-panel">
+            <div className="admin-sched-toolbar">
+              <div>
+                <h3 style={{ margin: 0 }}>{selectedSchedule.nameTh}</h3>
+                <span className="admin-ui-text-muted" style={{ fontSize: '0.82rem' }}>{daysWithItems.length} วัน · {daysWithItems.reduce((n, d) => n + d.items.length, 0)} กิจกรรม</span>
               </div>
-            ),
-          },
-        ]}
-      />
-
-      <DetailDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        title={editingId ? 'แก้ไขเซสชันกำหนดการ' : 'เพิ่มเซสชันกำหนดการ'}
-        subtitle="ข้อมูลจะถูก sync เข้าตาราง event_schedule_items และแสดงผลในหน้า Home"
-      >
-        <div className="admin-ui-form">
-          <div className="admin-ui-two-col">
-            <label htmlFor="schedule-day">
-              วัน *
-              <select
-                id="schedule-day"
-                value={form.dayId}
-                onChange={(event) => setForm((prev) => ({ ...prev, dayId: event.target.value }))}
-              >
-                <option value="">เลือกวัน</option>
-                {days.map((day) => (
-                  <option key={day.id} value={day.id}>
-                    {day.dayNameEn || day.dayNameTh || day.dayDate} ({day.dayDate})
-                  </option>
+              <div className="admin-sched-viewtype">
+                <span className="admin-ui-text-muted" style={{ fontSize: '0.78rem' }}>รูปแบบ:</span>
+                {VIEW_TYPES.map((v) => (
+                  <button
+                    key={v.value}
+                    type="button"
+                    title={v.hint}
+                    disabled={busy}
+                    className={`admin-ui-mini-btn ${selectedSchedule.tableType === v.value ? 'admin-ui-mini-btn-active' : ''}`}
+                    onClick={() => changeViewType(v.value)}
+                  >
+                    {v.label}
+                  </button>
                 ))}
-              </select>
-              {errors.dayId ? <small>{errors.dayId}</small> : null}
-            </label>
+              </div>
+            </div>
+          </article>
 
-            <label htmlFor="schedule-track">
-              แทร็ก
-              <select
-                id="schedule-track"
-                value={form.trackId}
-                onChange={(event) => setForm((prev) => ({ ...prev, trackId: event.target.value }))}
-              >
-                <option value="">แทร็กเริ่มต้น</option>
-                {trackOptions.map((track) => (
-                  <option key={track.id} value={track.id}>
-                    {track.trackNameEn || track.trackNameTh}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          {/* day cards */}
+          {daysWithItems.length === 0 ? (
+            <article className="admin-ui-panel" style={{ textAlign: 'center' }}>
+              <p className="admin-ui-text-muted">ยังไม่มีวันในกำหนดการนี้</p>
+              <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreateDay}><CalendarPlus size={14} /> เพิ่มวันแรก</button>
+            </article>
+          ) : (
+            daysWithItems.map((day) => (
+              <article key={day.id} className="admin-ui-panel admin-sched-day">
+                <div className="admin-sched-day-head">
+                  <div>
+                    <strong className="admin-sched-day-date">{formatThaiDate(day.dayDate)}</strong>
+                    {day.dayNameTh ? <span className="admin-sched-day-name">{day.dayNameTh}</span> : null}
+                  </div>
+                  <div className="admin-ui-inline-actions">
+                    <button type="button" className="admin-ui-mini-btn" onClick={() => openEditDay(day)}><Pencil size={13} /> แก้วัน</button>
+                    <button type="button" className="admin-ui-mini-btn admin-ui-mini-btn-danger" onClick={() => setConfirm({ kind: 'day', id: day.id, label: `${formatThaiDate(day.dayDate)} (พร้อม ${day.items.length} กิจกรรม)` })}><Trash2 size={13} /> ลบวัน</button>
+                  </div>
+                </div>
 
-          <div className="admin-ui-two-col">
-            <label htmlFor="schedule-start-time">
-              เวลาเริ่ม *
-              <input
-                id="schedule-start-time"
-                type="time"
-                value={form.startTime}
-                onChange={(event) => setForm((prev) => ({ ...prev, startTime: event.target.value }))}
-              />
-              {errors.startTime ? <small>{errors.startTime}</small> : null}
-            </label>
+                <div className="admin-sched-items">
+                  {day.items.length === 0 ? (
+                    <div className="admin-sched-item admin-sched-item-empty">ยังไม่มีกิจกรรมในวันนี้</div>
+                  ) : (
+                    day.items.map((item) => (
+                      <div key={item.id} className="admin-sched-item">
+                        <div className="admin-sched-item-time">
+                          {isMilestone
+                            ? (item.displayDateLabelTh?.trim() || formatThaiDate(day.dayDate))
+                            : (item.displayTimeLabelTh?.trim() || formatTimeRange(item.startTime, item.endTime))}
+                        </div>
+                        <div className="admin-sched-item-title">{item.titleTh || item.titleEn || '-'}</div>
+                        <div className="admin-ui-inline-actions">
+                          <button type="button" className="admin-ui-mini-btn" onClick={() => openEditItem(item)}><Pencil size={12} /></button>
+                          <button type="button" className="admin-ui-mini-btn admin-ui-mini-btn-danger" onClick={() => setConfirm({ kind: 'item', id: item.id, label: item.titleTh })}><Trash2 size={12} /></button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <button type="button" className="admin-sched-add-item" onClick={() => openCreateItem(day.id)}><Plus size={14} /> เพิ่มกิจกรรม</button>
+                </div>
+              </article>
+            ))
+          )}
 
-            <label htmlFor="schedule-end-time">
-              เวลาสิ้นสุด *
-              <input
-                id="schedule-end-time"
-                type="time"
-                value={form.endTime}
-                onChange={(event) => setForm((prev) => ({ ...prev, endTime: event.target.value }))}
-              />
-              {errors.endTime ? <small>{errors.endTime}</small> : null}
-            </label>
-          </div>
+          {daysWithItems.length > 0 && (
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary admin-sched-add-day" onClick={openCreateDay}>
+              <CalendarPlus size={14} /> เพิ่มวัน
+            </button>
+          )}
+        </>
+      )}
 
-          <div className="admin-ui-two-col">
-            <label htmlFor="schedule-display-date-label-th">
-              display_date_label_th (override)
-              <input
-                id="schedule-display-date-label-th"
-                value={form.displayDateLabelTh}
-                onChange={(event) => setForm((prev) => ({ ...prev, displayDateLabelTh: event.target.value }))}
-                placeholder="เช่น 14 มิ.ย. - 18 มิ.ย."
-              />
-            </label>
-
-            <label htmlFor="schedule-display-time-label-th">
-              display_time_label_th (override)
-              <input
-                id="schedule-display-time-label-th"
-                value={form.displayTimeLabelTh}
-                onChange={(event) => setForm((prev) => ({ ...prev, displayTimeLabelTh: event.target.value }))}
-                placeholder="เช่น 15.30 เป็นต้นไป ถึงเที่ยงคืน"
-              />
-            </label>
-          </div>
-
-          <div className="admin-ui-two-col">
-            <label htmlFor="schedule-title-th">
-              title_th *
-              <input
-                id="schedule-title-th"
-                value={form.titleTh}
-                onChange={(event) => setForm((prev) => ({ ...prev, titleTh: event.target.value }))}
-              />
-              {errors.titleTh ? <small>{errors.titleTh}</small> : null}
-            </label>
-
-            <label htmlFor="schedule-title-en">
-              title_en *
-              <input
-                id="schedule-title-en"
-                value={form.titleEn}
-                onChange={(event) => setForm((prev) => ({ ...prev, titleEn: event.target.value }))}
-              />
-              {errors.titleEn ? <small>{errors.titleEn}</small> : null}
-            </label>
-          </div>
-
-          <div className="admin-ui-two-col">
-            <label htmlFor="schedule-location-th">
-              location_th
-              <input
-                id="schedule-location-th"
-                value={form.locationTh}
-                onChange={(event) => setForm((prev) => ({ ...prev, locationTh: event.target.value }))}
-              />
-            </label>
-
-            <label htmlFor="schedule-location-en">
-              location_en
-              <input
-                id="schedule-location-en"
-                value={form.locationEn}
-                onChange={(event) => setForm((prev) => ({ ...prev, locationEn: event.target.value }))}
-              />
-            </label>
-          </div>
-
-          <div className="admin-ui-two-col">
-            <label htmlFor="schedule-speaker-th">
-              speaker_th
-              <input
-                id="schedule-speaker-th"
-                value={form.speakerTh}
-                onChange={(event) => setForm((prev) => ({ ...prev, speakerTh: event.target.value }))}
-              />
-            </label>
-
-            <label htmlFor="schedule-speaker-en">
-              speaker_en
-              <input
-                id="schedule-speaker-en"
-                value={form.speakerEn}
-                onChange={(event) => setForm((prev) => ({ ...prev, speakerEn: event.target.value }))}
-              />
-            </label>
-          </div>
-
-          <div className="admin-ui-two-col">
-            <label htmlFor="schedule-audience">
-              audience
-              <select
-                id="schedule-audience"
-                value={form.audience}
-                onChange={(event) => setForm((prev) => ({ ...prev, audience: event.target.value }))}
-              >
-                {Object.entries(scheduleAudienceLabel).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label htmlFor="schedule-sort-order">
-              sort_order
-              <input
-                id="schedule-sort-order"
-                type="number"
-                min={0}
-                value={form.sortOrder}
-                onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
-              />
-            </label>
-          </div>
-
-          <div className="admin-ui-two-col">
-            <label htmlFor="schedule-description-th">
-              description_th
-              <textarea
-                id="schedule-description-th"
-                rows={3}
-                value={form.descriptionTh}
-                onChange={(event) => setForm((prev) => ({ ...prev, descriptionTh: event.target.value }))}
-              />
-            </label>
-
-            <label htmlFor="schedule-description-en">
-              description_en
-              <textarea
-                id="schedule-description-en"
-                rows={3}
-                value={form.descriptionEn}
-                onChange={(event) => setForm((prev) => ({ ...prev, descriptionEn: event.target.value }))}
-              />
-            </label>
-          </div>
-
-          <div className="admin-ui-two-col">
-            <label className="admin-ui-check">
-              <input
-                type="checkbox"
-                checked={form.isHighlight}
-                onChange={(event) => setForm((prev) => ({ ...prev, isHighlight: event.target.checked }))}
-              />
-              <span>ไฮไลต์</span>
-            </label>
-
-            <label className="admin-ui-check">
-              <input
-                type="checkbox"
-                checked={form.isEnabled}
-                onChange={(event) => setForm((prev) => ({ ...prev, isEnabled: event.target.checked }))}
-              />
-              <span>เปิดใช้งาน</span>
-            </label>
-          </div>
-
-          <div className="admin-ui-panel">
-            <h3>ตัวอย่าง</h3>
-            <div className="admin-ui-col-stack">
-              <strong>{form.titleEn || '-'}</strong>
-              <span>{form.titleTh || '-'}</span>
-              <span>
-                {form.startTime || '--:--'} - {form.endTime || '--:--'}
-              </span>
-              <span>{selectedDay?.dayDate || '-'}</span>
-              <span>{scheduleAudienceLabel[form.audience] || form.audience}</span>
+      {/* day modal */}
+      {dayModal && (
+        <div className="admin-log-modal-layer" role="dialog" aria-modal="true">
+          <button type="button" className="admin-log-modal-backdrop" aria-label="ปิด" onClick={() => !busy && setDayModal(null)} />
+          <div className="admin-log-modal-card admin-ui-panel" style={{ width: 'min(460px, 100%)' }}>
+            <div className="admin-log-modal-head">
+              <h3>{dayModal.mode === 'create' ? 'เพิ่มวัน' : 'แก้ไขวัน'}</h3>
+              <button type="button" className="admin-ui-mini-btn" onClick={() => !busy && setDayModal(null)}><X size={14} /></button>
+            </div>
+            <div className="admin-ui-form">
+              <label>วันที่
+                <input type="date" value={dayModal.form.dayDate} onChange={(e) => setDayModal((m) => ({ ...m, form: { ...m.form, dayDate: e.target.value } }))} />
+              </label>
+              <label>ชื่อวัน (ไม่บังคับ เช่น วันแรก)
+                <input value={dayModal.form.dayNameTh} onChange={(e) => setDayModal((m) => ({ ...m, form: { ...m.form, dayNameTh: e.target.value } }))} placeholder="เว้นว่างได้" />
+              </label>
+              <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={busy} onClick={saveDay}>{busy ? 'กำลังบันทึก...' : 'บันทึก'}</button>
             </div>
           </div>
+        </div>
+      )}
 
-          <div className="admin-ui-form-actions">
-            <button type="button" className="admin-ui-btn" onClick={() => setDrawerOpen(false)}>
-              ยกเลิก
-            </button>
-            <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={save}>
-              <Save size={14} />
-              บันทึก
-            </button>
+      {/* item modal */}
+      {itemModal && (
+        <div className="admin-log-modal-layer" role="dialog" aria-modal="true">
+          <button type="button" className="admin-log-modal-backdrop" aria-label="ปิด" onClick={() => !busy && setItemModal(null)} />
+          <div className="admin-log-modal-card admin-ui-panel" style={{ width: 'min(480px, 100%)' }}>
+            <div className="admin-log-modal-head">
+              <h3>{itemModal.mode === 'create' ? 'เพิ่มกิจกรรม' : 'แก้ไขกิจกรรม'}</h3>
+              <button type="button" className="admin-ui-mini-btn" onClick={() => !busy && setItemModal(null)}><X size={14} /></button>
+            </div>
+            <div className="admin-ui-form">
+              <label>ชื่อกิจกรรม
+                <input value={itemModal.form.titleTh} onChange={(e) => setItemModal((m) => ({ ...m, form: { ...m.form, titleTh: e.target.value } }))} placeholder="เช่น ลงทะเบียน / Keynote" />
+              </label>
+              {isMilestone ? (
+                <label>ป้ายวันที่/ช่วงเวลา (ไม่บังคับ — เว้นว่างจะใช้วันที่ของวัน)
+                  <input value={itemModal.form.displayDateLabelTh} onChange={(e) => setItemModal((m) => ({ ...m, form: { ...m.form, displayDateLabelTh: e.target.value } }))} placeholder="เช่น 15 มิ.ย. / ภายในมิถุนายน" />
+                </label>
+              ) : (
+                <div className="admin-sched-time-row">
+                  <label><Clock size={12} /> เวลาเริ่ม
+                    <input type="time" value={itemModal.form.startTime} onChange={(e) => setItemModal((m) => ({ ...m, form: { ...m.form, startTime: e.target.value } }))} />
+                  </label>
+                  <label>เวลาสิ้นสุด
+                    <input type="time" value={itemModal.form.endTime} onChange={(e) => setItemModal((m) => ({ ...m, form: { ...m.form, endTime: e.target.value } }))} />
+                  </label>
+                </div>
+              )}
+              <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={busy} onClick={saveItem}>{busy ? 'กำลังบันทึก...' : 'บันทึก'}</button>
+            </div>
           </div>
         </div>
-      </DetailDrawer>
+      )}
+
+      {/* confirm delete */}
+      {confirm && (
+        <div className="admin-log-modal-layer" role="dialog" aria-modal="true">
+          <button type="button" className="admin-log-modal-backdrop" aria-label="ปิด" onClick={() => !busy && setConfirm(null)} />
+          <div className="admin-log-modal-card admin-ui-panel" style={{ width: 'min(420px, 100%)' }}>
+            <div className="admin-log-modal-head">
+              <h3>ยืนยันการลบ</h3>
+              <button type="button" className="admin-ui-mini-btn" onClick={() => !busy && setConfirm(null)}><X size={14} /></button>
+            </div>
+            <p className="admin-ui-text-muted">
+              {confirm.kind === 'day' ? `ลบวัน ${confirm.label}? กิจกรรมทั้งหมดในวันนี้จะถูกลบด้วย` : `ลบกิจกรรม "${confirm.label}"?`}
+            </p>
+            <div className="admin-ui-header-actions" style={{ justifyContent: 'flex-end' }}>
+              <button type="button" className="admin-ui-btn" disabled={busy} onClick={() => setConfirm(null)}>ยกเลิก</button>
+              <button type="button" className="admin-ui-btn admin-ui-btn-danger" disabled={busy} onClick={doDelete}>{busy ? 'กำลังลบ...' : 'ลบ'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
