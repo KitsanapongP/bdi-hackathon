@@ -192,8 +192,8 @@ export default function StaticCarouselsPage() {
       openInNewTab: Boolean(form.openInNewTab),
       sortOrder: Math.max(0, Number(form.sortOrder) || 0),
       isEnabled: Boolean(form.isEnabled),
-      startAt: form.startAt ? new Date(form.startAt).toISOString() : null,
-      endAt: form.endAt ? new Date(form.endAt).toISOString() : null,
+      startAt: form.startAt || null,
+      endAt: form.endAt || null,
     }
 
     const uploadImageIfNeeded = async (slideId) => {

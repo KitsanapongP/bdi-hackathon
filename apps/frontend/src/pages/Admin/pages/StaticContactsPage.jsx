@@ -171,7 +171,7 @@ export default function StaticContactsPage() {
       isFeatured: contactForm.isFeatured,
       sortOrder: Number(contactForm.sortOrder),
       isEnabled: contactForm.isEnabled,
-      publishedAt: contactForm.publishedAt ? new Date(contactForm.publishedAt).toISOString() : null,
+      publishedAt: contactForm.publishedAt || null,
     }
 
     try {

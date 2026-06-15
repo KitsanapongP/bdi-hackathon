@@ -2193,8 +2193,8 @@ function StaticCarouselsPage() {
       openInNewTab: Boolean(form.openInNewTab),
       sortOrder: Math.max(0, Number(form.sortOrder) || 0),
       isEnabled: Boolean(form.isEnabled),
-      startAt: form.startAt ? new Date(form.startAt).toISOString() : null,
-      endAt: form.endAt ? new Date(form.endAt).toISOString() : null,
+      startAt: form.startAt || null,
+      endAt: form.endAt || null,
     }
 
     const uploadImageIfNeeded = async (slideId) => {
@@ -3286,7 +3286,7 @@ function StaticContactsPage() {
       isFeatured: contactForm.isFeatured,
       sortOrder: Number(contactForm.sortOrder),
       isEnabled: contactForm.isEnabled,
-      publishedAt: contactForm.publishedAt ? new Date(contactForm.publishedAt).toISOString() : null,
+      publishedAt: contactForm.publishedAt || null,
     }
 
     try {

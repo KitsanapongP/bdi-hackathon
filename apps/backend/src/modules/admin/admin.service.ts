@@ -16,6 +16,7 @@ import type {
     SelectionTeamRow,
 } from './admin.types.js';
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors.js';
+import { normalizeWallClockToDb } from '../../shared/utils.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import { PassThrough } from 'node:stream';
@@ -1719,24 +1720,7 @@ export async function forfeitTeam(
 }
 
 function normalizeDateTimeToDb(rawInput: string): string {
-    const raw = String(rawInput || '').trim();
-    let date: Date;
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) {
-        date = new Date(`${raw}:00`);
-    } else {
-        date = new Date(raw);
-    }
-    if (Number.isNaN(date.getTime())) {
-        throw new BadRequestError('รูปแบบวันเวลาไม่ถูกต้อง');
-    }
-
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    const hh = String(date.getHours()).padStart(2, '0');
-    const mi = String(date.getMinutes()).padStart(2, '0');
-    const ss = String(date.getSeconds()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+    return normalizeWallClockToDb(rawInput);
 }
 
 export async function getGlobalSelectionConfirmWindow(db: DB): Promise<{ openAt: string | null; closeAt: string | null }> {
@@ -1792,11 +1776,7 @@ function normalizeOptionalDeadline(rawValue: string | null | undefined): string 
     if (!rawValue) return null;
     const value = String(rawValue).trim();
     if (!value) return null;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-        throw new BadRequestError('รูปแบบ deadline ไม่ถูกต้อง');
-    }
-    return date.toISOString().slice(0, 19).replace('T', ' ');
+    return normalizeWallClockToDb(value, 'deadline');
 }
 
 function toSubmissionTaskResponse(row: AdminSubmissionTaskRow) {

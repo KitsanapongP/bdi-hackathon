@@ -30,6 +30,7 @@ import type {
     ContentVenueImageAdmin,
 } from './content.types.js';
 import { BadRequestError, NotFoundError } from '../../shared/errors.js';
+import { normalizeWallClockToDb } from '../../shared/utils.js';
 
 const PARTICIPATION_OVERVIEW_CACHE_TTL_MS = 5 * 60 * 1000;
 const VENUE_CATEGORIES: ContentVenueCategory[] = ['venue', 'accommodation', 'transportation', 'attraction'];
@@ -591,12 +592,7 @@ function parseDateTimeToDb(value: string | null | undefined, fieldName: string):
     const raw = String(value).trim();
     if (!raw) return null;
 
-    const date = new Date(raw);
-    if (Number.isNaN(date.getTime())) {
-        throw new BadRequestError(`รูปแบบ ${fieldName} ไม่ถูกต้อง`);
-    }
-
-    return date.toISOString().slice(0, 19).replace('T', ' ');
+    return normalizeWallClockToDb(raw, fieldName);
 }
 
 function ensureStartEndValid(startAt: string | null, endAt: string | null): void {
@@ -850,12 +846,7 @@ function parsePublishedAt(value: string | null | undefined): string | null {
     const raw = String(value).trim();
     if (!raw) return null;
 
-    const date = new Date(raw);
-    if (Number.isNaN(date.getTime())) {
-        throw new BadRequestError('รูปแบบ publishedAt ไม่ถูกต้อง');
-    }
-
-    return date.toISOString().slice(0, 19).replace('T', ' ');
+    return normalizeWallClockToDb(raw, 'publishedAt');
 }
 
 function normalizeContactPayload(data: {
