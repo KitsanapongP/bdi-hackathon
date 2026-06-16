@@ -1153,9 +1153,9 @@ export async function exportCertificateCandidatesSheet(
     db: DB,
     publicBaseUrl: string,
 ): Promise<{ fileName: string; stream: PassThrough }> {
-    const teams = await repo.getTeamsForSheetExport(db, ['submitted']);
+    const teams = await repo.getTeamsForSheetExport(db, ['submitted', 'passed', 'failed', 'confirmed', 'not_joined']);
     if (teams.length === 0) {
-        throw new NotFoundError('ไม่พบข้อมูลทีมที่ส่ง proposal แล้ว');
+        throw new NotFoundError('ไม่พบข้อมูลทีมสำหรับสรุปผู้มีสิทธิ์ประกาศนียบัตร');
     }
 
     const teamIds = teams.map((team) => team.team_id);

@@ -302,7 +302,7 @@ export default function AdminExportsPage() {
         <header>
           <div>
             <h3>Certificate Candidates</h3>
-            <p>ส่งออกทีมที่ส่ง proposal แล้วสำหรับนำไปเทียบรายชื่อ Orientation Day เอง โดยรวมรายชื่อและอีเมลสมาชิกไว้ในแถวเดียว</p>
+            <p>ส่งออกทีมสถานะ submitted, passed, failed, confirmed และ not_joined สำหรับนำไปเทียบรายชื่อ Orientation Day เอง โดยรวมรายชื่อและอีเมลสมาชิกไว้ในแถวเดียว</p>
           </div>
         </header>
 
