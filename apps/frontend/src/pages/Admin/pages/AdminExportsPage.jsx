@@ -41,6 +41,7 @@ export default function AdminExportsPage() {
   const [exportingBundle, setExportingBundle] = useState(false)
   const [exportingSheet, setExportingSheet] = useState(false)
   const [exportingReviewSheet, setExportingReviewSheet] = useState(false)
+  const [exportingCertificateSheet, setExportingCertificateSheet] = useState(false)
   const [exportingReviewTrack, setExportingReviewTrack] = useState('')
   const [exportingIdentityTrack, setExportingIdentityTrack] = useState('')
   const [sheetStatuses, setSheetStatuses] = useState(['submitted', 'passed'])
@@ -157,6 +158,34 @@ export default function AdminExportsPage() {
     }
   }, [pushToast, sheetStatuses])
 
+  const handleExportCertificateCandidatesSheet = useCallback(async () => {
+    try {
+      setExportingCertificateSheet(true)
+      const response = await fetch(apiUrl('/api/admin/exports/certificate-candidates-sheet'), {
+        credentials: 'include',
+      })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload?.message || 'ไม่สามารถ export รายชื่อประกาศนียบัตรได้')
+      }
+
+      const fileName = await downloadResponseFile(response, `certificate_candidates_${Date.now()}.xlsx`)
+      pushToast({
+        variant: 'success',
+        title: 'ส่งออกรายชื่อประกาศนียบัตรสำเร็จ',
+        description: `ดาวน์โหลดไฟล์แล้ว: ${fileName}`,
+      })
+    } catch (error) {
+      pushToast({
+        variant: 'danger',
+        title: 'ส่งออกรายชื่อประกาศนียบัตรไม่สำเร็จ',
+        description: error?.message || 'ไม่สามารถ export รายชื่อประกาศนียบัตรได้',
+      })
+    } finally {
+      setExportingCertificateSheet(false)
+    }
+  }, [pushToast])
+
   const handleExportReviewTrackSheet = useCallback(async (track) => {
     try {
       setExportingReviewTrack(track)
@@ -265,6 +294,15 @@ export default function AdminExportsPage() {
           >
             <Download size={15} />
             {exportingReviewSheet ? 'Exporting review links...' : 'Export Review Links (XLSX)'}
+          </button>
+          <button
+            type="button"
+            className="admin-export-btn"
+            onClick={handleExportCertificateCandidatesSheet}
+            disabled={exportingCertificateSheet}
+          >
+            <Download size={15} />
+            {exportingCertificateSheet ? 'กำลังส่งออก...' : 'ส่งออกผู้มีสิทธิ์ประกาศนียบัตร (XLSX)'}
           </button>
         </div>
       </section>

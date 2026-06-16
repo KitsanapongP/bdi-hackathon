@@ -1291,6 +1291,21 @@ export async function handleExportTeamsContactSheet(req: FastifyRequest, reply: 
     }
 }
 
+export async function handleExportCertificateCandidatesSheet(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const publicBaseUrl = pickFrontendBaseUrl(req);
+        const result = await service.exportCertificateCandidatesSheet(req.server.ctx.db, publicBaseUrl);
+        reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        reply.header('Content-Disposition', buildAttachmentHeader(result.fileName));
+        return reply.send(result.stream);
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
 export async function handleGetAdminTeamSubmissions(req: FastifyRequest, reply: FastifyReply) {
     const parsed = adminTeamSubmissionsQuerySchema.safeParse(req.query);
     if (!parsed.success) {

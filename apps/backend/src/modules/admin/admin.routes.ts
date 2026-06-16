@@ -62,6 +62,7 @@ import {
     handleExportTeamsReviewTrackSheet,
     handleExportTeamsIdentityReviewTrackSheet,
     handleExportTeamsContactSheet,
+    handleExportCertificateCandidatesSheet,
     handleGetAdminTeamSubmissions,
     handleExportAdminTeamSubmissions,
     handleGetTeamDossier,
@@ -155,6 +156,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get('/exports/teams-review-track-sheet', handleExportTeamsReviewTrackSheet);
     fastify.get('/exports/teams-identity-review-track-sheet', handleExportTeamsIdentityReviewTrackSheet);
     fastify.get('/exports/teams-contact-sheet', handleExportTeamsContactSheet);
+    fastify.get('/exports/certificate-candidates-sheet', handleExportCertificateCandidatesSheet);
     fastify.get('/submissions', handleGetAdminTeamSubmissions);
     fastify.get('/submissions/export', handleExportAdminTeamSubmissions);
     fastify.get('/judging/teams/:teamId/dossier', handleGetTeamDossier);

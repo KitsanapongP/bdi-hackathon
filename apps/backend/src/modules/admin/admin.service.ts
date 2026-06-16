@@ -1144,6 +1144,83 @@ export async function exportTeamsContactSheet(
     };
 }
 
+export async function exportCertificateCandidatesSheet(
+    db: DB,
+    publicBaseUrl: string,
+): Promise<{ fileName: string; stream: PassThrough }> {
+    const teams = await repo.getTeamsForSheetExport(db, ['submitted']);
+    if (teams.length === 0) {
+        throw new NotFoundError('ไม่พบข้อมูลทีมที่ส่ง proposal แล้ว');
+    }
+
+    const teamIds = teams.map((team) => team.team_id);
+    const members = await repo.getTeamMembersForExport(db, teamIds);
+
+    const membersByTeam = new Map<number, ExportTeamMemberRow[]>();
+    for (const row of members) {
+        const bucket = membersByTeam.get(row.team_id) ?? [];
+        bucket.push(row);
+        membersByTeam.set(row.team_id, bucket);
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('certificate_candidates');
+    sheet.columns = [
+        { header: 'team_id', key: 'team_id', width: 12 },
+        { header: 'team_code', key: 'team_code', width: 14 },
+        { header: 'team_name_th', key: 'team_name_th', width: 28 },
+        { header: 'team_name_en', key: 'team_name_en', width: 28 },
+        { header: 'team_status', key: 'team_status', width: 14 },
+        { header: 'review_link', key: 'review_link', width: 42 },
+        { header: 'member_names', key: 'member_names', width: 52 },
+        { header: 'member_email', key: 'member_email', width: 52 },
+    ];
+
+    const hyperlinkStyle: Partial<ExcelJS.Font> = {
+        color: { argb: 'FF0563C1' },
+        underline: true,
+    };
+
+    for (const team of teams) {
+        const teamMembers = [...(membersByTeam.get(team.team_id) ?? [])].sort((a, b) => a.member_order - b.member_order);
+        const teamShareId = await getOrCreateTeamReviewShareId(db, team.team_id);
+        const reviewUrl = buildPublicTeamReviewPageUrl(publicBaseUrl, teamShareId);
+        const row = sheet.addRow({
+            team_id: team.team_id,
+            team_code: team.team_code,
+            team_name_th: team.team_name_th || '',
+            team_name_en: team.team_name_en || '',
+            team_status: team.status,
+            member_names: teamMembers.map(pickMemberDisplayName).filter(Boolean).join(', '),
+            member_email: teamMembers.map((member) => member.email || '').filter(Boolean).join(', '),
+        });
+
+        const reviewCell = row.getCell('review_link');
+        reviewCell.value = {
+            text: 'Open Team Review',
+            hyperlink: reviewUrl,
+        };
+        reviewCell.font = hyperlinkStyle;
+        row.getCell('member_names').alignment = { wrapText: true, vertical: 'top' };
+        row.getCell('member_email').alignment = { wrapText: true, vertical: 'top' };
+        row.height = 54;
+    }
+
+    sheet.getRow(1).font = { bold: true };
+
+    const output = new PassThrough();
+    void (async () => {
+        await workbook.xlsx.write(output);
+        output.end();
+    })();
+
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
+    return {
+        fileName: `certificate_candidates_${timestamp}.xlsx`,
+        stream: output,
+    };
+}
+
 export async function exportTeamsReviewSheet(
     db: DB,
     inputStatuses: string[],
