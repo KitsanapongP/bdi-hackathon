@@ -209,13 +209,6 @@ export default function JudgingPage() {
         }
       />
 
-      <article className="admin-ui-panel judging-no-print" style={{ background: 'var(--admin-ui-surface-soft)' }}>
-        <p className="admin-ui-text-muted" style={{ margin: 0 }}>
-          เลือกทีมจากรายการด้านซ้ายเพื่อดูใบสรุปทีม: ผลงานที่ส่งคัดเลือก ประวัติผู้เข้าแข่งขัน (สถาบัน/ระดับการศึกษา/เพศ/จังหวัด/อายุ)
-          และอาจารย์ที่ปรึกษา — กด “พิมพ์ / บันทึก PDF” เพื่อบันทึกใบสรุปทีมที่เลือกเป็น PDF
-        </p>
-      </article>
-
       <div className="judging-layout">
         {/* ===== Left rail ===== */}
         <aside className="admin-ui-panel judging-rail judging-no-print">
