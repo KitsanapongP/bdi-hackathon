@@ -23,6 +23,18 @@ const STAGE_LABELS = { pre_selection: 'ก่อนคัดเลือก', tr
 
 const EMPTY_FILTERS = { teamStatus: '', submissionTaskId: '', teamId: '', track: '', itemType: '' }
 
+function getInitialFilters() {
+  const params = new URLSearchParams(window.location.search)
+  return {
+    ...EMPTY_FILTERS,
+    teamStatus: params.get('teamStatus') || '',
+    submissionTaskId: params.get('submissionTaskId') || '',
+    teamId: params.get('teamId') || '',
+    track: params.get('track') || '',
+    itemType: params.get('itemType') || '',
+  }
+}
+
 function getAttachmentFileName(disposition, fallback) {
   const encodedName = String(disposition || '').match(/filename\*=UTF-8''([^;]+)/i)?.[1]
   return encodedName ? decodeURIComponent(encodedName) : fallback
@@ -44,7 +56,7 @@ async function downloadResponseFile(response, fallbackFileName) {
 
 export default function TeamSubmissionsPage() {
   const { pushToast } = useAdminToast()
-  const [filters, setFilters] = useState(EMPTY_FILTERS)
+  const [filters, setFilters] = useState(getInitialFilters)
   const [searchInput, setSearchInput] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
   const [page, setPage] = useState(1)

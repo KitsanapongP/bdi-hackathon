@@ -6,7 +6,6 @@ import managementNavGroups from './config/managementNavGroups'
 import AdminExportsPage from './pages/AdminExportsPage'
 import AnnouncementsPage from './pages/AnnouncementsPage'
 import DashboardPage from './pages/DashboardPage'
-import JudgingPage from './pages/JudgingPage'
 import NotificationLogsPage from './pages/NotificationLogsPage'
 import NotificationSettingsPage from './pages/NotificationSettingsPage'
 import PrivilegesAdminPage from './pages/PrivilegesAdminPage'
@@ -42,7 +41,6 @@ function AdminAppRoutes() {
         <Route path="announcements" element={<AnnouncementsPage />} />
         <Route path="submission-tasks" element={<SubmissionTasksPage />} />
         <Route path="submissions" element={<TeamSubmissionsPage />} />
-        <Route path="judging" element={<JudgingPage />} />
 
         <Route path="notifications" element={<NotificationSettingsPage />} />
         <Route path="notification-logs" element={<NotificationLogsPage />} />

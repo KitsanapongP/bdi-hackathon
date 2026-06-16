@@ -295,9 +295,21 @@ export default function AdminExportsPage() {
             <Download size={15} />
             {exportingReviewSheet ? 'Exporting review links...' : 'Export Review Links (XLSX)'}
           </button>
+        </div>
+      </section>
+
+      <section className="admin-export-panel">
+        <header>
+          <div>
+            <h3>Certificate Candidates</h3>
+            <p>ส่งออกทีมที่ส่ง proposal แล้วสำหรับนำไปเทียบรายชื่อ Orientation Day เอง โดยรวมรายชื่อและอีเมลสมาชิกไว้ในแถวเดียว</p>
+          </div>
+        </header>
+
+        <div className="admin-export-actions">
           <button
             type="button"
-            className="admin-export-btn"
+            className="admin-export-btn admin-export-btn-primary"
             onClick={handleExportCertificateCandidatesSheet}
             disabled={exportingCertificateSheet}
           >

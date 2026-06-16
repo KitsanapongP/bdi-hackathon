@@ -94,6 +94,11 @@ function buildPublicTeamIdentityReviewPageUrl(baseUrl: string, shareId: string):
     return `${safeBase}/review/identity/${shareId}`;
 }
 
+function buildAdminTeamSubmissionsPageUrl(baseUrl: string, teamId: number): string {
+    const safeBase = String(baseUrl || '').replace(/\/$/, '');
+    return `${safeBase}/admin/submissions?teamId=${encodeURIComponent(String(teamId))}`;
+}
+
 function pickMemberDisplayName(member: ExportTeamMemberRow): string {
     const th = `${member.first_name_th || ''} ${member.last_name_th || ''}`.trim();
     const en = `${member.first_name_en || ''} ${member.last_name_en || ''}`.trim();
@@ -1176,15 +1181,9 @@ export async function exportCertificateCandidatesSheet(
         { header: 'member_email', key: 'member_email', width: 52 },
     ];
 
-    const hyperlinkStyle: Partial<ExcelJS.Font> = {
-        color: { argb: 'FF0563C1' },
-        underline: true,
-    };
-
     for (const team of teams) {
         const teamMembers = [...(membersByTeam.get(team.team_id) ?? [])].sort((a, b) => a.member_order - b.member_order);
-        const teamShareId = await getOrCreateTeamReviewShareId(db, team.team_id);
-        const reviewUrl = buildPublicTeamReviewPageUrl(publicBaseUrl, teamShareId);
+        const reviewUrl = buildAdminTeamSubmissionsPageUrl(publicBaseUrl, team.team_id);
         const row = sheet.addRow({
             team_id: team.team_id,
             team_code: team.team_code,
@@ -1197,10 +1196,10 @@ export async function exportCertificateCandidatesSheet(
 
         const reviewCell = row.getCell('review_link');
         reviewCell.value = {
-            text: 'Open Team Review',
+            text: reviewUrl,
             hyperlink: reviewUrl,
         };
-        reviewCell.font = hyperlinkStyle;
+        reviewCell.font = { color: { argb: 'FF0563C1' }, underline: true };
         row.getCell('member_names').alignment = { wrapText: true, vertical: 'top' };
         row.getCell('member_email').alignment = { wrapText: true, vertical: 'top' };
         row.height = 54;
