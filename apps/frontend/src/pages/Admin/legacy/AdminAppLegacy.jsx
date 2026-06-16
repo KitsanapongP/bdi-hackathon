@@ -772,8 +772,14 @@ function AdminLayout({ navGroups = adminNavGroups }) {
   const location = useLocation()
   const { adminUser, demoMode } = useAdminSession()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('admin_nav_collapsed') === '1' } catch { return false }
+  })
 
   useEffect(() => setMobileOpen(false), [location.pathname])
+  useEffect(() => {
+    try { localStorage.setItem('admin_nav_collapsed', collapsed ? '1' : '0') } catch { /* ignore */ }
+  }, [collapsed])
 
   const pageLabel = useMemo(() => {
     const map = {
@@ -812,16 +818,22 @@ function AdminLayout({ navGroups = adminNavGroups }) {
 
   return (
     <div className="admin-ui-page">
-        <div className={`admin-ui-shell ${mobileOpen ? 'mobile-open' : ''}`}>
+        <div className={`admin-ui-shell ${mobileOpen ? 'mobile-open' : ''} ${collapsed ? 'nav-collapsed' : ''}`}>
           <aside className="admin-ui-sidebar">
-            <div className="admin-ui-brand">
-              <div className="admin-ui-brand-icon">
-                <ShieldAlert size={18} />
-              </div>
-              <div>
-                <strong>Hackathon Admin</strong>
-                <span>Management Console</span>
-              </div>
+            <div className="admin-ui-sidebar-head">
+              <span className="admin-ui-sidebar-brand">
+                <ShieldAlert size={16} />
+                <span className="admin-ui-nav-label">Hackathon Admin</span>
+              </span>
+              <button
+                type="button"
+                className="admin-ui-nav-collapse-btn"
+                onClick={() => setCollapsed((prev) => !prev)}
+                aria-label="หุบ/กางเมนู"
+                title="หุบ/กางเมนู"
+              >
+                <Menu size={18} />
+              </button>
             </div>
 
             <nav>
@@ -833,10 +845,11 @@ function AdminLayout({ navGroups = adminNavGroups }) {
                       key={link.to}
                       to={link.to}
                       end={link.to === '/admin'}
+                      title={link.label}
                       className={({ isActive }) => (isActive ? 'active' : '')}
                     >
-                      <link.icon size={16} />
-                      {link.label}
+                      <link.icon size={18} />
+                      <span className="admin-ui-nav-label">{link.label}</span>
                     </NavLink>
                   ))}
                 </div>
@@ -846,7 +859,7 @@ function AdminLayout({ navGroups = adminNavGroups }) {
 
           <div className="admin-ui-main">
             <header className="admin-ui-topbar">
-              <button type="button" className="admin-ui-menu-btn" onClick={() => setMobileOpen((prev) => !prev)}>
+              <button type="button" className="admin-ui-menu-btn" onClick={() => setMobileOpen((prev) => !prev)} aria-label="เปิด/ปิดเมนู">
                 {mobileOpen ? <X size={18} /> : <Menu size={18} />}
               </button>
               <div className="admin-ui-topbar-title">
