@@ -69,7 +69,7 @@ import {
   useAdminSession,
   useAdminToast,
 } from '../shared/adminContexts'
-import PrivilegesPage from '../pages/PrivilegesPage'
+import PrivilegesManagePage from '../pages/PrivilegesManagePage'
 import SubmissionTasksPageView from '../pages/SubmissionTasksPageView'
 import {
   approvedTeamsSeed,
@@ -798,7 +798,8 @@ function AdminLayout({ navGroups = adminNavGroups }) {
       '/admin/selection': 'Team Selection',
       '/admin/submission-tasks': 'Submission Tasks',
       '/admin/notifications': 'Notification Settings',
-      '/admin/privileges': 'Privileges',
+      '/admin/privileges': 'จัดการสิทธิ์ / ของรางวัล',
+      '/admin/privileges/redeem': 'รับสิทธิ์ & สแกน',
       '/admin/audit': 'Audit Logs',
       '/admin/settings': 'Settings',
     }
@@ -844,7 +845,7 @@ function AdminLayout({ navGroups = adminNavGroups }) {
                     <NavLink
                       key={link.to}
                       to={link.to}
-                      end={link.to === '/admin'}
+                      end={link.to === '/admin' || link.end}
                       title={link.label}
                       className={({ isActive }) => (isActive ? 'active' : '')}
                     >
@@ -7220,8 +7221,7 @@ function NotificationSettingsPage() {
 }
 
 function PrivilegesAdminPage() {
-  const { pushToast } = useAdminToast()
-  return <PrivilegesPage pushToast={pushToast} />
+  return <PrivilegesManagePage />
 }
 
 function AuditLogsPage() {

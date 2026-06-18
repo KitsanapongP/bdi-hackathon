@@ -20,6 +20,12 @@
   --admin-ui-shadow: 0 18px 42px -24px rgba(2, 6, 23, 0.75);
 }
 
+/* Make native controls (select popups, scrollbars) follow dark mode within the
+   admin UI only, so user-facing pages are not affected. */
+.dark .admin-ui-page {
+  color-scheme: dark;
+}
+
 body:has(.admin-ui-page) {
   background: var(--admin-ui-bg);
 }

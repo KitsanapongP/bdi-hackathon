@@ -56,7 +56,7 @@ function toClaim(row: PrivilegeClaimAdminRow) {
     userName: row.user_name,
     teamCode: row.team_code,
     teamNameTh: row.team_name_th,
-    teamNameEn: row.team_name_th,
+    teamNameEn: row.team_name_en,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -163,7 +163,7 @@ export async function getMyPrivileges(db: DB, userId: number) {
       teamId: Number(team.team_id),
       teamCode: team.team_code,
       teamNameTh: team.team_name_th,
-      teamNameEn: team.team_name_th,
+      teamNameEn: team.team_name_en,
     },
     claims: claims.map(toClaim),
   };

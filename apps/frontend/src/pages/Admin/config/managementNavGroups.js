@@ -97,6 +97,22 @@ const managementNavGroups = [
     ],
   },
   {
+    title: 'สิทธิประโยชน์',
+    links: [
+      {
+        to: '/admin/privileges',
+        label: 'จัดการสิทธิ์/ของรางวัล',
+        icon: Gift,
+        end: true,
+      },
+      {
+        to: '/admin/privileges/redeem',
+        label: 'รับสิทธิ์ & สแกน',
+        icon: QrCode,
+      },
+    ],
+  },
+  {
     title: 'System',
     links: [
       {
@@ -108,11 +124,6 @@ const managementNavGroups = [
         to: '/admin/notification-logs',
         label: 'Notification Logs',
         icon: ScrollText,
-      },
-      {
-        to: '/admin/privileges',
-        label: 'Privileges',
-        icon: QrCode,
       },
     ],
   },

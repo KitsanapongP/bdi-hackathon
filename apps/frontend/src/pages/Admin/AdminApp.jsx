@@ -8,7 +8,8 @@ import AnnouncementsPage from './pages/AnnouncementsPage'
 import DashboardPage from './pages/DashboardPage'
 import NotificationLogsPage from './pages/NotificationLogsPage'
 import NotificationSettingsPage from './pages/NotificationSettingsPage'
-import PrivilegesAdminPage from './pages/PrivilegesAdminPage'
+import PrivilegesManagePage from './pages/PrivilegesManagePage'
+import PrivilegeRedeemPage from './pages/PrivilegeRedeemPage'
 import SelectionPage from './pages/SelectionPage'
 import StaticAboutPage from './pages/StaticAboutPage'
 import StaticCarouselsPage from './pages/StaticCarouselsPage'
@@ -44,7 +45,8 @@ function AdminAppRoutes() {
 
         <Route path="notifications" element={<NotificationSettingsPage />} />
         <Route path="notification-logs" element={<NotificationLogsPage />} />
-        <Route path="privileges" element={<PrivilegesAdminPage />} />
+        <Route path="privileges" element={<PrivilegesManagePage />} />
+        <Route path="privileges/redeem" element={<PrivilegeRedeemPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>

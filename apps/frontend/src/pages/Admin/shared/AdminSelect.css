@@ -1,0 +1,111 @@
+.admin-select {
+  position: relative;
+  display: inline-block;
+}
+
+.admin-select.is-full {
+  display: block;
+  width: 100%;
+}
+
+.admin-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--admin-ui-border);
+  border-radius: 10px;
+  background: var(--admin-ui-surface-soft);
+  color: var(--admin-ui-text);
+  font-size: 0.84rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.admin-select-trigger:hover {
+  border-color: color-mix(in srgb, var(--admin-ui-primary) 45%, var(--admin-ui-border));
+}
+
+.admin-select-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-select-icon {
+  flex-shrink: 0;
+  color: var(--admin-ui-muted);
+}
+
+.admin-select-label {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-select-label.is-placeholder {
+  color: var(--admin-ui-muted);
+}
+
+.admin-select-chevron {
+  flex-shrink: 0;
+  color: var(--admin-ui-muted);
+  transition: transform 0.15s ease;
+}
+
+.admin-select-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.admin-select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 40;
+  min-width: 100%;
+  max-width: min(320px, 90vw);
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  border: 1px solid var(--admin-ui-border);
+  border-radius: 12px;
+  background: var(--admin-ui-surface);
+  box-shadow: var(--admin-ui-shadow);
+}
+
+.admin-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--admin-ui-text);
+  font-size: 0.84rem;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-select-option:hover {
+  background: var(--admin-ui-surface-soft);
+}
+
+.admin-select-option.is-selected {
+  color: var(--admin-ui-primary);
+  font-weight: 600;
+  background: var(--admin-ui-primary-soft);
+}
+
+.admin-select-option svg {
+  flex-shrink: 0;
+}
