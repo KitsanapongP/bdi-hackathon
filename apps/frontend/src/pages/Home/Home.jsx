@@ -51,7 +51,7 @@ const config = {
         primary: '#7c3aed',
     },
     locale: {
-        nav: ['หน้าแรก', 'เกี่ยวกับ', 'ภาคีเครือข่าย', 'กำหนดการกิจกรรม', 'สถานที่จัดงาน', 'ตัวอย่างชุดข้อมูล', 'คำถามที่พบบ่อย', 'ลงทะเบียน'],
+        nav: ['หน้าแรก', 'เกี่ยวกับ', 'ภาคีเครือข่าย', 'คณะกรรมการ', 'กำหนดการกิจกรรม', 'สถานที่จัดงาน', 'ตัวอย่างชุดข้อมูล', 'คำถามที่พบบ่อย', 'ลงทะเบียน'],
         heroBadge: '🏆 BDI Young Innovator Hackathon',
         heroTitle: 'สถาบันข้อมูลขนาดใหญ่ (องค์การมหาชน) ร่วมกับวิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น\nขอเชิญนักเรียน นิสิต และนักศึกษา เข้าร่วมการแข่งขัน BDI Young Innovator Hackathon\nชิงถ้วยพระราชทาน สมเด็จพระกนิษฐาธิราชเจ้า กรมสมเด็จพระเทพรัตนราชสุดา ฯ สยามบรมราชกุมารี',
         ctaPrimary: 'ลงทะเบียนเลย',
@@ -1335,7 +1335,7 @@ function HomePage() {
         return () => clearTimeout(timer);
     }, [location.state?.scrollTo]);
 
-    const sectionIds = ['hero', 'about', null, 'schedule', null, null, null, 'register'];
+    const sectionIds = ['hero', 'about', null, null, 'schedule', null, null, null, 'register'];
 
     return (
         <div className="gt-page">
@@ -1391,8 +1391,8 @@ function HomePage() {
                         {config.locale.nav.map((label, i) => {
                             // REGISTRATION_CLOSED_UI: temporarily hide the register nav button.
                             // Restore old behavior by changing this back to:
-                            // if (i === 7 && user) return null; // hide ลงทะเบียน when logged in
-                            if (i === 7) return null;
+                            // if (i === 8 && user) return null; // hide ลงทะเบียน when logged in
+                            if (i === 8) return null;
 
                             const handleNavClick = () => {
                                 if (i === 1) {
@@ -1405,22 +1405,27 @@ function HomePage() {
                                     return;
                                 }
 
-                                if (i === 4) {
-                                    navigate('/home/venues');
+                                if (i === 3) {
+                                    navigate('/home/committee');
                                     return;
                                 }
 
                                 if (i === 5) {
-                                    navigate('/home/datasets');
+                                    navigate('/home/venues');
                                     return;
                                 }
 
                                 if (i === 6) {
-                                    navigate('/home/faqs');
+                                    navigate('/home/datasets');
                                     return;
                                 }
 
                                 if (i === 7) {
+                                    navigate('/home/faqs');
+                                    return;
+                                }
+
+                                if (i === 8) {
                                     navigate('/home/register');
                                     return;
                                 }
@@ -1482,7 +1487,7 @@ function HomePage() {
                 <div className={`gt-pill-collapse ${mobileOpen ? 'open' : ''}`}>
                     <div className="gt-pill-collapse-inner">
                         {config.locale.nav.map((label, i) => {
-                            const isRegister = i === 7;
+                            const isRegister = i === 8;
                             // REGISTRATION_CLOSED_UI: temporarily hide the mobile register nav item.
                             // Old behavior below converted the register item to My Team for logged-in users
                             // and showed the register link for guests.
@@ -1508,25 +1513,31 @@ function HomePage() {
                                     return;
                                 }
 
-                                if (i === 4) {
-                                    navigate('/home/venues');
+                                if (i === 3) {
+                                    navigate('/home/committee');
                                     setMobileOpen(false);
                                     return;
                                 }
 
                                 if (i === 5) {
-                                    navigate('/home/datasets');
+                                    navigate('/home/venues');
                                     setMobileOpen(false);
                                     return;
                                 }
 
                                 if (i === 6) {
-                                    navigate('/home/faqs');
+                                    navigate('/home/datasets');
                                     setMobileOpen(false);
                                     return;
                                 }
 
                                 if (i === 7) {
+                                    navigate('/home/faqs');
+                                    setMobileOpen(false);
+                                    return;
+                                }
+
+                                if (i === 8) {
                                     navigate('/home/register');
                                     setMobileOpen(false);
                                     return;

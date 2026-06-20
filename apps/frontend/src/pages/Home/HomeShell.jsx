@@ -45,6 +45,7 @@ function HomeShell({ children }) {
         { key: 'home', label: 'หน้าแรก', onClick: () => navigate('/home') },
         { key: 'about', label: 'เกี่ยวกับ', onClick: () => navigate('/home/about') },
         { key: 'sponsors', label: 'ภาคีเครือข่าย', onClick: () => navigate('/home/partner') },
+        { key: 'committee', label: 'คณะกรรมการ', onClick: () => navigate('/home/committee') },
         { key: 'schedule', label: 'กำหนดการกิจกรรม', onClick: () => navigate('/home', { state: { scrollTo: 'schedule' } }) },
         { key: 'venues', label: 'สถานที่จัดงาน', onClick: () => navigate('/home/venues') },
         { key: 'datasets', label: 'ตัวอย่างชุดข้อมูล', onClick: () => navigate('/home/datasets') },

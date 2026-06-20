@@ -7,6 +7,7 @@ import AboutPage from './pages/Home/AboutPage'
 import ContactPage from './pages/Home/ContactPage'
 import FAQPage from './pages/Home/FAQPage'
 import SponsorsPage from './pages/Home/SponsorsPage'
+import CommitteePage from './pages/Home/CommitteePage'
 import DatasetsPage from './pages/Home/DatasetsPage'
 import VenuesPage from './pages/Home/VenuesPage'
 import NotificationsPage from './pages/Home/NotificationsPage'
@@ -36,6 +37,7 @@ function App() {
         <Route path="/home/faqs" element={<FAQPage />} />
         <Route path="/home/partner" element={<SponsorsPage />} />
         <Route path="/home/sponsors" element={<Navigate to="/home/partner" replace />} />
+        <Route path="/home/committee" element={<CommitteePage />} />
         <Route path="/home/venues" element={<VenuesPage />} />
         <Route path="/home/datasets" element={<DatasetsPage />} />
         <Route path="/home/datasets/:slug" element={<DatasetsPage />} />
