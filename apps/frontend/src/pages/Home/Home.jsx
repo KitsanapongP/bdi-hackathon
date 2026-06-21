@@ -7,10 +7,6 @@ import {
     Users,
     Trophy,
     Target,
-    BedDouble,
-    Car,
-    UtensilsCrossed,
-    Gift,
     Award,
     Rocket,
     Home,
@@ -1858,16 +1854,16 @@ function HomePage() {
                         </div>
 
                         <div className="gt-benefits-wrap gt-reveal">
-                            <article className="gt-benefit-card gt-benefit-card-featured" aria-label="สิทธิประโยชน์ของผู้ที่ลงทะเบียนและเข้าร่วมการอบรม">
-                                <h3 className="gt-training-benefit-heading">
-                                    <span className="gt-training-benefit-heading-icon"><Award size={18} /></span>
-                                    ประกาศนียบัตรสำหรับผู้ผ่านเงื่อนไขการอบรม
-                                </h3>
-                                <p>
-                                    ผู้ลงทะเบียนที่เข้าร่วมฝึกอบรมวันที่ 24 พฤษภาคม ครบทุกหัวข้อ และมีการส่งโครงร่างโดยหัวหน้าทีม จะได้รับประกาศนียบัตร
-                                    <br />
-                                    <strong>(โครงร่างนั้นต้องไม่ใช้ AI ในการสร้าง)</strong>
-                                </p>
+                            <article className="gt-benefit-card gt-benefit-card-featured gt-training-benefit-item" aria-label="สิทธิประโยชน์ของผู้ที่ลงทะเบียนและเข้าร่วมการอบรม">
+                                <span className="gt-training-benefit-heading-icon"><Award size={22} /></span>
+                                <div className="gt-training-benefit-body">
+                                    <h3 className="gt-training-benefit-heading">ประกาศนียบัตรสำหรับผู้ผ่านเงื่อนไขการอบรม</h3>
+                                    <p>
+                                        ผู้ลงทะเบียนที่เข้าร่วมฝึกอบรมวันที่ 24 พฤษภาคม ครบทุกหัวข้อ และมีการส่งโครงร่างโดยหัวหน้าทีม จะได้รับประกาศนียบัตร
+                                        <br />
+                                        <strong>(โครงร่างนั้นต้องไม่ใช้ AI ในการสร้าง)</strong>
+                                    </p>
+                                </div>
                             </article>
                         </div>
                     </section>
@@ -1879,53 +1875,44 @@ function HomePage() {
                             <p>ครอบคลุมทั้งที่พัก การเดินทาง และการสนับสนุนระหว่างการแข่งขัน</p>
                         </div>
 
-                        <div className="gt-benefits-wrap gt-reveal">
-                            <div className="gt-benefits-grid" aria-label="สิทธิประโยชน์ของผู้เข้าร่วมแข่งขัน">
-                                <article className="gt-benefit-card">
-                                    <div className="gt-benefit-card-head">
-                                        <span className="gt-benefit-index">01</span>
-                                        <span className="gt-benefit-icon"><BedDouble size={18} /></span>
+                        <div className="gt-eligibility-wrap gt-reveal">
+                            <ul className="gt-eligibility-list" aria-label="สิทธิประโยชน์ของผู้เข้าร่วมแข่งขัน">
+                                <li className="gt-eligibility-item">
+                                    <span className="gt-eligibility-item-index">01</span>
+                                    <div className="gt-eligibility-item-body">
+                                        <h4>ที่พัก</h4>
+                                        <p>จำนวน 3 คืน (ห้องคู่)</p>
                                     </div>
-                                    <h3>ที่พัก</h3>
-                                    <p>จำนวน 3 คืน (ห้องคู่)</p>
-                                </article>
-
-                                <article className="gt-benefit-card">
-                                    <div className="gt-benefit-card-head">
-                                        <span className="gt-benefit-index">02</span>
-                                        <span className="gt-benefit-icon"><Car size={18} /></span>
+                                </li>
+                                <li className="gt-eligibility-item">
+                                    <span className="gt-eligibility-item-index">02</span>
+                                    <div className="gt-eligibility-item-body">
+                                        <h4>ค่าเดินทาง</h4>
+                                        <p>ตามที่จ่ายจริง ทีมละไม่เกิน 5,000 บาท</p>
                                     </div>
-                                    <h3>ค่าเดินทาง</h3>
-                                    <p>ตามที่จ่ายจริง ทีมละไม่เกิน 5,000 บาท</p>
-                                </article>
-
-                                <article className="gt-benefit-card">
-                                    <div className="gt-benefit-card-head">
-                                        <span className="gt-benefit-index">03</span>
-                                        <span className="gt-benefit-icon"><UtensilsCrossed size={18} /></span>
+                                </li>
+                                <li className="gt-eligibility-item">
+                                    <span className="gt-eligibility-item-index">03</span>
+                                    <div className="gt-eligibility-item-body">
+                                        <h4>อาหารและเครื่องดื่ม</h4>
+                                        <p>จัดเตรียมให้ตลอดการเข้าร่วมกิจกรรม</p>
                                     </div>
-                                    <h3>อาหารและเครื่องดื่ม</h3>
-                                    <p>จัดเตรียมให้ตลอดการเข้าร่วมกิจกรรม</p>
-                                </article>
-
-                                <article className="gt-benefit-card">
-                                    <div className="gt-benefit-card-head">
-                                        <span className="gt-benefit-index">04</span>
-                                        <span className="gt-benefit-icon"><Gift size={18} /></span>
+                                </li>
+                                <li className="gt-eligibility-item">
+                                    <span className="gt-eligibility-item-index">04</span>
+                                    <div className="gt-eligibility-item-body">
+                                        <h4>ของที่ระลึก</h4>
+                                        <p>สำหรับผู้เข้าร่วมแข่งขันที่ผ่านการคัดเลือก</p>
                                     </div>
-                                    <h3>ของที่ระลึก</h3>
-                                    <p>สำหรับผู้เข้าร่วมแข่งขันที่ผ่านการคัดเลือก</p>
-                                </article>
-
-                                <article className="gt-benefit-card gt-benefit-card-featured">
-                                    <div className="gt-benefit-card-head">
-                                        <span className="gt-benefit-index">05</span>
-                                        <span className="gt-benefit-icon"><Trophy size={18} /></span>
+                                </li>
+                                <li className="gt-eligibility-item is-highlight">
+                                    <span className="gt-eligibility-item-index">05</span>
+                                    <div className="gt-eligibility-item-body">
+                                        <h4>ชิงถ้วยพระราชทาน กรมสมเด็จพระเทพฯ พร้อมเงินรางวัล</h4>
+                                        <p>เวทีสำคัญระดับประเทศ เพื่อสร้างผลงานที่สร้างผลกระทบจริง</p>
                                     </div>
-                                    <h3>ชิงถ้วยพระราชทาน กรมสมเด็จพระเทพฯ พร้อมเงินรางวัล</h3>
-                                    <p>เวทีสำคัญระดับประเทศ เพื่อสร้างผลงานที่สร้างผลกระทบจริง</p>
-                                </article>
-                            </div>
+                                </li>
+                            </ul>
                         </div>
                     </section>
 
