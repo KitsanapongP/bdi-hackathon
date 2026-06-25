@@ -1105,6 +1105,9 @@ export async function exportTeamsContactSheet(
         { header: 'team_code', key: 'team_code', width: 14 },
         { header: 'team_name_th', key: 'team_name_th', width: 28 },
         { header: 'team_status', key: 'team_status', width: 14 },
+        { header: 'track_count', key: 'track_count', width: 12 },
+        { header: 'track_1', key: 'track_1', width: 12 },
+        { header: 'track_2', key: 'track_2', width: 12 },
         { header: 'role', key: 'role', width: 10 },
         { header: 'user_code', key: 'user_code', width: 14 },
         { header: 'name_th', key: 'name_th', width: 24 },
@@ -1118,6 +1121,12 @@ export async function exportTeamsContactSheet(
     ];
 
     for (const team of teams) {
+        const teamWorks = worksByTeam.get(team.team_id);
+        const teamTrack1 = teamWorks?.get('work_1')?.submission_track || '';
+        const teamTrack2 = teamWorks?.get('work_2')?.submission_track || '';
+        const teamTrackCount = (['work_1', 'work_2'] as ReviewWorkSlot[]).filter(
+            (slot) => Boolean(teamWorks?.get(slot)?.submission_track),
+        ).length;
         for (const member of getSortedMembers(team.team_id)) {
             const nameTh = `${member.first_name_th || ''} ${member.last_name_th || ''}`.trim();
             const nameEn = `${member.first_name_en || ''} ${member.last_name_en || ''}`.trim();
@@ -1125,6 +1134,9 @@ export async function exportTeamsContactSheet(
                 team_code: team.team_code,
                 team_name_th: team.team_name_th || '',
                 team_status: team.status,
+                track_count: teamTrackCount,
+                track_1: teamTrack1,
+                track_2: teamTrack2,
                 role: member.role,
                 user_code: member.user_code || '',
                 name_th: nameTh || pickMemberDisplayName(member),
