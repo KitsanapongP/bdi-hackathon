@@ -1056,6 +1056,7 @@ export async function exportTeamsContactSheet(
         { header: 'team_name_th', key: 'team_name_th', width: 28 },
         { header: 'team_name_en', key: 'team_name_en', width: 28 },
         { header: 'status', key: 'status', width: 14 },
+        { header: 'track_count', key: 'track_count', width: 12 },
         { header: 'track_1', key: 'track_1', width: 12 },
         { header: 'track_2', key: 'track_2', width: 12 },
         { header: 'member_count', key: 'member_count', width: 12 },
@@ -1080,6 +1081,9 @@ export async function exportTeamsContactSheet(
             team_name_th: team.team_name_th || '',
             team_name_en: team.team_name_en || '',
             status: team.status,
+            track_count: (['work_1', 'work_2'] as ReviewWorkSlot[]).filter(
+                (slot) => Boolean(works?.get(slot)?.submission_track),
+            ).length,
             track_1: works?.get('work_1')?.submission_track || '',
             track_2: works?.get('work_2')?.submission_track || '',
             member_count: teamMembers.length,

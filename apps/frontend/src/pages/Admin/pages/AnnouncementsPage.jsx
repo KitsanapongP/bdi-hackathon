@@ -372,7 +372,7 @@ export default function AnnouncementsPage() {
         <h3>Export ข้อมูลทีม + อีเมลสมาชิก (สำหรับส่งเมล manual)</h3>
         <div className="admin-ui-form">
           <p className="admin-ui-text-muted" style={{ margin: 0 }}>
-            ไฟล์ Excel จะอิงตามสถานะที่เลือกด้านบน (หรือสถานะของทีมที่เลือก) มี 2 ชีต: สรุปทีม และ รายชื่อสมาชิกพร้อมอีเมล
+            ไฟล์ Excel จะอิงตามสถานะที่เลือกด้านบน (หรือสถานะของทีมที่เลือก) มี 2 ชีต: สรุปทีม (รวมจำนวน track ที่ส่ง และ track ลำดับ 1/2) และ รายชื่อสมาชิกพร้อมอีเมล
           </p>
           <button type="button" className="admin-ui-btn" disabled={exporting || loading} onClick={exportContactSheet}>
             <Download size={14} />
