@@ -20,7 +20,7 @@ INSERT INTO event_schedule_days
 VALUES
   (@schedule_id, '2026-07-03', 'วันศุกร์ที่ 3 กรกฎาคม 2569 ณ อุทยานวิทยาศาสตร์ มหาวิทยาลัยขอนแก่น', 'Friday 3 July 2026', 10, 1),
   (@schedule_id, '2026-07-04', 'วันเสาร์ที่ 4 กรกฎาคม 2569 ณ อุทยานวิทยาศาสตร์ มหาวิทยาลัยขอนแก่น', 'Saturday 4 July 2026', 20, 1),
-  (@schedule_id, '2026-07-05', 'วันอาทิตย์ที่ 5 กรกฎาคม 2569 ณ อุทยานวิทยาศาสตร์ มหาวิทยาลัยขอนแก่น', 'Sunday 5 July 2026', 30, 1)
+  (@schedule_id, '2026-07-05', 'วันอาทิตย์ที่ 5 กรกฎาคม 2569', 'Sunday 5 July 2026', 30, 1)
 ON DUPLICATE KEY UPDATE
   day_name_th = VALUES(day_name_th),
   day_name_en = VALUES(day_name_en),
@@ -55,7 +55,7 @@ VALUES
   (@schedule_id, @day_20260704, NULL, '09:00:00', '09:15:00', 'ลงทะเบียนเข้าร่วมงาน', 'Registration', NULL, NULL, NULL, NULL, NULL, NULL, 'public', 0, 210, 1, NULL, NULL, '09.00 - 09.15 น.', NULL),
   (@schedule_id, @day_20260704, NULL, '09:15:00', '12:00:00', 'Mentor Walk-in Session #2: พี่เลี้ยงช่วยดูแลแต่ละทีม', 'Mentor Walk-in Session #2', NULL, NULL, NULL, NULL, NULL, NULL, 'public', 0, 220, 1, NULL, NULL, '09.15 - 12.00 น.', NULL),
   (@schedule_id, @day_20260704, NULL, '12:00:00', '13:00:00', 'รับประทานอาหารกลางวัน', 'Lunch', NULL, NULL, NULL, NULL, NULL, NULL, 'public', 0, 230, 1, NULL, NULL, '12.00 - 13.00 น.', NULL),
-  (@schedule_id, @day_20260704, NULL, '13:00:00', '13:30:00', 'ปิดรับผลงาน ทีมส่ง Repository / Demo Link / Slide', 'Submission deadline for Repository, Demo Link and Slide', NULL, NULL, NULL, NULL, NULL, NULL, 'public', 0, 240, 1, NULL, NULL, '11:00 - 13.30 น.', NULL),
+  (@schedule_id, @day_20260704, NULL, '13:00:00', '13:30:00', 'ปิดรับผลงาน ทีมส่ง Repository / Demo Link / Slide', 'Submission deadline for Repository, Demo Link and Slide', NULL, NULL, NULL, NULL, NULL, NULL, 'public', 0, 240, 1, NULL, NULL, '13.00 - 13.30 น.', NULL),
   (@schedule_id, @day_20260704, NULL, '13:30:00', '17:30:00', 'Final Pitching: แต่ละทีมนำเสนอผลงาน 5 นาที + Q&A 5 นาที ต่อหน้าคณะกรรมการ', 'Final pitching', NULL, NULL, NULL, NULL, NULL, NULL, 'public', 0, 250, 1, NULL, NULL, '13.30 - 17.30 น.', NULL),
   (@schedule_id, @day_20260704, NULL, '17:30:00', '18:00:00', 'คณะกรรมการพิจารณาตัดสิน', 'Judging session', NULL, NULL, NULL, NULL, NULL, NULL, 'public', 0, 260, 1, NULL, NULL, '17.30 - 18.00 น.', NULL),
   (@schedule_id, @day_20260704, NULL, '18:00:00', '18:30:00', CONCAT('พิธีอัญเชิญถ้วยพระราชทานสมเด็จพระกนิษฐาธิราชเจ้า กรมสมเด็จพระเทพรัตนราชสุดาฯ', CHAR(10), '- เชิญถ้วยพระราชทานผู้ชนะเลิศการแข่งขัน', CHAR(10), 'โดย ดร.สุนทรีย์ ส่งเสริม รองผู้อำนวยการสถาบันข้อมูลขนาดใหญ่', CHAR(10), '- เปิดกรวยดอกไม้ เบื้องหน้าพระบรมฉายาลักษณ์ สมเด็จพระกนิษฐาธิราชเจ้า กรมสมเด็จพระเทพรัตนราชสุดาฯ เจ้าฟ้ามหาจักรีสิรินธรฯ สยามบรมราชกุมารี', CHAR(10), 'โดย รองศาสตราจารย์ชาญชัย พานทองวิริยะกุล อธิการบดีมหาวิทยาลัยขอนแก่น'), 'Royal trophy procession and ceremonial offering', NULL, NULL, NULL, NULL, NULL, NULL, 'public', 0, 270, 1, NULL, NULL, '18.00 - 18.30 น.', NULL),
