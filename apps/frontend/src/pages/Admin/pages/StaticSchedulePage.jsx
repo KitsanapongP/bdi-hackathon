@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarPlus, Clock, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react'
+import { CalendarPlus, ChevronDown, ChevronUp, Clock, GripVertical, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import PageHeader from '../shared/PageHeader'
 import LoadingState from '../shared/LoadingState'
@@ -42,6 +42,8 @@ export default function StaticSchedulePage() {
   const [dayModal, setDayModal] = useState(null) // { mode:'create'|'edit', dayId?, form }
   const [itemModal, setItemModal] = useState(null) // { mode, dayId, itemId?, form }
   const [confirm, setConfirm] = useState(null) // { kind:'day'|'item', id, label }
+  const [dragItem, setDragItem] = useState(null) // { dayId, itemId }
+  const [overItemId, setOverItemId] = useState(null)
 
   const load = useCallback(async () => {
     try {
@@ -81,7 +83,7 @@ export default function StaticSchedulePage() {
       items: bundle.items
         .filter((it) => it.dayId === day.id)
         .slice()
-        .sort((a, b) => String(a.startTime).localeCompare(String(b.startTime)) || a.sortOrder - b.sortOrder),
+        .sort((a, b) => (a.sortOrder - b.sortOrder) || String(a.startTime).localeCompare(String(b.startTime))),
     }))
   }, [bundle, selectedSchedule])
 
@@ -158,7 +160,8 @@ export default function StaticSchedulePage() {
     try {
       setBusy(true)
       if (itemModal.mode === 'create') {
-        await apiCall('POST', '/api/admin/schedules/items', { dayId: itemModal.dayId, ...body })
+        const dayItemCount = daysWithItems.find((d) => d.id === itemModal.dayId)?.items.length ?? 0
+        await apiCall('POST', '/api/admin/schedules/items', { dayId: itemModal.dayId, sortOrder: dayItemCount, ...body })
       } else {
         await apiCall('PATCH', `/api/admin/schedules/items/${itemModal.itemId}`, body)
       }
@@ -170,6 +173,64 @@ export default function StaticSchedulePage() {
     } finally {
       setBusy(false)
     }
+  }
+
+  // เขียนลำดับใหม่ของกิจกรรมในวันเดียวกันแบบ optimistic — อัปเดต state ทันที ไม่รีโหลดทั้งหน้า
+  const applyItemOrder = async (day, orderedItems) => {
+    const posById = new Map(orderedItems.map((it, idx) => [it.id, idx]))
+    const updates = orderedItems
+      .map((it, idx) => ({ id: it.id, sortOrder: idx }))
+      .filter((u) => {
+        const original = day.items.find((it) => it.id === u.id)
+        return original && original.sortOrder !== u.sortOrder
+      })
+    if (!updates.length) return
+
+    // อัปเดตเฉพาะ sortOrder ของกิจกรรมในวันนี้ — ลำดับใหม่จะสะท้อนทันทีโดยไม่ refetch
+    setBundle((prev) => ({
+      ...prev,
+      items: prev.items.map((it) => (posById.has(it.id) ? { ...it, sortOrder: posById.get(it.id) } : it)),
+    }))
+
+    try {
+      await Promise.all(updates.map((u) => apiCall('PATCH', `/api/admin/schedules/items/${u.id}`, { sortOrder: u.sortOrder })))
+    } catch (error) {
+      pushToast({ variant: 'danger', title: error?.message || 'จัดลำดับไม่สำเร็จ' })
+      load()
+    }
+  }
+
+  // ปุ่มลูกศรขึ้น/ลง (สำรองสำหรับทัช/คีย์บอร์ด)
+  const moveItem = (day, index, dir) => {
+    const target = index + dir
+    if (target < 0 || target >= day.items.length) return
+    const ordered = day.items.slice()
+    ;[ordered[index], ordered[target]] = [ordered[target], ordered[index]]
+    applyItemOrder(day, ordered)
+  }
+
+  // ลากเพื่อจัดลำดับภายในวันเดียวกัน
+  const handleItemDrop = (day) => {
+    if (!dragItem || dragItem.dayId !== day.id || !overItemId || dragItem.itemId === overItemId) {
+      resetItemDrag()
+      return
+    }
+    const ordered = day.items.slice()
+    const from = ordered.findIndex((it) => it.id === dragItem.itemId)
+    const to = ordered.findIndex((it) => it.id === overItemId)
+    if (from < 0 || to < 0) {
+      resetItemDrag()
+      return
+    }
+    const [moved] = ordered.splice(from, 1)
+    ordered.splice(to, 0, moved)
+    applyItemOrder(day, ordered)
+    resetItemDrag()
+  }
+
+  const resetItemDrag = () => {
+    setDragItem(null)
+    setOverItemId(null)
   }
 
   const doDelete = async () => {
@@ -286,8 +347,25 @@ export default function StaticSchedulePage() {
                   {day.items.length === 0 ? (
                     <div className="admin-sched-item admin-sched-item-empty">ยังไม่มีกิจกรรมในวันนี้</div>
                   ) : (
-                    day.items.map((item) => (
-                      <div key={item.id} className="admin-sched-item">
+                    day.items.map((item, itemIdx) => (
+                      <div
+                        key={item.id}
+                        className={`admin-sched-item ${dragItem?.itemId === item.id ? 'is-dragging' : ''} ${overItemId === item.id && dragItem && dragItem.dayId === day.id && dragItem.itemId !== item.id ? 'is-drop-target' : ''}`}
+                        draggable
+                        onDragStart={() => setDragItem({ dayId: day.id, itemId: item.id })}
+                        onDragOver={(event) => {
+                          if (!dragItem || dragItem.dayId !== day.id) return
+                          event.preventDefault()
+                          if (overItemId !== item.id) setOverItemId(item.id)
+                        }}
+                        onDrop={() => handleItemDrop(day)}
+                        onDragEnd={resetItemDrag}
+                      >
+                        <span className="admin-sched-item-grip" title="ลากเพื่อจัดลำดับ" aria-hidden="true"><GripVertical size={14} /></span>
+                        <div className="admin-sched-item-order">
+                          <button type="button" className="admin-ui-mini-btn" disabled={busy || itemIdx === 0} title="เลื่อนขึ้น" onClick={() => moveItem(day, itemIdx, -1)}><ChevronUp size={13} /></button>
+                          <button type="button" className="admin-ui-mini-btn" disabled={busy || itemIdx === day.items.length - 1} title="เลื่อนลง" onClick={() => moveItem(day, itemIdx, 1)}><ChevronDown size={13} /></button>
+                        </div>
                         <div className="admin-sched-item-time">
                           {isMilestone
                             ? (item.displayDateLabelTh?.trim() || formatThaiDate(day.dayDate))

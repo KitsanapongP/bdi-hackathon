@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, Link2, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
+import AdminConfirmModal from '../shared/AdminConfirmModal'
 import DetailDrawer from '../shared/DetailDrawer'
 import PageHeader from '../shared/PageHeader'
 import StatusBadge from '../shared/StatusBadge'
@@ -16,6 +17,7 @@ export default function StaticSponsorsPage() {
   const [editingGroupId, setEditingGroupId] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [confirmState, setConfirmState] = useState(null)
   const [groupErrors, setGroupErrors] = useState({})
   const [groupForm, setGroupForm] = useState({
     code: '',
@@ -334,25 +336,19 @@ export default function StaticSponsorsPage() {
     }
   }
 
-  const moveItem = async (id, direction) => {
-    const index = items.findIndex((item) => item.id === id)
-    if (index === -1) return
-    const swapIndex = direction === 'up' ? index - 1 : index + 1
-    if (swapIndex < 0 || swapIndex >= items.length) return
-
-    const next = [...items]
-    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
-    const reordered = next.map((item, idx) => ({ ...item, displayOrder: idx + 1 }))
+  // optimistic — บันทึกลำดับใหม่ ดึงข้อมูลใหม่เฉพาะตอนพลาด
+  const persistSponsorOrder = async (reordered) => {
     setItems(reordered)
-
     try {
       const updates = reordered.map((item) => ({ id: item.id, displayOrder: item.displayOrder }))
-      await fetch(apiUrl('/api/admin/sponsors/reorder'), {
+      const response = await fetch(apiUrl('/api/admin/sponsors/reorder'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ updates }),
       })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.ok) throw new Error(data?.message || 'จัดลำดับไม่สำเร็จ')
     } catch (error) {
       console.error('Failed to reorder sponsors:', error)
       pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับ' })
@@ -360,31 +356,49 @@ export default function StaticSponsorsPage() {
     }
   }
 
-  const moveGroup = async (id, direction) => {
-    const index = groupItems.findIndex((item) => item.id === id)
+  const handleReorderSponsors = (nextRows) => persistSponsorOrder(nextRows.map((item, idx) => ({ ...item, displayOrder: idx + 1 })))
+
+  const moveItem = (id, direction) => {
+    const index = items.findIndex((item) => item.id === id)
     if (index === -1) return
     const swapIndex = direction === 'up' ? index - 1 : index + 1
-    if (swapIndex < 0 || swapIndex >= groupItems.length) return
-
-    const next = [...groupItems]
+    if (swapIndex < 0 || swapIndex >= items.length) return
+    const next = [...items]
     ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
-    const reordered = next.map((item, idx) => ({ ...item, sortOrder: idx + 1 }))
-    setGroupItems(reordered)
+    handleReorderSponsors(next)
+  }
 
+  const persistGroupOrder = async (reordered) => {
+    setGroupItems(reordered)
     try {
       const updates = reordered.map((item) => ({ id: item.id, sortOrder: item.sortOrder }))
-      await fetch(apiUrl('/api/admin/sponsor-groups/reorder'), {
+      const response = await fetch(apiUrl('/api/admin/sponsor-groups/reorder'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ updates }),
       })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.ok) throw new Error(data?.message || 'จัดลำดับไม่สำเร็จ')
+      // ลำดับกลุ่มมีผลต่อการเรียง sponsor ในตารางล่าง — รีเฟรชเฉพาะ sponsor เพื่อให้สะท้อนลำดับใหม่
       fetchSponsors()
     } catch (error) {
       console.error('Failed to reorder sponsor groups:', error)
       pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับกลุ่มภาคี' })
       fetchSponsorGroups()
     }
+  }
+
+  const handleReorderGroups = (nextRows) => persistGroupOrder(nextRows.map((item, idx) => ({ ...item, sortOrder: idx + 1 })))
+
+  const moveGroup = (id, direction) => {
+    const index = groupItems.findIndex((item) => item.id === id)
+    if (index === -1) return
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (swapIndex < 0 || swapIndex >= groupItems.length) return
+    const next = [...groupItems]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    handleReorderGroups(next)
   }
 
   return (
@@ -407,6 +421,8 @@ export default function StaticSponsorsPage() {
 
       <AdminDataTable
         loading={loading}
+        reorderable
+        onReorder={handleReorderGroups}
         rows={[...groupItems].sort((a, b) => a.sortOrder - b.sortOrder)}
         searchKeys={['nameTh', 'nameEn', 'code']}
         searchPlaceholder="ค้นหาชื่อกลุ่มภาคี"
@@ -538,6 +554,8 @@ export default function StaticSponsorsPage() {
 
       <AdminDataTable
         loading={loading}
+        reorderable
+        onReorder={handleReorderSponsors}
         rows={[...items].sort((a, b) => {
           const leftGroupOrder = Number(a.sponsorGroup?.sortOrder ?? 999999)
           const rightGroupOrder = Number(b.sponsorGroup?.sortOrder ?? 999999)
@@ -608,7 +626,7 @@ export default function StaticSponsorsPage() {
                 <button type="button" onClick={() => openEdit(row)} aria-label="edit">
                   <Pencil size={14} />
                 </button>
-                <button type="button" onClick={() => remove(row.id)} aria-label="delete">
+                <button type="button" onClick={() => setConfirmState({ id: row.id, label: row.nameTh || row.name || '' })} aria-label="delete">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -782,6 +800,21 @@ export default function StaticSponsorsPage() {
           </div>
         </div>
       </DetailDrawer>
+
+      <AdminConfirmModal
+        open={Boolean(confirmState)}
+        danger
+        title="ยืนยันการลบภาคีเครือข่าย"
+        description={confirmState ? `ต้องการลบ "${confirmState.label || '-'}" ใช่หรือไม่?` : ''}
+        confirmLabel="ลบ"
+        cancelLabel="ยกเลิก"
+        onCancel={() => setConfirmState(null)}
+        onConfirm={() => {
+          const id = confirmState?.id
+          setConfirmState(null)
+          if (id != null) remove(id)
+        }}
+      />
     </div>
   )
 }

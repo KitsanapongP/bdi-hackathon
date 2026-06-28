@@ -1302,6 +1302,57 @@ body:has(.admin-ui-page) {
   gap: 5px;
 }
 
+/* About editor toolbar + live preview */
+.admin-about-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.admin-about-live-preview {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.admin-about-live-preview .admin-ui-markdown-preview {
+  border: 1px dashed var(--admin-ui-border);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--admin-ui-surface-soft);
+}
+
+/* Drag-to-reorder (AdminDataTable) */
+.admin-ui-reorder-th {
+  width: 34px;
+}
+.admin-ui-reorder-cell {
+  width: 34px;
+  text-align: center;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+.admin-ui-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--admin-ui-muted);
+  cursor: grab;
+}
+.admin-ui-drag-handle.is-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.admin-ui-table tbody tr[draggable='true'] {
+  cursor: grab;
+}
+.admin-ui-table tbody tr.is-dragging {
+  opacity: 0.5;
+}
+.admin-ui-table tbody tr.is-drop-target td {
+  box-shadow: inset 0 2px 0 0 var(--admin-ui-primary, #2563eb);
+}
+
 .admin-ui-row-actions button {
   width: 28px;
   height: 28px;
@@ -2874,13 +2925,32 @@ body:has(.admin-ui-page) {
 }
 .admin-sched-item {
   display: grid;
-  grid-template-columns: minmax(120px, 180px) 1fr auto;
+  grid-template-columns: auto auto minmax(120px, 180px) 1fr auto;
   align-items: center;
   gap: 12px;
   padding: 9px 12px;
   border: 1px solid var(--admin-ui-border);
   border-radius: 10px;
   background: var(--admin-ui-surface-soft);
+}
+.admin-sched-item[draggable='true'] { cursor: grab; }
+.admin-sched-item.is-dragging { opacity: 0.5; }
+.admin-sched-item.is-drop-target { box-shadow: inset 0 0 0 2px var(--admin-ui-primary, #2563eb); }
+.admin-sched-item-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--admin-ui-muted);
+  cursor: grab;
+}
+.admin-sched-item-order {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.admin-sched-item-order .admin-ui-mini-btn {
+  padding: 1px 4px;
+  line-height: 1;
 }
 .admin-sched-item-empty {
   display: block;

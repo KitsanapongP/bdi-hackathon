@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, Contact, Globe, Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
+import AdminConfirmModal from '../shared/AdminConfirmModal'
 import DetailDrawer from '../shared/DetailDrawer'
 import EmptyState from '../shared/EmptyState'
 import PageHeader from '../shared/PageHeader'
@@ -20,6 +21,7 @@ export default function StaticContactsPage() {
   const [editingChannelId, setEditingChannelId] = useState(null)
   const [contactErrors, setContactErrors] = useState({})
   const [channelErrors, setChannelErrors] = useState({})
+  const [confirmState, setConfirmState] = useState(null)
   const [contactForm, setContactForm] = useState({
     contactCategory: 'event_inquiry',
     displayNameTh: '',
@@ -224,16 +226,8 @@ export default function StaticContactsPage() {
     }
   }
 
-  const moveContact = async (id, direction) => {
-    const index = sortedContacts.findIndex((item) => item.id === id)
-    const swapIndex = direction === 'up' ? index - 1 : index + 1
-    if (index < 0 || swapIndex < 0 || swapIndex >= sortedContacts.length) return
-
-    const next = [...sortedContacts]
-    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
-    const reordered = next.map((item, idx) => ({ ...item, sortOrder: idx + 1 }))
+  const persistContactOrder = async (reordered) => {
     setItems(reordered)
-
     try {
       const updates = reordered.map((item) => ({ id: item.id, sortOrder: item.sortOrder }))
       const response = await fetch(apiUrl('/api/admin/contacts/reorder'), {
@@ -242,15 +236,24 @@ export default function StaticContactsPage() {
         credentials: 'include',
         body: JSON.stringify({ updates }),
       })
-      const data = await response.json()
-      if (!data.ok) {
-        throw new Error(data.message || 'จัดลำดับข้อมูลไม่สำเร็จ')
-      }
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.ok) throw new Error(data?.message || 'จัดลำดับข้อมูลไม่สำเร็จ')
     } catch (error) {
       console.error('Failed to reorder contacts:', error)
       pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับ contact' })
       await fetchContacts()
     }
+  }
+
+  const handleReorderContacts = (nextRows) => persistContactOrder(nextRows.map((item, idx) => ({ ...item, sortOrder: idx + 1 })))
+
+  const moveContact = (id, direction) => {
+    const index = sortedContacts.findIndex((item) => item.id === id)
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (index < 0 || swapIndex < 0 || swapIndex >= sortedContacts.length) return
+    const next = [...sortedContacts]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    handleReorderContacts(next)
   }
 
   const openCreateChannel = () => {
@@ -364,25 +367,11 @@ export default function StaticContactsPage() {
     }
   }
 
-  const moveChannel = async (channelId, direction) => {
+  const persistChannelOrder = async (reordered) => {
     if (!selectedContact) return
-
-    const index = selectedChannels.findIndex((item) => item.id === channelId)
-    const swapIndex = direction === 'up' ? index - 1 : index + 1
-    if (index < 0 || swapIndex < 0 || swapIndex >= selectedChannels.length) return
-
-    const next = [...selectedChannels]
-    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
-    const reordered = next.map((channel, idx) => ({ ...channel, sortOrder: (idx + 1) * 10 }))
-
     setItems((prev) =>
       prev.map((contact) =>
-        contact.id === selectedContact.id
-          ? {
-              ...contact,
-              channels: reordered,
-            }
-          : contact,
+        contact.id === selectedContact.id ? { ...contact, channels: reordered } : contact,
       ),
     )
 
@@ -394,15 +383,24 @@ export default function StaticContactsPage() {
         credentials: 'include',
         body: JSON.stringify({ updates }),
       })
-      const data = await response.json()
-      if (!data.ok) {
-        throw new Error(data.message || 'จัดลำดับช่องทางติดต่อไม่สำเร็จ')
-      }
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.ok) throw new Error(data?.message || 'จัดลำดับช่องทางติดต่อไม่สำเร็จ')
     } catch (error) {
       console.error('Failed to reorder channels:', error)
       pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับช่องทาง' })
       await fetchContacts()
     }
+  }
+
+  const handleReorderChannels = (nextRows) => persistChannelOrder(nextRows.map((channel, idx) => ({ ...channel, sortOrder: (idx + 1) * 10 })))
+
+  const moveChannel = (channelId, direction) => {
+    const index = selectedChannels.findIndex((item) => item.id === channelId)
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (index < 0 || swapIndex < 0 || swapIndex >= selectedChannels.length) return
+    const next = [...selectedChannels]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    handleReorderChannels(next)
   }
 
   const channelTypeOptions = ['email', 'phone', 'line', 'facebook', 'instagram', 'linkedin', 'x', 'website', 'map', 'other']
@@ -431,6 +429,8 @@ export default function StaticContactsPage() {
 
       <AdminDataTable
         loading={loading}
+        reorderable
+        onReorder={handleReorderContacts}
         rows={sortedContacts}
         searchKeys={['contactCategory', 'displayNameTh', 'displayNameEn', 'roleTh', 'roleEn', 'organizationTh', 'organizationEn']}
         searchPlaceholder="ค้นหาประเภท / display name / role / organization"
@@ -508,7 +508,7 @@ export default function StaticContactsPage() {
                 <button type="button" onClick={() => openEditContact(row)} aria-label="edit">
                   <Pencil size={14} />
                 </button>
-                <button type="button" onClick={() => removeContact(row.id)} aria-label="delete">
+                <button type="button" onClick={() => setConfirmState({ kind: 'contact', id: row.id, label: row.displayNameTh || row.displayNameEn || '' })} aria-label="delete">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -566,6 +566,8 @@ export default function StaticContactsPage() {
         {selectedContact ? (
           <AdminDataTable
             loading={loading}
+            reorderable
+            onReorder={handleReorderChannels}
             rows={selectedChannels.map((channel) => ({ ...channel, contactId: selectedContact.id }))}
             searchKeys={['channelType', 'labelTh', 'labelEn', 'value', 'url']}
             searchPlaceholder="ค้นหา channel type / label / value"
@@ -633,7 +635,7 @@ export default function StaticContactsPage() {
                     <button type="button" onClick={() => openEditChannel(row)} aria-label="edit">
                       <Pencil size={14} />
                     </button>
-                    <button type="button" onClick={() => removeChannel(row.id)} aria-label="delete">
+                    <button type="button" onClick={() => setConfirmState({ kind: 'channel', id: row.id, label: row.value || row.channelType || '' })} aria-label="delete">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -961,6 +963,29 @@ export default function StaticContactsPage() {
           </div>
         </div>
       </DetailDrawer>
+
+      <AdminConfirmModal
+        open={Boolean(confirmState)}
+        danger
+        title={confirmState?.kind === 'channel' ? 'ยืนยันการลบช่องทางติดต่อ' : 'ยืนยันการลบผู้ติดต่อ'}
+        description={
+          confirmState
+            ? confirmState.kind === 'channel'
+              ? `ต้องการลบช่องทาง "${confirmState.label || '-'}" ใช่หรือไม่?`
+              : `ต้องการลบผู้ติดต่อ "${confirmState.label || '-'}" ใช่หรือไม่? ช่องทางทั้งหมดจะถูกลบด้วย`
+            : ''
+        }
+        confirmLabel="ลบ"
+        cancelLabel="ยกเลิก"
+        onCancel={() => setConfirmState(null)}
+        onConfirm={() => {
+          const current = confirmState
+          setConfirmState(null)
+          if (!current) return
+          if (current.kind === 'channel') removeChannel(current.id)
+          else removeContact(current.id)
+        }}
+      />
     </div>
   )
 }

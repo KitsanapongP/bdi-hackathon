@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ArrowDown, ArrowUp, Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
+import AdminConfirmModal from '../shared/AdminConfirmModal'
 import DetailDrawer from '../shared/DetailDrawer'
 import PageHeader from '../shared/PageHeader'
 import StatusBadge from '../shared/StatusBadge'
@@ -13,6 +14,7 @@ export default function StaticRewardsPage() {
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [confirmState, setConfirmState] = useState(null)
   const [form, setForm] = useState({
     rank: 1,
     title: '',
@@ -166,35 +168,41 @@ export default function StaticRewardsPage() {
     }
   }
 
-  const moveItem = async (id, direction) => {
+  // จัดลำดับใหม่ทั้งชุด (sortOrder = 1..n) แบบ optimistic — ไม่มี endpoint reorder จึง PATCH รายตัวพร้อมกัน
+  const persistOrder = async (orderedRows) => {
+    const reordered = orderedRows.map((item, idx) => ({ ...item, sortOrder: idx + 1 }))
+    setItems(reordered)
+    try {
+      await Promise.all(
+        reordered.map((item) =>
+          fetch(apiUrl(`/api/admin/rewards/${item.id}`), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ sortOrder: item.sortOrder }),
+          }).then(async (response) => {
+            const data = await response.json().catch(() => ({}))
+            if (!response.ok || !data?.ok) throw new Error(data?.message || 'จัดลำดับไม่สำเร็จ')
+          }),
+        ),
+      )
+    } catch (error) {
+      console.error('Failed to reorder rewards:', error)
+      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการเรียงลำดับ' })
+      fetchRewards()
+    }
+  }
+
+  const handleReorder = (nextRows) => persistOrder(nextRows)
+
+  const moveItem = (id, direction) => {
     const sorted = [...items].sort((a, b) => (a.sortOrder || a.rank) - (b.sortOrder || b.rank))
     const index = sorted.findIndex((item) => item.id === id)
     const swapIndex = direction === 'up' ? index - 1 : index + 1
     if (index < 0 || swapIndex < 0 || swapIndex >= sorted.length) return
-
-    const itemA = sorted[index]
-    const itemB = sorted[swapIndex]
-
-    try {
-      await Promise.all([
-        fetch(apiUrl(`/api/admin/rewards/${itemA.id}`), {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ sortOrder: itemB.sortOrder || itemB.rank }),
-        }),
-        fetch(apiUrl(`/api/admin/rewards/${itemB.id}`), {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ sortOrder: itemA.sortOrder || itemA.rank }),
-        }),
-      ])
-      await fetchRewards()
-    } catch (error) {
-      console.error('Failed to reorder rewards:', error)
-      pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการเรียงลำดับ' })
-    }
+    const next = [...sorted]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    persistOrder(next)
   }
 
   return (
@@ -212,6 +220,8 @@ export default function StaticRewardsPage() {
       />
 
       <AdminDataTable
+        reorderable
+        onReorder={handleReorder}
         rows={[...items].sort((a, b) => (a.sortOrder || a.rank) - (b.sortOrder || b.rank))}
         searchKeys={['title', 'titleTh', 'descriptionTh', 'descriptionEn']}
         searchPlaceholder="ค้นหา reward title / description"
@@ -266,7 +276,7 @@ export default function StaticRewardsPage() {
                 <button type="button" onClick={() => openEdit(row)} aria-label="edit">
                   <Pencil size={14} />
                 </button>
-                <button type="button" onClick={() => remove(row.id)} aria-label="delete">
+                <button type="button" onClick={() => setConfirmState({ id: row.id, label: row.titleTh || row.title || '' })} aria-label="delete">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -390,6 +400,21 @@ export default function StaticRewardsPage() {
           </div>
         </div>
       </DetailDrawer>
+
+      <AdminConfirmModal
+        open={Boolean(confirmState)}
+        danger
+        title="ยืนยันการลบรางวัล"
+        description={confirmState ? `ต้องการลบรางวัล "${confirmState.label || '-'}" ใช่หรือไม่?` : ''}
+        confirmLabel="ลบ"
+        cancelLabel="ยกเลิก"
+        onCancel={() => setConfirmState(null)}
+        onConfirm={() => {
+          const id = confirmState?.id
+          setConfirmState(null)
+          if (id != null) remove(id)
+        }}
+      />
     </div>
   )
 }

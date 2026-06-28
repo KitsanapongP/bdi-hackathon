@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, Link2, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
+import AdminConfirmModal from '../shared/AdminConfirmModal'
 import DetailDrawer from '../shared/DetailDrawer'
 import PageHeader from '../shared/PageHeader'
 import StatusBadge from '../shared/StatusBadge'
@@ -14,6 +15,7 @@ export default function StaticCarouselsPage() {
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [confirmState, setConfirmState] = useState(null)
   const [errors, setErrors] = useState({})
   const [form, setForm] = useState({
     titleTh: '',
@@ -277,32 +279,37 @@ export default function StaticCarouselsPage() {
     }
   }
 
-  const moveItem = async (id, direction) => {
-    const sorted = [...items].sort((a, b) => a.sortOrder - b.sortOrder)
-    const index = sorted.findIndex((item) => item.id === id)
-    if (index < 0) return
-
-    const swapIndex = direction === 'up' ? index - 1 : index + 1
-    if (swapIndex < 0 || swapIndex >= sorted.length) return
-
-    const next = [...sorted]
-    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
-    const reordered = next.map((item, idx) => ({ ...item, sortOrder: idx + 1 }))
+  // อัปเดต state ทันที (optimistic) แล้วค่อยบันทึก — ดึงข้อมูลใหม่เฉพาะตอนพลาดเพื่อย้อนกลับ
+  const persistOrder = async (reordered) => {
     setItems(reordered)
-
     try {
       const updates = reordered.map((item) => ({ id: item.id, sortOrder: item.sortOrder }))
-      await fetch(apiUrl('/api/admin/carousels/reorder'), {
+      const response = await fetch(apiUrl('/api/admin/carousels/reorder'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ updates }),
       })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.ok) throw new Error(data?.message || 'จัดลำดับไม่สำเร็จ')
     } catch (error) {
       console.error('Failed to reorder carousels:', error)
       pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับ' })
       fetchCarousels()
     }
+  }
+
+  const handleReorder = (nextRows) => persistOrder(nextRows.map((item, idx) => ({ ...item, sortOrder: idx + 1 })))
+
+  const moveItem = (id, direction) => {
+    const sorted = [...items].sort((a, b) => a.sortOrder - b.sortOrder)
+    const index = sorted.findIndex((item) => item.id === id)
+    if (index < 0) return
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (swapIndex < 0 || swapIndex >= sorted.length) return
+    const next = [...sorted]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    handleReorder(next)
   }
 
   return (
@@ -321,6 +328,8 @@ export default function StaticCarouselsPage() {
 
       <AdminDataTable
         loading={loading}
+        reorderable
+        onReorder={handleReorder}
         rows={[...items].sort((a, b) => a.sortOrder - b.sortOrder)}
         searchKeys={['titleTh', 'titleEn', 'targetUrl', 'descriptionTh', 'descriptionEn']}
         searchPlaceholder="ค้นหา title / description / target URL"
@@ -389,7 +398,7 @@ export default function StaticCarouselsPage() {
                 <button type="button" onClick={() => openEdit(row)} aria-label="edit">
                   <Pencil size={14} />
                 </button>
-                <button type="button" onClick={() => remove(row.id)} aria-label="delete">
+                <button type="button" onClick={() => setConfirmState({ id: row.id, label: row.titleTh || row.titleEn || '' })} aria-label="delete">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -591,6 +600,21 @@ export default function StaticCarouselsPage() {
           </div>
         </div>
       </DetailDrawer>
+
+      <AdminConfirmModal
+        open={Boolean(confirmState)}
+        danger
+        title="ยืนยันการลบสไลด์"
+        description={confirmState ? `ต้องการลบสไลด์ "${confirmState.label || '-'}" ใช่หรือไม่?` : ''}
+        confirmLabel="ลบ"
+        cancelLabel="ยกเลิก"
+        onCancel={() => setConfirmState(null)}
+        onConfirm={() => {
+          const id = confirmState?.id
+          setConfirmState(null)
+          if (id != null) remove(id)
+        }}
+      />
     </div>
   )
 }

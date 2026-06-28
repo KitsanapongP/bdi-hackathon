@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, Eye, FileImage, Pencil, Plus, Save, Trash2 } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import AdminDataTable from '../shared/AdminDataTable'
+import AdminConfirmModal from '../shared/AdminConfirmModal'
 import DetailDrawer from '../shared/DetailDrawer'
 import EmptyState from '../shared/EmptyState'
 import PageHeader from '../shared/PageHeader'
@@ -20,6 +21,7 @@ export default function StaticVenuesPage() {
   const [editingImageId, setEditingImageId] = useState(null)
   const [venueErrors, setVenueErrors] = useState({})
   const [imageErrors, setImageErrors] = useState({})
+  const [confirmState, setConfirmState] = useState(null)
   const [venueForm, setVenueForm] = useState({
     category: 'venue',
     nameTh: '',
@@ -276,33 +278,12 @@ export default function StaticVenuesPage() {
     }
   }
 
-  const moveVenue = async (id, direction) => {
-    const index = sortedVenues.findIndex((item) => item.id === id)
-    const swapIndex = direction === 'up' ? index - 1 : index + 1
-    if (index < 0 || swapIndex < 0 || swapIndex >= sortedVenues.length) return
-
-    const current = sortedVenues[index]
-    const target = sortedVenues[swapIndex]
-    if (!current || !target || current.category !== target.category) {
-      pushToast({ type: 'info', title: 'เลื่อนข้ามหมวดไม่ได้', description: 'จัดลำดับได้เฉพาะรายการในหมวดเดียวกัน' })
-      return
-    }
-
-    const next = [...sortedVenues]
-    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
-
-    const counters = {
-      venue: 0,
-      accommodation: 0,
-      transportation: 0,
-      attraction: 0,
-    }
-    const reordered = next.map((item) => {
-      counters[item.category] += 1
-      return {
-        ...item,
-        sortOrder: counters[item.category] - 1,
-      }
+  // จัดลำดับใหม่ทั้งชุด โดยนับ sortOrder แยกตามหมวด (จัดลำดับได้เฉพาะภายในหมวดเดียวกัน)
+  const persistVenueOrder = async (orderedRows) => {
+    const counters = { venue: 0, accommodation: 0, transportation: 0, attraction: 0 }
+    const reordered = orderedRows.map((item) => {
+      counters[item.category] = (counters[item.category] || 0) + 1
+      return { ...item, sortOrder: counters[item.category] - 1 }
     })
     setItems(reordered)
 
@@ -323,6 +304,25 @@ export default function StaticVenuesPage() {
       pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับสถานที่' })
       await fetchVenues()
     }
+  }
+
+  const handleReorderVenues = (nextRows) => persistVenueOrder(nextRows)
+
+  const moveVenue = (id, direction) => {
+    const index = sortedVenues.findIndex((item) => item.id === id)
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (index < 0 || swapIndex < 0 || swapIndex >= sortedVenues.length) return
+
+    const current = sortedVenues[index]
+    const target = sortedVenues[swapIndex]
+    if (!current || !target || current.category !== target.category) {
+      pushToast({ type: 'info', title: 'เลื่อนข้ามหมวดไม่ได้', description: 'จัดลำดับได้เฉพาะรายการในหมวดเดียวกัน' })
+      return
+    }
+
+    const next = [...sortedVenues]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    persistVenueOrder(next)
   }
 
   const openCreateImage = () => {
@@ -471,28 +471,12 @@ export default function StaticVenuesPage() {
     }
   }
 
-  const moveImage = async (imageId, direction) => {
+  const persistImageOrder = async (orderedRows) => {
     if (!selectedVenue) return
-
-    const index = selectedImages.findIndex((item) => item.id === imageId)
-    const swapIndex = direction === 'up' ? index - 1 : index + 1
-    if (index < 0 || swapIndex < 0 || swapIndex >= selectedImages.length) return
-
-    const next = [...selectedImages]
-    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
-    const reordered = next.map((image, idx) => ({
-      ...image,
-      sortOrder: idx,
-    }))
-
+    const reordered = orderedRows.map((image, idx) => ({ ...image, sortOrder: idx }))
     setItems((prev) =>
       prev.map((venue) =>
-        venue.id === selectedVenue.id
-          ? {
-              ...venue,
-              images: reordered,
-            }
-          : venue,
+        venue.id === selectedVenue.id ? { ...venue, images: reordered } : venue,
       ),
     )
 
@@ -513,6 +497,17 @@ export default function StaticVenuesPage() {
       pushToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการจัดลำดับรูป' })
       await fetchVenues()
     }
+  }
+
+  const handleReorderImages = (nextRows) => persistImageOrder(nextRows)
+
+  const moveImage = (imageId, direction) => {
+    const index = selectedImages.findIndex((item) => item.id === imageId)
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (index < 0 || swapIndex < 0 || swapIndex >= selectedImages.length) return
+    const next = [...selectedImages]
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+    persistImageOrder(next)
   }
 
   const imageCategoryFolder = String(selectedVenue?.category || 'venue').replace(/_/g, '-')
@@ -537,6 +532,8 @@ export default function StaticVenuesPage() {
 
       <AdminDataTable
         loading={loading}
+        reorderable
+        onReorder={handleReorderVenues}
         rows={sortedVenues}
         searchKeys={['category', 'nameTh', 'nameEn', 'descriptionTh', 'descriptionEn', 'googleMapsUrl', 'latitude', 'longitude']}
         searchPlaceholder="ค้นหา category / venue name / description"
@@ -600,7 +597,7 @@ export default function StaticVenuesPage() {
                 <button type="button" onClick={() => openEditVenue(row)} aria-label="edit venue">
                   <Pencil size={14} />
                 </button>
-                <button type="button" onClick={() => removeVenue(row.id)} aria-label="delete venue">
+                <button type="button" onClick={() => setConfirmState({ kind: 'venue', id: row.id, label: row.nameTh || row.nameEn || '' })} aria-label="delete venue">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -660,6 +657,8 @@ export default function StaticVenuesPage() {
         {selectedVenue ? (
           <AdminDataTable
             loading={loading}
+            reorderable
+            onReorder={handleReorderImages}
             rows={selectedImages}
             searchKeys={['imageStorageKey', 'altTh', 'altEn']}
             searchPlaceholder="ค้นหา image_storage_key / alt"
@@ -718,7 +717,7 @@ export default function StaticVenuesPage() {
                     <button type="button" onClick={() => openEditImage(row)} aria-label="edit image">
                       <Pencil size={14} />
                     </button>
-                    <button type="button" onClick={() => removeImage(row.id)} aria-label="delete image">
+                    <button type="button" onClick={() => setConfirmState({ kind: 'image', id: row.id, label: row.altTh || row.altEn || row.imageStorageKey || '' })} aria-label="delete image">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -1003,6 +1002,29 @@ export default function StaticVenuesPage() {
           </div>
         </div>
       </DetailDrawer>
+
+      <AdminConfirmModal
+        open={Boolean(confirmState)}
+        danger
+        title={confirmState?.kind === 'image' ? 'ยืนยันการลบรูปสถานที่' : 'ยืนยันการลบสถานที่'}
+        description={
+          confirmState
+            ? confirmState.kind === 'image'
+              ? `ต้องการลบรูป "${confirmState.label || '-'}" ใช่หรือไม่?`
+              : `ต้องการลบสถานที่ "${confirmState.label || '-'}" ใช่หรือไม่? รูปภาพทั้งหมดจะถูกลบด้วย`
+            : ''
+        }
+        confirmLabel="ลบ"
+        cancelLabel="ยกเลิก"
+        onCancel={() => setConfirmState(null)}
+        onConfirm={() => {
+          const current = confirmState
+          setConfirmState(null)
+          if (!current) return
+          if (current.kind === 'image') removeImage(current.id)
+          else removeVenue(current.id)
+        }}
+      />
     </div>
   )
 }

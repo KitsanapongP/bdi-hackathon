@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Save } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Bold, Heading, Link2, List, Pilcrow, Save } from 'lucide-react'
 import { apiUrl } from '../../../lib/api'
 import PageHeader from '../shared/PageHeader'
 import { useAdminToast } from '../shared/adminContexts'
@@ -12,6 +12,7 @@ export default function StaticAboutPage() {
   const [lang, setLang] = useState('th')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const editorRef = useRef(null)
 
   const fetchAboutPage = useCallback(async () => {
     try {
@@ -69,6 +70,42 @@ export default function StaticAboutPage() {
     }
   }, [contentEn, contentTh, pushToast])
 
+  const content = lang === 'th' ? contentTh : contentEn
+  const setContent = (value) => (lang === 'th' ? setContentTh(value) : setContentEn(value))
+
+  // ครอบข้อความที่เลือกใน textarea ด้วยแท็ก HTML เพื่อให้จัดรูปแบบง่ายขึ้นโดยไม่ต้องพิมพ์แท็กเอง
+  const applyFormat = (kind) => {
+    const textarea = editorRef.current
+    if (!textarea) return
+    const start = textarea.selectionStart ?? content.length
+    const end = textarea.selectionEnd ?? content.length
+    const selected = content.slice(start, end)
+    const wrappers = {
+      h2: (s) => `<h2>${s || 'หัวข้อ'}</h2>`,
+      bold: (s) => `<strong>${s || 'ข้อความ'}</strong>`,
+      link: (s) => `<a href="https://">${s || 'ลิงก์'}</a>`,
+      list: (s) => `<ul>\n  <li>${s || 'รายการ'}</li>\n</ul>`,
+      paragraph: (s) => `<p>${s || 'ย่อหน้า'}</p>`,
+    }
+    const inserted = (wrappers[kind] || wrappers.paragraph)(selected)
+    const nextValue = content.slice(0, start) + inserted + content.slice(end)
+    setContent(nextValue)
+    // คืนโฟกัสและวางเคอร์เซอร์ต่อจากข้อความที่แทรก
+    requestAnimationFrame(() => {
+      textarea.focus()
+      const caret = start + inserted.length
+      textarea.setSelectionRange(caret, caret)
+    })
+  }
+
+  const formatButtons = [
+    { kind: 'h2', label: 'หัวข้อ', icon: Heading },
+    { kind: 'bold', label: 'ตัวหนา', icon: Bold },
+    { kind: 'link', label: 'ลิงก์', icon: Link2 },
+    { kind: 'list', label: 'รายการ', icon: List },
+    { kind: 'paragraph', label: 'ย่อหน้า', icon: Pilcrow },
+  ]
+
   return (
     <div className="admin-ui-stack">
       <PageHeader
@@ -111,20 +148,39 @@ export default function StaticAboutPage() {
           <label htmlFor="about-editor" className="admin-ui-label">
             เนื้อหา HTML ({lang.toUpperCase()})
           </label>
+          <div className="admin-about-toolbar">
+            {formatButtons.map((button) => (
+              <button
+                key={button.kind}
+                type="button"
+                className="admin-ui-mini-btn"
+                disabled={loading}
+                title={button.label}
+                onClick={() => applyFormat(button.kind)}
+              >
+                <button.icon size={13} /> {button.label}
+              </button>
+            ))}
+          </div>
           <textarea
             id="about-editor"
+            ref={editorRef}
             rows={16}
-            value={lang === 'th' ? contentTh : contentEn}
-            onChange={(event) => (lang === 'th' ? setContentTh(event.target.value) : setContentEn(event.target.value))}
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
             disabled={loading}
           />
+          <div className="admin-about-live-preview">
+            <span className="admin-ui-label">ตัวอย่างสด</span>
+            <div className="admin-ui-markdown-preview" dangerouslySetInnerHTML={{ __html: content || '<p>-</p>' }} />
+          </div>
         </article>
       ) : (
         <article className="admin-ui-panel admin-ui-markdown-preview">
           {loading ? (
             <p>กำลังโหลดข้อมูล...</p>
           ) : (
-            <div dangerouslySetInnerHTML={{ __html: (lang === 'th' ? contentTh : contentEn) || '<p>-</p>' }} />
+            <div dangerouslySetInnerHTML={{ __html: content || '<p>-</p>' }} />
           )}
         </article>
       )}

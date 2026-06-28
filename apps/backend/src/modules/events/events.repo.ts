@@ -27,7 +27,7 @@ export async function getScheduleTracks(db: DB, scheduleId: number): Promise<Eve
 
 export async function getScheduleItems(db: DB, scheduleId: number): Promise<EventScheduleItemRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT * FROM event_schedule_items WHERE schedule_id = :scheduleId AND is_enabled = 1 ORDER BY start_time ASC, sort_order ASC`,
+        `SELECT * FROM event_schedule_items WHERE schedule_id = :scheduleId AND is_enabled = 1 ORDER BY sort_order ASC, start_time ASC`,
         { scheduleId }
     );
     return rows as EventScheduleItemRow[];
@@ -64,7 +64,7 @@ export async function getAllScheduleTracksAdmin(db: DB): Promise<EventScheduleTr
 
 export async function getAllScheduleItemsAdmin(db: DB): Promise<EventScheduleItemRow[]> {
     const [rows] = await db.query<RowDataPacket[]>(
-        `SELECT * FROM event_schedule_items ORDER BY day_id ASC, start_time ASC, sort_order ASC, item_id ASC`
+        `SELECT * FROM event_schedule_items ORDER BY day_id ASC, sort_order ASC, start_time ASC, item_id ASC`
     );
     return rows as EventScheduleItemRow[];
 }
