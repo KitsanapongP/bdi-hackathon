@@ -105,6 +105,18 @@ function pickMemberDisplayName(member: ExportTeamMemberRow): string {
     return th || en || member.user_name || `user-${member.user_id}`;
 }
 
+// คำนวณอายุเต็มปีจากวันเกิด เทียบกับวันนี้ (วันที่ export) — คืน '' ถ้าไม่มี/รูปแบบไม่ถูกต้อง
+function computeAgeYears(birthDate: string | null): number | '' {
+    if (!birthDate) return '';
+    const dob = new Date(birthDate);
+    if (Number.isNaN(dob.getTime())) return '';
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const monthDiff = now.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) age -= 1;
+    return age >= 0 && age < 150 ? age : '';
+}
+
 function toAllowlistResponse(row: any): AllowlistResponse {
     return {
         allowId: row.allow_id,
@@ -1113,6 +1125,8 @@ export async function exportTeamsContactSheet(
         { header: 'name_th', key: 'name_th', width: 24 },
         { header: 'name_en', key: 'name_en', width: 24 },
         { header: 'gender', key: 'gender', width: 10 },
+        { header: 'birth_date', key: 'birth_date', width: 14 },
+        { header: 'age', key: 'age', width: 8 },
         { header: 'email', key: 'email', width: 30 },
         { header: 'phone', key: 'phone', width: 18 },
         { header: 'institution', key: 'institution', width: 30 },
@@ -1142,6 +1156,8 @@ export async function exportTeamsContactSheet(
                 name_th: nameTh || pickMemberDisplayName(member),
                 name_en: nameEn,
                 gender: member.gender === 'male' ? 'ชาย' : member.gender === 'female' ? 'หญิง' : member.gender === 'other' ? 'อื่นๆ' : '',
+                birth_date: member.birth_date || '',
+                age: computeAgeYears(member.birth_date),
                 email: member.email || '',
                 phone: member.phone || '',
                 institution: member.institution_name_th || '',
