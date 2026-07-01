@@ -1447,6 +1447,18 @@
     white-space: pre-line;
 }
 
+.gl-rich-message-table {
+    margin: 10px 0;
+    border-collapse: collapse;
+    width: 100%;
+    white-space: normal;
+}
+
+.gl-rich-message-table td {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 6px 10px;
+}
+
 .gl-team-inbox-delivery {
     display: flex;
     align-items: center;

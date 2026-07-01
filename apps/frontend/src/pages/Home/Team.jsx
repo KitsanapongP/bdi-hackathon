@@ -39,6 +39,7 @@ import {
     ExternalLink,
 } from 'lucide-react';
 import { apiUrl } from '../../lib/api';
+import { splitMessageBlocks } from '../../lib/richMessage';
 import {
     fetchGlobalSelectionConfirmWindowStatus,
     fetchSysConfigValue,
@@ -60,17 +61,15 @@ import './Profile.css';
 
 // รองรับ markdown แบบง่าย: **ข้อความ** -> ตัวหนา และลิงก์ http(s) -> กดได้
 // (ขึ้นบรรทัดใหม่จัดการด้วย CSS white-space: pre-line/pre-wrap)
-function renderRichText(text) {
-    const str = String(text || '');
-    if (!str) return null;
-    return str.split(/(\*\*[^*\n]+\*\*|https?:\/\/[^\s]+)/g).map((part, index) => {
+function renderInlineRichText(text, keyPrefix) {
+    return String(text || '').split(/(\*\*[^*\n]+\*\*|https?:\/\/[^\s]+)/g).map((part, index) => {
         if (/^\*\*[^*\n]+\*\*$/.test(part)) {
-            return <strong key={index}>{part.slice(2, -2)}</strong>;
+            return <strong key={`${keyPrefix}-${index}`}>{part.slice(2, -2)}</strong>;
         }
         if (/^https?:\/\/[^\s]+$/.test(part)) {
             return (
                 <a
-                    key={index}
+                    key={`${keyPrefix}-${index}`}
                     href={part}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -81,6 +80,36 @@ function renderRichText(text) {
             );
         }
         return part;
+    });
+}
+
+// เหมือนเดิม เพิ่มเติมคือถ้าวางตารางจาก Excel มา (แต่ละเซลล์คั่นด้วย Tab) จะแสดงเป็นตาราง HTML ให้อัตโนมัติ
+function renderRichText(text) {
+    const str = String(text || '');
+    if (!str) return null;
+
+    return splitMessageBlocks(str).map((block, blockIndex) => {
+        if (block.type === 'table') {
+            return (
+                <table className="gl-rich-message-table" key={`table-${blockIndex}`}>
+                    <tbody>
+                        {block.rows.map((row, rowIndex) => (
+                            <tr key={rowIndex}>
+                                {row.map((cell, cellIndex) => (
+                                    <td key={cellIndex}>{renderInlineRichText(cell, `${blockIndex}-${rowIndex}-${cellIndex}`)}</td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            );
+        }
+
+        return (
+            <React.Fragment key={`text-${blockIndex}`}>
+                {renderInlineRichText(block.content, `text-${blockIndex}`)}
+            </React.Fragment>
+        );
     });
 }
 

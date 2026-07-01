@@ -69,11 +69,45 @@ function textToHtml(text: string): string {
   return escapeHtml(text).replace(/\r?\n/g, '<br />');
 }
 
+function escapeAndBold(text: string): string {
+  return escapeHtml(text).replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+}
+
 // รองรับ markdown แบบง่าย: **ข้อความ** -> ตัวหนา และขึ้นบรรทัดใหม่ -> <br />
+// ถ้าวางตารางที่คัดลอกจาก Excel มา (แต่ละเซลล์คั่นด้วย Tab) จะแปลงเป็นตาราง HTML ให้อัตโนมัติ
 function richTextToHtml(text: string): string {
-  return escapeHtml(text)
-    .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\r?\n/g, '<br />');
+  const lines = String(text ?? '').replace(/\r\n/g, '\n').split('\n');
+  const htmlParts: string[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    if (lines[index]!.includes('\t')) {
+      const tableLines: string[] = [];
+      while (index < lines.length && lines[index]!.includes('\t')) {
+        tableLines.push(lines[index]!);
+        index += 1;
+      }
+      const rowsHtml = tableLines
+        .map((row) => {
+          const cellsHtml = row
+            .split('\t')
+            .map((cell) => `<td style="border: 1px solid #dbe3ef; padding: 6px 10px;">${escapeAndBold(cell.trim())}</td>`)
+            .join('');
+          return `<tr>${cellsHtml}</tr>`;
+        })
+        .join('');
+      htmlParts.push(`<table style="border-collapse: collapse; margin: 8px 0; width: 100%;">${rowsHtml}</table>`);
+    } else {
+      const textLines: string[] = [];
+      while (index < lines.length && !lines[index]!.includes('\t')) {
+        textLines.push(lines[index]!);
+        index += 1;
+      }
+      htmlParts.push(textLines.map(escapeAndBold).join('<br />'));
+    }
+  }
+
+  return htmlParts.join('');
 }
 
 function formatDetailLine(label: string, value: string): string {

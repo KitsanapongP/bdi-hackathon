@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Bell, CheckCircle2, ChevronDown, Clock, Inbox, Loader2, MailCheck, MailQuestion, MailWarning } from 'lucide-react';
 import HomeShell from './HomeShell';
 import { apiUrl } from '../../lib/api';
+import { splitMessageBlocks } from '../../lib/richMessage';
 import './InfoPages.css';
 
 function formatNotificationDate(value) {
@@ -44,19 +45,16 @@ function openInFreshTab(url) {
     return true;
 }
 
-function renderMessageWithLinks(message) {
-    const text = String(message || '');
-    if (!text) return null;
-
-    return text.split(/(\*\*[^*]+\*\*|https?:\/\/[^\s]+)/g).map((part, index) => {
+function renderInlineWithLinks(text, keyPrefix) {
+    return String(text || '').split(/(\*\*[^*]+\*\*|https?:\/\/[^\s]+)/g).map((part, index) => {
         if (/^\*\*[^*]+\*\*$/.test(part)) {
-            return <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>;
+            return <strong key={`${keyPrefix}-${index}`}>{part.slice(2, -2)}</strong>;
         }
 
         if (/^https?:\/\/[^\s]+$/.test(part)) {
             return (
                 <a
-                    key={`${part}-${index}`}
+                    key={`${keyPrefix}-${index}`}
                     className="gt-notification-message-link"
                     href={part}
                     target="_blank"
@@ -73,6 +71,37 @@ function renderMessageWithLinks(message) {
         }
 
         return part;
+    });
+}
+
+// รองรับ **ตัวหนา** และลิงก์เหมือนเดิม เพิ่มเติมคือถ้าวางตารางจาก Excel มา
+// (แต่ละเซลล์คั่นด้วย Tab) จะแสดงเป็นตาราง HTML ให้อัตโนมัติ
+function renderMessageWithLinks(message) {
+    const text = String(message || '');
+    if (!text) return null;
+
+    return splitMessageBlocks(text).map((block, blockIndex) => {
+        if (block.type === 'table') {
+            return (
+                <table className="gt-notification-message-table" key={`table-${blockIndex}`}>
+                    <tbody>
+                        {block.rows.map((row, rowIndex) => (
+                            <tr key={rowIndex}>
+                                {row.map((cell, cellIndex) => (
+                                    <td key={cellIndex}>{renderInlineWithLinks(cell, `${blockIndex}-${rowIndex}-${cellIndex}`)}</td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            );
+        }
+
+        return (
+            <React.Fragment key={`text-${blockIndex}`}>
+                {renderInlineWithLinks(block.content, `text-${blockIndex}`)}
+            </React.Fragment>
+        );
     });
 }
 
@@ -254,7 +283,7 @@ function NotificationsPage() {
                                             </button>
                                             <div className="gt-notification-detail" aria-hidden={!isExpanded}>
                                                 <div className="gt-notification-detail-inner">
-                                                    {item.message ? <p>{renderMessageWithLinks(item.message)}</p> : null}
+                                                    {item.message ? <div className="gt-notification-message">{renderMessageWithLinks(item.message)}</div> : null}
                                                     {emailMeta ? (
                                                         <div className="gt-notification-channels" aria-label="ช่องทางการแจ้งเตือน">
                                                             <div className={`gt-notification-channel ${emailMeta.className}`}>
