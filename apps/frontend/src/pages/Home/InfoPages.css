@@ -374,7 +374,7 @@
 }
 
 .gt-notification-message-table td {
-    border: 1px solid var(--gt-border);
+    border: 1px solid color-mix(in srgb, var(--gt-text-muted) 55%, transparent);
     padding: 6px 10px;
 }
 

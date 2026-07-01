@@ -91,7 +91,7 @@ function richTextToHtml(text: string): string {
         .map((row) => {
           const cellsHtml = row
             .split('\t')
-            .map((cell) => `<td style="border: 1px solid #dbe3ef; padding: 6px 10px;">${escapeAndBold(cell.trim())}</td>`)
+            .map((cell) => `<td style="border: 1px solid #94a3b8; padding: 6px 10px;">${escapeAndBold(cell.trim())}</td>`)
             .join('');
           return `<tr>${cellsHtml}</tr>`;
         })

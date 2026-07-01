@@ -60,7 +60,7 @@ function renderAnnouncementPreview(message) {
             {block.rows.map((row, rowIndex) => (
               <tr key={rowIndex}>
                 {row.map((cell, cellIndex) => (
-                  <td key={cellIndex} style={{ border: '1px solid var(--admin-ui-border, #dbe3ef)', padding: '6px 10px' }}>
+                  <td key={cellIndex} style={{ border: '1px solid color-mix(in srgb, var(--gt-text-muted, #64748b) 55%, transparent)', padding: '6px 10px' }}>
                     {renderPreviewInline(cell, `${blockIndex}-${rowIndex}-${cellIndex}`)}
                   </td>
                 ))}
