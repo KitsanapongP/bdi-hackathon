@@ -102,6 +102,7 @@ export default function AnnouncementsPage() {
   const [form, setForm] = useState({
     target: 'status',
     teamStatuses: ['passed'],
+    teamFilterStatus: '',
     teamId: '',
     userTarget: 'selected',
     userIds: [],
@@ -150,6 +151,12 @@ export default function AnnouncementsPage() {
   }, {}), [teamOptions])
 
   const selectedStatusTeamCount = form.teamStatuses.reduce((sum, status) => sum + (statusTeamCounts[status] || 0), 0)
+
+  const filteredTeamOptions = useMemo(() => (
+    form.teamFilterStatus
+      ? teamOptions.filter((team) => team.status === form.teamFilterStatus)
+      : teamOptions
+  ), [teamOptions, form.teamFilterStatus])
 
   const previewNodes = useMemo(() => renderAnnouncementPreview(form.message), [form.message])
   const tablePreviewWarnings = useMemo(() => getTablePreviewWarnings(form.message), [form.message])
@@ -342,18 +349,34 @@ export default function AnnouncementsPage() {
           )}
 
           {form.target === 'team' && (
-            <label>
-              ทีม
-              <select
-                value={form.teamId}
-                onChange={(event) => setForm((prev) => ({ ...prev, teamId: event.target.value }))}
-              >
-                <option value="">เลือกทีม</option>
-                {teamOptions.map((item) => (
-                  <option key={item.teamId} value={item.teamId}>{item.label}</option>
-                ))}
-              </select>
-            </label>
+            <>
+              <label>
+                กรองตามสถานะ (ช่วยหาทีมง่ายขึ้น)
+                <select
+                  value={form.teamFilterStatus}
+                  onChange={(event) => setForm((prev) => ({ ...prev, teamFilterStatus: event.target.value, teamId: '' }))}
+                >
+                  <option value="">ทุกสถานะ ({teamOptions.length} ทีม)</option>
+                  {TEAM_STATUS_OPTIONS.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.th} ({statusTeamCounts[status.value] || 0} ทีม)
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                ทีม
+                <select
+                  value={form.teamId}
+                  onChange={(event) => setForm((prev) => ({ ...prev, teamId: event.target.value }))}
+                >
+                  <option value="">เลือกทีม ({filteredTeamOptions.length} ทีม)</option>
+                  {filteredTeamOptions.map((item) => (
+                    <option key={item.teamId} value={item.teamId}>{item.label}</option>
+                  ))}
+                </select>
+              </label>
+            </>
           )}
 
           {form.target === 'users' && (
