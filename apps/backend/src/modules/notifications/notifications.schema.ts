@@ -61,6 +61,10 @@ export const adminSendAnnouncementSchema = z.object({
   { message: 'กรุณาเลือกผู้รับอย่างน้อยหนึ่งคน', path: ['userIds'] },
 );
 
+export const adminMatchEmailsSchema = z.object({
+  emails: z.array(z.string().trim().min(1)).min(1, 'กรุณากรอกอีเมลอย่างน้อยหนึ่งรายการ').max(2000),
+});
+
 export const adminSendInAppNotificationSchema = z.object({
   target: z.enum(['all', 'selected']),
   userIds: z.array(z.number().int().positive()).optional().default([]),

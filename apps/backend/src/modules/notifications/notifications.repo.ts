@@ -379,6 +379,39 @@ export async function getActiveNotificationUsersByIds(
   }>;
 }
 
+export async function getUsersByEmails(
+  db: DB,
+  emails: string[],
+): Promise<Array<{
+  user_id: number;
+  user_name: string;
+  email: string | null;
+  display_name: string;
+}>> {
+  if (emails.length === 0) return [];
+  const [rows] = await db.query<RowDataPacket[]>(`
+    SELECT
+      user_id,
+      user_name,
+      email,
+      COALESCE(
+        NULLIF(TRIM(CONCAT(COALESCE(first_name_th, ''), ' ', COALESCE(last_name_th, ''))), ''),
+        NULLIF(TRIM(CONCAT(COALESCE(first_name_en, ''), ' ', COALESCE(last_name_en, ''))), ''),
+        user_name
+      ) AS display_name
+    FROM user_users
+    WHERE is_active = 1
+      AND deleted_at IS NULL
+      AND LOWER(email) IN (?)
+  `, [emails]);
+  return rows as Array<{
+    user_id: number;
+    user_name: string;
+    email: string | null;
+    display_name: string;
+  }>;
+}
+
 export async function getOrientationDeniedUserIds(db: DB, userIds: number[]): Promise<Set<number>> {
   if (userIds.length === 0) return new Set();
   const [rows] = await db.query<RowDataPacket[]>(`

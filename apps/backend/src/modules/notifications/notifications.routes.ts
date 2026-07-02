@@ -14,6 +14,7 @@ import {
   handleAdminSendOrientationInApp,
   handleAdminSendCustomEmail,
   handleAdminSendAnnouncement,
+  handleAdminMatchAnnouncementEmails,
   handleAdminSendBurstTestEmail,
   handleGetAdminNotificationUsers,
   handleGetAdminNotificationRecipients,
@@ -43,6 +44,7 @@ export async function notificationsRoutes(app: FastifyInstance) {
     adminApp.post('/admin/orientation-in-app', handleAdminSendOrientationInApp);
     adminApp.post('/admin/custom-email', handleAdminSendCustomEmail);
     adminApp.post('/admin/announcements', handleAdminSendAnnouncement);
+    adminApp.post('/admin/match-emails', handleAdminMatchAnnouncementEmails);
     adminApp.post('/admin/test-burst-email', handleAdminSendBurstTestEmail);
     adminApp.get('/admin/recipients', handleGetAdminNotificationRecipients);
     adminApp.put('/admin/recipients/:userId', handleUpdateAdminNotificationRecipient);

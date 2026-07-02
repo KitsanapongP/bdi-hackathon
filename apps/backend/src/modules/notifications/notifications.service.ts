@@ -1052,6 +1052,63 @@ export async function sendCustomEmailToTeamsByStatus(
   return totals;
 }
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * ตรวจสอบว่ารายชื่ออีเมลที่แอดมินวางเข้ามา ตรงกับผู้ใช้ในระบบหรือไม่
+ * - เทียบกับ user_users.email (อีเมลโปรไฟล์) แบบไม่สนตัวพิมพ์เล็ก/ใหญ่
+ * - อีเมลหนึ่งอาจ map ไปยังผู้ใช้เดียวกัน (email ไม่ unique) จึง dedupe ผู้รับด้วย user_id
+ */
+export async function matchAnnouncementEmails(db: DB, rawEmails: string[]) {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  const invalidEmails: string[] = [];
+
+  for (const raw of rawEmails) {
+    const email = String(raw || '').trim().toLowerCase();
+    if (!email || seen.has(email)) continue;
+    seen.add(email);
+    if (EMAIL_PATTERN.test(email)) {
+      normalized.push(email);
+    } else {
+      invalidEmails.push(email);
+    }
+  }
+
+  const rows = await repo.getUsersByEmails(db, normalized);
+
+  // จับคู่อีเมล -> ผู้ใช้ (dedupe ตาม user_id) และเก็บว่าอีเมลไหนถูก match แล้ว
+  const matchedByUserId = new Map<number, { email: string; userId: number; displayName: string; userName: string }>();
+  const matchedEmailSet = new Set<string>();
+  for (const row of rows) {
+    const email = String(row.email || '').trim().toLowerCase();
+    if (email) matchedEmailSet.add(email);
+    if (!matchedByUserId.has(row.user_id)) {
+      matchedByUserId.set(row.user_id, {
+        email,
+        userId: row.user_id,
+        displayName: String(row.display_name || '').trim() || row.user_name,
+        userName: row.user_name,
+      });
+    }
+  }
+
+  const matched = Array.from(matchedByUserId.values());
+  const unmatchedEmails = normalized.filter((email) => !matchedEmailSet.has(email));
+
+  return {
+    matched,
+    unmatchedEmails,
+    invalidEmails,
+    counts: {
+      total: seen.size,
+      matched: matched.length,
+      unmatched: unmatchedEmails.length,
+      invalid: invalidEmails.length,
+    },
+  };
+}
+
 type AnnouncementTeamStatus = 'forming' | 'submitted' | 'passed' | 'failed' | 'confirmed' | 'not_joined' | 'disbanded';
 
 /**

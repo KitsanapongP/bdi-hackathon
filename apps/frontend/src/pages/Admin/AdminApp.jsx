@@ -6,6 +6,7 @@ import managementNavGroups from './config/managementNavGroups'
 import AdminExportsPage from './pages/AdminExportsPage'
 import AnnouncementsPage from './pages/AnnouncementsPage'
 import DashboardPage from './pages/DashboardPage'
+import EmailNotifyPage from './pages/EmailNotifyPage'
 import NotificationLogsPage from './pages/NotificationLogsPage'
 import NotificationSettingsPage from './pages/NotificationSettingsPage'
 import PrivilegesManagePage from './pages/PrivilegesManagePage'
@@ -40,6 +41,7 @@ function AdminAppRoutes() {
         <Route path="review" element={<Navigate to="/admin/selection" replace />} />
         <Route path="selection" element={<SelectionPage />} />
         <Route path="announcements" element={<AnnouncementsPage />} />
+        <Route path="email-notify" element={<EmailNotifyPage />} />
         <Route path="submission-tasks" element={<SubmissionTasksPage />} />
         <Route path="submissions" element={<TeamSubmissionsPage />} />
 

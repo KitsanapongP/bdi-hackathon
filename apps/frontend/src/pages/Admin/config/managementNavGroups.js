@@ -85,6 +85,11 @@ const managementNavGroups = [
         icon: Megaphone,
       },
       {
+        to: '/admin/email-notify',
+        label: 'ส่งแจ้งเตือนตามอีเมล',
+        icon: Mail,
+      },
+      {
         to: '/admin/submission-tasks',
         label: 'Submission Tasks',
         icon: FileText,

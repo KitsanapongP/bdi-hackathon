@@ -3,6 +3,7 @@ import { ok } from '../../shared/response.js';
 import { AppError } from '../../shared/errors.js';
 import * as service from './notifications.service.js';
 import {
+  adminMatchEmailsSchema,
   adminNotificationLogsQuerySchema,
   adminSendAnnouncementSchema,
   adminSendBurstTestEmailSchema,
@@ -181,6 +182,21 @@ export async function handleAdminSendAnnouncement(req: FastifyRequest, reply: Fa
       actorUserId: user.userId,
     });
     return reply.send(ok(result, 'ส่งประกาศสำเร็จ'));
+  } catch (err) {
+    if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
+    throw err;
+  }
+}
+
+export async function handleAdminMatchAnnouncementEmails(req: FastifyRequest, reply: FastifyReply) {
+  const parsed = adminMatchEmailsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ ok: false, message: parsed.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้' });
+  }
+
+  try {
+    const result = await service.matchAnnouncementEmails(req.server.ctx.db, parsed.data.emails);
+    return reply.send(ok(result));
   } catch (err) {
     if (err instanceof AppError) return reply.status(err.statusCode).send({ ok: false, message: err.message });
     throw err;
