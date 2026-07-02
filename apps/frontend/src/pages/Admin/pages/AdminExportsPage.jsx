@@ -45,9 +45,17 @@ export default function AdminExportsPage() {
   const [exportingReviewTrack, setExportingReviewTrack] = useState('')
   const [exportingIdentityTrack, setExportingIdentityTrack] = useState('')
   const [sheetStatuses, setSheetStatuses] = useState(['submitted', 'passed'])
+  const [reviewTrackStatuses, setReviewTrackStatuses] = useState(['passed'])
 
   const toggleSheetStatus = useCallback((status) => {
     setSheetStatuses((prev) => {
+      if (prev.includes(status)) return prev.filter((item) => item !== status)
+      return [...prev, status]
+    })
+  }, [])
+
+  const toggleReviewTrackStatus = useCallback((status) => {
+    setReviewTrackStatuses((prev) => {
       if (prev.includes(status)) return prev.filter((item) => item !== status)
       return [...prev, status]
     })
@@ -187,9 +195,13 @@ export default function AdminExportsPage() {
   }, [pushToast])
 
   const handleExportReviewTrackSheet = useCallback(async (track) => {
+    if (reviewTrackStatuses.length === 0) {
+      pushToast({ variant: 'warning', title: 'กรุณาเลือกสถานะทีมอย่างน้อย 1 สถานะ' })
+      return
+    }
     try {
       setExportingReviewTrack(track)
-      const query = new URLSearchParams({ statuses: reviewTrackExportStatuses.join(','), track })
+      const query = new URLSearchParams({ statuses: reviewTrackStatuses.join(','), track })
       const response = await fetch(apiUrl(`/api/admin/exports/teams-review-track-sheet?${query.toString()}`), {
         credentials: 'include',
       })
@@ -213,7 +225,7 @@ export default function AdminExportsPage() {
     } finally {
       setExportingReviewTrack('')
     }
-  }, [pushToast])
+  }, [pushToast, reviewTrackStatuses])
 
   const handleExportIdentityReviewTrackSheet = useCallback(async (track) => {
     try {
@@ -323,9 +335,22 @@ export default function AdminExportsPage() {
         <header>
           <div>
             <h3>Review Links By Track</h3>
-            <p>แยก Excel สำหรับกรรมการตามประเภทผลงาน โดยกรองจาก task “ส่งผลงานลำดับที่ 1” และ “ส่งผลงานลำดับที่ 2”</p>
+            <p>แยก Excel สำหรับกรรมการตามประเภทผลงาน โดยกรองจาก task “ส่งผลงานลำดับที่ 1” และ “ส่งผลงานลำดับที่ 2” เลือกสถานะทีมที่ต้องการโหลด (เช่น เฉพาะทีมที่ผ่านการคัดเลือก)</p>
           </div>
         </header>
+
+        <div className="admin-export-status-list">
+          {Object.entries(statusMeta).map(([statusKey, meta]) => (
+            <label key={statusKey}>
+              <input
+                type="checkbox"
+                checked={reviewTrackStatuses.includes(statusKey)}
+                onChange={() => toggleReviewTrackStatus(statusKey)}
+              />
+              <span>{meta.label}</span>
+            </label>
+          ))}
+        </div>
 
         <div className="admin-export-track-actions">
           {reviewTrackOptions.map((track) => (
@@ -334,7 +359,7 @@ export default function AdminExportsPage() {
               type="button"
               className="admin-export-btn"
               onClick={() => handleExportReviewTrackSheet(track)}
-              disabled={Boolean(exportingReviewTrack)}
+              disabled={Boolean(exportingReviewTrack) || reviewTrackStatuses.length === 0}
             >
               <Download size={15} />
               {exportingReviewTrack === track ? `Exporting ${track}...` : `Export ${track} Review Links`}
