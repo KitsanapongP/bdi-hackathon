@@ -1604,7 +1604,7 @@ function HomePage() {
                             {heroCountdown.expired ? (
                                 <div className="gt-hero-countdown-status" aria-live="polite">
                                     <span className="gt-hero-countdown-status-main">ถึงวันงานแล้ว</span>
-                                    <span className="gt-hero-countdown-status-sub">มาเริ่มสร้างนวัตกรรมไปด้วยกันในงาน BDI Young Innovator Hackathon</span>
+                                    <span className="gt-hero-countdown-status-sub">มาเริ่มสร้างนวัตกรรมไปด้วยกัน</span>
                                 </div>
                             ) : null}
                         </div>
