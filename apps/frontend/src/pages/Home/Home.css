@@ -1050,13 +1050,69 @@ section.gt-hero {
 }
 
 .gt-hero-countdown-status {
-    margin: 2px 0 0;
+    margin: 0;
+    padding: clamp(12px, 2vw, 18px) clamp(18px, 3vw, 30px);
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(14, 165, 233, 0.24);
+    border-radius: 999px;
+    background:
+        radial-gradient(circle at top left, rgba(14, 165, 233, 0.18), transparent 36%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(236, 253, 245, 0.74));
+    box-shadow: 0 18px 44px rgba(14, 165, 233, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+    text-align: center;
+}
+
+.gt-hero-countdown-status::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: inherit;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    pointer-events: none;
+}
+
+.gt-hero-countdown-status-main,
+.gt-hero-countdown-status-sub {
+    position: relative;
+    z-index: 1;
+    display: block;
+}
+
+.gt-hero-countdown-status-main {
+    color: #0284c7;
+    font-size: clamp(1.18rem, 2.25vw, 1.62rem);
+    line-height: 1.12;
+    font-weight: 900;
+    letter-spacing: 0.01em;
+    text-shadow: 0 8px 22px rgba(14, 165, 233, 0.22);
+}
+
+.gt-hero-countdown-status-sub {
     color: #059669;
-    font-weight: 700;
-    font-size: 1.15rem;
+    font-size: clamp(0.94rem, 1.55vw, 1.14rem);
+    line-height: 1.45;
+    font-weight: 800;
 }
 
 .dark .gt-hero-countdown-status {
+    border-color: rgba(56, 189, 248, 0.28);
+    background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 38%),
+        linear-gradient(135deg, rgba(15, 23, 42, 0.84), rgba(6, 78, 59, 0.54));
+    box-shadow: 0 20px 48px rgba(8, 145, 178, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.dark .gt-hero-countdown-status-main {
+    color: #38bdf8;
+}
+
+.dark .gt-hero-countdown-status-sub {
     color: #34d399;
 }
 

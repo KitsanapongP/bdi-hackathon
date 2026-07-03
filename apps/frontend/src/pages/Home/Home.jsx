@@ -1601,7 +1601,12 @@ function HomePage() {
                                 <Calendar size={16} />
                                 นับถอยหลังสู่วันที่ {HERO_COUNTDOWN_TARGET_LABEL}
                             </p>
-                            {heroCountdown.expired ? <p className="gt-hero-countdown-status">ถึงวันสุดท้ายของกิจกรรมแล้ว</p> : null}
+                            {heroCountdown.expired ? (
+                                <div className="gt-hero-countdown-status" aria-live="polite">
+                                    <span className="gt-hero-countdown-status-main">ถึงวันงานแล้ว</span>
+                                    <span className="gt-hero-countdown-status-sub">มาเริ่มสร้างนวัตกรรมไปด้วยกันในงาน BDI Young Innovator Hackathon</span>
+                                </div>
+                            ) : null}
                         </div>
                         <div className="gt-hero-actions">
                             <button type="button" className="gt-btn gt-btn-primary" onClick={handlePrimaryCta}>
