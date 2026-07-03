@@ -38,6 +38,12 @@ import {
     handleDeleteCarouselAdmin,
     handleReorderCarouselsAdmin,
     handleUploadCarouselImageAdmin,
+    handleGetAllGalleryAdmin,
+    handleCreateGalleryAdmin,
+    handleUpdateGalleryAdmin,
+    handleDeleteGalleryAdmin,
+    handleReorderGalleryAdmin,
+    handleUploadGalleryImageAdmin,
     handleGetAllContactsAdmin,
     handleCreateContactAdmin,
     handleUpdateContactAdmin,
@@ -129,6 +135,13 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.post('/carousels/:id/image', handleUploadCarouselImageAdmin);
     fastify.delete('/carousels/:id', handleDeleteCarouselAdmin);
     fastify.put('/carousels/reorder', handleReorderCarouselsAdmin);
+
+    fastify.get('/gallery', handleGetAllGalleryAdmin);
+    fastify.post('/gallery', handleCreateGalleryAdmin);
+    fastify.patch('/gallery/:id', handleUpdateGalleryAdmin);
+    fastify.post('/gallery/:id/image', handleUploadGalleryImageAdmin);
+    fastify.delete('/gallery/:id', handleDeleteGalleryAdmin);
+    fastify.put('/gallery/reorder', handleReorderGalleryAdmin);
 
     fastify.get('/contacts', handleGetAllContactsAdmin);
     fastify.post('/contacts', handleCreateContactAdmin);

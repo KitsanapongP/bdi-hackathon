@@ -20,6 +20,9 @@ import {
     createCarouselSchema,
     updateCarouselSchema,
     reorderCarouselsSchema,
+    createGallerySchema,
+    updateGallerySchema,
+    reorderGallerySchema,
     createContactChannelSchema,
     updateContactChannelSchema,
     reorderContactChannelsSchema,
@@ -750,6 +753,127 @@ export async function handleUploadCarouselImageAdmin(req: FastifyRequest<{ Param
 
         const requestedFileName = (file.fields?.fileName?.value || '').toString();
         const result = await contentService.uploadCarouselImageAdmin(req.server.ctx.db, parsedParams.data.id, {
+            stream: file.file,
+            originalName: file.filename,
+            mimeType: file.mimetype,
+            requestedFileName: requestedFileName || null,
+        });
+
+        return reply.send(ok(result, 'อัปโหลดรูปภาพสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleGetAllGalleryAdmin(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const photos = await contentService.getAllGalleryPhotosAdmin(req.server.ctx.db);
+        return reply.send(ok(photos));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleCreateGalleryAdmin(req: FastifyRequest, reply: FastifyReply) {
+    const parsedBody = createGallerySchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const user = req.user as JwtPayload;
+        const result = await contentService.createGalleryAdmin(req.server.ctx.db, parsedBody.data, user.userId);
+        return reply.status(201).send(ok(result, 'เพิ่มรูปภาพสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUpdateGalleryAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    const parsedBody = updateGallerySchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const result = await contentService.updateGalleryAdmin(req.server.ctx.db, parsedParams.data.id, parsedBody.data);
+        return reply.send(ok(result, 'อัปเดตรูปภาพสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleDeleteGalleryAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await contentService.deleteGalleryAdmin(req.server.ctx.db, parsedParams.data.id);
+        return reply.send(ok({ success: true }, 'ลบรูปภาพสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleReorderGalleryAdmin(req: FastifyRequest, reply: FastifyReply) {
+    const parsedBody = reorderGallerySchema.safeParse(req.body);
+    if (!parsedBody.success) {
+        const firstError = parsedBody.error.issues[0]?.message ?? 'เซิร์ฟเวอร์ไม่สามารถประมวลผลคำขอได้';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        await contentService.reorderGalleryAdmin(req.server.ctx.db, parsedBody.data.updates || []);
+        return reply.send(ok({ success: true }, 'จัดลำดับรูปภาพสำเร็จ'));
+    } catch (err) {
+        if (err instanceof AppError) {
+            return reply.status(err.statusCode).send({ ok: false, message: err.message });
+        }
+        throw err;
+    }
+}
+
+export async function handleUploadGalleryImageAdmin(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
+    const parsedParams = idParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+        const firstError = parsedParams.error.issues[0]?.message ?? 'ID ไม่ถูกต้อง';
+        return reply.status(400).send({ ok: false, message: firstError });
+    }
+
+    try {
+        const file = await (req as any).file();
+        if (!file) {
+            return reply.status(400).send({ ok: false, message: 'กรุณาแนบไฟล์รูปภาพ' });
+        }
+
+        const requestedFileName = (file.fields?.fileName?.value || '').toString();
+        const result = await contentService.uploadGalleryImageAdmin(req.server.ctx.db, parsedParams.data.id, {
             stream: file.file,
             originalName: file.filename,
             mimeType: file.mimetype,

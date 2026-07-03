@@ -14,6 +14,7 @@ import PrivilegeRedeemPage from './pages/PrivilegeRedeemPage'
 import SelectionPage from './pages/SelectionPage'
 import StaticAboutPage from './pages/StaticAboutPage'
 import StaticCarouselsPage from './pages/StaticCarouselsPage'
+import StaticGalleryPage from './pages/StaticGalleryPage'
 import StaticContactsPage from './pages/StaticContactsPage'
 import StaticRewardsPage from './pages/StaticRewardsPage'
 import StaticSchedulePage from './pages/StaticSchedulePage'
@@ -32,6 +33,7 @@ function AdminAppRoutes() {
         <Route path="static" element={<Navigate to="sponsors" replace />} />
         <Route path="static/sponsors" element={<StaticSponsorsPage />} />
         <Route path="static/carousels" element={<StaticCarouselsPage />} />
+        <Route path="static/gallery" element={<StaticGalleryPage />} />
         <Route path="static/rewards" element={<StaticRewardsPage />} />
         <Route path="static/about" element={<StaticAboutPage />} />
         <Route path="static/schedule" element={<StaticSchedulePage />} />

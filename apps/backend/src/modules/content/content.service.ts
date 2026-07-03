@@ -8,6 +8,8 @@ import type {
     ContentDataset,
     ContentCarouselSlide,
     ContentCarouselSlideAdmin,
+    ContentGalleryPhoto,
+    ContentGalleryPhotoAdmin,
     ContentContact,
     ContentContactCategory,
     ContentContactAdmin,
@@ -748,6 +750,146 @@ function normalizeCarouselPayload(
     return output;
 }
 
+function normalizeGalleryImageStorageKey(imageInput: string): string {
+    let normalizedPath = (imageInput || '').trim();
+    if (!normalizedPath) {
+        throw new BadRequestError('กรุณาระบุรูปภาพ');
+    }
+
+    if (/^https?:\/\//i.test(normalizedPath)) {
+        try {
+            normalizedPath = new URL(normalizedPath).pathname;
+        } catch {
+            normalizedPath = '';
+        }
+    }
+
+    normalizedPath = normalizedPath.replace(/^\/+/, '');
+
+    if (normalizedPath.startsWith('static/content/gallery/')) {
+        return `/${normalizedPath}`;
+    }
+
+    if (normalizedPath.startsWith('content/gallery/')) {
+        return `/static/${normalizedPath}`;
+    }
+
+    const fileName = path.posix.basename(normalizedPath);
+    if (!fileName) {
+        throw new BadRequestError('รูปแบบ image_storage_key ไม่ถูกต้อง');
+    }
+
+    return `/static/content/gallery/${fileName}`;
+}
+
+function toGalleryResponse(row: {
+    photo_id: number;
+    caption_th: string | null;
+    caption_en: string | null;
+    image_storage_key: string;
+    image_alt_th: string | null;
+    image_alt_en: string | null;
+    sort_order: number;
+}): ContentGalleryPhoto {
+    return {
+        id: row.photo_id,
+        captionTh: row.caption_th,
+        captionEn: row.caption_en,
+        imageStorageKey: row.image_storage_key,
+        imageUrl: row.image_storage_key,
+        imageAltTh: row.image_alt_th,
+        imageAltEn: row.image_alt_en,
+        sortOrder: row.sort_order,
+    };
+}
+
+function toGalleryAdminResponse(row: {
+    photo_id: number;
+    caption_th: string | null;
+    caption_en: string | null;
+    image_storage_key: string;
+    image_alt_th: string | null;
+    image_alt_en: string | null;
+    sort_order: number;
+    is_enabled: number;
+    start_at: string | null;
+    end_at: string | null;
+    created_by_user_id: number | null;
+}): ContentGalleryPhotoAdmin {
+    return {
+        ...toGalleryResponse(row),
+        isEnabled: row.is_enabled === 1,
+        startAt: row.start_at,
+        endAt: row.end_at,
+        createdByUserId: row.created_by_user_id,
+    };
+}
+
+function normalizeGalleryPayload(
+    data: {
+        captionTh?: string | null | undefined;
+        captionEn?: string | null | undefined;
+        imageStorageKey?: string | undefined;
+        imageAltTh?: string | null | undefined;
+        imageAltEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+        startAt?: string | null | undefined;
+        endAt?: string | null | undefined;
+    },
+    requireRequired: boolean,
+): {
+    captionTh?: string | null;
+    captionEn?: string | null;
+    imageStorageKey?: string;
+    imageAltTh?: string | null;
+    imageAltEn?: string | null;
+    sortOrder?: number;
+    isEnabled?: boolean;
+    startAt?: string | null;
+    endAt?: string | null;
+} {
+    const output: {
+        captionTh?: string | null;
+        captionEn?: string | null;
+        imageStorageKey?: string;
+        imageAltTh?: string | null;
+        imageAltEn?: string | null;
+        sortOrder?: number;
+        isEnabled?: boolean;
+        startAt?: string | null;
+        endAt?: string | null;
+    } = {};
+
+    if (data.captionTh !== undefined) output.captionTh = normalizeNullableText(data.captionTh);
+    if (data.captionEn !== undefined) output.captionEn = normalizeNullableText(data.captionEn);
+    if (data.imageAltTh !== undefined) output.imageAltTh = normalizeNullableText(data.imageAltTh);
+    if (data.imageAltEn !== undefined) output.imageAltEn = normalizeNullableText(data.imageAltEn);
+
+    if (data.imageStorageKey !== undefined) {
+        output.imageStorageKey = normalizeGalleryImageStorageKey(data.imageStorageKey);
+    } else if (requireRequired) {
+        throw new BadRequestError('กรุณาระบุ imageStorageKey');
+    }
+
+    if (data.isEnabled !== undefined) output.isEnabled = Boolean(data.isEnabled);
+
+    if (data.sortOrder !== undefined) {
+        const sortOrder = Number(data.sortOrder);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+            throw new BadRequestError('sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+        }
+        output.sortOrder = Math.trunc(sortOrder);
+    }
+
+    const startAt = parseDateTimeToDb(data.startAt, 'startAt');
+    if (startAt !== undefined) output.startAt = startAt;
+    const endAt = parseDateTimeToDb(data.endAt, 'endAt');
+    if (endAt !== undefined) output.endAt = endAt;
+
+    return output;
+}
+
 function toContactChannelAdminResponse(row: {
     channel_id: number;
     contact_id: number;
@@ -1229,6 +1371,11 @@ export async function getSponsorGroupsWithSponsors(db: DB): Promise<ContentSpons
 export async function getCarousels(db: DB): Promise<ContentCarouselSlide[]> {
     const rows = await repo.getEnabledCarouselSlides(db);
     return rows.map(toCarouselResponse);
+}
+
+export async function getGallery(db: DB): Promise<ContentGalleryPhoto[]> {
+    const rows = await repo.getEnabledGalleryPhotos(db);
+    return rows.map(toGalleryResponse);
 }
 
 function toSponsorAdminResponse(row: any): ContentSponsorAdmin {
@@ -2044,6 +2191,154 @@ export async function uploadCarouselImageAdmin(
     }
 
     return toCarouselAdminResponse(updated);
+}
+
+export async function getAllGalleryPhotosAdmin(db: DB): Promise<ContentGalleryPhotoAdmin[]> {
+    const rows = await repo.getAllGalleryPhotosAdmin(db);
+    return rows.map(toGalleryAdminResponse);
+}
+
+export async function createGalleryAdmin(
+    db: DB,
+    data: {
+        captionTh?: string | null | undefined;
+        captionEn?: string | null | undefined;
+        imageStorageKey?: string | undefined;
+        imageAltTh?: string | null | undefined;
+        imageAltEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+        startAt?: string | null | undefined;
+        endAt?: string | null | undefined;
+    },
+    createdByUserId: number,
+): Promise<ContentGalleryPhotoAdmin> {
+    const payload = normalizeGalleryPayload(data, true);
+    const startAt = payload.startAt ?? null;
+    const endAt = payload.endAt ?? null;
+    ensureStartEndValid(startAt, endAt);
+
+    const photoId = await repo.createGalleryPhotoAdmin(db, {
+        captionTh: payload.captionTh ?? null,
+        captionEn: payload.captionEn ?? null,
+        imageStorageKey: payload.imageStorageKey!,
+        imageAltTh: payload.imageAltTh ?? null,
+        imageAltEn: payload.imageAltEn ?? null,
+        sortOrder: payload.sortOrder ?? 0,
+        isEnabled: payload.isEnabled ?? true,
+        startAt,
+        endAt,
+        createdByUserId,
+    });
+
+    const created = await repo.getGalleryPhotoByIdAdmin(db, photoId);
+    if (!created) {
+        throw new NotFoundError('ไม่พบข้อมูลรูปภาพที่เพิ่งสร้าง');
+    }
+
+    return toGalleryAdminResponse(created);
+}
+
+export async function updateGalleryAdmin(
+    db: DB,
+    photoId: number,
+    data: {
+        captionTh?: string | null | undefined;
+        captionEn?: string | null | undefined;
+        imageStorageKey?: string | undefined;
+        imageAltTh?: string | null | undefined;
+        imageAltEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+        startAt?: string | null | undefined;
+        endAt?: string | null | undefined;
+    },
+): Promise<ContentGalleryPhotoAdmin> {
+    const existing = await repo.getGalleryPhotoByIdAdmin(db, photoId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูลรูปภาพนี้');
+    }
+
+    const payload = normalizeGalleryPayload(data, false);
+    const effectiveStart = payload.startAt !== undefined ? payload.startAt : existing.start_at;
+    const effectiveEnd = payload.endAt !== undefined ? payload.endAt : existing.end_at;
+    ensureStartEndValid(effectiveStart, effectiveEnd);
+
+    await repo.updateGalleryPhotoAdmin(db, photoId, payload);
+
+    const updated = await repo.getGalleryPhotoByIdAdmin(db, photoId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบข้อมูลรูปภาพหลังการอัปเดต');
+    }
+
+    return toGalleryAdminResponse(updated);
+}
+
+export async function deleteGalleryAdmin(db: DB, photoId: number): Promise<void> {
+    const existing = await repo.getGalleryPhotoByIdAdmin(db, photoId);
+    if (!existing) {
+        throw new NotFoundError('ไม่พบข้อมูลรูปภาพนี้');
+    }
+
+    await repo.deleteGalleryPhotoAdmin(db, photoId);
+}
+
+export async function reorderGalleryAdmin(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
+    const normalized = updates.map((update) => {
+        const sortOrder = Number(update.sortOrder);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+            throw new BadRequestError('sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+        }
+        return {
+            id: Number(update.id),
+            sortOrder: Math.trunc(sortOrder),
+        };
+    });
+
+    await repo.updateGalleryPhotosOrderAdmin(db, normalized);
+}
+
+export async function uploadGalleryImageAdmin(
+    db: DB,
+    photoId: number,
+    input: {
+        stream: NodeJS.ReadableStream;
+        originalName: string;
+        mimeType: string;
+        requestedFileName?: string | null;
+    },
+): Promise<ContentGalleryPhotoAdmin> {
+    const photo = await repo.getGalleryPhotoByIdAdmin(db, photoId);
+    if (!photo) {
+        throw new NotFoundError('ไม่พบข้อมูลรูปภาพนี้');
+    }
+
+    const extFromMime = extensionFromMimeType(input.mimeType);
+    if (!extFromMime) {
+        throw new BadRequestError('รองรับเฉพาะ PNG/JPG/WEBP/SVG');
+    }
+
+    const preferredName = (input.requestedFileName || '').trim() || input.originalName;
+    let safeFileName = sanitizeFileName(preferredName);
+    if (!safeFileName || !path.posix.extname(safeFileName)) {
+        safeFileName = `${sanitizeFileName(path.posix.parse(preferredName).name || 'gallery-photo')}${extFromMime}`;
+    }
+
+    const uploadDir = path.join(process.cwd(), 'public', 'content', 'gallery');
+    await mkdir(uploadDir, { recursive: true });
+
+    const diskPath = path.join(uploadDir, safeFileName);
+    await pipeline(input.stream, createWriteStream(diskPath));
+
+    const imageStorageKey = `/static/content/gallery/${safeFileName}`;
+    await repo.updateGalleryPhotoAdmin(db, photoId, { imageStorageKey });
+
+    const updated = await repo.getGalleryPhotoByIdAdmin(db, photoId);
+    if (!updated) {
+        throw new NotFoundError('ไม่พบข้อมูลรูปภาพหลังอัปโหลดรูป');
+    }
+
+    return toGalleryAdminResponse(updated);
 }
 
 export async function getAllContactsAdmin(db: DB): Promise<ContentContactAdmin[]> {

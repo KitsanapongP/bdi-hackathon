@@ -23,6 +23,11 @@ export async function handleGetCarousels(req: FastifyRequest, reply: FastifyRepl
     return reply.send(ok(carousels));
 }
 
+export async function handleGetGallery(req: FastifyRequest, reply: FastifyReply) {
+    const photos = await service.getGallery(req.server.ctx.db);
+    return reply.send(ok(photos));
+}
+
 export async function handleGetPageByCode(
     req: FastifyRequest<{ Params: { pageCode: string } }>,
     reply: FastifyReply

@@ -143,6 +143,27 @@ export const reorderCarouselsSchema = z.object({
     })),
 });
 
+export const createGallerySchema = z.object({
+    captionTh: nullableText,
+    captionEn: nullableText,
+    imageStorageKey: z.string().trim().min(1, 'imageStorageKey ต้องไม่ว่าง'),
+    imageAltTh: nullableText,
+    imageAltEn: nullableText,
+    sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป').optional(),
+    isEnabled: z.boolean().optional(),
+    startAt: z.string().datetime({ offset: true }).nullable().optional(),
+    endAt: z.string().datetime({ offset: true }).nullable().optional(),
+});
+
+export const updateGallerySchema = createGallerySchema.partial();
+
+export const reorderGallerySchema = z.object({
+    updates: z.array(z.object({
+        id: z.number().int().positive('ID ไม่ถูกต้อง'),
+        sortOrder: z.number().int().min(0, 'sortOrder ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป'),
+    })),
+});
+
 export const createContactChannelSchema = z.object({
     channelType: z.string().trim().min(1, 'channelType ต้องไม่ว่าง'),
     labelTh: nullableText,

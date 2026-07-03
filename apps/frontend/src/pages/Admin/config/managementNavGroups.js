@@ -6,6 +6,7 @@ import {
   FileImage,
   FileText,
   Gift,
+  Images,
   LayoutDashboard,
   Mail,
   MapPin,
@@ -43,6 +44,11 @@ const managementNavGroups = [
         to: '/admin/static/carousels',
         label: 'Carousel',
         icon: FileImage,
+      },
+      {
+        to: '/admin/static/gallery',
+        label: 'บรรยากาศงาน',
+        icon: Images,
       },
       {
         to: '/admin/static/rewards',

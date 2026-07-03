@@ -10,7 +10,6 @@ import {
     Award,
     Rocket,
     Home,
-    Calendar,
     Menu,
     X,
     ArrowRight,
@@ -29,6 +28,7 @@ import GameShapes from '../../components/GameShapes';
 import HeroCarousel from './HeroCarousel';
 import TeamContent from './Team';
 import ProfileContent from './Profile';
+import AtmosphereGallery from './AtmosphereGallery';
 import './Home.css';
 import { apiUrl } from '../../lib/api';
 import {
@@ -36,6 +36,8 @@ import {
     setCachedCoOrganizerSponsors,
     getCachedHomeCarouselSlides,
     setCachedHomeCarouselSlides,
+    getCachedHomeGalleryPhotos,
+    setCachedHomeGalleryPhotos,
 } from '../../lib/contentCache';
 import { HACKATHON_CRITERIA_PATH, USER_MANUAL_PATH } from '../../lib/userManual';
 
@@ -114,17 +116,6 @@ const competitionSteps = [
 const REGISTRATION_PERIOD_START = '2026-04-10';
 const REGISTRATION_PERIOD_END = '2026-06-03';
 
-// ปรับวัน/เวลาสิ้นสุดของ Countdown ได้ที่ค่านี้ (รูปแบบ ISO 8601 + เวลาไทย)
-const HERO_COUNTDOWN_TARGET_ISO = '2026-07-03T00:00:00+07:00';
-const HERO_COUNTDOWN_TARGET_LABEL = '3 กรกฎาคม 2569';
-const HERO_COUNTDOWN_TARGET_DATE = new Date(HERO_COUNTDOWN_TARGET_ISO);
-const HERO_COUNTDOWN_UNITS = [
-    { key: 'days', label: 'วัน' },
-    { key: 'hours', label: 'ชั่วโมง' },
-    { key: 'minutes', label: 'นาที' },
-    { key: 'seconds', label: 'วินาที' },
-];
-
 const STATIC_PRIZES = [
     {
         id: 'prize-runner-up-1',
@@ -148,45 +139,6 @@ const STATIC_PRIZES = [
 ];
 
 const THAI_DATE_IN_TEXT_PATTERN = /(\d{1,2}(?:\s*-\s*\d{1,2})?\s+[ก-๙]+\s+25\d{2}|ก่อน\s*23:59\s*น\.)/g;
-
-function getHeroCountdown(targetDate, nowMs = Date.now()) {
-    if (!(targetDate instanceof Date) || Number.isNaN(targetDate.getTime())) {
-        return {
-            days: 0,
-            hours: 0,
-            minutes: 0,
-            seconds: 0,
-            expired: true,
-        };
-    }
-
-    const diffMs = targetDate.getTime() - nowMs;
-    if (diffMs <= 0) {
-        return {
-            days: 0,
-            hours: 0,
-            minutes: 0,
-            seconds: 0,
-            expired: true,
-        };
-    }
-
-    const totalSeconds = Math.floor(diffMs / 1000);
-
-    return {
-        days: Math.floor(totalSeconds / 86400),
-        hours: Math.floor((totalSeconds % 86400) / 3600),
-        minutes: Math.floor((totalSeconds % 3600) / 60),
-        seconds: totalSeconds % 60,
-        expired: false,
-    };
-}
-
-function formatHeroCountdownValue(unit, value) {
-    const numeric = Math.max(0, Number(value) || 0);
-    if (unit === 'days') return numeric.toLocaleString('th-TH');
-    return String(numeric).padStart(2, '0');
-}
 
 function emphasizeThaiDateInText(text) {
     if (typeof text !== 'string') return text;
@@ -897,6 +849,7 @@ function HomePage() {
     const [scheduleLoading, setScheduleLoading] = useState(true);
     const [scheduleError, setScheduleError] = useState(null);
     const [carouselSlides, setCarouselSlides] = useState(() => getCachedHomeCarouselSlides() || []);
+    const [galleryPhotos, setGalleryPhotos] = useState(() => getCachedHomeGalleryPhotos() || []);
     const [coOrganizerSponsors, setCoOrganizerSponsors] = useState(() => getCachedCoOrganizerSponsors() || []);
     const [sponsors, setSponsors] = useState([]);
     const [sponsorsLoading, setSponsorsLoading] = useState(true);
@@ -904,7 +857,6 @@ function HomePage() {
     const [participationLoading, setParticipationLoading] = useState(true);
     const [participationError, setParticipationError] = useState(null);
     const [participationMode, setParticipationMode] = useState('weekly');
-    const [heroCountdown, setHeroCountdown] = useState(() => getHeroCountdown(HERO_COUNTDOWN_TARGET_DATE));
 
     const processHighlightPhase = useMemo(() => {
         const step2Start = new Date(`${config.process.step2HighlightStartDate}T00:00:00+07:00`);
@@ -920,17 +872,6 @@ function HomePage() {
         if (hasStep3Date && now >= step3Start) return 'review';
         if (hasStep2Date && now >= step2Start) return 'submission';
         return 'registration';
-    }, []);
-
-    useEffect(() => {
-        const tick = () => {
-            setHeroCountdown(getHeroCountdown(HERO_COUNTDOWN_TARGET_DATE));
-        };
-
-        tick();
-        const intervalId = window.setInterval(tick, 1000);
-
-        return () => window.clearInterval(intervalId);
     }, []);
 
     useEffect(() => {
@@ -1062,6 +1003,39 @@ function HomePage() {
             }
         };
 
+        const fetchGallery = async () => {
+            try {
+                const response = await fetch(apiUrl('/api/content/gallery'), {
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    throw new Error('ไม่สามารถโหลดภาพบรรยากาศได้');
+                }
+
+                const payload = await response.json();
+                const items = Array.isArray(payload?.data) ? payload.data : [];
+                const normalized = items
+                    .map((item, index) => {
+                        const caption = item.captionTh || item.captionEn || '';
+                        const imagePath = item.imageUrl || item.imageStorageKey || '';
+                        return {
+                            id: item.id ?? `photo-${index + 1}`,
+                            caption,
+                            imageUrl: imagePath ? apiUrl(imagePath) : '',
+                            imageAlt: item.imageAltTh || item.imageAltEn || caption || `ภาพบรรยากาศ ${index + 1}`,
+                        };
+                    })
+                    .filter((item) => item.imageUrl);
+
+                setGalleryPhotos(normalized);
+                setCachedHomeGalleryPhotos(normalized);
+            } catch (err) {
+                console.error('Failed to fetch gallery', err);
+                setGalleryPhotos(getCachedHomeGalleryPhotos() || []);
+            }
+        };
+
 
         const fetchSponsors = async () => {
             try {
@@ -1126,6 +1100,7 @@ function HomePage() {
 
         fetchSchedules();
         fetchCarousels();
+        fetchGallery();
         fetchSponsors();
         fetchParticipationOverview();
     }, [location]);
@@ -1308,17 +1283,6 @@ function HomePage() {
         requestAnimationFrame(step);
     };
 
-    const handlePrimaryCta = () => {
-        if (user) {
-            setShowLobby(true);
-            setShowProfile(false);
-            setMobileOpen(false);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            return;
-        }
-
-        navigate('/login');
-    };
 
     useEffect(() => {
         const targetId = location.state?.scrollTo;
@@ -1588,37 +1552,9 @@ function HomePage() {
                     <section id="hero" className="gt-section gt-hero gt-container gt-reveal">
                         <HeroCarousel slides={carouselSlides} />
                         <h1 className="gt-hero-title" style={{ whiteSpace: 'pre-line' }}>{config.locale.heroTitle}</h1>
-                        <div className={`gt-hero-countdown ${heroCountdown.expired ? 'is-expired' : ''}`} role="timer" aria-label={`นับถอยหลังสู่วันที่ ${HERO_COUNTDOWN_TARGET_LABEL}`}>
-                            <div className="gt-hero-countdown-grid">
-                                {HERO_COUNTDOWN_UNITS.map((unit) => (
-                                    <div key={unit.key} className="gt-hero-countdown-item">
-                                        <span className="gt-hero-countdown-value">{formatHeroCountdownValue(unit.key, heroCountdown[unit.key])}</span>
-                                        <span className="gt-hero-countdown-unit">{unit.label}</span>
-                                    </div>
-                                ))}
-                            </div>
-                            <p className="gt-hero-countdown-label">
-                                <Calendar size={16} />
-                                นับถอยหลังสู่วันที่ {HERO_COUNTDOWN_TARGET_LABEL}
-                            </p>
-                            {heroCountdown.expired ? (
-                                <div className="gt-hero-countdown-status" aria-live="polite">
-                                    <span className="gt-hero-countdown-status-main">ถึงวันงานแล้ว</span>
-                                    <span className="gt-hero-countdown-status-sub">มาเริ่มสร้างนวัตกรรมไปด้วยกัน</span>
-                                </div>
-                            ) : null}
-                        </div>
-                        <div className="gt-hero-actions">
-                            <button type="button" className="gt-btn gt-btn-primary" onClick={handlePrimaryCta}>
-                                {user ? 'ไปยังทีมของฉัน' : config.locale.ctaPrimary} <ArrowRight size={18} />
-                            </button>
-                            <button className="gt-btn gt-btn-secondary" onClick={() => scrollTo('schedule')}>
-                                {config.locale.ctaSecondary}
-                            </button>
-                            <button className="gt-btn gt-btn-secondary" onClick={() => navigate('/home/faqs')}>
-                                คำถามที่พบบ่อย
-                            </button>
-                        </div>
+                        {galleryPhotos.length > 0 ? (
+                            <AtmosphereGallery photos={galleryPhotos} />
+                        ) : null}
                     </section>
 
                     {/* Participation Overview */}

@@ -3,6 +3,7 @@ import type { DB } from '../../config/db.js';
 import type {
     ContentDatasetRow,
     ContentCarouselSlideRow,
+    ContentGalleryPhotoRow,
     ContentContactCategory,
     ContentContactChannelRow,
     ContentContactRow,
@@ -887,6 +888,141 @@ export async function updateCarouselSlidesOrderAdmin(db: DB, updates: { id: numb
             `UPDATE content_carousel_slides
              SET sort_order = ?, updated_at = CURRENT_TIMESTAMP
              WHERE slide_id = ?`,
+            [update.sortOrder, update.id]
+        );
+    }
+}
+
+export async function getEnabledGalleryPhotos(db: DB): Promise<ContentGalleryPhotoRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_gallery_photos
+         WHERE is_enabled = 1
+           AND (start_at IS NULL OR start_at <= NOW())
+           AND (end_at IS NULL OR end_at >= NOW())
+         ORDER BY sort_order ASC, photo_id ASC`
+    );
+
+    return rows as ContentGalleryPhotoRow[];
+}
+
+export async function getAllGalleryPhotosAdmin(db: DB): Promise<ContentGalleryPhotoRow[]> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_gallery_photos
+         ORDER BY sort_order ASC, photo_id ASC`
+    );
+
+    return rows as ContentGalleryPhotoRow[];
+}
+
+export async function getGalleryPhotoByIdAdmin(db: DB, photoId: number): Promise<ContentGalleryPhotoRow | null> {
+    const [rows] = await db.query<RowDataPacket[]>(
+        `SELECT *
+         FROM content_gallery_photos
+         WHERE photo_id = ?
+         LIMIT 1`,
+        [photoId]
+    );
+
+    const result = rows as ContentGalleryPhotoRow[];
+    return result[0] ?? null;
+}
+
+export async function createGalleryPhotoAdmin(
+    db: DB,
+    data: {
+        captionTh: string | null;
+        captionEn: string | null;
+        imageStorageKey: string;
+        imageAltTh: string | null;
+        imageAltEn: string | null;
+        sortOrder: number;
+        isEnabled: boolean;
+        startAt: string | null;
+        endAt: string | null;
+        createdByUserId: number | null;
+    }
+): Promise<number> {
+    const [result] = await db.query(
+        `INSERT INTO content_gallery_photos (
+            caption_th,
+            caption_en,
+            image_storage_key,
+            image_alt_th,
+            image_alt_en,
+            sort_order,
+            is_enabled,
+            start_at,
+            end_at,
+            created_by_user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            data.captionTh,
+            data.captionEn,
+            data.imageStorageKey,
+            data.imageAltTh,
+            data.imageAltEn,
+            data.sortOrder,
+            data.isEnabled ? 1 : 0,
+            data.startAt,
+            data.endAt,
+            data.createdByUserId,
+        ]
+    );
+
+    return (result as { insertId: number }).insertId;
+}
+
+export async function updateGalleryPhotoAdmin(
+    db: DB,
+    photoId: number,
+    data: {
+        captionTh?: string | null | undefined;
+        captionEn?: string | null | undefined;
+        imageStorageKey?: string | undefined;
+        imageAltTh?: string | null | undefined;
+        imageAltEn?: string | null | undefined;
+        sortOrder?: number | undefined;
+        isEnabled?: boolean | undefined;
+        startAt?: string | null | undefined;
+        endAt?: string | null | undefined;
+    }
+): Promise<void> {
+    const fields: string[] = [];
+    const values: Array<string | number | null> = [];
+
+    if (data.captionTh !== undefined) { fields.push('caption_th = ?'); values.push(data.captionTh); }
+    if (data.captionEn !== undefined) { fields.push('caption_en = ?'); values.push(data.captionEn); }
+    if (data.imageStorageKey !== undefined) { fields.push('image_storage_key = ?'); values.push(data.imageStorageKey); }
+    if (data.imageAltTh !== undefined) { fields.push('image_alt_th = ?'); values.push(data.imageAltTh); }
+    if (data.imageAltEn !== undefined) { fields.push('image_alt_en = ?'); values.push(data.imageAltEn); }
+    if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
+    if (data.isEnabled !== undefined) { fields.push('is_enabled = ?'); values.push(data.isEnabled ? 1 : 0); }
+    if (data.startAt !== undefined) { fields.push('start_at = ?'); values.push(data.startAt); }
+    if (data.endAt !== undefined) { fields.push('end_at = ?'); values.push(data.endAt); }
+
+    if (!fields.length) return;
+
+    values.push(photoId);
+    await db.query(
+        `UPDATE content_gallery_photos
+         SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+         WHERE photo_id = ?`,
+        values
+    );
+}
+
+export async function deleteGalleryPhotoAdmin(db: DB, photoId: number): Promise<void> {
+    await db.query(`DELETE FROM content_gallery_photos WHERE photo_id = ?`, [photoId]);
+}
+
+export async function updateGalleryPhotosOrderAdmin(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
+    for (const update of updates) {
+        await db.query(
+            `UPDATE content_gallery_photos
+             SET sort_order = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE photo_id = ?`,
             [update.sortOrder, update.id]
         );
     }

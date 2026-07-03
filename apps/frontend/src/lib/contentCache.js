@@ -1,8 +1,11 @@
 let cachedCoOrganizerSponsors = null;
 let cachedHomeCarouselSlides = null;
+let cachedHomeGalleryPhotos = null;
 
 const HOME_CAROUSEL_CACHE_KEY = 'gt_home_carousel_slides_v1';
 const HOME_CAROUSEL_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const HOME_GALLERY_CACHE_KEY = 'gt_home_gallery_photos_v1';
+const HOME_GALLERY_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 function readJsonFromLocalStorage(key) {
     if (typeof window === 'undefined') return null;
@@ -92,4 +95,46 @@ export function setCachedHomeCarouselSlides(items) {
         cachedAt: Date.now(),
     };
     writeJsonToLocalStorage(HOME_CAROUSEL_CACHE_KEY, cachedHomeCarouselSlides);
+}
+
+function isGalleryCacheExpired(cachedAt) {
+    if (!Number.isFinite(cachedAt)) return true;
+    return Date.now() - cachedAt > HOME_GALLERY_CACHE_TTL_MS;
+}
+
+export function getCachedHomeGalleryPhotos() {
+    if (cachedHomeGalleryPhotos) {
+        if (isGalleryCacheExpired(cachedHomeGalleryPhotos.cachedAt)) {
+            cachedHomeGalleryPhotos = null;
+            removeFromLocalStorage(HOME_GALLERY_CACHE_KEY);
+            return [];
+        }
+        return cachedHomeGalleryPhotos.items;
+    }
+
+    const fromStorage = readJsonFromLocalStorage(HOME_GALLERY_CACHE_KEY);
+    const normalized = normalizeCarouselCachePayload(fromStorage);
+
+    if (!normalized) {
+        cachedHomeGalleryPhotos = null;
+        return [];
+    }
+
+    if (isGalleryCacheExpired(normalized.cachedAt)) {
+        cachedHomeGalleryPhotos = null;
+        removeFromLocalStorage(HOME_GALLERY_CACHE_KEY);
+        return [];
+    }
+
+    cachedHomeGalleryPhotos = normalized;
+    return normalized.items;
+}
+
+export function setCachedHomeGalleryPhotos(items) {
+    const normalized = Array.isArray(items) ? items : [];
+    cachedHomeGalleryPhotos = {
+        items: normalized,
+        cachedAt: Date.now(),
+    };
+    writeJsonToLocalStorage(HOME_GALLERY_CACHE_KEY, cachedHomeGalleryPhotos);
 }

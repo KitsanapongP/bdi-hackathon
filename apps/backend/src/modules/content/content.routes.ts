@@ -6,6 +6,7 @@ export const contentRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get('/sponsors', controller.handleGetSponsors);
     fastify.get('/sponsor-groups', controller.handleGetSponsorGroups);
     fastify.get('/carousels', controller.handleGetCarousels);
+    fastify.get('/gallery', controller.handleGetGallery);
     fastify.get('/pages/:pageCode', controller.handleGetPageByCode);
     fastify.get('/contacts', controller.handleGetContacts);
     fastify.get('/participation-overview', controller.handleGetParticipationOverview);

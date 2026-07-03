@@ -254,6 +254,40 @@ export type ContentCarouselSlideAdmin = ContentCarouselSlide & {
     createdByUserId: number | null;
 };
 
+export type ContentGalleryPhotoRow = {
+    photo_id: number;
+    caption_th: string | null;
+    caption_en: string | null;
+    image_storage_key: string;
+    image_alt_th: string | null;
+    image_alt_en: string | null;
+    sort_order: number;
+    is_enabled: number;
+    start_at: string | null;
+    end_at: string | null;
+    created_by_user_id: number | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type ContentGalleryPhoto = {
+    id: number;
+    captionTh: string | null;
+    captionEn: string | null;
+    imageStorageKey: string;
+    imageUrl: string;
+    imageAltTh: string | null;
+    imageAltEn: string | null;
+    sortOrder: number;
+};
+
+export type ContentGalleryPhotoAdmin = ContentGalleryPhoto & {
+    isEnabled: boolean;
+    startAt: string | null;
+    endAt: string | null;
+    createdByUserId: number | null;
+};
+
 export type ContentPageRow = {
     page_id: number;
     page_code: string;
