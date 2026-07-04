@@ -3403,6 +3403,7 @@ section.gt-hero {
 .gt-page .gt-footer,
 .gt-page .gl-page-container,
 .gt-page .gt-atmosphere-stage,
+.gt-page .gt-atmosphere-thumbs,
 .gt-page .gt-subpage-wrap {
     pointer-events: auto;
 }
