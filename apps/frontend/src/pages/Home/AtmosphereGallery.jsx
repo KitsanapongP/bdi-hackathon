@@ -156,7 +156,7 @@ function AtmosphereGallery({ photos = [] }) {
               aria-current={index === safeIndex ? 'true' : undefined}
             >
               <img
-                src={photo.imageUrl}
+                src={photo.thumbUrl || photo.imageUrl}
                 alt={photo.imageAlt || photo.caption || `ภาพย่อ ${index + 1}`}
                 loading="lazy"
                 decoding="async"
@@ -251,7 +251,7 @@ function AtmosphereGallery({ photos = [] }) {
               aria-current={index === activeIndex ? 'true' : undefined}
             >
               <img
-                src={photo.imageUrl}
+                src={photo.thumbUrl || photo.imageUrl}
                 alt={photo.imageAlt || photo.caption || `ภาพย่อ ${index + 1}`}
                 loading="lazy"
                 decoding="async"

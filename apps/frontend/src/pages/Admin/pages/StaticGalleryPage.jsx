@@ -73,6 +73,7 @@ export default function StaticGalleryPage() {
             captionEn: item.captionEn || '',
             imageStorageKey: item.imageStorageKey || item.imageUrl || '',
             imageUrl: item.imageUrl || item.imageStorageKey || '',
+            thumbUrl: item.thumbUrl || item.imageUrl || item.imageStorageKey || '',
             imageAltTh: item.imageAltTh || '',
             imageAltEn: item.imageAltEn || '',
             sortOrder: item.sortOrder || 0,
@@ -186,6 +187,8 @@ export default function StaticGalleryPage() {
     if (!all.length) return
 
     const valid = all.filter((file) => ALLOWED_TYPES.includes(file.type) && file.size <= 8 * 1024 * 1024)
+    // เรียงตามชื่อไฟล์ (รองรับเลขในชื่อ เช่น 2 มาก่อน 10) เพื่อให้ลำดับตรงกับที่ผู้ใช้ตั้งชื่อไว้
+    valid.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
     const skipped = all.length - valid.length
     if (!valid.length) {
       pushToast({ type: 'error', title: 'ไม่มีไฟล์ที่อัปโหลดได้', description: 'รองรับ PNG / JPG / WEBP / SVG ไม่เกิน 8 MB' })
@@ -524,7 +527,7 @@ export default function StaticGalleryPage() {
                 }}
                 title={isFiltering ? 'ล้างตัวกรองเพื่อจัดลำดับ' : 'ลากเพื่อจัดลำดับ'}
               >
-                <img src={apiUrl(item.imageUrl || item.imageStorageKey)} alt={item.captionTh || item.captionEn || 'gallery'} loading="lazy" decoding="async" />
+                <img src={apiUrl(item.thumbUrl || item.imageUrl || item.imageStorageKey)} alt={item.captionTh || item.captionEn || 'gallery'} loading="lazy" decoding="async" />
                 <span className="admin-ui-gallery-order">#{item.sortOrder}</span>
                 <span className={`admin-ui-gallery-badge ${item.isEnabled ? 'enabled' : 'disabled'}`}>
                   {item.isEnabled ? 'เปิด' : 'ปิด'}

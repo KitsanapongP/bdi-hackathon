@@ -259,6 +259,7 @@ export type ContentGalleryPhotoRow = {
     caption_th: string | null;
     caption_en: string | null;
     image_storage_key: string;
+    thumb_storage_key: string | null;
     image_alt_th: string | null;
     image_alt_en: string | null;
     sort_order: number;
@@ -276,6 +277,7 @@ export type ContentGalleryPhoto = {
     captionEn: string | null;
     imageStorageKey: string;
     imageUrl: string;
+    thumbUrl: string | null;
     imageAltTh: string | null;
     imageAltEn: string | null;
     sortOrder: number;

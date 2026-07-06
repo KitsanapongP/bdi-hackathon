@@ -1,8 +1,9 @@
 import type { DB } from '../../config/db.js';
 import path from 'node:path';
-import { mkdir, unlink } from 'node:fs/promises';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
+import sharp from 'sharp';
 import * as repo from './content.repo.js';
 import type {
     ContentDataset,
@@ -787,6 +788,7 @@ function toGalleryResponse(row: {
     caption_th: string | null;
     caption_en: string | null;
     image_storage_key: string;
+    thumb_storage_key?: string | null;
     image_alt_th: string | null;
     image_alt_en: string | null;
     sort_order: number;
@@ -797,6 +799,7 @@ function toGalleryResponse(row: {
         captionEn: row.caption_en,
         imageStorageKey: row.image_storage_key,
         imageUrl: row.image_storage_key,
+        thumbUrl: row.thumb_storage_key ?? null,
         imageAltTh: row.image_alt_th,
         imageAltEn: row.image_alt_en,
         sortOrder: row.sort_order,
@@ -808,6 +811,7 @@ function toGalleryAdminResponse(row: {
     caption_th: string | null;
     caption_en: string | null;
     image_storage_key: string;
+    thumb_storage_key?: string | null;
     image_alt_th: string | null;
     image_alt_en: string | null;
     sort_order: number;
@@ -2318,20 +2322,54 @@ export async function uploadGalleryImageAdmin(
         throw new BadRequestError('รองรับเฉพาะ PNG/JPG/WEBP/SVG');
     }
 
+    // ชื่อฐาน (ไม่มีนามสกุล) ใช้ตั้งชื่อไฟล์ผลลัพธ์
     const preferredName = (input.requestedFileName || '').trim() || input.originalName;
-    let safeFileName = sanitizeFileName(preferredName);
-    if (!safeFileName || !path.posix.extname(safeFileName)) {
-        safeFileName = `${sanitizeFileName(path.posix.parse(preferredName).name || 'gallery-photo')}${extFromMime}`;
-    }
+    const baseName = path.posix.parse(sanitizeFileName(preferredName)).name || 'gallery-photo';
 
     const uploadDir = path.join(process.cwd(), 'public', 'content', 'gallery');
     await mkdir(uploadDir, { recursive: true });
 
-    const diskPath = path.join(uploadDir, safeFileName);
-    await pipeline(input.stream, createWriteStream(diskPath));
+    // อ่านไฟล์ทั้งก้อนเข้าหน่วยความจำ (จำกัดขนาดโดย @fastify/multipart อยู่แล้ว)
+    const chunks: Buffer[] = [];
+    for await (const chunk of input.stream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const inputBuffer = Buffer.concat(chunks);
+    if (!inputBuffer.length) {
+        throw new BadRequestError('ไฟล์รูปภาพว่างเปล่า');
+    }
 
-    const imageStorageKey = `/static/content/gallery/${safeFileName}`;
-    await repo.updateGalleryPhotoAdmin(db, photoId, { imageStorageKey });
+    let imageStorageKey: string;
+    let thumbStorageKey: string | null = null;
+
+    if (input.mimeType.toLowerCase() === 'image/svg+xml') {
+        // SVG เป็น vector ขนาดเล็ก เก็บตามเดิม ไม่ต้องแปลง
+        const fileName = `${baseName}.svg`;
+        await writeFile(path.join(uploadDir, fileName), inputBuffer);
+        imageStorageKey = `/static/content/gallery/${fileName}`;
+    } else {
+        // รูป raster: ย่อ + แปลงเป็น WebP สำหรับแสดงผล และสร้าง thumbnail แยก
+        const displayName = `${baseName}.webp`;
+        const thumbName = `${baseName}_thumb.webp`;
+
+        const displayBuffer = await sharp(inputBuffer)
+            .rotate() // จัดทิศตาม EXIF
+            .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 80 })
+            .toBuffer();
+        const thumbBuffer = await sharp(inputBuffer)
+            .rotate()
+            .resize(480, 480, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 68 })
+            .toBuffer();
+
+        await writeFile(path.join(uploadDir, displayName), displayBuffer);
+        await writeFile(path.join(uploadDir, thumbName), thumbBuffer);
+        imageStorageKey = `/static/content/gallery/${displayName}`;
+        thumbStorageKey = `/static/content/gallery/${thumbName}`;
+    }
+
+    await repo.updateGalleryPhotoAdmin(db, photoId, { imageStorageKey, thumbStorageKey });
 
     const updated = await repo.getGalleryPhotoByIdAdmin(db, photoId);
     if (!updated) {

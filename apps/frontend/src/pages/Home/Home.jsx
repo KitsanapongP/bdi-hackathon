@@ -1019,10 +1019,12 @@ function HomePage() {
                     .map((item, index) => {
                         const caption = item.captionTh || item.captionEn || '';
                         const imagePath = item.imageUrl || item.imageStorageKey || '';
+                        const thumbPath = item.thumbUrl || imagePath;
                         return {
                             id: item.id ?? `photo-${index + 1}`,
                             caption,
                             imageUrl: imagePath ? apiUrl(imagePath) : '',
+                            thumbUrl: thumbPath ? apiUrl(thumbPath) : '',
                             imageAlt: item.imageAltTh || item.imageAltEn || caption || `ภาพบรรยากาศ ${index + 1}`,
                         };
                     })

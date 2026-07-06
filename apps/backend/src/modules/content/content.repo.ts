@@ -981,6 +981,7 @@ export async function updateGalleryPhotoAdmin(
         captionTh?: string | null | undefined;
         captionEn?: string | null | undefined;
         imageStorageKey?: string | undefined;
+        thumbStorageKey?: string | null | undefined;
         imageAltTh?: string | null | undefined;
         imageAltEn?: string | null | undefined;
         sortOrder?: number | undefined;
@@ -995,6 +996,7 @@ export async function updateGalleryPhotoAdmin(
     if (data.captionTh !== undefined) { fields.push('caption_th = ?'); values.push(data.captionTh); }
     if (data.captionEn !== undefined) { fields.push('caption_en = ?'); values.push(data.captionEn); }
     if (data.imageStorageKey !== undefined) { fields.push('image_storage_key = ?'); values.push(data.imageStorageKey); }
+    if (data.thumbStorageKey !== undefined) { fields.push('thumb_storage_key = ?'); values.push(data.thumbStorageKey); }
     if (data.imageAltTh !== undefined) { fields.push('image_alt_th = ?'); values.push(data.imageAltTh); }
     if (data.imageAltEn !== undefined) { fields.push('image_alt_en = ?'); values.push(data.imageAltEn); }
     if (data.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(data.sortOrder); }
