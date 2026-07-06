@@ -2456,6 +2456,27 @@ body:has(.admin-ui-page) {
   grid-column: 1 / -1;
 }
 
+.admin-ui-bulk-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-ui-bulk-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.admin-ui-bulk-head strong {
+  font-weight: 600;
+}
+
+.admin-ui-bulk-head .admin-ui-text-muted {
+  margin-left: auto;
+}
+
 /* Upload dropzone in the drawer */
 .admin-ui-dropzone {
   position: relative;

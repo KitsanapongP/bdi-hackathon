@@ -3,6 +3,8 @@ import {
   CalendarClock,
   ChevronDown,
   ImagePlus,
+  Images,
+  Loader2,
   Pencil,
   Plus,
   Save,
@@ -54,7 +56,9 @@ export default function StaticGalleryPage() {
   const [localPreview, setLocalPreview] = useState('')
   const [dragId, setDragId] = useState(null)
   const [dropId, setDropId] = useState(null)
+  const [bulk, setBulk] = useState(null) // { done, total, failed } ระหว่างอัปโหลดหลายรูป
   const fileInputRef = useRef(null)
+  const bulkInputRef = useRef(null)
 
   const fetchGallery = useCallback(async () => {
     try {
@@ -170,6 +174,85 @@ export default function StaticGalleryPage() {
       imageSize: file.size,
     }))
     setErrors((prev) => ({ ...prev, image: undefined }))
+  }
+
+  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
+  const extFromType = (type) =>
+    ({ 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp', 'image/svg+xml': '.svg' })[type] || '.jpg'
+
+  // อัปโหลดหลายรูปทีเดียว: สร้างแถว + อัปไฟล์ต่อรูป (ขนาน 3 งาน) โดยไม่ต้องกรอก caption
+  const onBulkFiles = async (fileList) => {
+    const all = Array.from(fileList || [])
+    if (!all.length) return
+
+    const valid = all.filter((file) => ALLOWED_TYPES.includes(file.type) && file.size <= 8 * 1024 * 1024)
+    const skipped = all.length - valid.length
+    if (!valid.length) {
+      pushToast({ type: 'error', title: 'ไม่มีไฟล์ที่อัปโหลดได้', description: 'รองรับ PNG / JPG / WEBP / SVG ไม่เกิน 8 MB' })
+      return
+    }
+
+    const baseSort = items.length ? Math.max(...items.map((item) => Number(item.sortOrder) || 0)) : 0
+    let done = 0
+    let failed = 0
+    setBulk({ done: 0, total: valid.length, failed: 0 })
+
+    const uploadOne = async (file, index) => {
+      const uniqueName = `atmos-${Date.now()}-${Math.random().toString(36).slice(2, 7)}${extFromType(file.type)}`
+      const createRes = await fetch(apiUrl('/api/admin/gallery'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          imageStorageKey: `/static/content/gallery/${uniqueName}`,
+          isEnabled: true,
+          sortOrder: baseSort + index + 1,
+        }),
+      })
+      const created = await createRes.json()
+      if (!created.ok) throw new Error(created.message || 'สร้างรายการไม่สำเร็จ')
+      const id = created.data.id
+      try {
+        const fd = new FormData()
+        fd.append('file', file)
+        fd.append('fileName', uniqueName)
+        const upRes = await fetch(apiUrl(`/api/admin/gallery/${id}/image`), { method: 'POST', credentials: 'include', body: fd })
+        const up = await upRes.json()
+        if (!up.ok) throw new Error(up.message || 'อัปโหลดรูปไม่สำเร็จ')
+      } catch (err) {
+        // ลบแถวที่สร้างไว้ ถ้าอัปไฟล์ไม่สำเร็จ กันรายการรูปเสีย
+        await fetch(apiUrl(`/api/admin/gallery/${id}`), { method: 'DELETE', credentials: 'include' }).catch(() => {})
+        throw err
+      }
+    }
+
+    let cursor = 0
+    const worker = async () => {
+      while (cursor < valid.length) {
+        const index = cursor++
+        try {
+          await uploadOne(valid[index], index)
+        } catch (error) {
+          failed++
+          console.error('bulk upload failed:', error)
+        }
+        done++
+        setBulk({ done, total: valid.length, failed })
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(3, valid.length) }, worker))
+
+    setBulk(null)
+    const okCount = valid.length - failed
+    pushToast({
+      type: failed ? 'warning' : 'success',
+      title: `อัปโหลดสำเร็จ ${okCount} รูป`,
+      description:
+        [failed ? `ล้มเหลว ${failed}` : null, skipped ? `ข้าม ${skipped} (ไฟล์ไม่รองรับ/ใหญ่เกิน)` : null]
+          .filter(Boolean)
+          .join(' · ') || undefined,
+    })
+    await fetchGallery()
   }
 
   const validate = () => {
@@ -341,10 +424,27 @@ export default function StaticGalleryPage() {
         title="ภาพบรรยากาศงาน"
         subtitle="อัปโหลดและจัดการรูปบรรยากาศที่แสดงในหน้าแรก ลากการ์ดเพื่อจัดลำดับ"
         actions={
-          <button type="button" className="admin-ui-btn admin-ui-btn-primary" onClick={openCreate}>
-            <Plus size={15} />
-            เพิ่มรูปภาพ
-          </button>
+          <>
+            <input
+              ref={bulkInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              multiple
+              style={{ display: 'none' }}
+              onChange={(event) => {
+                onBulkFiles(event.target.files)
+                event.target.value = ''
+              }}
+            />
+            <button type="button" className="admin-ui-btn" disabled={!!bulk} onClick={() => bulkInputRef.current?.click()}>
+              <Images size={15} />
+              อัปโหลดหลายรูป
+            </button>
+            <button type="button" className="admin-ui-btn admin-ui-btn-primary" disabled={!!bulk} onClick={openCreate}>
+              <Plus size={15} />
+              เพิ่มรูปภาพ
+            </button>
+          </>
         }
       />
 
@@ -369,6 +469,19 @@ export default function StaticGalleryPage() {
           {items.length} รูป · เปิดใช้งาน {enabledCount}
         </span>
       </div>
+
+      {bulk ? (
+        <div className="admin-ui-panel admin-ui-bulk-bar">
+          <div className="admin-ui-bulk-head">
+            <Loader2 size={16} className="spin" />
+            <strong>กำลังอัปโหลด {bulk.done}/{bulk.total} รูป…</strong>
+            {bulk.failed ? <span className="admin-ui-text-muted">ล้มเหลว {bulk.failed}</span> : null}
+          </div>
+          <div className="admin-ui-progress-bar">
+            <span style={{ width: `${Math.round((bulk.done / bulk.total) * 100)}%` }} />
+          </div>
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="admin-ui-loading-state">
