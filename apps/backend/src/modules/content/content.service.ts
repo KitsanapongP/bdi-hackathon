@@ -1,7 +1,7 @@
 import type { DB } from '../../config/db.js';
 import path from 'node:path';
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, existsSync } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import sharp from 'sharp';
 import * as repo from './content.repo.js';
@@ -749,6 +749,43 @@ function normalizeCarouselPayload(
     }
 
     return output;
+}
+
+// หาชื่อฐานที่ไม่ชนกับไฟล์อื่นในโฟลเดอร์ gallery — ยอมให้เขียนทับไฟล์ของรูปตัวเอง (ตอนแก้ไข)
+function resolveUniqueGalleryBaseName(
+    uploadDir: string,
+    base: string,
+    ext: string,
+    currentImageStorageKey?: string | null,
+): string {
+    const currentFile = currentImageStorageKey ? path.posix.basename(currentImageStorageKey) : '';
+    let candidate = base;
+    let counter = 1;
+    while (true) {
+        const displayName = `${candidate}${ext}`;
+        // ถ้าตรงกับไฟล์เดิมของรูปนี้เอง อนุญาตให้เขียนทับ
+        if (displayName === currentFile) return candidate;
+        const displayExists = existsSync(path.join(uploadDir, displayName));
+        const thumbExists = ext === '.webp' && existsSync(path.join(uploadDir, `${candidate}_thumb.webp`));
+        if (!displayExists && !thumbExists) return candidate;
+        counter += 1;
+        candidate = `${base}-${counter}`;
+    }
+}
+
+// ลบไฟล์รูปในโฟลเดอร์ gallery แบบ best-effort (ไม่ throw ถ้าไฟล์หายไปแล้ว)
+async function removeGalleryFileByKey(storageKey: string | null | undefined): Promise<void> {
+    if (!storageKey) return;
+    const prefix = '/static/content/gallery/';
+    if (!storageKey.startsWith(prefix)) return;
+    const fileName = path.posix.basename(storageKey);
+    if (!fileName || fileName === '.' || fileName === '..') return;
+    const diskPath = path.join(process.cwd(), 'public', 'content', 'gallery', fileName);
+    try {
+        await unlink(diskPath);
+    } catch {
+        // ไฟล์อาจไม่มีอยู่แล้ว หรือถูกลบไปก่อนหน้า — ไม่ต้องทำอะไร
+    }
 }
 
 function normalizeGalleryImageStorageKey(imageInput: string): string {
@@ -2285,6 +2322,10 @@ export async function deleteGalleryAdmin(db: DB, photoId: number): Promise<void>
     }
 
     await repo.deleteGalleryPhotoAdmin(db, photoId);
+
+    // ลบไฟล์รูปบนดิสก์ (display + thumbnail) หลังลบแถวสำเร็จ
+    await removeGalleryFileByKey(existing.image_storage_key);
+    await removeGalleryFileByKey(existing.thumb_storage_key);
 }
 
 export async function reorderGalleryAdmin(db: DB, updates: { id: number; sortOrder: number }[]): Promise<void> {
@@ -2339,18 +2380,23 @@ export async function uploadGalleryImageAdmin(
         throw new BadRequestError('ไฟล์รูปภาพว่างเปล่า');
     }
 
+    const isSvg = input.mimeType.toLowerCase() === 'image/svg+xml';
+    const outExt = isSvg ? '.svg' : '.webp';
+    // กันชื่อไฟล์ชนกับรูปอื่น (เติมเลขต่อท้ายถ้าซ้ำ) แต่เขียนทับไฟล์ของรูปตัวเองได้
+    const uniqueBase = resolveUniqueGalleryBaseName(uploadDir, baseName, outExt, photo.image_storage_key);
+
     let imageStorageKey: string;
     let thumbStorageKey: string | null = null;
 
-    if (input.mimeType.toLowerCase() === 'image/svg+xml') {
+    if (isSvg) {
         // SVG เป็น vector ขนาดเล็ก เก็บตามเดิม ไม่ต้องแปลง
-        const fileName = `${baseName}.svg`;
+        const fileName = `${uniqueBase}.svg`;
         await writeFile(path.join(uploadDir, fileName), inputBuffer);
         imageStorageKey = `/static/content/gallery/${fileName}`;
     } else {
         // รูป raster: ย่อ + แปลงเป็น WebP สำหรับแสดงผล และสร้าง thumbnail แยก
-        const displayName = `${baseName}.webp`;
-        const thumbName = `${baseName}_thumb.webp`;
+        const displayName = `${uniqueBase}.webp`;
+        const thumbName = `${uniqueBase}_thumb.webp`;
 
         const displayBuffer = await sharp(inputBuffer)
             .rotate() // จัดทิศตาม EXIF
@@ -2370,6 +2416,14 @@ export async function uploadGalleryImageAdmin(
     }
 
     await repo.updateGalleryPhotoAdmin(db, photoId, { imageStorageKey, thumbStorageKey });
+
+    // ลบไฟล์เก่าถ้าเปลี่ยนชื่อ/นามสกุล (กันไฟล์ค้างตอนอัปโหลดทับ)
+    if (photo.image_storage_key && photo.image_storage_key !== imageStorageKey) {
+        await removeGalleryFileByKey(photo.image_storage_key);
+    }
+    if (photo.thumb_storage_key && photo.thumb_storage_key !== thumbStorageKey) {
+        await removeGalleryFileByKey(photo.thumb_storage_key);
+    }
 
     const updated = await repo.getGalleryPhotoByIdAdmin(db, photoId);
     if (!updated) {
