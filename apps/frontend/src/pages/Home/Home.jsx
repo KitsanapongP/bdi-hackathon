@@ -17,7 +17,6 @@ import {
     LogOut,
     User,
     Bell,
-    Phone,
     MapPin,
     Mail,
     Facebook,
@@ -2039,8 +2038,6 @@ function HomePage() {
                                         <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px' }} />
                                         วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น<br />
                                         123 อาคารวิทยวิภาส ถ.มิตรภาพ ต.ในเมือง อ.เมืองขอนแก่น จ.ขอนแก่น 40002<br />
-                                        <Phone size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px', marginTop: '8px' }} />
-                                        โทรศัพท์ 043 009 700 ต่อ 51018 (คุณแพรว)<br />
                                         <Mail size={16} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px', marginTop: '8px' }} />
                                         Email : khwunch@kku.ac.th
                                     </p>
